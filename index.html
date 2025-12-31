@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ensemble</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg" sizes="any">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="flashOverlay"></div>
+<div id="toast">Copied to clipboard!</div>
+<header>
+    <h1>Ensemble</h1>
+    
+    <div class="main-controls">
+        <button id="playBtn" class="primary-btn">START</button>
+        
+        <div class="control-group">
+            <span class="control-label">BPM</span>
+            <input type="number" id="bpmInput" value="100" min="40" max="240">
+            <button id="tapBtn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; height: auto;">TAP</button>
+        </div>
+
+        <button id="settingsBtn" style="padding: 0.5rem;" aria-label="Settings">⚙️</button>
+    </div>
+</header>
+
+<div class="app-container">
+    <!-- CHORD BUDDY PANEL -->
+    <div class="panel" id="chordPanel">
+        <div class="panel-header">
+            <h2>Chord Buddy</h2>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button id="maximizeChordBtn" title="Maximize" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Maximize Chord Buddy">⛶</button>
+                <select id="keySelect" style="width: auto;" aria-label="Select Key">
+                    <option value="C">Key: C</option>
+                    <option value="Db">Key: Db</option>
+                    <option value="D">Key: D</option>
+                    <option value="Eb">Key: Eb</option>
+                    <option value="E">Key: E</option>
+                    <option value="F">Key: F</option>
+                    <option value="Gb">Key: Gb</option>
+                    <option value="G">Key: G</option>
+                    <option value="Ab">Key: Ab</option>
+                    <option value="A">Key: A</option>
+                    <option value="Bb">Key: Bb</option>
+                    <option value="B">Key: B</option>
+                </select>
+                <button id="transDownBtn" title="Transpose Down" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Transpose Down">♭</button>
+                <button id="transUpBtn" title="Transpose Up" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Transpose Up">♯</button>
+            </div>
+        </div>
+
+        <div class="display-area" id="chordVisualizer"></div>
+
+        <div style="margin-bottom: 1.5rem; height: 42px;">
+            <div style="display: flex; gap: 0.5rem; height: 100%;">
+                <input type="text" id="progressionInput" value="I | V | vi | IV" placeholder="Progression (e.g., I | V | vi | IV)" aria-label="Chord Progression">
+                <button id="saveBtn" title="Save Progression" style="width: auto; padding: 0.5rem 1rem;" aria-label="Save Progression">💾</button>
+                <button id="shareBtn" title="Share Progression" style="width: auto; padding: 0.5rem 1rem;" aria-label="Share Progression">🔗</button>
+            </div>
+        </div>
+
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 100px;">
+            <div class="presets-container" id="chordPresets"></div>
+            <div class="presets-container" id="userPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
+        </div>
+
+        <div style="margin-top: 1.5rem; border-top: 1px solid #334155; padding-top: 1rem;">
+            <label style="font-size: 0.9rem; color: #94a3b8;">Style</label>
+            <div class="presets-container" id="chordStylePresets" style="margin-top: 0.5rem;"></div>
+        </div>
+    </div>
+
+    <!-- GROOVE BUDDY PANEL -->
+    <div class="panel" id="groovePanel">
+        <div class="panel-header">
+            <h2>Groove Buddy</h2>
+            <div class="control-group">
+                <span class="control-label" style="font-size: 0.7rem;">Bars</span>
+                <select id="drumBarsSelect" style="width: 50px; border: none; background: transparent; font-size: 0.9rem; padding: 0; color: white;" aria-label="Number of Bars">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="4">4</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="sequencer-grid" id="sequencerGrid">
+            <!-- Filled by JS -->
+        </div>
+
+        <div style="margin-bottom: 1.5rem; height: 42px; display: flex; align-items: center;">
+            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">Tap steps to create your own beat...</div>
+        </div>
+
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 100px;">
+            <div class="presets-container" id="drumPresets"></div>
+            <div class="presets-container" id="userDrumPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
+        </div>
+
+        <div style="margin-top: 1.5rem; border-top: 1px solid #334155; padding-top: 1rem;">
+            <div style="display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;">
+                <div style="flex: 1 1 200px;">
+                    <label class="control-label" style="display: block; margin-bottom: 0.4rem;">Swing</label>
+                    <div style="display: flex; gap: 0.4rem; align-items: center;">
+                        <input type="range" id="swingSlider" min="0" max="100" value="0" style="flex-grow: 1; height: 4px;" aria-label="Swing Amount">
+                        <select id="swingBaseSelect" style="width: 65px; font-size: 0.75rem; padding: 0.2rem; height: 28px;" aria-label="Swing Base Note">
+                            <option value="16th">1/16</option>
+                            <option value="8th" selected>1/8</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="control-label" style="display: block; margin-bottom: 0.4rem;">Actions</label>
+                    <div style="display: flex; gap: 0.5rem; height: 32px;">
+                        <button id="clearDrumsBtn" style="font-size: 0.75rem; padding: 0 1rem; height: 100%;">Clear</button>
+                        <button id="saveDrumBtn" title="Save Pattern" style="font-size: 0.75rem; padding: 0 1rem; height: 100%;">💾 Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsOverlay">
+    <div class="settings-content">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+            <h2>Settings</h2>
+            <button id="closeSettingsBtn" style="background: none; border: none; font-size: 1.5rem;" aria-label="Close Settings">&times;</button>
+        </div>
+        
+        <div class="settings-section">
+            <h3>Mixer</h3>
+            <div class="setting-item">
+                <label class="setting-label">
+                    <span>Master Volume</span>
+                </label>
+                <input type="range" id="masterVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Master Volume">
+            </div>
+            <div class="setting-item">
+                <label class="setting-label">
+                    <span>Chord Volume</span>
+                </label>
+                <input type="range" id="chordVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Chord Volume">
+            </div>
+            <div class="setting-item">
+                <label class="setting-label">
+                    <span>Drum Volume</span>
+                </label>
+                <input type="range" id="drumVolume" min="0" max="1" step="0.05" value="0.7" style="width: 100%;" aria-label="Drum Volume">
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="countInCheck" checked>
+                Count-in (4 Beats)
+            </label>
+        </div>
+
+        <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="visualFlashCheck">
+                Visual Flash
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="hapticCheck">
+                Haptic
+            </label>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem;">Notation</label>
+            <select id="notationSelect" style="width: 100%;" aria-label="Chord Notation">
+                <option value="roman">Roman Numerals (I, vi, IV)</option>
+                <option value="name">Chord Names (C, Am, F)</option>
+                <option value="nns">Nashville Numbers (1, 6-, 4)</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span>Chord Voicing Register</span>
+                <span id="octaveLabel" style="color: var(--accent-color); font-weight: bold;">F4</span>
+            </label>
+            <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
+        </div>
+
+        <div style="margin-top: 2rem; border-top: 1px solid #334155; padding-top: 1rem;">
+            <button id="resetSettingsBtn" style="width: 100%; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--error-color);">Reset to Defaults</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

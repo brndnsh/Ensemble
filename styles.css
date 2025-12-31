@@ -1,0 +1,539 @@
+:root {
+    --bg-color: #0f172a;
+    --panel-color: #1e293b;
+    --text-color: #f1f5f9;
+    --accent-color: #3b82f6;
+    --accent-hover: #2563eb;
+    --success-color: #10b981;
+    --error-color: #ef4444;
+    --card-bg: #334155;
+    
+    /* Metronome specific overrides adapted to theme */
+    --beat-active: #facc15;
+    --beat-inactive-odd: #334155;
+    --beat-inactive-even: #475569;
+    --beat-playing: #fbbf24;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    touch-action: manipulation;
+}
+
+#flashOverlay {
+    position: fixed;
+    inset: 0;
+    background-color: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 0.05s;
+}
+
+/* --- Layout --- */
+header {
+    background: var(--panel-color);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+header h1 { margin: 0; font-size: 1.5rem; color: white; }
+
+.main-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--card-bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #475569;
+}
+
+.control-label {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.app-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+}
+
+.app-container.chord-maximized {
+    grid-template-columns: 1fr;
+}
+
+.app-container.chord-maximized #groovePanel {
+    display: none;
+}
+
+.app-container.chord-maximized #chordPanel {
+    grid-column: 1 / -1;
+}
+
+.app-container.chord-maximized .display-area {
+    grid-template-columns: repeat(4, 1fr);
+    min-height: 500px;
+}
+
+@media (max-width: 600px) {
+    .app-container.chord-maximized .display-area {
+        grid-template-columns: repeat(2, 1fr);
+        min-height: auto;
+    }
+    .app-container.chord-maximized .chord-card {
+        font-size: 1.8rem;
+        padding: 1.5rem 0.5rem;
+    }
+}
+
+.app-container.chord-maximized .chord-card {
+    font-size: 2.5rem;
+    padding: 2rem 0.5rem;
+}
+
+.app-container.chord-maximized .chord-card.small {
+    font-size: 1.5rem;
+}
+
+.app-container.chord-maximized .chord-card .suffix {
+    font-size: 0.5em;
+}
+
+@media (max-width: 950px) {
+    .app-container {
+        grid-template-columns: 1fr;
+        max-width: 700px;
+    }
+}
+
+@media (max-width: 600px) {
+    header {
+        padding: 0.75rem 1rem;
+    }
+    header h1 {
+        font-size: 1.1rem !important;
+    }
+    .main-controls {
+        gap: 0.4rem;
+    }
+    .app-container {
+        padding: 1rem;
+        gap: 1.5rem;
+    }
+    .panel {
+        padding: 1rem;
+    }
+    .primary-btn {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.9rem;
+    }
+    #bpmInput {
+        width: 45px !important;
+    }
+    .chord-panel-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+    #progressionInput {
+        min-width: 0;
+        font-size: 1rem !important;
+    }
+    #saveBtn, #shareBtn {
+        padding: 0.5rem 0.75rem !important;
+    }
+}
+
+.panel {
+    background-color: var(--panel-color);
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+h2 { margin-top: 0; color: var(--accent-color); font-size: 1.5rem; margin-bottom: 1.5rem; }
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    height: 42px;
+}
+.panel-header h2 { margin: 0; }
+
+/* --- Shared UI Components --- */
+button {
+    background-color: var(--card-bg);
+    color: white;
+    border: 1px solid #475569;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+button:hover { background-color: #475569; }
+button:active { background-color: var(--accent-color); border-color: var(--accent-color); }
+
+.primary-btn {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+.primary-btn:hover { background-color: var(--accent-hover); }
+.primary-btn.playing { background-color: var(--error-color); border-color: var(--error-color); }
+
+input[type="number"], select, input[type="text"] {
+    background: var(--card-bg);
+    border: 1px solid #475569;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+input[type="range"] {
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+
+#progressionInput {
+    flex-grow: 1;
+    font-family: monospace;
+    font-size: 1.2rem;
+    min-width: 0;
+}
+
+/* --- Chord Buddy Specific --- */
+.display-area {
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    min-height: 180px; 
+    align-items: stretch;
+    box-sizing: border-box;
+}
+.measure-box {
+    display: flex;
+    gap: 0.35rem;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding: 0.4rem;
+    border-right: 2px solid #334155;
+    min-height: 100px;
+}
+.measure-box:last-child {
+    border-right: none;
+}
+.chord-card {
+    background: var(--card-bg);
+    padding: 1rem 0.25rem;
+    border-radius: 8px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    flex: 1;
+    text-align: center;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    box-sizing: border-box;
+}
+.chord-card.small {
+    font-size: 0.9rem;
+}
+.chord-card.minor {
+    color: #cbd5e1; /* Dimmer than pure white */
+}
+.chord-card.active.minor {
+    color: #fff;
+}
+.chord-card:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    background: #475569;
+}
+.chord-card.active {
+    background: var(--accent-color);
+    border-color: #fff;
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+    z-index: 5;
+}
+
+#toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent-color);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    pointer-events: none;
+    z-index: 10000;
+    white-space: nowrap;
+}
+#toast.show {
+    opacity: 1 !important;
+    bottom: 50px !important;
+}
+
+.chord-card .suffix {
+    font-size: 0.65em;
+    vertical-align: super;
+    margin-left: 1px;
+    opacity: 0.9;
+    font-weight: 600;
+}
+@media (max-width: 600px) {
+    .display-area {
+        grid-template-columns: repeat(2, 1fr);
+        height: auto;
+        min-height: auto;
+        gap: 0.5rem;
+        padding: 0.75rem;
+    }
+    .measure-box {
+        min-height: 80px;
+        padding: 0.25rem;
+    }
+    .chord-card {
+        font-size: 1.1rem;
+        padding: 0.75rem 0.2rem;
+    }
+}
+.presets-container {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap; /* Allow wrapping */
+    margin-top: 1rem;
+    padding-bottom: 8px;
+}
+.preset-chip {
+    background: #334155;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.preset-chip:hover { background: #475569; }
+.preset-chip.active { background: var(--accent-color); }
+
+/* --- Groove Buddy Specific --- */
+.sequencer-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    width: 100%;
+    height: 180px;
+    margin-bottom: 1.5rem;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    box-sizing: border-box;
+    position: relative;
+    scroll-padding-left: 85px; /* Match desktop header width + small gap */
+}
+.track {
+    display: flex;
+    align-items: stretch;
+    min-width: min-content;
+    flex: 1;
+}
+.track-header {
+    width: 85px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    flex-shrink: 0;
+    display: flex;
+    gap: 6px;
+    justify-content: flex-start;
+    align-items: center;
+    position: sticky;
+    left: 0;
+    background: var(--panel-color);
+    z-index: 10;
+    padding: 0 6px;
+    border-right: 1px solid #334155;
+    transition: all 0.2s ease;
+    box-shadow: 4px 0 8px rgba(0,0,0,0.2);
+    box-sizing: border-box;
+}
+.steps-wrapper {
+    display: flex;
+    gap: 12px;
+    padding-left: 4px;
+}
+@media (max-width: 600px) {
+    .sequencer-grid {
+        scroll-padding-left: 35px; /* Match mobile header width */
+    }
+    .track-header {
+        width: 35px;
+        padding: 0;
+        justify-content: center;
+    }
+    .track-header span {
+        font-size: 1.1rem;
+    }
+    .track-header span span {
+        display: none;
+    }
+    .steps {
+        min-width: 280px;
+        gap: 2px;
+    }
+}
+.steps {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 4px;
+    flex-grow: 1;
+    min-width: 380px; 
+    scroll-snap-align: start;
+}
+.step {
+    background-color: var(--beat-inactive-odd);
+    border-radius: 4px;
+    cursor: pointer;
+    min-width: 20px;
+    transition: all 0.1s ease;
+}
+.step:hover {
+    filter: brightness(1.2);
+    transform: scale(1.05);
+}
+.step:nth-child(n+5):nth-child(-n+8),
+.step:nth-child(n+13):nth-child(-n+16) {
+    background-color: var(--beat-inactive-even);
+}
+.step.active { 
+    background-color: var(--accent-color) !important; 
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+}
+.step.playing { 
+    filter: brightness(1.5);
+    box-shadow: 0 0 12px var(--accent-color);
+    transform: scale(1.1);
+    z-index: 2;
+}
+.step:nth-child(4n+1) { border-left: 1px solid rgba(255,255,255,0.15); }
+
+/* Label row styles */
+.label-row {
+    margin-top: -4px;
+    min-height: 24px;
+}
+.label-header {
+    background: transparent !important;
+    border-right: 1px solid transparent !important;
+    box-shadow: none !important;
+}
+.step-label {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 600;
+    user-select: none;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+}
+.step-label.beat-start {
+    color: #cbd5e1;
+    font-weight: 800;
+}
+
+/* --- Settings Overlay --- */
+#settingsOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+#settingsOverlay.active { display: flex; }
+.settings-content {
+    background: var(--panel-color);
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+}
+.settings-section {
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 1rem;
+}
+.settings-section h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.setting-item { margin-bottom: 0.75rem; }
+.setting-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 0.25rem;
+}
