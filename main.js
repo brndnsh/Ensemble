@@ -88,55 +88,28 @@ function togglePlay() {
 }
 
 /**
- * Toggles the enabled state of a module (chord or groove).
- * @param {'chord'|'groove'} type 
+ * Toggles the enabled state of a module (chord, groove, or bass).
+ * @param {'chord'|'groove'|'bass'} type 
  */
 function togglePower(type) {
     if (type === 'chord') {
         cb.enabled = !cb.enabled;
         ui.chordPowerBtn.classList.toggle('active', cb.enabled);
-        
-        // Find the content parts of the panel to visually disable
-        const children = Array.from(document.getElementById('chordPanel').children);
-        children.forEach(child => {
-            if (!child.classList.contains('panel-header')) {
-                child.style.opacity = cb.enabled ? '1' : '0.3';
-                child.style.pointerEvents = cb.enabled ? 'all' : 'none';
-                child.style.filter = cb.enabled ? 'none' : 'grayscale(1)';
-            }
-        });
-        
+        document.getElementById('chordPanel').classList.toggle('panel-disabled', !cb.enabled);
         if (!cb.enabled) {
-            // Clear any active visuals immediately
             document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
         }
     } else if (type === 'groove') {
         gb.enabled = !gb.enabled;
         ui.groovePowerBtn.classList.toggle('active', gb.enabled);
-        
-        const children = Array.from(document.getElementById('groovePanel').children);
-        children.forEach(child => {
-            if (!child.classList.contains('panel-header')) {
-                child.style.opacity = gb.enabled ? '1' : '0.3';
-                child.style.pointerEvents = gb.enabled ? 'all' : 'none';
-                child.style.filter = gb.enabled ? 'none' : 'grayscale(1)';
-            }
-        });
-
+        document.getElementById('groovePanel').classList.toggle('panel-disabled', !gb.enabled);
         if (!gb.enabled) {
             document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
         }
     } else if (type === 'bass') {
         bb.enabled = !bb.enabled;
         ui.bassPowerBtn.classList.toggle('active', bb.enabled);
-        
-        const children = Array.from(document.getElementById('bassPanel').children);
-        children.forEach(child => {
-            if (!child.classList.contains('panel-header')) {
-                child.style.opacity = bb.enabled ? '1' : '0.3';
-                child.style.filter = bb.enabled ? 'none' : 'grayscale(1)';
-            }
-        });
+        document.getElementById('bassPanel').classList.toggle('panel-disabled', !bb.enabled);
     }
 }
 
@@ -230,16 +203,41 @@ function scheduleGlobalEvent(step, time) {
     if (totalSteps === 0) return;
     const drumStep = step % totalSteps;
     
-    // Global metronome flash (always runs if playing, or maybe controlled by groove buddy? 
-    // Let's keep it global or tied to Groove Buddy. Tied to Groove Buddy makes sense as it's the "rhythm" section.)
+    // Add micro-timing jitter (max +/- 2ms)
+    const jitter = (Math.random() - 0.5) * 0.004;
+    const t = time + jitter;
+
+    // Global metronome flash
     if (gb.enabled && drumStep % 4 === 0) {
         ctx.drawQueue.push({ type: 'flash', time: time, intensity: (drumStep % 16 === 0 ? 0.2 : 0.1), beat: (drumStep % 16 === 0 ? 1 : 0) });
     }
 
     if (gb.enabled) {
         ctx.drawQueue.push({ type: 'drum_vis', step: drumStep, time: time });
+        
+        const isDownbeat = drumStep % 16 === 0;
+        const isQuarter = drumStep % 4 === 0;
+        const isBackbeat = drumStep % 16 === 4 || drumStep % 16 === 12;
+
         gb.instruments.forEach(inst => {
-            if (inst.steps[drumStep] && !inst.muted) playDrumSound(inst.name, time);
+            if (inst.steps[drumStep] && !inst.muted) {
+                let velocity = 1.0;
+                
+                // Add natural accents
+                if (inst.name === 'Kick') {
+                    if (isDownbeat) velocity = 1.15;
+                    else if (isQuarter) velocity = 1.05;
+                    else velocity = 0.9;
+                } else if (inst.name === 'Snare') {
+                    if (isBackbeat) velocity = 1.1;
+                    else velocity = 0.9;
+                } else if (inst.name === 'HiHat' || inst.name === 'Open') {
+                    if (isQuarter) velocity = 1.1;
+                    else velocity = 0.85;
+                }
+                
+                playDrumSound(inst.name, t, velocity);
+            }
         });
     }
 
@@ -251,7 +249,7 @@ function scheduleGlobalEvent(step, time) {
 
         if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
         else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
-        else if (bb.style === 'quarter' && stepInChord % 4 === 0) shouldPlay = true;
+        else if ((bb.style === 'quarter' || bb.style === 'arp') && stepInChord % 4 === 0) shouldPlay = true;
 
         if (shouldPlay) {
             const quarterStep = Math.floor(stepInChord / 4);
@@ -283,7 +281,7 @@ function scheduleGlobalEvent(step, time) {
 
                 const spb = 60.0 / ctx.bpm;
                 const duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * spb;
-                playBassNote(bassFreq, time, duration);
+                playBassNote(bassFreq, t, duration);
             }
         }
     }
@@ -297,48 +295,48 @@ function scheduleGlobalEvent(step, time) {
         
         // Audio playback logic based on style
         if (cb.style === 'pad') {
-            if (stepInChord === 0) chord.freqs.forEach(f => playNote(f, time, chord.beats * spb, cb.volume * 0.2, 0.5, true, 4, ctx.bpm / 120));
+            if (stepInChord === 0) chord.freqs.forEach(f => playNote(f, t, chord.beats * spb, cb.volume * 0.2, 0.5, true, 4, ctx.bpm / 120));
         } else if (cb.style === 'pulse') {
-            if (measureStep % 4 === 0) chord.freqs.forEach(f => playNote(f, time, spb * 2.0, cb.volume * 0.2, 0.01));
+            if (measureStep % 4 === 0) chord.freqs.forEach(f => playNote(f, t, spb * 2.0, cb.volume * 0.2, 0.01));
         } else if (cb.style === 'strum8') {
-            if (measureStep % 2 === 0) chord.freqs.forEach(f => playNote(f, time, spb * 1.0, cb.volume * (measureStep % 4 === 0 ? 0.2 : 0.15), 0.01));
+            if (measureStep % 2 === 0) chord.freqs.forEach(f => playNote(f, t, spb * 1.0, cb.volume * (measureStep % 4 === 0 ? 0.2 : 0.15), 0.01));
         } else if (cb.style === 'pop') {
             const popSteps = [0, 3, 6, 10, 12, 14];
             if (popSteps.includes(measureStep)) { 
                 const isDownbeat = measureStep % 4 === 0;
-                chord.freqs.forEach(f => playNote(f, time, spb * 1.5, cb.volume * (isDownbeat ? 0.2 : 0.15), 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.5, cb.volume * (isDownbeat ? 0.2 : 0.15), 0.01));
             }
         } else if (cb.style === 'skank') {
-            if (measureStep % 8 === 4) chord.freqs.forEach(f => playNote(f, time, spb * 1.0, cb.volume * 0.2, 0.01));
+            if (measureStep % 8 === 4) chord.freqs.forEach(f => playNote(f, t, spb * 1.0, cb.volume * 0.2, 0.01));
         } else if (cb.style === 'funk') {
             const funkSteps = [0, 3, 4, 7, 8, 11, 12, 15];
             if (funkSteps.includes(measureStep)) {
-                chord.freqs.forEach(f => playNote(f, time, spb * 0.5, cb.volume * (measureStep % 4 === 0 ? 0.2 : 0.15), 0.005));
+                chord.freqs.forEach(f => playNote(f, t, spb * 0.5, cb.volume * (measureStep % 4 === 0 ? 0.2 : 0.15), 0.005));
             }
         } else if (cb.style === 'arpeggio') {
             if (measureStep % 2 === 0) {
                 const noteIdx = (Math.floor(stepInChord / 2)) % chord.freqs.length;
-                playNote(chord.freqs[noteIdx], time, spb * 2.0, cb.volume * 0.2, 0.01);
+                playNote(chord.freqs[noteIdx], t, spb * 2.0, cb.volume * 0.2, 0.01);
             }
         } else if (cb.style === 'tresillo') {
             const tresilloSteps = [0, 3, 6, 8, 11, 14];
             if (tresilloSteps.includes(measureStep)) {
-                chord.freqs.forEach(f => playNote(f, time, spb * 1.5, cb.volume * 0.2, 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.5, cb.volume * 0.2, 0.01));
             }
         } else if (cb.style === 'clave') {
             const sonClave = [0, 3, 6, 10, 12];
             if (sonClave.includes(measureStep)) {
-                chord.freqs.forEach(f => playNote(f, time, spb * 1.0, cb.volume * 0.2, 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.0, cb.volume * 0.2, 0.01));
             }
         } else if (cb.style === 'jazz') {
             const charleston = [0, 6]; 
             if (charleston.includes(measureStep % 8)) {
-                chord.freqs.forEach(f => playNote(f, time, spb * 1.0, cb.volume * 0.2, 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.0, cb.volume * 0.2, 0.01));
             }
         } else if (cb.style === 'bossa') {
             const bossa = [0, 3, 6, 10, 13];
             if (bossa.includes(measureStep)) {
-                chord.freqs.forEach(f => playNote(f, time, spb * 1.2, cb.volume * 0.2, 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.2, cb.volume * 0.2, 0.01));
             }
         }
     }

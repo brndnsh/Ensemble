@@ -46,7 +46,7 @@ export const bb = {
     volume: 0.5,
     lastFreq: null,
     octave: 41,
-    style: 'quarter',
+    style: 'arp',
     history: [],
     chordHistory: []
 };
