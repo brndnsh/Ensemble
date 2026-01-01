@@ -1,10 +1,11 @@
-import { ctx, gb, cb, bb, getUserPresets, getUserDrumPresets, saveUserPresets, saveUserDrumPresets } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, updateBassOctaveLabel } from './ui.js';
-import { initAudio, playNote, playDrumSound, playBassNote } from './engine.js';
-import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES } from './config.js';
+import { ctx, gb, cb, bb, sb, getUserPresets, getUserDrumPresets, saveUserPresets, saveUserDrumPresets } from './state.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, updateBassOctaveLabel, updateSoloistOctaveLabel } from './ui.js';
+import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote } from './engine.js';
+import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES } from './config.js';
 import { normalizeKey } from './utils.js';
 import { validateProgression } from './chords.js';
 import { getBassNote } from './bass.js';
+import { getSoloistNote } from './soloist.js';
 
 let userPresets = getUserPresets();
 let userDrumPresets = getUserDrumPresets();
@@ -47,6 +48,13 @@ function updateStyleUI(styleId) {
 function updateBassStyleUI(styleId) {
     bb.style = styleId;
     document.querySelectorAll('.bass-style-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.id === styleId);
+    });
+}
+
+function updateSoloistStyleUI(styleId) {
+    sb.style = styleId;
+    document.querySelectorAll('.soloist-style-chip').forEach(c => {
         c.classList.toggle('active', c.dataset.id === styleId);
     });
 }
@@ -110,6 +118,10 @@ function togglePower(type) {
         bb.enabled = !bb.enabled;
         ui.bassPowerBtn.classList.toggle('active', bb.enabled);
         document.getElementById('bassPanel').classList.toggle('panel-disabled', !bb.enabled);
+    } else if (type === 'soloist') {
+        sb.enabled = !sb.enabled;
+        ui.soloistPowerBtn.classList.toggle('active', sb.enabled);
+        document.getElementById('soloistPanel').classList.toggle('panel-disabled', !sb.enabled);
     }
 }
 
@@ -284,6 +296,45 @@ function scheduleGlobalEvent(step, time) {
                 playBassNote(bassFreq, t, duration);
             }
         }
+    }
+
+    if (sb.enabled && chordData) {
+        const { chord, stepInChord } = chordData;
+        const measureStep = step % 16;
+        
+        let nextChord = null;
+        const nextChordData = getChordAtStep(step + 4);
+        if (nextChordData) nextChord = nextChordData.chord;
+
+        const soloFreq = getSoloistNote(chord, nextChord, measureStep, sb.lastFreq, sb.octave, sb.style);
+        let midi = null;
+        let noteName = '--';
+        let octave = '';
+
+        if (soloFreq) {
+            sb.lastFreq = soloFreq;
+            
+            midi = Math.round(12 * Math.log2(soloFreq / 440) + 69);
+            const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+            noteName = notes[midi % 12];
+            octave = Math.floor(midi / 12) - 1;
+
+            const spb = 60.0 / ctx.bpm;
+            const duration = 0.25 * spb; // 16th note base duration
+            playSoloNote(soloFreq, t, duration, sb.volume);
+        }
+
+        // Get the actual MIDI notes Chord Buddy is playing
+        const chordNotes = chord.freqs.map(f => Math.round(12 * Math.log2(f / 440) + 69));
+
+        ctx.drawQueue.push({ 
+            type: 'soloist_vis', 
+            name: noteName, 
+            octave: octave, 
+            midi: midi, 
+            time: time,
+            chordNotes: chordNotes
+        });
     }
 
     if (cb.enabled && chordData) {
@@ -464,8 +515,14 @@ function draw() {
         if (ui.bassNoteOctave) ui.bassNoteOctave.textContent = '';
         if (ui.bassChordTones) ui.bassChordTones.innerHTML = '';
         if (ui.bassPolyline) ui.bassPolyline.setAttribute('points', '');
+        if (ui.soloistNoteName) ui.soloistNoteName.textContent = '--';
+        if (ui.soloistNoteOctave) ui.soloistNoteOctave.textContent = '';
+        if (ui.soloistChordTones) ui.soloistChordTones.innerHTML = '';
+        if (ui.soloistPath) ui.soloistPath.setAttribute('d', '');
         bb.history = [];
         bb.chordHistory = [];
+        sb.history = [];
+        sb.chordHistory = [];
         return;
     }
 
@@ -555,6 +612,73 @@ function draw() {
                 }).join(' ');
                 
                 ui.bassPolyline.setAttribute('points', points);
+            }
+        } else if (ev.type === 'soloist_vis') {
+            if (ui.soloistNoteName) ui.soloistNoteName.textContent = ev.name;
+            if (ui.soloistNoteOctave) ui.soloistNoteOctave.textContent = ev.octave;
+            
+            sb.history.push(ev.midi);
+            sb.chordHistory.push(ev.chordNotes);
+            if (sb.history.length > 16) {
+                sb.history.shift();
+                sb.chordHistory.shift();
+            }
+
+            if (ui.soloistPath && sb.history.length > 1) {
+                const width = 100, height = 100, range = 30;
+                const min = sb.octave - range, max = sb.octave + range;
+
+                // Draw historical chord notes as traces
+                if (ui.soloistChordTones) {
+                    ui.soloistChordTones.innerHTML = '';
+                    const historyLen = sb.chordHistory.length;
+                    const stepWidth = width / (historyLen > 1 ? historyLen - 1 : 1);
+                    
+                    sb.chordHistory.forEach((notes, historyIdx) => {
+                        const x = historyIdx * stepWidth;
+                        const opacity = (historyIdx / historyLen) * 0.4; 
+                        
+                        notes.forEach(midi => {
+                            let m = midi;
+                            while (m > max) m -= 12;
+                            while (m < min) m += 12;
+                            
+                            if (m >= min && m <= max) {
+                                const y = height - ((m - min) / (max - min)) * height;
+                                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                                rect.setAttribute("x", (x - stepWidth/2).toString());
+                                rect.setAttribute("y", (y - 2).toString());
+                                rect.setAttribute("width", (stepWidth + 1).toString());
+                                rect.setAttribute("height", "4"); 
+                                rect.setAttribute("fill", "var(--success-color)"); 
+                                rect.setAttribute("fill-opacity", opacity.toString());
+                                ui.soloistChordTones.appendChild(rect);
+                            }
+                        });
+                    });
+                }
+
+                let pathD = "";
+                let hasMoved = false;
+                const historyLen = sb.history.length;
+                
+                sb.history.forEach((midi, i) => {
+                    const x = (i / (historyLen - 1)) * width;
+                    if (midi === null) {
+                        hasMoved = false;
+                        return;
+                    }
+                    const val = Math.max(min, Math.min(max, midi));
+                    const y = height - ((val - min) / (max - min)) * height;
+                    
+                    if (!hasMoved) {
+                        pathD += `M ${x},${y} `;
+                        hasMoved = true;
+                    } else {
+                        pathD += `L ${x},${y} `;
+                    }
+                });
+                ui.soloistPath.setAttribute('d', pathD);
             }
         } else if (ev.type === 'flash') {
             triggerFlash(ev.intensity);
@@ -653,134 +777,155 @@ window.deleteUserDrumPreset = (idx) => {
 
 // --- INITIALIZATION ---
 function init() {
-    renderGrid();
-    Object.keys(DRUM_PRESETS).forEach(k => {
-        const chip = document.createElement('div');
-        chip.className = 'preset-chip drum-preset-chip';
-        chip.textContent = k;
-        if (k === 'Standard') chip.classList.add('active');
-        chip.onclick = () => {
-            loadDrumPreset(k);
-            document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-        };
-        ui.drumPresets.appendChild(chip);
-    });
-    loadDrumPreset('Standard');
-
-    CHORD_PRESETS.forEach(p => {
-        const chip = document.createElement('div');
-        chip.className = 'preset-chip chord-preset-chip';
-        chip.textContent = p.name;
-        if (p.name === 'Pop') chip.classList.add('active');
-        chip.onclick = () => {
-            ui.progInput.value = p.prog;
-            validateProgression(renderChordVisualizer);
-            document.querySelectorAll('.chord-preset-chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-        };
-        ui.chordPresets.appendChild(chip);
-    });
-
-    CHORD_STYLES.forEach(s => {
-        const chip = document.createElement('div');
-        chip.className = 'preset-chip style-preset-chip';
-        chip.textContent = s.name;
-        chip.dataset.id = s.id;
-        if (s.id === cb.style) chip.classList.add('active');
-        chip.onclick = () => updateStyleUI(s.id);
-        ui.chordStylePresets.appendChild(chip);
-    });
-
-    BASS_STYLES.forEach(s => {
-        const chip = document.createElement('div');
-        chip.className = 'preset-chip bass-style-chip';
-        chip.textContent = s.name;
-        chip.dataset.id = s.id;
-        if (s.id === bb.style) chip.classList.add('active');
-        chip.onclick = () => updateBassStyleUI(s.id);
-        ui.bassStylePresets.appendChild(chip);
-    });
-    
-    renderUserPresets();
-    renderUserDrumPresets();
-    loadFromUrl();
-    validateProgression(renderChordVisualizer);
-    updateBassOctaveLabel(bb.octave);
-
-    // Event Listeners
-    ui.playBtn.addEventListener('click', togglePlay);
-    ui.bpmInput.addEventListener('change', e => { setBpm(e.target.value); });
-    ui.tapBtn.addEventListener('click', handleTap);
-    ui.saveBtn.addEventListener('click', saveProgression);
-    ui.saveDrumBtn.addEventListener('click', saveDrumPattern);
-    ui.shareBtn.addEventListener('click', shareProgression);
-    ui.transUpBtn.addEventListener('click', () => transposeKey(1));
-    ui.transDownBtn.addEventListener('click', () => transposeKey(-1));
-    ui.maximizeChordBtn.addEventListener('click', () => {
-        const container = document.querySelector('.app-container');
-        container.classList.toggle('chord-maximized');
-        ui.maximizeChordBtn.textContent = container.classList.contains('chord-maximized') ? '❐' : '⛶';
-    });
-    ui.settingsBtn.addEventListener('click', () => ui.settingsOverlay.classList.add('active'));
-    ui.closeSettings.addEventListener('click', () => ui.settingsOverlay.classList.remove('active'));
-    ui.settingsOverlay.addEventListener('click', (e) => { if(e.target === ui.settingsOverlay) ui.settingsOverlay.classList.remove('active'); });
-    
-    ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); });
-    ui.progInput.addEventListener('input', () => { validateProgression(renderChordVisualizer); });
-    ui.chordVol.addEventListener('input', e => { cb.volume = parseFloat(e.target.value); });
-    ui.bassVol.addEventListener('input', e => { bb.volume = parseFloat(e.target.value); });
-    ui.octave.addEventListener('input', e => { 
-        cb.octave = parseInt(e.target.value); 
-        updateOctaveLabel(cb.octave);
-        validateProgression(renderChordVisualizer); 
-    });
-    ui.bassOctave.addEventListener('input', e => {
-        bb.octave = parseInt(e.target.value);
-        updateBassOctaveLabel(bb.octave);
-    });
-    ui.notationSelect.addEventListener('change', e => { cb.notation = e.target.value; renderChordVisualizer(); });
-    ui.clearDrums.addEventListener('click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); });
-    ui.drumVol.addEventListener('input', e => { gb.volume = parseFloat(e.target.value); });
-    ui.drumBarsSelect.addEventListener('change', e => { 
-        const newCount = parseInt(e.target.value);
-        const oldMeasures = gb.measures;
-        gb.instruments.forEach(inst => {
-            const currentSteps = [...inst.steps];
-            const newSteps = new Array(newCount * 16).fill(0);
-            for (let i = 0; i < newSteps.length; i++) newSteps[i] = currentSteps[i % (oldMeasures * 16)];
-            inst.steps = newSteps;
-        });
-        gb.measures = newCount;
+    try {
         renderGrid();
-    });
-    ui.masterVol.addEventListener('input', e => {
-        if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(parseFloat(e.target.value), ctx.audio.currentTime, 0.02);
-    });
-    ui.swingSlider.addEventListener('input', e => { gb.swing = parseInt(e.target.value); });
-    ui.swingBase.addEventListener('change', e => { gb.swingSub = e.target.value; });
+        Object.keys(DRUM_PRESETS).forEach(k => {
+            const chip = document.createElement('div');
+            chip.className = 'preset-chip drum-preset-chip';
+            chip.textContent = k;
+            if (k === 'Standard') chip.classList.add('active');
+            chip.onclick = () => {
+                loadDrumPreset(k);
+                document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+            };
+            ui.drumPresets.appendChild(chip);
+        });
+        loadDrumPreset('Standard');
 
-    ui.chordPowerBtn.addEventListener('click', () => togglePower('chord'));
-    ui.groovePowerBtn.addEventListener('click', () => togglePower('groove'));
-    ui.bassPowerBtn.addEventListener('click', () => togglePower('bass'));
+        CHORD_PRESETS.forEach(p => {
+            const chip = document.createElement('div');
+            chip.className = 'preset-chip chord-preset-chip';
+            chip.textContent = p.name;
+            if (p.name === 'Pop') chip.classList.add('active');
+            chip.onclick = () => {
+                ui.progInput.value = p.prog;
+                validateProgression(renderChordVisualizer);
+                document.querySelectorAll('.chord-preset-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+            };
+            ui.chordPresets.appendChild(chip);
+        });
 
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            if (ctx.audio && (ctx.audio.state === 'suspended' || ctx.audio.state === 'interrupted')) {
-                ctx.audio.resume();
+        CHORD_STYLES.forEach(s => {
+            const chip = document.createElement('div');
+            chip.className = 'preset-chip style-preset-chip';
+            chip.textContent = s.name;
+            chip.dataset.id = s.id;
+            if (s.id === cb.style) chip.classList.add('active');
+            chip.onclick = () => updateStyleUI(s.id);
+            ui.chordStylePresets.appendChild(chip);
+        });
+
+        BASS_STYLES.forEach(s => {
+            const chip = document.createElement('div');
+            chip.className = 'preset-chip bass-style-chip';
+            chip.textContent = s.name;
+            chip.dataset.id = s.id;
+            if (s.id === bb.style) chip.classList.add('active');
+            chip.onclick = () => updateBassStyleUI(s.id);
+            ui.bassStylePresets.appendChild(chip);
+        });
+
+        SOLOIST_STYLES.forEach(s => {
+            const chip = document.createElement('div');
+            chip.className = 'preset-chip soloist-style-chip';
+            chip.textContent = s.name;
+            chip.dataset.id = s.id;
+            if (s.id === sb.style) chip.classList.add('active');
+            chip.onclick = () => updateSoloistStyleUI(s.id);
+            ui.soloistStylePresets.appendChild(chip);
+        });
+        
+        renderUserPresets();
+        renderUserDrumPresets();
+        loadFromUrl();
+        validateProgression(renderChordVisualizer);
+        updateBassOctaveLabel(bb.octave);
+        updateSoloistOctaveLabel(sb.octave);
+
+        // Event Listeners
+        ui.playBtn.addEventListener('click', togglePlay);
+        ui.bpmInput.addEventListener('change', e => { setBpm(e.target.value); });
+        ui.tapBtn.addEventListener('click', handleTap);
+        ui.saveBtn.addEventListener('click', saveProgression);
+        ui.saveDrumBtn.addEventListener('click', saveDrumPattern);
+        ui.shareBtn.addEventListener('click', shareProgression);
+        ui.transUpBtn.addEventListener('click', () => transposeKey(1));
+        ui.transDownBtn.addEventListener('click', () => transposeKey(-1));
+        ui.maximizeChordBtn.addEventListener('click', () => {
+            const container = document.querySelector('.app-container');
+            container.classList.toggle('chord-maximized');
+            ui.maximizeChordBtn.textContent = container.classList.contains('chord-maximized') ? '❐' : '⛶';
+        });
+        ui.settingsBtn.addEventListener('click', () => ui.settingsOverlay.classList.add('active'));
+        ui.closeSettings.addEventListener('click', () => ui.settingsOverlay.classList.remove('active'));
+        ui.settingsOverlay.addEventListener('click', (e) => { if(e.target === ui.settingsOverlay) ui.settingsOverlay.classList.remove('active'); });
+        
+        ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); });
+        ui.progInput.addEventListener('input', () => { validateProgression(renderChordVisualizer); });
+        ui.chordVol.addEventListener('input', e => { cb.volume = parseFloat(e.target.value); });
+        ui.bassVol.addEventListener('input', e => { bb.volume = parseFloat(e.target.value); });
+        ui.soloistVol.addEventListener('input', e => { sb.volume = parseFloat(e.target.value); });
+        ui.octave.addEventListener('input', e => { 
+            cb.octave = parseInt(e.target.value); 
+            updateOctaveLabel(cb.octave);
+            validateProgression(renderChordVisualizer); 
+        });
+        ui.bassOctave.addEventListener('input', e => {
+            bb.octave = parseInt(e.target.value);
+            updateBassOctaveLabel(bb.octave);
+        });
+        ui.soloistOctave.addEventListener('input', e => {
+            sb.octave = parseInt(e.target.value);
+            updateSoloistOctaveLabel(sb.octave);
+        });
+        ui.notationSelect.addEventListener('change', e => { cb.notation = e.target.value; renderChordVisualizer(); });
+        ui.clearDrums.addEventListener('click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); });
+        ui.drumVol.addEventListener('input', e => { gb.volume = parseFloat(e.target.value); });
+        ui.drumBarsSelect.addEventListener('change', e => { 
+            const newCount = parseInt(e.target.value);
+            const oldMeasures = gb.measures;
+            gb.instruments.forEach(inst => {
+                const currentSteps = [...inst.steps];
+                const newSteps = new Array(newCount * 16).fill(0);
+                for (let i = 0; i < newSteps.length; i++) newSteps[i] = currentSteps[i % (oldMeasures * 16)];
+                inst.steps = newSteps;
+            });
+            gb.measures = newCount;
+            renderGrid();
+        });
+        ui.masterVol.addEventListener('input', e => {
+            if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(parseFloat(e.target.value), ctx.audio.currentTime, 0.02);
+        });
+        ui.swingSlider.addEventListener('input', e => { gb.swing = parseInt(e.target.value); });
+        ui.swingBase.addEventListener('change', e => { gb.swingSub = e.target.value; });
+
+        ui.chordPowerBtn.addEventListener('click', () => togglePower('chord'));
+        ui.groovePowerBtn.addEventListener('click', () => togglePower('groove'));
+        ui.bassPowerBtn.addEventListener('click', () => togglePower('bass'));
+        ui.soloistPowerBtn.addEventListener('click', () => togglePower('soloist'));
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                if (ctx.audio && (ctx.audio.state === 'suspended' || ctx.audio.state === 'interrupted')) {
+                    ctx.audio.resume();
+                }
+                if (ctx.isPlaying && iosAudioUnlocked) {
+                     silentAudio.play().catch(e => console.log("Resume silent audio failed", e));
+                }
             }
-            if (ctx.isPlaying && iosAudioUnlocked) {
-                 silentAudio.play().catch(e => console.log("Resume silent audio failed", e));
-            }
-        }
-    });
+        });
 
-    window.addEventListener('keydown', e => {
-        if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
-            e.preventDefault();
-            togglePlay();
-        }
-    });
+        window.addEventListener('keydown', e => {
+            if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+                e.preventDefault();
+                togglePlay();
+            }
+        });
+    } catch (e) {
+        console.error("Error during init:", e);
+    }
 }
 
 function setBpm(val) {

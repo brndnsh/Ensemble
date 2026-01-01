@@ -9,6 +9,7 @@ export const ui = {
     chordPowerBtn: document.getElementById('chordPowerBtn'),
     groovePowerBtn: document.getElementById('groovePowerBtn'),
     bassPowerBtn: document.getElementById('bassPowerBtn'),
+    soloistPowerBtn: document.getElementById('soloistPowerBtn'),
     progInput: document.getElementById('progressionInput'),
     saveBtn: document.getElementById('saveBtn'),
     shareBtn: document.getElementById('shareBtn'),
@@ -17,8 +18,10 @@ export const ui = {
     userPresetsContainer: document.getElementById('userPresetsContainer'),
     chordStylePresets: document.getElementById('chordStylePresets'),
     bassStylePresets: document.getElementById('bassStylePresets'),
+    soloistStylePresets: document.getElementById('soloistStylePresets'),
     chordVol: document.getElementById('chordVolume'),
     bassVol: document.getElementById('bassVolume'),
+    soloistVol: document.getElementById('soloistVolume'),
     drumBarsSelect: document.getElementById('drumBarsSelect'),
     drumPresets: document.getElementById('drumPresets'),
     userDrumPresetsContainer: document.getElementById('userDrumPresetsContainer'),
@@ -34,11 +37,18 @@ export const ui = {
     octaveLabel: document.getElementById('octaveLabel'),
     bassOctave: document.getElementById('bassOctaveSlider'),
     bassOctaveLabel: document.getElementById('bassOctaveLabel'),
+    soloistOctave: document.getElementById('soloistOctaveSlider'),
+    soloistOctaveLabel: document.getElementById('soloistOctaveLabel'),
     bassHeaderReg: document.getElementById('bassHeaderReg'),
+    soloistHeaderReg: document.getElementById('soloistHeaderReg'),
     bassNoteName: document.getElementById('bassNoteName'),
     bassNoteOctave: document.getElementById('bassNoteOctave'),
+    soloistNoteName: document.getElementById('soloistNoteName'),
+    soloistNoteOctave: document.getElementById('soloistNoteOctave'),
     bassPolyline: document.getElementById('bassPolyline'),
     bassChordTones: document.getElementById('bassChordTones'),
+    soloistPath: document.getElementById('soloistPath'),
+    soloistChordTones: document.getElementById('soloistChordTones'),
     notationSelect: document.getElementById('notationSelect'),
     countIn: document.getElementById('countInCheck'),
     swingSlider: document.getElementById('swingSlider'),
@@ -86,4 +96,13 @@ export function updateBassOctaveLabel(midi) {
     const label = `${noteName}${octave}`;
     ui.bassOctaveLabel.textContent = label;
     if (ui.bassHeaderReg) ui.bassHeaderReg.textContent = label;
+}
+
+export function updateSoloistOctaveLabel(midi) {
+    const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+    const noteName = notes[midi % 12];
+    const octave = Math.floor(midi / 12) - 1;
+    const label = `${noteName}${octave}`;
+    ui.soloistOctaveLabel.textContent = label;
+    if (ui.soloistHeaderReg) ui.soloistHeaderReg.textContent = label;
 }

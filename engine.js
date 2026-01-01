@@ -181,6 +181,70 @@ export function playBassNote(freq, time, duration) {
     oscBody.onended = () => safeDisconnect([gain, definition, scoop, weight, mainFilter, growlFilter, growlGain, thumpGain, thumpFilter, oscBody, oscGrowl, thump]);
 }
 
+export function playSoloNote(freq, time, duration, vol = 0.4) {
+    if (!Number.isFinite(freq)) return;
+    
+    const randomizedVol = vol * (0.95 + Math.random() * 0.1);
+    const gain = ctx.audio.createGain();
+    const pan = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
+    if (ctx.audio.createStereoPanner) pan.pan.setValueAtTime((Math.random() * 2 - 1) * 0.3, time);
+
+    // Osc 1: Primary Sawtooth
+    const osc1 = ctx.audio.createOscillator();
+    osc1.type = 'sawtooth';
+    // Slight pitch scoop at the start
+    osc1.frequency.setValueAtTime(freq * 0.97, time);
+    osc1.frequency.exponentialRampToValueAtTime(freq, time + 0.04);
+    
+    // Osc 2: Detuned Sawtooth for thickness
+    const osc2 = ctx.audio.createOscillator();
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(freq * 0.97, time);
+    osc2.frequency.exponentialRampToValueAtTime(freq, time + 0.04);
+    osc2.detune.setValueAtTime(14, time); // 14 cents detune
+
+    // Vibrato LFO (kicks in after 150ms)
+    const vibrato = ctx.audio.createOscillator();
+    vibrato.frequency.setValueAtTime(5.8, time); // Vibrato speed
+    const vibGain = ctx.audio.createGain();
+    vibGain.gain.setValueAtTime(0, time);
+    vibGain.gain.setValueAtTime(0, time + 0.15);
+    vibGain.gain.linearRampToValueAtTime(freq * 0.007, time + 0.4); 
+    vibrato.connect(vibGain);
+    vibGain.connect(osc1.frequency);
+    vibGain.connect(osc2.frequency);
+
+    // Resonant Filter
+    const filter = ctx.audio.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(4500, time);
+    filter.frequency.exponentialRampToValueAtTime(1800, time + duration);
+    filter.Q.setValueAtTime(3.5, time); // Resonance
+
+    // Amplitude Envelope
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(randomizedVol, time + 0.015);
+    gain.gain.exponentialRampToValueAtTime(randomizedVol * 0.8, time + duration * 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration * 1.2);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(pan);
+    pan.connect(ctx.masterGain);
+
+    vibrato.start(time);
+    osc1.start(time);
+    osc2.start(time);
+    
+    const stopTime = time + duration * 1.2 + 0.1;
+    vibrato.stop(stopTime);
+    osc1.stop(stopTime);
+    osc2.stop(stopTime);
+
+    osc1.onended = () => safeDisconnect([pan, gain, filter, osc1, osc2, vibrato, vibGain]);
+}
+
 export function playDrumSound(name, time, velocity = 1.0) {
     const masterVol = gb.volume * velocity;
     if (name === 'Kick') {
