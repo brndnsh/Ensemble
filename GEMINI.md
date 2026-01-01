@@ -65,6 +65,7 @@ Navigate to `http://localhost:8000` (or the port shown by your server) to view t
 
 ## Architecture Notes
 
-*   **Audio Scheduling**: The `scheduler()` function in `main.js` looks ahead to schedule audio events precisely, while `requestAnimationFrame` handles the visual synchronization (`draw()` loop).
+*   **Audio Scheduling**: The `scheduler()` function in `main.js` looks ahead to schedule audio events precisely. It employs a dual-clock system: a "swung" clock for the rhythm section and an "unswung" clock for the soloist, allowing for a more laid-back melodic feel. `requestAnimationFrame` handles visual synchronization.
+*   **Performance Optimization**: DOM elements for the sequencer grid and chord progression cards are cached in the global state during rendering to minimize query overhead in the high-frequency animation and state-update loops.
 *   **State Management**: State is divided into contexts (`ctx` for audio/runtime, `cb` for Chords, `gb` for Grooves, `bb` for Bassist, `sb` for Soloist) in `state.js`.
 *   **Persistence**: User presets and preferences are saved to `localStorage`.
