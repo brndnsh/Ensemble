@@ -279,7 +279,7 @@ function scheduleGlobalEvent(step, time) {
                 const noteName = notes[midi % 12];
                 const octave = Math.floor(midi / 12) - 1;
                 
-                // Get the actual MIDI notes Chord Buddy is playing
+                // Get the actual MIDI notes Chords is playing
                 const chordNotes = chord.freqs.map(f => Math.round(12 * Math.log2(f / 440) + 69));
 
                 ctx.drawQueue.push({ 
@@ -324,7 +324,7 @@ function scheduleGlobalEvent(step, time) {
             playSoloNote(soloFreq, t, duration, sb.volume);
         }
 
-        // Get the actual MIDI notes Chord Buddy is playing
+        // Get the actual MIDI notes Chords is playing
         const chordNotes = chord.freqs.map(f => Math.round(12 * Math.log2(f / 440) + 69));
 
         ctx.drawQueue.push({ 
@@ -580,7 +580,7 @@ function draw() {
                     
                     bb.chordHistory.forEach((notes, historyIdx) => {
                         const x = historyIdx * stepWidth;
-                        const opacity = (historyIdx / historyLen) * 0.4; 
+                        const opacity = (historyIdx / historyLen) * 0.6; 
                         
                         notes.forEach(midi => {
                             let m = midi;
@@ -636,7 +636,7 @@ function draw() {
                     
                     sb.chordHistory.forEach((notes, historyIdx) => {
                         const x = historyIdx * stepWidth;
-                        const opacity = (historyIdx / historyLen) * 0.4; 
+                        const opacity = (historyIdx / historyLen) * 0.6; 
                         
                         notes.forEach(midi => {
                             let m = midi;

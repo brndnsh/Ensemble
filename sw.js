@@ -8,6 +8,8 @@ const ASSETS = [
     './config.js',
     './utils.js',
     './chords.js',
+    './bass.js',
+    './soloist.js',
     './styles.css',
     './manifest.json',
     './icon.svg',

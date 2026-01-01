@@ -322,7 +322,7 @@ input[type="range"] {
     min-width: 0;
 }
 
-/* --- Chord Buddy Specific --- */
+/* --- Chords Specific --- */
 .display-area {
     background: #0f172a;
     border-radius: 12px;
@@ -462,7 +462,7 @@ input[type="range"] {
 .preset-chip:hover { background: #475569; }
 .preset-chip.active { background: var(--accent-color); }
 
-/* --- Groove Buddy Specific --- */
+/* --- Grooves Specific --- */
 .sequencer-grid {
     display: flex;
     flex-direction: column;
@@ -581,11 +581,13 @@ input[type="range"] {
     font-weight: 600;
     user-select: none;
     font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+    min-width: 20px;
 }
 .step-label.beat-start {
     color: #cbd5e1;
     font-weight: 800;
 }
+.step-label:nth-child(4n+1) { border-left: 1px solid transparent; }
 
 /* --- Settings Overlay --- */
 #settingsOverlay {

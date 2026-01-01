@@ -30,15 +30,15 @@
 </header>
 
 <div class="app-container">
-    <!-- CHORD BUDDY PANEL -->
+    <!-- CHORD PANEL -->
     <div class="panel" id="chordPanel">
         <div class="panel-header chord-panel-header">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button id="chordPowerBtn" class="power-btn active" aria-label="Toggle Chord Buddy">⏻</button>
-                <h2>Chord Buddy</h2>
+                <button id="chordPowerBtn" class="power-btn active" aria-label="Toggle Chords">⏻</button>
+                <h2>Chords</h2>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
-                <button id="maximizeChordBtn" title="Maximize" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Maximize Chord Buddy">⛶</button>
+                <button id="maximizeChordBtn" title="Maximize" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Maximize Chords">⛶</button>
                 <select id="keySelect" style="width: auto;" aria-label="Select Key">
                     <option value="C">Key: C</option>
                     <option value="Db">Key: Db</option>
@@ -79,12 +79,12 @@
         </div>
     </div>
 
-    <!-- GROOVE BUDDY PANEL -->
+    <!-- GROOVE PANEL -->
     <div class="panel" id="groovePanel">
         <div class="panel-header groove-panel-header">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button id="groovePowerBtn" class="power-btn active" aria-label="Toggle Groove Buddy">⏻</button>
-                <h2>Groove Buddy</h2>
+                <button id="groovePowerBtn" class="power-btn active" aria-label="Toggle Grooves">⏻</button>
+                <h2>Grooves</h2>
             </div>
             <div style="display: flex; align-items: center;">
                 <div class="control-group">
@@ -134,12 +134,12 @@
         </div>
     </div>
 
-    <!-- BASS BUDDY PANEL -->
+    <!-- BASSIST PANEL -->
     <div class="panel" id="bassPanel">
         <div class="panel-header bass-panel-header">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button id="bassPowerBtn" class="power-btn active" aria-label="Toggle Bass Buddy">⏻</button>
-                <h2>Bass Buddy</h2>
+                <button id="bassPowerBtn" class="power-btn active" aria-label="Toggle Bassist">⏻</button>
+                <h2>Bassist</h2>
             </div>
             <div style="display: flex; align-items: center;">
                 <div class="control-group">
@@ -157,7 +157,7 @@
              <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; z-index: 1;">
                 <svg id="bassGraph" viewBox="0 0 100 100" preserveAspectRatio="none" style="display: block; width: 100%; height: 100%;">
                     <g id="bassChordTones"></g>
-                    <polyline id="bassPolyline" points="" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-opacity="0.4" stroke-linejoin="round" />
+                    <polyline id="bassPolyline" points="" fill="none" stroke="var(--accent-color)" stroke-width="3" stroke-opacity="0.8" stroke-linejoin="round" />
                 </svg>
              </div>
         </div>
@@ -176,12 +176,12 @@
         </div>
     </div>
 
-    <!-- SOLOIST BUDDY PANEL -->
+    <!-- SOLOIST PANEL -->
     <div class="panel" id="soloistPanel">
         <div class="panel-header soloist-panel-header">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button id="soloistPowerBtn" class="power-btn" aria-label="Toggle Soloist Buddy">⏻</button>
-                <h2>Soloist Buddy</h2>
+                <button id="soloistPowerBtn" class="power-btn" aria-label="Toggle Soloist">⏻</button>
+                <h2>Soloist</h2>
             </div>
             <div style="display: flex; align-items: center;">
                 <div class="control-group">
@@ -199,7 +199,7 @@
              <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; z-index: 1;">
                 <svg id="soloistGraph" viewBox="0 0 100 100" preserveAspectRatio="none" style="display: block; width: 100%; height: 100%;">
                     <g id="soloistChordTones"></g>
-                    <path id="soloistPath" d="" fill="none" stroke="#f472b6" stroke-width="2" stroke-opacity="0.4" stroke-linejoin="round" stroke-linecap="round" />
+                    <path id="soloistPath" d="" fill="none" stroke="#f472b6" stroke-width="3" stroke-opacity="0.8" stroke-linejoin="round" stroke-linecap="round" />
                 </svg>
              </div>
         </div>
@@ -325,7 +325,7 @@
                 </summary>
                 <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
                     <div style="margin-bottom: 1rem;">
-                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">🎹 Chord Buddy</h4>
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">🎹 Chords</h4>
                         <p>Enter progressions using three flexible notations. You can separate chords with spaces or use <code>|</code> to denote measures (each measure defaults to 4 beats).</p>
                         
                         <ul style="margin-left: 1.2rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
@@ -348,7 +348,7 @@
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">🥁 Groove Buddy</h4>
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">🥁 Grooves</h4>
                         <p>Tap grid steps to program beats. Each row represents a drum (Kick, Snare, HiHat, Open Hat). Use the <strong>Bars</strong> selector to change pattern length.</p>
                         <p style="margin-top: 0.3rem;"><strong>Swing:</strong> Adjust the slider to add a "shuffle" feel. Choose between 1/8 or 1/16 note swing bases.</p>
                     </div>
