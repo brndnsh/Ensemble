@@ -164,10 +164,16 @@ header h1 { margin: 0; font-size: 1.5rem; color: white; }
     #bpmInput {
         width: 45px !important;
     }
-    .chord-panel-header {
-        flex-direction: column;
+    .chord-panel-header, .groove-panel-header {
+        flex-direction: column !important;
         align-items: flex-start !important;
         gap: 0.5rem;
+        height: auto !important;
+    }
+    .chord-panel-header > div:last-child, .groove-panel-header > div:last-child {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
     }
     #progressionInput {
         min-width: 0;

@@ -32,7 +32,7 @@
 <div class="app-container">
     <!-- CHORD BUDDY PANEL -->
     <div class="panel" id="chordPanel">
-        <div class="panel-header">
+        <div class="panel-header chord-panel-header">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
                 <button id="chordPowerBtn" class="power-btn active" aria-label="Toggle Chord Buddy">⏻</button>
                 <h2>Chord Buddy</h2>
@@ -81,18 +81,20 @@
 
     <!-- GROOVE BUDDY PANEL -->
     <div class="panel" id="groovePanel">
-        <div class="panel-header">
+        <div class="panel-header groove-panel-header">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
                 <button id="groovePowerBtn" class="power-btn active" aria-label="Toggle Groove Buddy">⏻</button>
                 <h2>Groove Buddy</h2>
             </div>
-            <div class="control-group">
-                <span class="control-label" style="font-size: 0.7rem;">Bars</span>
-                <select id="drumBarsSelect" style="width: 50px; border: none; background: transparent; font-size: 0.9rem; padding: 0; color: white;" aria-label="Number of Bars">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="4">4</option>
-                </select>
+            <div style="display: flex; align-items: center;">
+                <div class="control-group">
+                    <span class="control-label" style="font-size: 0.7rem;">Bars</span>
+                    <select id="drumBarsSelect" style="width: 40px; border: none; background: transparent; font-size: 0.9rem; padding: 0; color: white;" aria-label="Number of Bars">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="4">4</option>
+                    </select>
+                </div>
             </div>
         </div>
 
