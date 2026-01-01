@@ -1,4 +1,4 @@
-import { ctx, gb, cb } from './state.js';
+import { ctx, gb, cb, bb } from './state.js';
 import { ui, triggerFlash } from './ui.js';
 
 /**
@@ -82,6 +82,33 @@ export function playNote(freq, time, duration, vol = 0.1, att = 0.05, soft = fal
             tine.connect(tGain); tGain.connect(pan); tine.start(time); tine.stop(time + 0.15);
         }
     } catch (e) { console.error("playNote error:", e); }
+}
+
+export function playBassNote(freq, time, duration) {
+    if (!Number.isFinite(freq)) return;
+    const vol = bb.volume;
+    const osc = ctx.audio.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq, time);
+
+    const filter = ctx.audio.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, time);
+    filter.frequency.exponentialRampToValueAtTime(150, time + duration * 1.2);
+    filter.Q.value = 1;
+
+    const gain = ctx.audio.createGain();
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol, time + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + duration * 1.2);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.masterGain);
+
+    osc.start(time);
+    osc.stop(time + duration * 1.2 + 0.1);
+    osc.onended = () => { gain.disconnect(); filter.disconnect(); osc.disconnect(); };
 }
 
 export function playDrumSound(name, time) {

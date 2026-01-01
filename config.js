@@ -36,6 +36,12 @@ export const CHORD_STYLES = [
     { id: 'bossa', name: 'Bossa' }
 ];
 
+export const BASS_STYLES = [
+    { id: 'whole', name: 'Whole' },
+    { id: 'half', name: 'Half' },
+    { id: 'quarter', name: 'Walking' }
+];
+
 export const CHORD_PRESETS = [
     { name: "Pop", prog: "I | V | vi | IV" },
     { name: "12-Bar Blues", prog: "I7 | I7 | I7 | I7 | IV7 | IV7 | I7 | I7 | V7 | IV7 | I7 | V7" },

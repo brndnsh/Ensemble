@@ -41,6 +41,16 @@ export const gb = {
     audioBuffers: {} 
 };
 
+export const bb = {
+    enabled: true,
+    volume: 0.5,
+    lastFreq: null,
+    octave: 41,
+    style: 'quarter',
+    history: [],
+    chordHistory: []
+};
+
 export const getUserPresets = () => JSON.parse(localStorage.getItem('ensemble_userPresets') || '[]');
 export const getUserDrumPresets = () => JSON.parse(localStorage.getItem('ensemble_userDrumPresets') || '[]');
 
