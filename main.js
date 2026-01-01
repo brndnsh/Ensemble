@@ -620,6 +620,17 @@ function init() {
     ui.chordPowerBtn.addEventListener('click', () => togglePower('chord'));
     ui.groovePowerBtn.addEventListener('click', () => togglePower('groove'));
 
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            if (ctx.audio && (ctx.audio.state === 'suspended' || ctx.audio.state === 'interrupted')) {
+                ctx.audio.resume();
+            }
+            if (ctx.isPlaying && iosAudioUnlocked) {
+                 silentAudio.play().catch(e => console.log("Resume silent audio failed", e));
+            }
+        }
+    });
+
     window.addEventListener('keydown', e => {
         if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
             e.preventDefault();
