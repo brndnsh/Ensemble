@@ -200,7 +200,56 @@
             <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
         </div>
 
-        <div style="margin-top: 2rem; border-top: 1px solid #334155; padding-top: 1rem;">
+        <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">
+            <details>
+                <summary style="cursor: pointer; font-weight: bold; color: var(--text-primary); list-style: none; display: flex; align-items: center; justify-content: space-between;">
+                    <span>Help & Instructions</span>
+                    <span style="font-size: 0.8em;">▼</span>
+                </summary>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">🎹 Chord Buddy</h4>
+                        <p>Enter progressions using three flexible notations. You can separate chords with spaces or use <code>|</code> to denote measures (each measure defaults to 4 beats).</p>
+                        
+                        <ul style="margin-left: 1.2rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                            <li><strong>Roman Numerals:</strong> Use <code>I, IV, V, vi, ii</code>. Uppercase for major, lowercase for minor (e.g., <code>I vi IV V</code>).</li>
+                            <li><strong>Nashville Numbers:</strong> Use <code>1, 4, 5, 6-, 2-</code>. Add <code>-</code> for minor (e.g., <code>1 6- 4 5</code>).</li>
+                            <li><strong>Chord Names:</strong> Use standard names like <code>C, Am, F, G, Bb</code>.</li>
+                        </ul>
+
+                        <p style="margin-top: 0.8rem;"><strong>Supported Qualities:</strong></p>
+                        <ul style="margin-left: 1.2rem; margin-top: 0.3rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem;">
+                            <li><code>7</code>: Dominant 7th</li>
+                            <li><code>maj7</code>: Major 7th</li>
+                            <li><code>m, min, -</code>: Minor</li>
+                            <li><code>m7</code>: Minor 7th</li>
+                            <li><code>dim, o</code>: Diminished</li>
+                            <li><code>m7b5, ø</code>: Half-dim</li>
+                            <li><code>aug, +</code>: Augmented</li>
+                            <li><code># / b</code>: Accidentals</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">🥁 Groove Buddy</h4>
+                        <p>Tap grid steps to program beats. Each row represents a drum (Kick, Snare, HiHat, Open Hat). Use the <strong>Bars</strong> selector to change pattern length.</p>
+                        <p style="margin-top: 0.3rem;"><strong>Swing:</strong> Adjust the slider to add a "shuffle" feel. Choose between 1/8 or 1/16 note swing bases.</p>
+                    </div>
+
+                    <div>
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">⌨️ Shortcuts & Tips</h4>
+                        <ul style="margin-left: 1.2rem; display: flex; flex-direction: column; gap: 0.2rem;">
+                            <li><code>Space</code>: Start / Stop playback.</li>
+                            <li><code>⛶</code>: Maximize chord display (ideal for practice).</li>
+                            <li><code>🔗</code>: Copy a shareable URL of your current setup.</li>
+                            <li><code>💾</code>: Save your custom progressions or drum beats.</li>
+                        </ul>
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">
             <button id="resetSettingsBtn" style="width: 100%; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--error-color);">Reset to Defaults</button>
         </div>
     </div>
