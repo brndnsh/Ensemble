@@ -80,6 +80,48 @@ function togglePlay() {
 }
 
 /**
+ * Toggles the enabled state of a module (chord or groove).
+ * @param {'chord'|'groove'} type 
+ */
+function togglePower(type) {
+    if (type === 'chord') {
+        cb.enabled = !cb.enabled;
+        ui.chordPowerBtn.classList.toggle('active', cb.enabled);
+        
+        // Find the content parts of the panel to visually disable
+        const children = Array.from(document.getElementById('chordPanel').children);
+        children.forEach(child => {
+            if (!child.classList.contains('panel-header')) {
+                child.style.opacity = cb.enabled ? '1' : '0.3';
+                child.style.pointerEvents = cb.enabled ? 'all' : 'none';
+                child.style.filter = cb.enabled ? 'none' : 'grayscale(1)';
+            }
+        });
+        
+        if (!cb.enabled) {
+            // Clear any active visuals immediately
+            document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
+        }
+    } else if (type === 'groove') {
+        gb.enabled = !gb.enabled;
+        ui.groovePowerBtn.classList.toggle('active', gb.enabled);
+        
+        const children = Array.from(document.getElementById('groovePanel').children);
+        children.forEach(child => {
+            if (!child.classList.contains('panel-header')) {
+                child.style.opacity = gb.enabled ? '1' : '0.3';
+                child.style.pointerEvents = gb.enabled ? 'all' : 'none';
+                child.style.filter = gb.enabled ? 'none' : 'grayscale(1)';
+            }
+        });
+
+        if (!gb.enabled) {
+            document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
+        }
+    }
+}
+
+/**
  * The main audio scheduler loop.
  */
 function scheduler() {
@@ -169,16 +211,21 @@ function scheduleGlobalEvent(step, time) {
     if (totalSteps === 0) return;
     const drumStep = step % totalSteps;
     
-    if (drumStep % 4 === 0) {
+    // Global metronome flash (always runs if playing, or maybe controlled by groove buddy? 
+    // Let's keep it global or tied to Groove Buddy. Tied to Groove Buddy makes sense as it's the "rhythm" section.)
+    if (gb.enabled && drumStep % 4 === 0) {
         ctx.drawQueue.push({ type: 'flash', time: time, intensity: (drumStep % 16 === 0 ? 0.2 : 0.1), beat: (drumStep % 16 === 0 ? 1 : 0) });
     }
 
-    ctx.drawQueue.push({ type: 'drum_vis', step: drumStep, time: time });
-    gb.instruments.forEach(inst => {
-        if (inst.steps[drumStep] && !inst.muted) playDrumSound(inst.name, time);
-    });
+    if (gb.enabled) {
+        ctx.drawQueue.push({ type: 'drum_vis', step: drumStep, time: time });
+        gb.instruments.forEach(inst => {
+            if (inst.steps[drumStep] && !inst.muted) playDrumSound(inst.name, time);
+        });
+    }
+
     const chordData = getChordAtStep(step);
-    if (chordData) {
+    if (cb.enabled && chordData) {
         const { chord, stepInChord, chordIndex } = chordData;
         const spb = 60.0 / ctx.bpm;
         const measureStep = step % 16;
@@ -569,6 +616,9 @@ function init() {
     });
     ui.swingSlider.addEventListener('input', e => { gb.swing = parseInt(e.target.value); });
     ui.swingBase.addEventListener('change', e => { gb.swingSub = e.target.value; });
+
+    ui.chordPowerBtn.addEventListener('click', () => togglePower('chord'));
+    ui.groovePowerBtn.addEventListener('click', () => togglePower('groove'));
 
     window.addEventListener('keydown', e => {
         if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {

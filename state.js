@@ -16,6 +16,7 @@ export const ctx = {
 };
 
 export const cb = {
+    enabled: true,
     progression: [],
     key: 'C',
     style: 'pad',
@@ -26,6 +27,7 @@ export const cb = {
 };
 
 export const gb = {
+    enabled: true,
     instruments: [
         { name: 'Kick',  symbol: '🥁', steps: new Array(16).fill(0), muted: false },
         { name: 'Snare', symbol: '👏', steps: new Array(16).fill(0), muted: false },
