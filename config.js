@@ -43,6 +43,13 @@ export const BASS_STYLES = [
     { id: 'quarter', name: 'Walking' }
 ];
 
+export const SOLOIST_STYLES = [
+    { id: 'bird', name: 'Bebop' },
+    { id: 'blues', name: 'Blues' },
+    { id: 'scalar', name: 'Scalar' },
+    { id: 'minimal', name: 'Minimal' }
+];
+
 export const CHORD_PRESETS = [
     { name: "Pop", prog: "I | V | vi | IV" },
     { name: "12-Bar Blues", prog: "I7 | I7 | I7 | I7 | IV7 | IV7 | I7 | I7 | V7 | IV7 | I7 | V7" },

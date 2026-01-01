@@ -140,9 +140,10 @@ header h1 { margin: 0; font-size: 1.5rem; color: white; }
 }
 
 @media (max-width: 950px) {
-    .app-container {
+    .app-container:not(.chord-maximized) {
         grid-template-columns: 1fr;
-        max-width: 700px;
+        max-width: 100%;
+        padding: 1rem;
     }
 }
 
@@ -157,11 +158,11 @@ header h1 { margin: 0; font-size: 1.5rem; color: white; }
         gap: 0.4rem;
     }
     .app-container {
-        padding: 1rem;
-        gap: 1.5rem;
+        padding: 0.5rem;
+        gap: 1rem;
     }
     .panel {
-        padding: 1rem;
+        padding: 1rem 0.75rem;
     }
     .primary-btn {
         padding: 0.6rem 0.8rem;
@@ -170,13 +171,13 @@ header h1 { margin: 0; font-size: 1.5rem; color: white; }
     #bpmInput {
         width: 45px !important;
     }
-    .chord-panel-header, .groove-panel-header, .bass-panel-header {
+    .chord-panel-header, .groove-panel-header, .bass-panel-header, .soloist-panel-header {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 0.5rem;
         height: auto !important;
     }
-    .chord-panel-header > div:last-child, .groove-panel-header > div:last-child, .bass-panel-header > div:last-child {
+    .chord-panel-header > div:last-child, .groove-panel-header > div:last-child, .bass-panel-header > div:last-child, .soloist-panel-header > div:last-child {
         width: 100%;
         display: flex;
         justify-content: flex-end;
@@ -188,6 +189,20 @@ header h1 { margin: 0; font-size: 1.5rem; color: white; }
     #saveBtn, #shareBtn {
         padding: 0.5rem 0.75rem !important;
     }
+    .display-area {
+        height: auto;
+        min-height: auto;
+        gap: 0.5rem;
+        padding: 0.5rem;
+    }
+    .measure-box {
+        min-height: 80px;
+        padding: 0.25rem;
+    }
+    .chord-card {
+        font-size: 1.1rem;
+        padding: 0.75rem 0.2rem;
+    }
 }
 
 .panel {
@@ -198,6 +213,7 @@ header h1 { margin: 0; font-size: 1.5rem; color: white; }
     flex-direction: column;
     border: 1px solid #334155;
     transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s, filter 0.3s;
+    min-width: 0; /* Prevent flex/grid items from pushing width */
 }
 
 /* Disabled state for panel content when power is off */
@@ -231,13 +247,14 @@ h2 { margin-top: 0; color: var(--accent-color); font-size: 1.5rem; margin-bottom
     color: #64748b;
     width: 36px;
     height: 36px;
+    aspect-ratio: 1 / 1;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     font-size: 1.2rem;
-    padding: 0 1px 2px 0; /* Nudge up and left */
+    flex-shrink: 0; /* Keep it circular */
     line-height: 1;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
@@ -309,7 +326,7 @@ input[type="range"] {
 .display-area {
     background: #0f172a;
     border-radius: 12px;
-    padding: 1.25rem;
+    padding: 1rem;
     margin-bottom: 1.5rem;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -317,6 +334,7 @@ input[type="range"] {
     min-height: 180px; 
     align-items: stretch;
     box-sizing: border-box;
+    width: 100%;
 }
 .measure-box {
     display: flex;
@@ -326,11 +344,19 @@ input[type="range"] {
     background: rgba(255, 255, 255, 0.02);
     border-radius: 8px;
     padding: 0.4rem;
-    border-right: 2px solid #334155;
+    border: 1px solid rgba(255, 255, 255, 0.05);
     min-height: 100px;
+    width: 100%;
 }
-.measure-box:last-child {
-    border-right: none;
+@media (max-width: 800px) {
+    .display-area {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 450px) {
+    .chord-card {
+        font-size: 1rem;
+    }
 }
 .chord-card {
     background: var(--card-bg);
@@ -498,7 +524,7 @@ input[type="range"] {
         display: none;
     }
     .steps {
-        min-width: 280px;
+        min-width: unset;
         gap: 2px;
     }
 }
@@ -507,7 +533,6 @@ input[type="range"] {
     grid-template-columns: repeat(16, 1fr);
     gap: 4px;
     flex-grow: 1;
-    min-width: 380px; 
     scroll-snap-align: start;
 }
 .step {

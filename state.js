@@ -51,6 +51,19 @@ export const bb = {
     chordHistory: []
 };
 
+export const sb = {
+    enabled: false,
+    volume: 0.4,
+    lastFreq: null,
+    octave: 77, // F5
+    style: 'scalar',
+    history: [],
+    chordHistory: [],
+    direction: 1,      // 1 for up, -1 for down
+    patternMode: 'scale', // 'scale', 'arp', 'stay'
+    patternSteps: 0     // How many steps remain in current pattern
+};
+
 export const getUserPresets = () => JSON.parse(localStorage.getItem('ensemble_userPresets') || '[]');
 export const getUserDrumPresets = () => JSON.parse(localStorage.getItem('ensemble_userDrumPresets') || '[]');
 
