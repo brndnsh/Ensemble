@@ -15,8 +15,14 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Swing Control**: Adjustable swing amount and subdivision (8th/16th).
 *   **Presets**: Includes standard drum patterns for various genres (Rock, Hip Hop, Jazz, Latin).
 
+### 🎸 Bass Buddy
+*   **Walking Bass Generator**: Automatically generates melodic walking bass lines that follow your chord progression.
+*   **Rhythmic Styles**: Choose between Whole Note, Half Note, and Walking (Quarter Note) patterns.
+*   **Melodic Visualizer**: Real-time visualization of the bass line contour and chord tones.
+*   **Register Control**: Adjustable bass register (center octave) to fit different musical contexts.
+
 ### General
-*   **Mixer**: Adjust individual levels for Master, Chords, and Drums.
+*   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
 *   **PWA**: Fully installable and works offline.
 *   **Sharing**: Share progressions via URL.
 

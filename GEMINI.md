@@ -13,6 +13,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **`engine.js`**: Handles all Web Audio API operations, including the scheduler loop, sound synthesis (oscillators for chords), and drum sample playback.
 *   **`state.js`**: Manages the global application state (playback status, BPM, active instruments, user presets).
 *   **`chords.js`**: Contains logic for parsing chord progressions (Roman Numerals, Nashville Numbers, Chord Names) and calculating voicings.
+*   **`bass.js`**: Generates walking bass lines and patterns based on chord progressions and desired register.
 *   **`ui.js`**: Centralizes DOM element references and UI manipulation functions (toasts, visual updates).
 *   **`config.js`**: Stores static configuration, such as default drum presets, chord styles, and musical constants.
 *   **`sw.js`**: A Service Worker that caches key assets to enable offline functionality.
@@ -30,8 +31,13 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **Swing Control**: Adjustable swing amount and subdivision (8th/16th).
 *   **Presets**: Includes standard drum patterns for various genres (Rock, Hip Hop, Jazz, Latin).
 
+### Bass Buddy
+*   **Walking Bass Generator**: Automatically generates melodic walking bass lines using chord tones and approach notes.
+*   **Rhythmic Styles**: Supports Whole Note, Half Note, and Walking (Quarter Note) patterns.
+*   **Visualizer**: A real-time sparkline graph showing melodic contour alongside chord tone "lanes".
+
 ### General
-*   **Mixer**: Adjust individual levels for Master, Chords, and Drums.
+*   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
 *   **PWA**: Fully installable and works offline.
 *   **Sharing**: Share progressions via URL.
 
@@ -60,5 +66,5 @@ Navigate to `http://localhost:8000` (or the port shown by your server) to view t
 ## Architecture Notes
 
 *   **Audio Scheduling**: The `scheduler()` function in `main.js` looks ahead to schedule audio events precisely, while `requestAnimationFrame` handles the visual synchronization (`draw()` loop).
-*   **State Management**: State is divided into contexts (`ctx` for audio/runtime, `cb` for Chord Buddy, `gb` for Groove Buddy) in `state.js`.
+*   **State Management**: State is divided into contexts (`ctx` for audio/runtime, `cb` for Chord Buddy, `gb` for Groove Buddy, `bb` for Bass Buddy) in `state.js`.
 *   **Persistence**: User presets and preferences are saved to `localStorage`.

@@ -133,6 +133,48 @@
             </div>
         </div>
     </div>
+
+    <!-- BASS BUDDY PANEL -->
+    <div class="panel" id="bassPanel">
+        <div class="panel-header bass-panel-header">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <button id="bassPowerBtn" class="power-btn active" aria-label="Toggle Bass Buddy">⏻</button>
+                <h2>Bass Buddy</h2>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <div class="control-group">
+                    <span class="control-label" style="font-size: 0.7rem;">Reg</span>
+                    <span id="bassHeaderReg" style="font-size: 0.9rem; color: white; min-width: 25px; text-align: center; font-weight: bold;">F2</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="display-area" id="bassVisualizer" style="display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; padding: 0;">
+             <div style="display: flex; align-items: baseline; justify-content: center; z-index: 2; margin-top: 10px;">
+                <div id="bassNoteName" style="font-size: 4rem; font-weight: 800; font-family: serif; color: var(--accent-color); text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);">--</div>
+                <div id="bassNoteOctave" style="font-size: 1.5rem; color: #64748b; font-weight: bold; margin-left: 2px;"></div>
+             </div>
+             <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; z-index: 1;">
+                <svg id="bassGraph" viewBox="0 0 100 100" preserveAspectRatio="none" style="display: block; width: 100%; height: 100%;">
+                    <g id="bassChordTones"></g>
+                    <polyline id="bassPolyline" points="" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-opacity="0.4" stroke-linejoin="round" />
+                </svg>
+             </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem; height: 42px; display: flex; align-items: center;">
+            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">Walking Bass Generator follows your chords...</div>
+        </div>
+
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 40px;">
+            <!-- Placeholder for potential future presets -->
+        </div>
+
+        <div style="margin-top: 1.5rem; border-top: 1px solid #334155; padding-top: 1rem;">
+            <label style="font-size: 0.9rem; color: #94a3b8;">Style</label>
+            <div class="presets-container" id="bassStylePresets" style="margin-top: 0.5rem;"></div>
+        </div>
+    </div>
 </div>
 
 <!-- Settings Modal -->
@@ -158,12 +200,19 @@
                     </label>
                     <input type="range" id="chordVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Chord Volume">
                 </div>
-                                        <div class="setting-item">
-                                            <label class="setting-label">
-                                                <span>Drum Volume</span>
-                                            </label>
-                                            <input type="range" id="drumVolume" min="0" max="1" step="0.05" value="0.6" style="width: 100%;" aria-label="Drum Volume">
-                                        </div>            </div>
+                <div class="setting-item">
+                    <label class="setting-label">
+                        <span>Bass Volume</span>
+                    </label>
+                    <input type="range" id="bassVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Bass Volume">
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label">
+                        <span>Drum Volume</span>
+                    </label>
+                    <input type="range" id="drumVolume" min="0" max="1" step="0.05" value="0.6" style="width: 100%;" aria-label="Drum Volume">
+                </div>
+            </div>
 
             <div style="margin-bottom: 1rem;">
                 <label style="display: flex; align-items: center; gap: 0.5rem;">
@@ -198,6 +247,14 @@
                     <span id="octaveLabel" style="color: var(--accent-color); font-weight: bold;">F4</span>
                 </label>
                 <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>Bass Register</span>
+                    <span id="bassOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F2</span>
+                </label>
+                <input type="range" id="bassOctaveSlider" min="24" max="60" value="41" style="width: 100%;" aria-label="Bass Octave">
             </div>
 
             <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">

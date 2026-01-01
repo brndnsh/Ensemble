@@ -154,7 +154,10 @@ export function validateProgression(renderCallback) {
                 nnsName: formatChordName(rootNNS, nnsSuffix),
                 isMinor: isMinor,
                 beats: beatsPerChord, 
-                freqs: currentMidis.map(getFrequency) 
+                freqs: currentMidis.map(getFrequency),
+                rootMidi: rootMidi,
+                intervals: intervals,
+                quality: quality
             });
         });
     });

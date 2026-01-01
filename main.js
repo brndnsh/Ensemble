@@ -1,9 +1,10 @@
-import { ctx, gb, cb, getUserPresets, getUserDrumPresets, saveUserPresets, saveUserDrumPresets } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel } from './ui.js';
-import { initAudio, playNote, playDrumSound } from './engine.js';
-import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES } from './config.js';
+import { ctx, gb, cb, bb, getUserPresets, getUserDrumPresets, saveUserPresets, saveUserDrumPresets } from './state.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, updateBassOctaveLabel } from './ui.js';
+import { initAudio, playNote, playDrumSound, playBassNote } from './engine.js';
+import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES } from './config.js';
 import { normalizeKey } from './utils.js';
 import { validateProgression } from './chords.js';
+import { getBassNote } from './bass.js';
 
 let userPresets = getUserPresets();
 let userDrumPresets = getUserDrumPresets();
@@ -39,6 +40,13 @@ function releaseWakeLock() {
 function updateStyleUI(styleId) {
     cb.style = styleId;
     document.querySelectorAll('.style-preset-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.id === styleId);
+    });
+}
+
+function updateBassStyleUI(styleId) {
+    bb.style = styleId;
+    document.querySelectorAll('.bass-style-chip').forEach(c => {
         c.classList.toggle('active', c.dataset.id === styleId);
     });
 }
@@ -118,6 +126,17 @@ function togglePower(type) {
         if (!gb.enabled) {
             document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
         }
+    } else if (type === 'bass') {
+        bb.enabled = !bb.enabled;
+        ui.bassPowerBtn.classList.toggle('active', bb.enabled);
+        
+        const children = Array.from(document.getElementById('bassPanel').children);
+        children.forEach(child => {
+            if (!child.classList.contains('panel-header')) {
+                child.style.opacity = bb.enabled ? '1' : '0.3';
+                child.style.filter = bb.enabled ? 'none' : 'grayscale(1)';
+            }
+        });
     }
 }
 
@@ -225,6 +244,50 @@ function scheduleGlobalEvent(step, time) {
     }
 
     const chordData = getChordAtStep(step);
+
+    if (bb.enabled && chordData) {
+        const { chord, stepInChord } = chordData;
+        let shouldPlay = false;
+
+        if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
+        else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
+        else if (bb.style === 'quarter' && stepInChord % 4 === 0) shouldPlay = true;
+
+        if (shouldPlay) {
+            const quarterStep = Math.floor(stepInChord / 4);
+            let nextChord = null;
+            const nextChordData = getChordAtStep(step + 4);
+            if (nextChordData) nextChord = nextChordData.chord;
+
+            const bassFreq = getBassNote(chord, nextChord, quarterStep, bb.lastFreq, bb.octave, bb.style);
+            if (bassFreq) {
+                bb.lastFreq = bassFreq;
+                
+                // Find the MIDI note from freq for visualization
+                const midi = Math.round(12 * Math.log2(bassFreq / 440) + 69);
+                const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+                const noteName = notes[midi % 12];
+                const octave = Math.floor(midi / 12) - 1;
+                
+                // Get the actual MIDI notes Chord Buddy is playing
+                const chordNotes = chord.freqs.map(f => Math.round(12 * Math.log2(f / 440) + 69));
+
+                ctx.drawQueue.push({ 
+                    type: 'bass_vis', 
+                    name: noteName, 
+                    octave: octave, 
+                    midi: midi, 
+                    time: time,
+                    chordNotes: chordNotes
+                });
+
+                const spb = 60.0 / ctx.bpm;
+                const duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * spb;
+                playBassNote(bassFreq, time, duration);
+            }
+        }
+    }
+
     if (cb.enabled && chordData) {
         const { chord, stepInChord, chordIndex } = chordData;
         const spb = 60.0 / ctx.bpm;
@@ -399,6 +462,12 @@ function draw() {
         ctx.isDrawing = false;
         document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
         document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
+        if (ui.bassNoteName) ui.bassNoteName.textContent = '--';
+        if (ui.bassNoteOctave) ui.bassNoteOctave.textContent = '';
+        if (ui.bassChordTones) ui.bassChordTones.innerHTML = '';
+        if (ui.bassPolyline) ui.bassPolyline.setAttribute('points', '');
+        bb.history = [];
+        bb.chordHistory = [];
         return;
     }
 
@@ -429,6 +498,66 @@ function draw() {
             document.querySelectorAll('.chord-card').forEach((c, i) => {
                 c.classList.toggle('active', i === ev.index);
             });
+        } else if (ev.type === 'bass_vis') {
+            if (ui.bassNoteName) ui.bassNoteName.textContent = ev.name;
+            if (ui.bassNoteOctave) ui.bassNoteOctave.textContent = ev.octave;
+            
+            // Update History and Graph
+            bb.history.push(ev.midi);
+            bb.chordHistory.push(ev.chordNotes);
+            if (bb.history.length > 16) {
+                bb.history.shift();
+                bb.chordHistory.shift();
+            }
+
+            if (ui.bassPolyline && bb.history.length > 1) {
+                const width = 100; 
+                const height = 100;
+                const range = 12;
+                const min = bb.octave - range;
+                const max = bb.octave + range;
+                
+                // Draw historical chord notes as traces
+                if (ui.bassChordTones) {
+                    ui.bassChordTones.innerHTML = '';
+                    const historyLen = bb.chordHistory.length;
+                    const stepWidth = width / (historyLen > 1 ? historyLen - 1 : 1);
+                    
+                    bb.chordHistory.forEach((notes, historyIdx) => {
+                        const x = historyIdx * stepWidth;
+                        const opacity = (historyIdx / historyLen) * 0.4; 
+                        
+                        notes.forEach(midi => {
+                            let m = midi;
+                            while (m > max) m -= 12;
+                            while (m < min) m += 12;
+                            
+                            if (m >= min && m <= max) {
+                                const y = height - ((m - min) / (max - min)) * height;
+                                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                                // Make rects wider to overlap and form continuous lines
+                                rect.setAttribute("x", (x - stepWidth/2).toString());
+                                rect.setAttribute("y", (y - 2).toString());
+                                rect.setAttribute("width", (stepWidth + 1).toString());
+                                rect.setAttribute("height", "4"); 
+                                rect.setAttribute("fill", "var(--success-color)");
+                                rect.setAttribute("fill-opacity", opacity.toString());
+                                ui.bassChordTones.appendChild(rect);
+                            }
+                        });
+                    });
+                }
+
+                const points = bb.history.map((midi, i) => {
+                    const x = (i / (bb.history.length - 1)) * width;
+                    // Clamp and normalize
+                    const val = Math.max(min, Math.min(max, midi));
+                    const y = height - ((val - min) / (max - min)) * height;
+                    return `${x},${y}`;
+                }).join(' ');
+                
+                ui.bassPolyline.setAttribute('points', points);
+            }
         } else if (ev.type === 'flash') {
             triggerFlash(ev.intensity);
         }
@@ -564,11 +693,22 @@ function init() {
         chip.onclick = () => updateStyleUI(s.id);
         ui.chordStylePresets.appendChild(chip);
     });
+
+    BASS_STYLES.forEach(s => {
+        const chip = document.createElement('div');
+        chip.className = 'preset-chip bass-style-chip';
+        chip.textContent = s.name;
+        chip.dataset.id = s.id;
+        if (s.id === bb.style) chip.classList.add('active');
+        chip.onclick = () => updateBassStyleUI(s.id);
+        ui.bassStylePresets.appendChild(chip);
+    });
     
     renderUserPresets();
     renderUserDrumPresets();
     loadFromUrl();
     validateProgression(renderChordVisualizer);
+    updateBassOctaveLabel(bb.octave);
 
     // Event Listeners
     ui.playBtn.addEventListener('click', togglePlay);
@@ -591,10 +731,15 @@ function init() {
     ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); });
     ui.progInput.addEventListener('input', () => { validateProgression(renderChordVisualizer); });
     ui.chordVol.addEventListener('input', e => { cb.volume = parseFloat(e.target.value); });
+    ui.bassVol.addEventListener('input', e => { bb.volume = parseFloat(e.target.value); });
     ui.octave.addEventListener('input', e => { 
         cb.octave = parseInt(e.target.value); 
         updateOctaveLabel(cb.octave);
         validateProgression(renderChordVisualizer); 
+    });
+    ui.bassOctave.addEventListener('input', e => {
+        bb.octave = parseInt(e.target.value);
+        updateBassOctaveLabel(bb.octave);
     });
     ui.notationSelect.addEventListener('change', e => { cb.notation = e.target.value; renderChordVisualizer(); });
     ui.clearDrums.addEventListener('click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); });
@@ -619,6 +764,7 @@ function init() {
 
     ui.chordPowerBtn.addEventListener('click', () => togglePower('chord'));
     ui.groovePowerBtn.addEventListener('click', () => togglePower('groove'));
+    ui.bassPowerBtn.addEventListener('click', () => togglePower('bass'));
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
