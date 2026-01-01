@@ -6,6 +6,8 @@ export const ui = {
     transUpBtn: document.getElementById('transUpBtn'),
     transDownBtn: document.getElementById('transDownBtn'),
     maximizeChordBtn: document.getElementById('maximizeChordBtn'),
+    chordPowerBtn: document.getElementById('chordPowerBtn'),
+    groovePowerBtn: document.getElementById('groovePowerBtn'),
     progInput: document.getElementById('progressionInput'),
     saveBtn: document.getElementById('saveBtn'),
     shareBtn: document.getElementById('shareBtn'),
