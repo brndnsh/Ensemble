@@ -191,13 +191,27 @@ header h1 { margin: 0; font-size: 1.5rem; color: white; }
 }
 
 .panel {
-    background-color: var(--panel-color);
+    background: var(--panel-color);
+    border-radius: 1rem;
     padding: 1.5rem;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-    min-width: 0;
     display: flex;
     flex-direction: column;
+    border: 1px solid #334155;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s, filter 0.3s;
+}
+
+/* Disabled state for panel content when power is off */
+.panel-disabled > *:not(.panel-header) {
+    opacity: 0.3;
+    pointer-events: none;
+    filter: grayscale(1);
+    transition: all 0.3s ease;
+}
+
+.panel-disabled .panel-header {
+    pointer-events: all;
+    opacity: 1;
+    filter: none;
 }
 
 h2 { margin-top: 0; color: var(--accent-color); font-size: 1.5rem; margin-bottom: 1.5rem; }
@@ -246,21 +260,6 @@ h2 { margin-top: 0; color: var(--accent-color); font-size: 1.5rem; margin-bottom
 .power-btn.active:hover {
     background: rgba(16, 185, 129, 0.2);
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.3), inset 0 0 10px rgba(16, 185, 129, 0.1);
-}
-
-/* Disabled state for panel content when power is off */
-.panel-disabled {
-    opacity: 0.4;
-    pointer-events: none;
-    filter: grayscale(0.8);
-    transition: all 0.3s ease;
-}
-
-/* Keep the header enabled so we can turn it back on */
-.panel-disabled .panel-header {
-    pointer-events: all;
-    opacity: 1;
-    filter: none;
 }
 
 /* --- Shared UI Components --- */

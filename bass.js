@@ -17,10 +17,9 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
     const maxMidi = centerMidi + 10;
 
     const normalizeToRange = (midi) => {
-        let m = midi;
-        while (m > centerMidi + 6) m -= 12;
-        while (m < centerMidi - 6) m += 12;
-        if (m < 24) m += 12;
+        // Use modulo to wrap MIDI note into a +/- 6 semitone range around centerMidi
+        let m = ((midi - (centerMidi - 6)) % 12 + 12) % 12 + (centerMidi - 6);
+        if (m < 24) m += 12; // Ensure it stays in a musical bass range
         return m;
     };
 
@@ -39,6 +38,31 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
         while (fifth > maxMidi) fifth -= 12;
         while (fifth < minMidi) fifth += 12;
         return getFrequency(fifth);
+    }
+
+    // --- ARP STYLE: 1-3-5-3 Pattern ---
+    if (style === 'arp') {
+        const beatInPattern = stepInChord % 4;
+        
+        // Pattern: Root (0), Third (1), Fifth (2), Third (3)
+        if (beatInPattern === 0) return getFrequency(baseRoot);
+        
+        // Find chord tones from intervals
+        const intervals = currentChord.intervals; // e.g. [0, 4, 7] or [0, 3, 7]
+        let targetInterval = 0;
+        
+        if (beatInPattern === 1 || beatInPattern === 3) {
+            // Find the 3rd (usually index 1)
+            targetInterval = intervals.length > 1 ? intervals[1] : 4;
+        } else if (beatInPattern === 2) {
+            // Find the 5th (usually index 2 or 7 semitones)
+            targetInterval = intervals.find(i => i === 7 || i === 6 || i === 8) || 7;
+        }
+        
+        let note = baseRoot + targetInterval;
+        while (note > maxMidi) note -= 12;
+        while (note < minMidi) note += 12;
+        return getFrequency(note);
     }
 
     // --- QUARTER NOTE (WALKING) STYLE ---
@@ -85,8 +109,9 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
     }
 
     // Fallback/Beat 2: Chord Tones
-    let extendedIntervals = [...currentChord.intervals, 12];
-    if (currentChord.intervals.includes(7)) extendedIntervals.push(14);
+    let extendedIntervals = [...currentChord.intervals];
+    // Add octave if not present
+    if (!extendedIntervals.includes(12)) extendedIntervals.push(12);
     
     let chordTones = [];
     const shifts = [-12, 0, 12];
@@ -98,7 +123,22 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
     });
     chordTones = [...new Set(chordTones)].sort((a,b) => a - b);
     
+    // For Beat 2, favor the closest chord tone to the root that isn't the root
+    if (stepInChord === 1) {
+        let options = chordTones.filter(n => n !== baseRoot);
+        if (options.length > 0) {
+            options.sort((a, b) => Math.abs(a - baseRoot) - Math.abs(b - baseRoot));
+            return getFrequency(options[0]);
+        }
+    }
+
     let available = chordTones.filter(n => !isSameAsPrev(n));
     if (available.length === 0) available = chordTones;
+    // Prefer notes closer to prevFreq if possible for smoother movement
+    if (prevFreq) {
+        const prevMidi = Math.round(12 * Math.log2(prevFreq / 440) + 69);
+        available.sort((a, b) => Math.abs(a - prevMidi) - Math.abs(b - prevMidi));
+        return getFrequency(available[0]);
+    }
     return getFrequency(available[Math.floor(Math.random() * available.length)]);
 }

@@ -39,6 +39,7 @@ export const CHORD_STYLES = [
 export const BASS_STYLES = [
     { id: 'whole', name: 'Whole' },
     { id: 'half', name: 'Half' },
+    { id: 'arp', name: 'Arp (1-3-5-3)' },
     { id: 'quarter', name: 'Walking' }
 ];
 
