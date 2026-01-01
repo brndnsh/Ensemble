@@ -34,7 +34,7 @@ export const gb = {
         { name: 'HiHat', symbol: '🎩', steps: new Array(16).fill(0), muted: false },
         { name: 'Open',  symbol: '📀', steps: new Array(16).fill(0), muted: false }
     ],
-    volume: 0.7,
+    volume: 0.5,
     measures: 1,
     swing: 0,
     swingSub: '8th',
