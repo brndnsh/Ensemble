@@ -4,6 +4,7 @@ export const ctx = {
     isPlaying: false,
     bpm: 100,
     nextNoteTime: 0.0,
+    unswungNextNoteTime: 0.0,
     timerID: null,
     lookahead: 25.0,
     scheduleAheadTime: 0.1,
@@ -23,7 +24,8 @@ export const cb = {
     notation: 'roman',
     volume: 0.5,
     octave: 65,
-    valid: false
+    valid: false,
+    cachedCards: []
 };
 
 export const gb = {
@@ -38,7 +40,8 @@ export const gb = {
     measures: 1,
     swing: 0,
     swingSub: '8th',
-    audioBuffers: {} 
+    audioBuffers: {},
+    cachedSteps: [] 
 };
 
 export const bb = {
@@ -61,7 +64,10 @@ export const sb = {
     chordHistory: [],
     direction: 1,      // 1 for up, -1 for down
     patternMode: 'scale', // 'scale', 'arp', 'stay'
-    patternSteps: 0     // How many steps remain in current pattern
+    patternSteps: 0,     // How many steps remain in current pattern
+    phraseSteps: 0,
+    isResting: false,
+    currentCell: [1, 0, 1, 0]
 };
 
 export const getUserPresets = () => JSON.parse(localStorage.getItem('ensemble_userPresets') || '[]');

@@ -8,7 +8,6 @@ import { ui, triggerFlash } from './ui.js';
 export function initAudio() {
     if (!ctx.audio) {
         ctx.audio = new (window.AudioContext || window.webkitAudioContext)();
-        // ... (rest of function)
 
         ctx.masterGain = ctx.audio.createGain();
         ctx.masterGain.gain.value = parseFloat(ui.masterVol.value);

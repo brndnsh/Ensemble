@@ -23,10 +23,12 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ### 🎷 Soloist
 *   **Algorithmic Soloing**: Generates melodic lines over your progression using rhythmic cells and harmonic targeting.
+*   **Key-Aware & Blues Logic**: Melodies strictly adhere to the parent key signature for diatonic chords and employ Major/Minor blues scales with chromatic grace note slips for authentic phrasing.
 *   **Melodic Visualizer**: Real-time visualization of the soloist's melodic path.
 
 ### General
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
+*   **Reset to Defaults**: Quickly restore original settings, volumes, and registers from the Settings menu.
 *   **PWA**: Fully installable and works offline.
 *   **Sharing**: Share progressions via URL.
 

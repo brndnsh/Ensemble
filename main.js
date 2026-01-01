@@ -83,6 +83,7 @@ function togglePlay() {
         ui.playBtn.classList.add('playing');
         ctx.step = 0;
         ctx.nextNoteTime = ctx.audio.currentTime;
+        ctx.unswungNextNoteTime = ctx.audio.currentTime;
         ctx.isCountingIn = ui.countIn.checked;
         ctx.countInBeat = 0;
         requestWakeLock();
@@ -134,6 +135,8 @@ function scheduler() {
             scheduleCountIn(ctx.countInBeat, ctx.nextNoteTime);
             advanceCountIn();
         } else {
+            // We pass the swung time to the general scheduler, 
+            // but we'll calculate an unswung version for the soloist inside.
             scheduleGlobalEvent(ctx.step, ctx.nextNoteTime);
             advanceGlobalStep();
         }
@@ -142,7 +145,9 @@ function scheduler() {
 }
 
 function advanceCountIn() {
-    ctx.nextNoteTime += 60.0 / ctx.bpm;
+    const beatDuration = 60.0 / ctx.bpm;
+    ctx.nextNoteTime += beatDuration;
+    ctx.unswungNextNoteTime += beatDuration;
     ctx.countInBeat++;
     if (ctx.countInBeat >= 4) {
         ctx.isCountingIn = false;
@@ -176,6 +181,7 @@ function advanceGlobalStep() {
     const secondsPerBeat = 60.0 / ctx.bpm;
     const sixteenth = 0.25 * secondsPerBeat;
     let duration = sixteenth;
+    
     if (gb.swing > 0) {
         const shift = (sixteenth / 3) * (gb.swing / 100);
         if (gb.swingSub === '16th') {
@@ -185,6 +191,7 @@ function advanceGlobalStep() {
         }
     }
     ctx.nextNoteTime += duration;
+    ctx.unswungNextNoteTime += sixteenth;
     ctx.step++;
 }
 
@@ -205,27 +212,27 @@ function getChordAtStep(step) {
     return getChordAtStep(step % current);
 }
 
-/**
- * Schedules all audio events (drums and chords) for a single sixteenth note step.
- * @param {number} step 
- * @param {number} time 
- */
-function scheduleGlobalEvent(step, time) {
+function scheduleGlobalEvent(step, swungTime) {
     const totalSteps = gb.measures * 16;
     if (totalSteps === 0) return;
     const drumStep = step % totalSteps;
     
     // Add micro-timing jitter (max +/- 2ms)
     const jitter = (Math.random() - 0.5) * 0.004;
-    const t = time + jitter;
+    const t = swungTime + jitter;
+
+    // Calculate unswung time for the soloist
+    // soloist straightness factor (0.0 = fully swung, 1.0 = perfectly straight)
+    const straightness = 0.65; 
+    const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + jitter;
 
     // Global metronome flash
     if (gb.enabled && drumStep % 4 === 0) {
-        ctx.drawQueue.push({ type: 'flash', time: time, intensity: (drumStep % 16 === 0 ? 0.2 : 0.1), beat: (drumStep % 16 === 0 ? 1 : 0) });
+        ctx.drawQueue.push({ type: 'flash', time: swungTime, intensity: (drumStep % 16 === 0 ? 0.2 : 0.1), beat: (drumStep % 16 === 0 ? 1 : 0) });
     }
 
     if (gb.enabled) {
-        ctx.drawQueue.push({ type: 'drum_vis', step: drumStep, time: time });
+        ctx.drawQueue.push({ type: 'drum_vis', step: drumStep, time: swungTime });
         
         const isDownbeat = drumStep % 16 === 0;
         const isQuarter = drumStep % 4 === 0;
@@ -287,7 +294,7 @@ function scheduleGlobalEvent(step, time) {
                     name: noteName, 
                     octave: octave, 
                     midi: midi, 
-                    time: time,
+                    time: swungTime,
                     chordNotes: chordNotes
                 });
 
@@ -321,7 +328,7 @@ function scheduleGlobalEvent(step, time) {
 
             const spb = 60.0 / ctx.bpm;
             const duration = 0.25 * spb; // 16th note base duration
-            playSoloNote(soloFreq, t, duration, sb.volume);
+            playSoloNote(soloFreq, soloistTime, duration, sb.volume);
         }
 
         // Get the actual MIDI notes Chords is playing
@@ -332,7 +339,7 @@ function scheduleGlobalEvent(step, time) {
             name: noteName, 
             octave: octave, 
             midi: midi, 
-            time: time,
+            time: soloistTime,
             chordNotes: chordNotes
         });
     }
@@ -342,7 +349,7 @@ function scheduleGlobalEvent(step, time) {
         const spb = 60.0 / ctx.bpm;
         const measureStep = step % 16;
         
-        if (stepInChord === 0) ctx.drawQueue.push({ type: 'chord_vis', index: chordIndex, time: time });
+        if (stepInChord === 0) ctx.drawQueue.push({ type: 'chord_vis', index: chordIndex, time: swungTime });
         
         // Audio playback logic based on style
         if (cb.style === 'pad') {
@@ -398,6 +405,7 @@ function scheduleGlobalEvent(step, time) {
  */
 function renderChordVisualizer() {
     ui.chordVisualizer.innerHTML = '';
+    cb.cachedCards = [];
     if (cb.progression.length === 0) return;
 
     let measureBox = document.createElement('div');
@@ -424,6 +432,7 @@ function renderChordVisualizer() {
         else div.innerHTML = chord.romanName;
         
         measureBox.appendChild(div);
+        cb.cachedCards.push(div);
         currentBeatsInBar += chord.beats;
     });
 }
@@ -433,6 +442,7 @@ function renderChordVisualizer() {
  */
 function renderGrid() {
     ui.sequencerGrid.innerHTML = '';
+    gb.cachedSteps = [];
     gb.instruments.forEach((inst, tIdx) => {
         const row = document.createElement('div');
         row.className = 'track';
@@ -452,6 +462,8 @@ function renderGrid() {
                 step.className = `step ${active ? 'active' : ''}`; step.dataset.step = globalIdx;
                 step.onclick = () => { inst.steps[globalIdx] = inst.steps[globalIdx] ? 0 : 1; renderGridState(); };
                 measureDiv.appendChild(step);
+                if (!gb.cachedSteps[globalIdx]) gb.cachedSteps[globalIdx] = [];
+                gb.cachedSteps[globalIdx].push(step);
             }
             stepsWrapper.appendChild(measureDiv);
         }
@@ -480,6 +492,10 @@ function renderGrid() {
             label.textContent = text;
             if (i % 4 === 0) label.classList.add('beat-start');
             measureDiv.appendChild(label);
+            
+            const globalIdx = m * 16 + i;
+            if (!gb.cachedSteps[globalIdx]) gb.cachedSteps[globalIdx] = [];
+            gb.cachedSteps[globalIdx].push(label);
         });
         labelsWrapper.appendChild(measureDiv);
     }
@@ -492,14 +508,16 @@ function renderGrid() {
  */
 function renderGridState() {
     const totalSteps = gb.measures * 16;
-    gb.instruments.forEach((inst, tIdx) => {
-        const trackRow = ui.sequencerGrid.children[tIdx], allSteps = trackRow.querySelectorAll('.step');
-        for(let i=0; i < totalSteps; i++) {
-            if (allSteps[i]) {
-                allSteps[i].classList.toggle('active', !!inst.steps[i]);
-            }
+    for (let i = 0; i < totalSteps; i++) {
+        const elements = gb.cachedSteps[i];
+        if (elements) {
+            gb.instruments.forEach((inst, tIdx) => {
+                if (elements[tIdx]) {
+                    elements[tIdx].classList.toggle('active', !!inst.steps[i]);
+                }
+            });
         }
-    });
+    }
 }
 
 /**
@@ -537,20 +555,24 @@ function draw() {
     while (ctx.drawQueue.length && ctx.drawQueue[0].time <= now) {
         const ev = ctx.drawQueue.shift();
         if (ev.type === 'drum_vis') {
-            document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
-            const activeSteps = document.querySelectorAll(`.step[data-step="${ev.step}"]`);
-            activeSteps.forEach(s => s.classList.add('playing'));
-            
-            if (activeSteps.length > 0 && ev.step % 16 === 0) {
-                const container = ui.sequencerGrid;
-                const step = activeSteps[0];
-                const containerRect = container.getBoundingClientRect();
-                const stepRect = step.getBoundingClientRect();
-                const scrollLeft = stepRect.left - containerRect.left + container.scrollLeft - 100;
-                container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+            if (ctx.lastPlayingStep !== undefined && gb.cachedSteps[ctx.lastPlayingStep]) {
+                gb.cachedSteps[ctx.lastPlayingStep].forEach(s => s.classList.remove('playing'));
             }
+            const activeSteps = gb.cachedSteps[ev.step];
+            if (activeSteps) {
+                activeSteps.forEach(s => s.classList.add('playing'));
+                if (ev.step % 16 === 0) {
+                    const container = ui.sequencerGrid;
+                    const step = activeSteps[0];
+                    const containerRect = container.getBoundingClientRect();
+                    const stepRect = step.getBoundingClientRect();
+                    const scrollLeft = stepRect.left - containerRect.left + container.scrollLeft - 100;
+                    container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+                }
+            }
+            ctx.lastPlayingStep = ev.step;
         } else if (ev.type === 'chord_vis') {
-            document.querySelectorAll('.chord-card').forEach((c, i) => {
+            cb.cachedCards.forEach((c, i) => {
                 c.classList.toggle('active', i === ev.index);
             });
         } else if (ev.type === 'bass_vis') {
@@ -580,7 +602,7 @@ function draw() {
                     
                     bb.chordHistory.forEach((notes, historyIdx) => {
                         const x = historyIdx * stepWidth;
-                        const opacity = (historyIdx / historyLen) * 0.6; 
+                        const opacity = (historyIdx / historyLen) * 0.2; 
                         
                         notes.forEach(midi => {
                             let m = midi;
@@ -589,15 +611,15 @@ function draw() {
                             
                             if (m >= min && m <= max) {
                                 const y = height - ((m - min) / (max - min)) * height;
-                                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                                // Make rects wider to overlap and form continuous lines
-                                rect.setAttribute("x", (x - stepWidth/2).toString());
-                                rect.setAttribute("y", (y - 2).toString());
-                                rect.setAttribute("width", (stepWidth + 1).toString());
-                                rect.setAttribute("height", "4"); 
-                                rect.setAttribute("fill", "var(--success-color)");
-                                rect.setAttribute("fill-opacity", opacity.toString());
-                                ui.bassChordTones.appendChild(rect);
+                                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                                line.setAttribute("x1", (x - stepWidth/2).toString());
+                                line.setAttribute("y1", y.toString());
+                                line.setAttribute("x2", (x + stepWidth/2).toString());
+                                line.setAttribute("y2", y.toString());
+                                line.setAttribute("stroke", "#ffffff");
+                                line.setAttribute("stroke-width", "1");
+                                line.setAttribute("stroke-opacity", ((historyIdx / historyLen) * 0.4).toString());
+                                ui.bassChordTones.appendChild(line);
                             }
                         });
                     });
@@ -636,7 +658,7 @@ function draw() {
                     
                     sb.chordHistory.forEach((notes, historyIdx) => {
                         const x = historyIdx * stepWidth;
-                        const opacity = (historyIdx / historyLen) * 0.6; 
+                        const opacity = (historyIdx / historyLen) * 0.2; 
                         
                         notes.forEach(midi => {
                             let m = midi;
@@ -645,14 +667,15 @@ function draw() {
                             
                             if (m >= min && m <= max) {
                                 const y = height - ((m - min) / (max - min)) * height;
-                                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                                rect.setAttribute("x", (x - stepWidth/2).toString());
-                                rect.setAttribute("y", (y - 2).toString());
-                                rect.setAttribute("width", (stepWidth + 1).toString());
-                                rect.setAttribute("height", "4"); 
-                                rect.setAttribute("fill", "var(--success-color)"); 
-                                rect.setAttribute("fill-opacity", opacity.toString());
-                                ui.soloistChordTones.appendChild(rect);
+                                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                                line.setAttribute("x1", (x - stepWidth/2).toString());
+                                line.setAttribute("y1", y.toString());
+                                line.setAttribute("x2", (x + stepWidth/2).toString());
+                                line.setAttribute("y2", y.toString());
+                                line.setAttribute("stroke", "#ffffff"); 
+                                line.setAttribute("stroke-width", "1");
+                                line.setAttribute("stroke-opacity", ((historyIdx / historyLen) * 0.4).toString());
+                                ui.soloistChordTones.appendChild(line);
                             }
                         });
                     });
@@ -861,6 +884,11 @@ function init() {
         ui.settingsBtn.addEventListener('click', () => ui.settingsOverlay.classList.add('active'));
         ui.closeSettings.addEventListener('click', () => ui.settingsOverlay.classList.remove('active'));
         ui.settingsOverlay.addEventListener('click', (e) => { if(e.target === ui.settingsOverlay) ui.settingsOverlay.classList.remove('active'); });
+        ui.resetSettingsBtn.addEventListener('click', () => {
+            if (confirm("Reset all settings (volumes, registers, etc.) to defaults?")) {
+                resetToDefaults();
+            }
+        });
         
         ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); });
         ui.progInput.addEventListener('input', () => { validateProgression(renderChordVisualizer); });
@@ -935,6 +963,9 @@ function setBpm(val) {
         const now = ctx.audio.currentTime, ratio = ctx.bpm / newBpm;
         const noteTimeRemaining = ctx.nextNoteTime - now;
         if (noteTimeRemaining > 0) ctx.nextNoteTime = now + (noteTimeRemaining * ratio);
+        
+        const unswungNoteTimeRemaining = ctx.unswungNextNoteTime - now;
+        if (unswungNoteTimeRemaining > 0) ctx.unswungNextNoteTime = now + (unswungNoteTimeRemaining * ratio);
     }
     ctx.bpm = newBpm; ui.bpmInput.value = newBpm;
 }
@@ -982,6 +1013,54 @@ function handleTap() {
         const avg = intervals.reduce((a,b)=>a+b)/intervals.length;
         setBpm(Math.round(60000/avg));
     }
+}
+
+function resetToDefaults() {
+    ctx.bpm = 100;
+    cb.volume = 0.5;
+    cb.octave = 65;
+    cb.notation = 'roman';
+    bb.volume = 0.5;
+    bb.octave = 41;
+    sb.volume = 0.4;
+    sb.octave = 77;
+    gb.volume = 0.6;
+    gb.swing = 0;
+    gb.swingSub = '8th';
+    gb.measures = 1;
+
+    ui.bpmInput.value = 100;
+    ui.chordVol.value = 0.5;
+    ui.octave.value = 65;
+    ui.notationSelect.value = 'roman';
+    ui.bassVol.value = 0.5;
+    ui.bassOctave.value = 41;
+    ui.soloistVol.value = 0.4;
+    ui.soloistOctave.value = 77;
+    ui.drumVol.value = 0.6;
+    ui.swingSlider.value = 0;
+    ui.swingBase.value = '8th';
+    ui.drumBarsSelect.value = 1;
+    ui.masterVol.value = 0.5;
+    ui.countIn.checked = true;
+    ui.visualFlash.checked = false;
+    ui.haptic.checked = false;
+
+    if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+
+    updateOctaveLabel(cb.octave);
+    updateBassOctaveLabel(bb.octave);
+    updateSoloistOctaveLabel(sb.octave);
+    validateProgression(renderChordVisualizer);
+    
+    gb.instruments.forEach(inst => {
+        inst.steps = new Array(16).fill(0);
+        inst.muted = false;
+    });
+    loadDrumPreset('Standard');
+    renderGrid(); 
+
+    showToast("Settings reset");
 }
 
 function shareProgression() {
