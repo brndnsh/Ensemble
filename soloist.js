@@ -1,5 +1,6 @@
 import { getFrequency } from './utils.js';
-import { sb } from './state.js';
+import { sb, cb } from './state.js';
+import { KEY_ORDER } from './config.js';
 
 /**
  * Advanced Soloist Logic
@@ -18,20 +19,42 @@ const RHYTHMIC_CELLS = [
 ];
 
 /**
- * Determines the best scale intervals based on chord quality.
+ * Determines the best scale intervals based on chord quality and parent key.
  */
-function getScaleForChord(chord) {
-    // Basic mapping of chord qualities to scales
+function getScaleForChord(chord, style) {
+    if (style === 'blues') {
+        // Blues scales are often used regardless of the underlying chord's diatonic function
+        if (chord.quality === 'minor' || chord.quality === 'halfdim' || chord.quality === 'dim') {
+            return [0, 3, 5, 6, 7, 10]; // Minor Blues Scale (1, b3, 4, #4, 5, b7)
+        }
+        return [0, 2, 3, 4, 7, 9]; // Major Blues Scale (1, 2, b3, 3, 5, 6)
+    }
+
+    const keyRoot = KEY_ORDER.indexOf(cb.key);
+    const keyIntervals = [0, 2, 4, 5, 7, 9, 11]; // Major Scale
+    const keyNotes = keyIntervals.map(i => (keyRoot + i) % 12);
+    
+    const chordRoot = chord.rootMidi % 12;
+    const chordTones = chord.intervals.map(i => (chordRoot + i) % 12);
+    
+    // Check if chord is primarily diatonic
+    const isDiatonic = chordTones.every(note => keyNotes.includes(note));
+    
+    if (isDiatonic) {
+        // Return intervals of the parent key scale relative to the chord root
+        return keyNotes.map(note => (note - chordRoot + 12) % 12).sort((a, b) => a - b);
+    }
+
+    // Fallback for chromatic chords: use standard chord-scale theory
     switch (chord.quality) {
-        case 'minor': return [0, 2, 3, 5, 7, 8, 10]; // Dorian/Aeolian mix
-        case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11]; // Octatonic
-        case 'halfdim': return [0, 1, 3, 5, 6, 8, 10]; // Locrian
-        case 'aug': return [0, 2, 4, 6, 8, 10]; // Whole Tone
-        case 'maj7': return [0, 2, 4, 5, 7, 9, 11]; // Ionian
+        case 'minor': return [0, 2, 3, 5, 7, 8, 10]; 
+        case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
+        case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
+        case 'aug': return [0, 2, 4, 6, 8, 10];
+        case 'maj7': return [0, 2, 4, 5, 7, 9, 11];
         default: 
-            // If it's a dominant 7th (not maj7 but is7th)
-            if (chord.intervals.includes(10)) return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
-            return [0, 2, 4, 5, 7, 9, 11]; // Major
+            if (chord.intervals.includes(10)) return [0, 2, 4, 5, 7, 9, 10];
+            return [0, 2, 4, 5, 7, 9, 11];
     }
 }
 
@@ -74,10 +97,17 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     const rootMidi = currentChord.rootMidi;
     
     const chordTones = currentChord.intervals.map(i => rootMidi + i);
-    const scaleIntervals = getScaleForChord(currentChord);
+    const scaleIntervals = getScaleForChord(currentChord, style);
     const scaleTones = scaleIntervals.map(i => rootMidi + i);
 
     let finalMidi = prevMidi;
+
+    // --- Blues Specific Phrasing ---
+    let isGraceNote = false;
+    if (style === 'blues' && Math.random() < 0.25 && stepInBeat !== 0) {
+        // Characteristic blues "slip": quick chromatic note 1 semitone below a target
+        isGraceNote = true;
+    }
 
     // Harmonic Targeting: If we are at the end of a measure and a new chord is coming,
     // target a strong note (3rd or 7th) of the next chord.
@@ -128,6 +158,11 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         }
     }
 
+    if (isGraceNote) {
+        // Slip from 1 semitone below the target
+        finalMidi -= 1;
+    }
+
     // Add some Bebop "Enclosure" logic for 'bird' style
     if (sb.style === 'bird' && Math.random() < 0.2 && stepInBeat !== 0) {
         finalMidi += (Math.random() > 0.5 ? 1 : -1);
@@ -139,7 +174,8 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
 
     // Avoid dissonant "avoid notes" on downbeats
     const intervalFromRoot = (finalMidi - rootMidi + 120) % 12;
-    if (stepInBeat === 0 && !currentChord.isMinor && intervalFromRoot === 5) {
+    // Avoid the 4th (interval 5) on downbeats for major and minor chords unless it's a chord tone
+    if (stepInBeat === 0 && intervalFromRoot === 5 && !chordTones.includes(finalMidi)) {
         finalMidi += (sb.direction || 1);
     }
 

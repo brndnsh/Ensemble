@@ -4,6 +4,7 @@ export const ctx = {
     isPlaying: false,
     bpm: 100,
     nextNoteTime: 0.0,
+    unswungNextNoteTime: 0.0,
     timerID: null,
     lookahead: 25.0,
     scheduleAheadTime: 0.1,
