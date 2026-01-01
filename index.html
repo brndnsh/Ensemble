@@ -143,65 +143,71 @@
             <button id="closeSettingsBtn" style="background: none; border: none; font-size: 1.5rem;" aria-label="Close Settings">&times;</button>
         </div>
         
-        <div class="settings-section">
-            <h3>Mixer</h3>
-            <div class="setting-item">
-                <label class="setting-label">
-                    <span>Master Volume</span>
-                </label>
-                <input type="range" id="masterVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Master Volume">
+        <div class="settings-controls">
+            <div class="settings-section">
+                <h3>Mixer</h3>
+                <div class="setting-item">
+                    <label class="setting-label">
+                        <span>Master Volume</span>
+                    </label>
+                    <input type="range" id="masterVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Master Volume">
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label">
+                        <span>Chord Volume</span>
+                    </label>
+                    <input type="range" id="chordVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Chord Volume">
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label">
+                        <span>Drum Volume</span>
+                    </label>
+                    <input type="range" id="drumVolume" min="0" max="1" step="0.05" value="0.7" style="width: 100%;" aria-label="Drum Volume">
+                </div>
             </div>
-            <div class="setting-item">
-                <label class="setting-label">
-                    <span>Chord Volume</span>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="countInCheck" checked>
+                    Count-in (4 Beats)
                 </label>
-                <input type="range" id="chordVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Chord Volume">
             </div>
-            <div class="setting-item">
-                <label class="setting-label">
-                    <span>Drum Volume</span>
+
+            <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="visualFlashCheck">
+                    Visual Flash
                 </label>
-                <input type="range" id="drumVolume" min="0" max="1" step="0.05" value="0.7" style="width: 100%;" aria-label="Drum Volume">
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="hapticCheck">
+                    Haptic
+                </label>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem;">Notation</label>
+                <select id="notationSelect" style="width: 100%;" aria-label="Chord Notation">
+                    <option value="roman">Roman Numerals (I, vi, IV)</option>
+                    <option value="name">Chord Names (C, Am, F)</option>
+                    <option value="nns">Nashville Numbers (1, 6-, 4)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>Chord Voicing Register</span>
+                    <span id="octaveLabel" style="color: var(--accent-color); font-weight: bold;">F4</span>
+                </label>
+                <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
+            </div>
+
+            <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">
+                <button id="resetSettingsBtn" style="width: 100%; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--error-color);">Reset to Defaults</button>
             </div>
         </div>
 
-        <div style="margin-bottom: 1rem;">
-            <label style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="countInCheck" checked>
-                Count-in (4 Beats)
-            </label>
-        </div>
-
-        <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
-            <label style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="visualFlashCheck">
-                Visual Flash
-            </label>
-            <label style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="hapticCheck">
-                Haptic
-            </label>
-        </div>
-
-        <div style="margin-bottom: 1rem;">
-            <label style="display: block; margin-bottom: 0.5rem;">Notation</label>
-            <select id="notationSelect" style="width: 100%;" aria-label="Chord Notation">
-                <option value="roman">Roman Numerals (I, vi, IV)</option>
-                <option value="name">Chord Names (C, Am, F)</option>
-                <option value="nns">Nashville Numbers (1, 6-, 4)</option>
-            </select>
-        </div>
-
-        <div style="margin-bottom: 1rem;">
-            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                <span>Chord Voicing Register</span>
-                <span id="octaveLabel" style="color: var(--accent-color); font-weight: bold;">F4</span>
-            </label>
-            <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
-        </div>
-
-        <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">
-            <details>
+        <div class="settings-help" style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem; border-top: none;">
+            <details open>
                 <summary style="cursor: pointer; font-weight: bold; color: var(--text-primary); list-style: none; display: flex; align-items: center; justify-content: space-between;">
                     <span>Help & Instructions</span>
                     <span style="font-size: 0.8em;">▼</span>
@@ -247,10 +253,6 @@
                     </div>
                 </div>
             </details>
-        </div>
-
-        <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">
-            <button id="resetSettingsBtn" style="width: 100%; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--error-color);">Reset to Defaults</button>
         </div>
     </div>
 </div>
