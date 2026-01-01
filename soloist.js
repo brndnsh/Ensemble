@@ -38,13 +38,6 @@ function getScaleForChord(chord) {
 export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = null, centerMidi = 77, style = 'scalar') {
     if (!currentChord) return null;
 
-    // --- State Initialization ---
-    if (sb.phraseSteps === undefined) {
-        sb.phraseSteps = 0;
-        sb.isResting = false;
-        sb.currentCell = RHYTHMIC_CELLS[0];
-    }
-
     const beatInMeasure = Math.floor(measureStep / 4);
     const stepInBeat = measureStep % 4;
 

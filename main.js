@@ -398,6 +398,7 @@ function scheduleGlobalEvent(step, time) {
  */
 function renderChordVisualizer() {
     ui.chordVisualizer.innerHTML = '';
+    cb.cachedCards = [];
     if (cb.progression.length === 0) return;
 
     let measureBox = document.createElement('div');
@@ -424,6 +425,7 @@ function renderChordVisualizer() {
         else div.innerHTML = chord.romanName;
         
         measureBox.appendChild(div);
+        cb.cachedCards.push(div);
         currentBeatsInBar += chord.beats;
     });
 }
@@ -433,6 +435,7 @@ function renderChordVisualizer() {
  */
 function renderGrid() {
     ui.sequencerGrid.innerHTML = '';
+    gb.cachedSteps = [];
     gb.instruments.forEach((inst, tIdx) => {
         const row = document.createElement('div');
         row.className = 'track';
@@ -452,6 +455,8 @@ function renderGrid() {
                 step.className = `step ${active ? 'active' : ''}`; step.dataset.step = globalIdx;
                 step.onclick = () => { inst.steps[globalIdx] = inst.steps[globalIdx] ? 0 : 1; renderGridState(); };
                 measureDiv.appendChild(step);
+                if (!gb.cachedSteps[globalIdx]) gb.cachedSteps[globalIdx] = [];
+                gb.cachedSteps[globalIdx].push(step);
             }
             stepsWrapper.appendChild(measureDiv);
         }
@@ -480,6 +485,10 @@ function renderGrid() {
             label.textContent = text;
             if (i % 4 === 0) label.classList.add('beat-start');
             measureDiv.appendChild(label);
+            
+            const globalIdx = m * 16 + i;
+            if (!gb.cachedSteps[globalIdx]) gb.cachedSteps[globalIdx] = [];
+            gb.cachedSteps[globalIdx].push(label);
         });
         labelsWrapper.appendChild(measureDiv);
     }
@@ -492,14 +501,16 @@ function renderGrid() {
  */
 function renderGridState() {
     const totalSteps = gb.measures * 16;
-    gb.instruments.forEach((inst, tIdx) => {
-        const trackRow = ui.sequencerGrid.children[tIdx], allSteps = trackRow.querySelectorAll('.step');
-        for(let i=0; i < totalSteps; i++) {
-            if (allSteps[i]) {
-                allSteps[i].classList.toggle('active', !!inst.steps[i]);
-            }
+    for (let i = 0; i < totalSteps; i++) {
+        const elements = gb.cachedSteps[i];
+        if (elements) {
+            gb.instruments.forEach((inst, tIdx) => {
+                if (elements[tIdx]) {
+                    elements[tIdx].classList.toggle('active', !!inst.steps[i]);
+                }
+            });
         }
-    });
+    }
 }
 
 /**
@@ -537,20 +548,24 @@ function draw() {
     while (ctx.drawQueue.length && ctx.drawQueue[0].time <= now) {
         const ev = ctx.drawQueue.shift();
         if (ev.type === 'drum_vis') {
-            document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
-            const activeSteps = document.querySelectorAll(`.step[data-step="${ev.step}"]`);
-            activeSteps.forEach(s => s.classList.add('playing'));
-            
-            if (activeSteps.length > 0 && ev.step % 16 === 0) {
-                const container = ui.sequencerGrid;
-                const step = activeSteps[0];
-                const containerRect = container.getBoundingClientRect();
-                const stepRect = step.getBoundingClientRect();
-                const scrollLeft = stepRect.left - containerRect.left + container.scrollLeft - 100;
-                container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+            if (ctx.lastPlayingStep !== undefined && gb.cachedSteps[ctx.lastPlayingStep]) {
+                gb.cachedSteps[ctx.lastPlayingStep].forEach(s => s.classList.remove('playing'));
             }
+            const activeSteps = gb.cachedSteps[ev.step];
+            if (activeSteps) {
+                activeSteps.forEach(s => s.classList.add('playing'));
+                if (ev.step % 16 === 0) {
+                    const container = ui.sequencerGrid;
+                    const step = activeSteps[0];
+                    const containerRect = container.getBoundingClientRect();
+                    const stepRect = step.getBoundingClientRect();
+                    const scrollLeft = stepRect.left - containerRect.left + container.scrollLeft - 100;
+                    container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+                }
+            }
+            ctx.lastPlayingStep = ev.step;
         } else if (ev.type === 'chord_vis') {
-            document.querySelectorAll('.chord-card').forEach((c, i) => {
+            cb.cachedCards.forEach((c, i) => {
                 c.classList.toggle('active', i === ev.index);
             });
         } else if (ev.type === 'bass_vis') {
@@ -861,6 +876,11 @@ function init() {
         ui.settingsBtn.addEventListener('click', () => ui.settingsOverlay.classList.add('active'));
         ui.closeSettings.addEventListener('click', () => ui.settingsOverlay.classList.remove('active'));
         ui.settingsOverlay.addEventListener('click', (e) => { if(e.target === ui.settingsOverlay) ui.settingsOverlay.classList.remove('active'); });
+        ui.resetSettingsBtn.addEventListener('click', () => {
+            if (confirm("Reset all settings (volumes, registers, etc.) to defaults?")) {
+                resetToDefaults();
+            }
+        });
         
         ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); });
         ui.progInput.addEventListener('input', () => { validateProgression(renderChordVisualizer); });
@@ -982,6 +1002,54 @@ function handleTap() {
         const avg = intervals.reduce((a,b)=>a+b)/intervals.length;
         setBpm(Math.round(60000/avg));
     }
+}
+
+function resetToDefaults() {
+    ctx.bpm = 100;
+    cb.volume = 0.5;
+    cb.octave = 65;
+    cb.notation = 'roman';
+    bb.volume = 0.5;
+    bb.octave = 41;
+    sb.volume = 0.4;
+    sb.octave = 77;
+    gb.volume = 0.6;
+    gb.swing = 0;
+    gb.swingSub = '8th';
+    gb.measures = 1;
+
+    ui.bpmInput.value = 100;
+    ui.chordVol.value = 0.5;
+    ui.octave.value = 65;
+    ui.notationSelect.value = 'roman';
+    ui.bassVol.value = 0.5;
+    ui.bassOctave.value = 41;
+    ui.soloistVol.value = 0.4;
+    ui.soloistOctave.value = 77;
+    ui.drumVol.value = 0.6;
+    ui.swingSlider.value = 0;
+    ui.swingBase.value = '8th';
+    ui.drumBarsSelect.value = 1;
+    ui.masterVol.value = 0.5;
+    ui.countIn.checked = true;
+    ui.visualFlash.checked = false;
+    ui.haptic.checked = false;
+
+    if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+
+    updateOctaveLabel(cb.octave);
+    updateBassOctaveLabel(bb.octave);
+    updateSoloistOctaveLabel(sb.octave);
+    validateProgression(renderChordVisualizer);
+    
+    gb.instruments.forEach(inst => {
+        inst.steps = new Array(16).fill(0);
+        inst.muted = false;
+    });
+    loadDrumPreset('Standard');
+    renderGrid(); 
+
+    showToast("Settings reset");
 }
 
 function shareProgression() {

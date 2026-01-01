@@ -72,10 +72,17 @@ export function showToast(msg) {
     }, 2000);
 }
 
+let flashTimeout = null;
 export function triggerFlash(intensity = 0.2) {
     if (ui.visualFlash.checked) {
+        if (flashTimeout) clearTimeout(flashTimeout);
+        ui.flashOverlay.style.transition = 'none';
         ui.flashOverlay.style.opacity = intensity;
-        setTimeout(() => { ui.flashOverlay.style.opacity = 0; }, 50);
+        flashTimeout = setTimeout(() => {
+            ui.flashOverlay.style.transition = 'opacity 0.15s ease-out';
+            ui.flashOverlay.style.opacity = 0;
+            flashTimeout = null;
+        }, 50);
     }
     if (ui.haptic.checked && navigator.vibrate) {
         navigator.vibrate(intensity > 0.15 ? 20 : 10);
