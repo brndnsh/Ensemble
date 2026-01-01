@@ -1,6 +1,11 @@
 export const ctx = {
     audio: null,
     masterGain: null,
+    reverbNode: null,
+    chordsReverb: null,
+    drumsReverb: null,
+    bassReverb: null,
+    soloistReverb: null,
     isPlaying: false,
     bpm: 100,
     nextNoteTime: 0.0,
@@ -23,6 +28,7 @@ export const cb = {
     style: 'pad',
     notation: 'roman',
     volume: 0.5,
+    reverb: 0.3,
     octave: 65,
     valid: false,
     cachedCards: []
@@ -37,6 +43,7 @@ export const gb = {
         { name: 'Open',  symbol: '📀', steps: new Array(16).fill(0), muted: false }
     ],
     volume: 0.6,
+    reverb: 0.2,
     measures: 1,
     swing: 0,
     swingSub: '8th',
@@ -47,6 +54,7 @@ export const gb = {
 export const bb = {
     enabled: true,
     volume: 0.5,
+    reverb: 0.05,
     lastFreq: null,
     octave: 41,
     style: 'arp',
@@ -56,7 +64,8 @@ export const bb = {
 
 export const sb = {
     enabled: false,
-    volume: 0.4,
+    volume: 0.3,
+    reverb: 0.6,
     lastFreq: null,
     octave: 77, // F5
     style: 'scalar',

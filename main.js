@@ -893,8 +893,20 @@ function init() {
         ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); });
         ui.progInput.addEventListener('input', () => { validateProgression(renderChordVisualizer); });
         ui.chordVol.addEventListener('input', e => { cb.volume = parseFloat(e.target.value); });
+        ui.chordReverb.addEventListener('input', e => { 
+            cb.reverb = parseFloat(e.target.value); 
+            if (ctx.chordsReverb) ctx.chordsReverb.gain.setTargetAtTime(cb.reverb, ctx.audio.currentTime, 0.02);
+        });
         ui.bassVol.addEventListener('input', e => { bb.volume = parseFloat(e.target.value); });
+        ui.bassReverb.addEventListener('input', e => { 
+            bb.reverb = parseFloat(e.target.value); 
+            if (ctx.bassReverb) ctx.bassReverb.gain.setTargetAtTime(bb.reverb, ctx.audio.currentTime, 0.02);
+        });
         ui.soloistVol.addEventListener('input', e => { sb.volume = parseFloat(e.target.value); });
+        ui.soloistReverb.addEventListener('input', e => { 
+            sb.reverb = parseFloat(e.target.value); 
+            if (ctx.soloistReverb) ctx.soloistReverb.gain.setTargetAtTime(sb.reverb, ctx.audio.currentTime, 0.02);
+        });
         ui.octave.addEventListener('input', e => { 
             cb.octave = parseInt(e.target.value); 
             updateOctaveLabel(cb.octave);
@@ -911,6 +923,10 @@ function init() {
         ui.notationSelect.addEventListener('change', e => { cb.notation = e.target.value; renderChordVisualizer(); });
         ui.clearDrums.addEventListener('click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); });
         ui.drumVol.addEventListener('input', e => { gb.volume = parseFloat(e.target.value); });
+        ui.drumReverb.addEventListener('input', e => { 
+            gb.reverb = parseFloat(e.target.value); 
+            if (ctx.drumsReverb) ctx.drumsReverb.gain.setTargetAtTime(gb.reverb, ctx.audio.currentTime, 0.02);
+        });
         ui.drumBarsSelect.addEventListener('change', e => { 
             const newCount = parseInt(e.target.value);
             const oldMeasures = gb.measures;
@@ -1018,26 +1034,34 @@ function handleTap() {
 function resetToDefaults() {
     ctx.bpm = 100;
     cb.volume = 0.5;
+    cb.reverb = 0.3;
     cb.octave = 65;
     cb.notation = 'roman';
     bb.volume = 0.5;
+    bb.reverb = 0.05;
     bb.octave = 41;
-    sb.volume = 0.4;
+    sb.volume = 0.3;
+    sb.reverb = 0.6;
     sb.octave = 77;
     gb.volume = 0.6;
+    gb.reverb = 0.2;
     gb.swing = 0;
     gb.swingSub = '8th';
     gb.measures = 1;
 
     ui.bpmInput.value = 100;
     ui.chordVol.value = 0.5;
+    ui.chordReverb.value = 0.3;
     ui.octave.value = 65;
     ui.notationSelect.value = 'roman';
     ui.bassVol.value = 0.5;
+    ui.bassReverb.value = 0.05;
     ui.bassOctave.value = 41;
-    ui.soloistVol.value = 0.4;
+    ui.soloistVol.value = 0.3;
+    ui.soloistReverb.value = 0.6;
     ui.soloistOctave.value = 77;
     ui.drumVol.value = 0.6;
+    ui.drumReverb.value = 0.2;
     ui.swingSlider.value = 0;
     ui.swingBase.value = '8th';
     ui.drumBarsSelect.value = 1;
@@ -1047,6 +1071,10 @@ function resetToDefaults() {
     ui.haptic.checked = false;
 
     if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+    if (ctx.chordsReverb) ctx.chordsReverb.gain.setTargetAtTime(0.3, ctx.audio.currentTime, 0.02);
+    if (ctx.bassReverb) ctx.bassReverb.gain.setTargetAtTime(0.05, ctx.audio.currentTime, 0.02);
+    if (ctx.soloistReverb) ctx.soloistReverb.gain.setTargetAtTime(0.6, ctx.audio.currentTime, 0.02);
+    if (ctx.drumsReverb) ctx.drumsReverb.gain.setTargetAtTime(0.2, ctx.audio.currentTime, 0.02);
 
     updateOctaveLabel(cb.octave);
     updateBassOctaveLabel(bb.octave);

@@ -1,5 +1,25 @@
-import { ctx, gb, cb, bb } from './state.js';
+import { ctx, gb, cb, bb, sb } from './state.js';
 import { ui, triggerFlash } from './ui.js';
+
+/**
+ * Creates a simple algorithmic reverb impulse response.
+ * @param {AudioContext} audioCtx 
+ * @param {number} duration 
+ * @param {number} decay 
+ * @returns {AudioBuffer}
+ */
+function createReverbImpulse(audioCtx, duration = 2.0, decay = 2.0) {
+    const sampleRate = audioCtx.sampleRate;
+    const length = sampleRate * duration;
+    const impulse = audioCtx.createBuffer(2, length, sampleRate);
+    for (let channel = 0; channel < 2; channel++) {
+        const data = impulse.getChannelData(channel);
+        for (let i = 0; i < length; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+        }
+    }
+    return impulse;
+}
 
 /**
  * Initializes the Web Audio context and global audio nodes.
@@ -22,6 +42,27 @@ export function initAudio() {
         
         ctx.masterGain.connect(ctx.compressor);
         ctx.compressor.connect(ctx.audio.destination);
+
+        // Reverb setup
+        ctx.reverbNode = ctx.audio.createConvolver();
+        ctx.reverbNode.buffer = createReverbImpulse(ctx.audio, 1.5, 3.0);
+        ctx.reverbNode.connect(ctx.masterGain);
+
+        ctx.chordsReverb = ctx.audio.createGain();
+        ctx.chordsReverb.gain.value = cb.reverb;
+        ctx.chordsReverb.connect(ctx.reverbNode);
+
+        ctx.drumsReverb = ctx.audio.createGain();
+        ctx.drumsReverb.gain.value = gb.reverb;
+        ctx.drumsReverb.connect(ctx.reverbNode);
+
+        ctx.bassReverb = ctx.audio.createGain();
+        ctx.bassReverb.gain.value = bb.reverb;
+        ctx.bassReverb.connect(ctx.reverbNode);
+
+        ctx.soloistReverb = ctx.audio.createGain();
+        ctx.soloistReverb.gain.value = sb.reverb;
+        ctx.soloistReverb.connect(ctx.reverbNode);
 
         const bufSize = ctx.audio.sampleRate * 2;
         const buffer = ctx.audio.createBuffer(1, bufSize, ctx.audio.sampleRate);
@@ -78,7 +119,9 @@ export function playNote(freq, time, duration, vol = 0.1, att = 0.05, soft = fal
         gain.gain.linearRampToValueAtTime(randomizedVol, time + att);
         const releaseTime = soft ? duration * 1.5 : duration;
         gain.gain.exponentialRampToValueAtTime(0.001, time + releaseTime);
-        osc1.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(pan); pan.connect(ctx.masterGain);
+        osc1.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(pan); 
+        pan.connect(ctx.masterGain);
+        if (ctx.chordsReverb) pan.connect(ctx.chordsReverb);
         
         osc1.onended = () => safeDisconnect([pan, gain, filter, osc1, osc2, lfo, lfoGain]);
         
@@ -89,7 +132,9 @@ export function playNote(freq, time, duration, vol = 0.1, att = 0.05, soft = fal
             tGain.gain.setValueAtTime(0, time); tGain.gain.linearRampToValueAtTime(randomizedVol * 0.25, time + 0.002);
             tGain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
             tine.onended = () => safeDisconnect([tGain, tine]);
-            tine.connect(tGain); tGain.connect(pan); tine.start(time); tine.stop(time + 0.15);
+            tine.connect(tGain); 
+            tGain.connect(pan); 
+            tine.start(time); tine.stop(time + 0.15);
         }
     } catch (e) { console.error("playNote error:", e); }
 }
@@ -168,6 +213,7 @@ export function playBassNote(freq, time, duration) {
     scoop.connect(definition);
     definition.connect(gain);
     gain.connect(ctx.masterGain);
+    if (ctx.bassReverb) gain.connect(ctx.bassReverb);
 
     oscBody.start(time);
     oscGrowl.start(time);
@@ -231,6 +277,7 @@ export function playSoloNote(freq, time, duration, vol = 0.4) {
     filter.connect(gain);
     gain.connect(pan);
     pan.connect(ctx.masterGain);
+    if (ctx.soloistReverb) pan.connect(ctx.soloistReverb);
 
     vibrato.start(time);
     osc1.start(time);
@@ -250,6 +297,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const osc = ctx.audio.createOscillator();
         const gain = ctx.audio.createGain();
         gain.connect(ctx.masterGain);
+        if (ctx.drumsReverb) gain.connect(ctx.drumsReverb);
         
         const pitch = 150 + (Math.random() * 10 - 5);
         const decay = 0.4 + (Math.random() * 0.2);
@@ -276,6 +324,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         noise.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(ctx.masterGain);
+        if (ctx.drumsReverb) noiseGain.connect(ctx.drumsReverb);
         noiseGain.gain.setValueAtTime(vol, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.01, time + decay);
         noise.onended = () => safeDisconnect([noiseGain, noiseFilter, noise]);
@@ -287,6 +336,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         tone.frequency.setValueAtTime(250 + (Math.random() * 20 - 10), time);
         const toneGain = ctx.audio.createGain();
         toneGain.connect(ctx.masterGain);
+        if (ctx.drumsReverb) toneGain.connect(ctx.drumsReverb);
         toneGain.gain.setValueAtTime(vol * 0.5, time);
         toneGain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
         tone.onended = () => safeDisconnect([toneGain, tone]);
@@ -304,6 +354,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         noise.connect(filter);
         filter.connect(hGain);
         hGain.connect(ctx.masterGain);
+        if (ctx.drumsReverb) hGain.connect(ctx.drumsReverb);
         
         const baseDuration = (name === 'Open' ? 0.4 : 0.05);
         const duration = baseDuration * (0.8 + Math.random() * 0.4);
