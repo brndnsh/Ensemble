@@ -355,7 +355,7 @@ function scheduleGlobalEvent(step, swungTime) {
                  }
             }
             
-            playSoloNote(soloFreq, soloistTime, duration, sb.volume, bendStartInterval);
+            playSoloNote(soloFreq, soloistTime, duration, 1.0, bendStartInterval);
             sb.lastNoteEnd = soloistTime + duration;
         }
 
@@ -381,48 +381,48 @@ function scheduleGlobalEvent(step, swungTime) {
         
         // Audio playback logic based on style
         if (cb.style === 'pad') {
-            if (stepInChord === 0) chord.freqs.forEach(f => playNote(f, t, chord.beats * spb, cb.volume * 0.2, 0.5, true, 4, ctx.bpm / 120));
+            if (stepInChord === 0) chord.freqs.forEach(f => playNote(f, t, chord.beats * spb, 0.2, 0.5, true, 4, ctx.bpm / 120));
         } else if (cb.style === 'pulse') {
-            if (measureStep % 4 === 0) chord.freqs.forEach(f => playNote(f, t, spb * 2.0, cb.volume * 0.2, 0.01));
+            if (measureStep % 4 === 0) chord.freqs.forEach(f => playNote(f, t, spb * 2.0, 0.2, 0.01));
         } else if (cb.style === 'strum8') {
-            if (measureStep % 2 === 0) chord.freqs.forEach(f => playNote(f, t, spb * 1.0, cb.volume * (measureStep % 4 === 0 ? 0.2 : 0.15), 0.01));
+            if (measureStep % 2 === 0) chord.freqs.forEach(f => playNote(f, t, spb * 1.0, (measureStep % 4 === 0 ? 0.2 : 0.15), 0.01));
         } else if (cb.style === 'pop') {
             const popSteps = [0, 3, 6, 10, 12, 14];
             if (popSteps.includes(measureStep)) { 
                 const isDownbeat = measureStep % 4 === 0;
-                chord.freqs.forEach(f => playNote(f, t, spb * 1.5, cb.volume * (isDownbeat ? 0.2 : 0.15), 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.5, (isDownbeat ? 0.2 : 0.15), 0.01));
             }
         } else if (cb.style === 'skank') {
-            if (measureStep % 8 === 4) chord.freqs.forEach(f => playNote(f, t, spb * 1.0, cb.volume * 0.2, 0.01));
+            if (measureStep % 8 === 4) chord.freqs.forEach(f => playNote(f, t, spb * 1.0, 0.2, 0.01));
         } else if (cb.style === 'funk') {
             const funkSteps = [0, 3, 4, 7, 8, 11, 12, 15];
             if (funkSteps.includes(measureStep)) {
-                chord.freqs.forEach(f => playNote(f, t, spb * 0.5, cb.volume * (measureStep % 4 === 0 ? 0.2 : 0.15), 0.005));
+                chord.freqs.forEach(f => playNote(f, t, spb * 0.5, (measureStep % 4 === 0 ? 0.2 : 0.15), 0.005));
             }
         } else if (cb.style === 'arpeggio') {
             if (measureStep % 2 === 0) {
                 const noteIdx = (Math.floor(stepInChord / 2)) % chord.freqs.length;
-                playNote(chord.freqs[noteIdx], t, spb * 2.0, cb.volume * 0.2, 0.01);
+                playNote(chord.freqs[noteIdx], t, spb * 2.0, 0.2, 0.01);
             }
         } else if (cb.style === 'tresillo') {
             const tresilloSteps = [0, 3, 6, 8, 11, 14];
             if (tresilloSteps.includes(measureStep)) {
-                chord.freqs.forEach(f => playNote(f, t, spb * 1.5, cb.volume * 0.2, 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.5, 0.2, 0.01));
             }
         } else if (cb.style === 'clave') {
             const sonClave = [0, 3, 6, 10, 12];
             if (sonClave.includes(measureStep)) {
-                chord.freqs.forEach(f => playNote(f, t, spb * 1.0, cb.volume * 0.2, 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.0, 0.2, 0.01));
             }
         } else if (cb.style === 'jazz') {
             const charleston = [0, 6]; 
             if (charleston.includes(measureStep % 8)) {
-                chord.freqs.forEach(f => playNote(f, t, spb * 1.0, cb.volume * 0.2, 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.0, 0.2, 0.01));
             }
         } else if (cb.style === 'bossa') {
             const bossa = [0, 3, 6, 10, 13];
             if (bossa.includes(measureStep)) {
-                chord.freqs.forEach(f => playNote(f, t, spb * 1.2, cb.volume * 0.2, 0.01));
+                chord.freqs.forEach(f => playNote(f, t, spb * 1.2, 0.2, 0.01));
             }
         }
     }
@@ -920,17 +920,26 @@ function init() {
         
         ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); });
         ui.progInput.addEventListener('input', () => { validateProgression(renderChordVisualizer); });
-        ui.chordVol.addEventListener('input', e => { cb.volume = parseFloat(e.target.value); });
+        ui.chordVol.addEventListener('input', e => { 
+            cb.volume = parseFloat(e.target.value); 
+            if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(cb.volume, ctx.audio.currentTime, 0.02);
+        });
         ui.chordReverb.addEventListener('input', e => { 
             cb.reverb = parseFloat(e.target.value); 
             if (ctx.chordsReverb) ctx.chordsReverb.gain.setTargetAtTime(cb.reverb, ctx.audio.currentTime, 0.02);
         });
-        ui.bassVol.addEventListener('input', e => { bb.volume = parseFloat(e.target.value); });
+        ui.bassVol.addEventListener('input', e => { 
+            bb.volume = parseFloat(e.target.value); 
+            if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(bb.volume, ctx.audio.currentTime, 0.02);
+        });
         ui.bassReverb.addEventListener('input', e => { 
             bb.reverb = parseFloat(e.target.value); 
             if (ctx.bassReverb) ctx.bassReverb.gain.setTargetAtTime(bb.reverb, ctx.audio.currentTime, 0.02);
         });
-        ui.soloistVol.addEventListener('input', e => { sb.volume = parseFloat(e.target.value); });
+        ui.soloistVol.addEventListener('input', e => { 
+            sb.volume = parseFloat(e.target.value); 
+            if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(sb.volume, ctx.audio.currentTime, 0.02);
+        });
         ui.soloistReverb.addEventListener('input', e => { 
             sb.reverb = parseFloat(e.target.value); 
             if (ctx.soloistReverb) ctx.soloistReverb.gain.setTargetAtTime(sb.reverb, ctx.audio.currentTime, 0.02);
@@ -950,7 +959,10 @@ function init() {
         });
         ui.notationSelect.addEventListener('change', e => { cb.notation = e.target.value; renderChordVisualizer(); });
         ui.clearDrums.addEventListener('click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); });
-        ui.drumVol.addEventListener('input', e => { gb.volume = parseFloat(e.target.value); });
+        ui.drumVol.addEventListener('input', e => { 
+            gb.volume = parseFloat(e.target.value); 
+            if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(gb.volume, ctx.audio.currentTime, 0.02);
+        });
         ui.drumReverb.addEventListener('input', e => { 
             gb.reverb = parseFloat(e.target.value); 
             if (ctx.drumsReverb) ctx.drumsReverb.gain.setTargetAtTime(gb.reverb, ctx.audio.currentTime, 0.02);
@@ -1068,10 +1080,10 @@ function resetToDefaults() {
     bb.volume = 0.5;
     bb.reverb = 0.05;
     bb.octave = 41;
-    sb.volume = 0.2;
+    sb.volume = 0.5;
     sb.reverb = 0.6;
     sb.octave = 77;
-    gb.volume = 0.6;
+    gb.volume = 0.5;
     gb.reverb = 0.2;
     gb.swing = 0;
     gb.swingSub = '8th';
@@ -1085,10 +1097,10 @@ function resetToDefaults() {
     ui.bassVol.value = 0.5;
     ui.bassReverb.value = 0.05;
     ui.bassOctave.value = 41;
-    ui.soloistVol.value = 0.2;
+    ui.soloistVol.value = 0.5;
     ui.soloistReverb.value = 0.6;
     ui.soloistOctave.value = 77;
-    ui.drumVol.value = 0.6;
+    ui.drumVol.value = 0.5;
     ui.drumReverb.value = 0.2;
     ui.swingSlider.value = 0;
     ui.swingBase.value = '8th';
@@ -1099,6 +1111,13 @@ function resetToDefaults() {
     ui.haptic.checked = false;
 
     if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+    
+    // Update instrument buses
+    if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+    if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+    if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+
     if (ctx.chordsReverb) ctx.chordsReverb.gain.setTargetAtTime(0.3, ctx.audio.currentTime, 0.02);
     if (ctx.bassReverb) ctx.bassReverb.gain.setTargetAtTime(0.05, ctx.audio.currentTime, 0.02);
     if (ctx.soloistReverb) ctx.soloistReverb.gain.setTargetAtTime(0.6, ctx.audio.currentTime, 0.02);

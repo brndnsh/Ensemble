@@ -42,7 +42,7 @@ export const gb = {
         { name: 'HiHat', symbol: '🎩', steps: new Array(16).fill(0), muted: false },
         { name: 'Open',  symbol: '📀', steps: new Array(16).fill(0), muted: false }
     ],
-    volume: 0.6,
+    volume: 0.5,
     reverb: 0.2,
     measures: 1,
     swing: 0,
@@ -64,7 +64,7 @@ export const bb = {
 
 export const sb = {
     enabled: false,
-    volume: 0.2,
+    volume: 0.5,
     reverb: 0.6,
     lastFreq: null,
     lastNoteEnd: 0,
