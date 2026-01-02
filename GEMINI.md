@@ -14,8 +14,10 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **`state.js`**: Manages the global application state (playback status, BPM, active instruments, user presets).
 *   **`chords.js`**: Contains logic for parsing chord progressions (Roman Numerals, Nashville Numbers, Chord Names) and calculating voicings.
 *   **`bass.js`**: Generates walking bass lines and patterns based on chord progressions and desired register.
+*   **`soloist.js`**: Implements advanced algorithmic soloing logic, including phrasing, rhythmic cells, and harmonic targeting.
 *   **`ui.js`**: Centralizes DOM element references and UI manipulation functions (toasts, visual updates).
 *   **`config.js`**: Stores static configuration, such as default drum presets, chord styles, and musical constants.
+*   **`utils.js`**: Contains common utility functions for frequency calculation and formatting.
 *   **`sw.js`**: A Service Worker that caches key assets to enable offline functionality.
 
 ## Features
@@ -33,8 +35,15 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ### Bassist
 *   **Walking Bass Generator**: Automatically generates melodic walking bass lines using chord tones and approach notes.
-*   **Rhythmic Styles**: Supports Whole Note, Half Note, and Walking (Quarter Note) patterns.
+*   **Rhythmic Styles**: Supports Whole Note, Half Note, Arpeggio, and Walking (Quarter Note) patterns.
+*   **Register Control**: Adjustable bass register to fit different musical contexts.
 *   **Visualizer**: A real-time sparkline graph showing melodic contour alongside chord tone "lanes".
+
+### Soloist
+*   **Algorithmic Soloing**: Generates melodic lines over progressions using rhythmic cells and harmonic targeting.
+*   **Styles**: Supports various soloing styles including Scalar, Shreddy, Bebop, Blues, and Minimal.
+*   **Dual-Clock Scheduling**: Employs an unswung clock for a more laid-back, human-like melodic feel relative to the rhythm section.
+*   **Visualizer**: Real-time path visualization of the generated melody.
 
 ### General
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.

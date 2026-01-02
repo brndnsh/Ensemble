@@ -17,7 +17,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ### 🎸 Bassist
 *   **Walking Bass Generator**: Automatically generates melodic walking bass lines that follow your chord progression.
-*   **Rhythmic Styles**: Choose between Whole Note, Half Note, and Walking (Quarter Note) patterns.
+*   **Rhythmic Styles**: Choose between Whole Note, Half Note, Arpeggio, and Walking (Quarter Note) patterns.
 *   **Melodic Visualizer**: Real-time visualization of the bass line contour and chord tones.
 *   **Register Control**: Adjustable bass register (center octave) to fit different musical contexts.
 
