@@ -24,7 +24,6 @@ export const DRUM_PRESETS = {
 
 export const CHORD_STYLES = [
     { id: 'pad', name: 'Pad' },
-    { id: 'pulse', name: 'Pulse' },
     { id: 'strum8', name: 'Strum' },
     { id: 'pop', name: 'Pop' },
     { id: 'rock', name: 'Pop-Rock' },

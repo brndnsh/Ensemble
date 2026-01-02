@@ -382,8 +382,6 @@ function scheduleGlobalEvent(step, swungTime) {
         // Audio playback logic based on style
         if (cb.style === 'pad') {
             if (stepInChord === 0) chord.freqs.forEach(f => playNote(f, t, chord.beats * spb, 0.2, 0.5, true, 4, ctx.bpm / 120));
-        } else if (cb.style === 'pulse') {
-            if (measureStep % 4 === 0) chord.freqs.forEach(f => playNote(f, t, spb * 2.0, 0.2, 0.01));
         } else if (cb.style === 'strum8') {
             if (measureStep % 2 === 0) chord.freqs.forEach(f => playNote(f, t, spb * 1.0, (measureStep % 4 === 0 ? 0.2 : 0.15), 0.01));
         } else if (cb.style === 'pop') {
