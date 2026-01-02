@@ -5,7 +5,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 ## Features
 
 ### 🎹 Chords
-*   **Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`).
+*   **Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`). Use the pipe symbol (`|`) to explicitly delimit measures (e.g., `I | IV | V | I`).
 *   **Playback Styles**: Choose from various accompaniment styles like Pad, Pulse, Strum, Funk, Reggae, and Jazz.
 *   **Smart Voicing**: Automatically calculates smooth voice leading for chords.
 *   **Transposition**: Instantly transpose the entire progression to any key.
