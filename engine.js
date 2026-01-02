@@ -173,6 +173,38 @@ export function playNote(freq, time, duration, vol = 0.1, att = 0.05, soft = fal
     } catch (e) { console.error("playNote error:", e); }
 }
 
+/**
+ * Plays a percussive "scratch" or muted strum sound for chord rhythms.
+ * @param {number} time - AudioContext time to play.
+ * @param {number} vol - Volume multiplier.
+ */
+export function playChordScratch(time, vol = 0.1) {
+    try {
+        const randomizedVol = vol * (0.8 + Math.random() * 0.4);
+        const gain = ctx.audio.createGain();
+        const filter = ctx.audio.createBiquadFilter();
+        const noise = ctx.audio.createBufferSource();
+        
+        noise.buffer = gb.audioBuffers.noise;
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1200 + Math.random() * 400, time);
+        filter.Q.setValueAtTime(1.5, time);
+        
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(randomizedVol, time + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+        
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.chordsGain);
+        
+        noise.start(time);
+        noise.stop(time + 0.05);
+        
+        noise.onended = () => safeDisconnect([gain, filter, noise]);
+    } catch (e) { console.error("playChordScratch error:", e); }
+}
+
 export function playBassNote(freq, time, duration) {
     if (!Number.isFinite(freq) || !Number.isFinite(time) || !Number.isFinite(duration)) return;
     if (freq < 10 || freq > 24000) return;

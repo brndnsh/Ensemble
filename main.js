@@ -1,6 +1,6 @@
 import { ctx, gb, cb, bb, sb, getUserPresets, getUserDrumPresets, saveUserPresets, saveUserDrumPresets } from './state.js';
 import { ui, showToast, triggerFlash, updateOctaveLabel, updateBassOctaveLabel, updateSoloistOctaveLabel } from './ui.js';
-import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote } from './engine.js';
+import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
 import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES } from './config.js';
 import { normalizeKey } from './utils.js';
 import { validateProgression } from './chords.js';
@@ -392,12 +392,29 @@ function scheduleGlobalEvent(step, swungTime) {
                 const isDownbeat = measureStep % 4 === 0;
                 chord.freqs.forEach(f => playNote(f, t, spb * 1.5, (isDownbeat ? 0.2 : 0.15), 0.01));
             }
+        } else if (cb.style === 'rock') {
+            // Straight 8ths Pop-Rock
+            if (measureStep % 2 === 0) {
+                const isDownbeat = measureStep % 4 === 0;
+                chord.freqs.forEach(f => playNote(f, t, spb * 0.5, (isDownbeat ? 0.2 : 0.16), 0.01));
+            }
         } else if (cb.style === 'skank') {
-            if (measureStep % 8 === 4) chord.freqs.forEach(f => playNote(f, t, spb * 1.0, 0.2, 0.01));
+            // Reggae Single Skank (2 and 4)
+            if (measureStep % 8 === 4) {
+                chord.freqs.forEach(f => playNote(f, t, spb * 0.5, 0.22, 0.005));
+            }
+        } else if (cb.style === 'double_skank') {
+            // Reggae Double Skank (2 & 4 + their 'and')
+            if (measureStep % 8 === 4 || measureStep % 8 === 6) {
+                chord.freqs.forEach(f => playNote(f, t, spb * 0.35, 0.18, 0.005));
+            }
         } else if (cb.style === 'funk') {
             const funkSteps = [0, 3, 4, 7, 8, 11, 12, 15];
             if (funkSteps.includes(measureStep)) {
-                chord.freqs.forEach(f => playNote(f, t, spb * 0.5, (measureStep % 4 === 0 ? 0.2 : 0.15), 0.005));
+                chord.freqs.forEach(f => playNote(f, t, spb * 0.5, (measureStep % 4 === 0 ? 0.22 : 0.18), 0.005));
+            } else {
+                // Ghost notes (scratches) for that percussive funk engine
+                playChordScratch(t, 0.08);
             }
         } else if (cb.style === 'arpeggio') {
             if (measureStep % 2 === 0) {
@@ -414,14 +431,35 @@ function scheduleGlobalEvent(step, swungTime) {
             if (sonClave.includes(measureStep)) {
                 chord.freqs.forEach(f => playNote(f, t, spb * 1.0, 0.2, 0.01));
             }
+        } else if (cb.style === 'afrobeat') {
+            // Syncopated Afrobeat guitar-style pattern
+            const afro = [0, 3, 6, 7, 10, 12, 13, 15];
+            if (afro.includes(measureStep)) {
+                chord.freqs.forEach(f => playNote(f, t, spb * 0.3, 0.18, 0.01));
+            }
         } else if (cb.style === 'jazz') {
-            const charleston = [0, 6]; 
-            if (charleston.includes(measureStep % 8)) {
-                chord.freqs.forEach(f => playNote(f, t, spb * 1.0, 0.2, 0.01));
+            // Jazz Comping (Charleston + anticipation)
+            const comping = [0, 6, 14]; 
+            if (comping.includes(measureStep)) {
+                chord.freqs.forEach(f => playNote(f, t, spb * 0.8, 0.18, 0.01));
+            }
+            if (measureStep % 4 === 0 && !comping.includes(measureStep) && Math.random() < 0.2) {
+                playChordScratch(t, 0.04);
+            }
+        } else if (cb.style === 'green') {
+            // Freddy Green style (4-to-the-bar)
+            if (measureStep % 4 === 0) {
+                const isBackbeat = measureStep % 8 === 4;
+                chord.freqs.forEach(f => playNote(f, t, spb * 0.4, (isBackbeat ? 0.22 : 0.18), 0.01));
             }
         } else if (cb.style === 'bossa') {
-            const bossa = [0, 3, 6, 10, 13];
-            if (bossa.includes(measureStep)) {
+            // Bossa Nova 2-measure pattern
+            const isSecondMeasure = Math.floor(step / 16) % 2 === 1;
+            const bossa1 = [0, 3, 6, 10, 13];
+            const bossa2 = [0, 3, 6, 8, 11, 14];
+            const currentBossa = isSecondMeasure ? bossa2 : bossa1;
+            
+            if (currentBossa.includes(measureStep)) {
                 chord.freqs.forEach(f => playNote(f, t, spb * 1.2, 0.2, 0.01));
             }
         }

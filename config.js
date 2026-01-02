@@ -27,12 +27,16 @@ export const CHORD_STYLES = [
     { id: 'pulse', name: 'Pulse' },
     { id: 'strum8', name: 'Strum' },
     { id: 'pop', name: 'Pop' },
+    { id: 'rock', name: 'Pop-Rock' },
     { id: 'skank', name: 'Reggae' },
+    { id: 'double_skank', name: 'Double Skank' },
     { id: 'funk', name: 'Funk' },
     { id: 'arpeggio', name: 'Arpeggio' },
     { id: 'tresillo', name: 'Tresillo' },
     { id: 'clave', name: 'Clave' },
-    { id: 'jazz', name: 'Jazz' },
+    { id: 'afrobeat', name: 'Afrobeat' },
+    { id: 'jazz', name: 'Jazz Comp' },
+    { id: 'green', name: 'Freddy Green' },
     { id: 'bossa', name: 'Bossa' }
 ];
 
