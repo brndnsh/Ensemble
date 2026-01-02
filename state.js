@@ -68,7 +68,7 @@ export const sb = {
     reverb: 0.6,
     lastFreq: null,
     octave: 77, // F5
-    style: 'scalar',
+    style: 'shred',
     history: [],
     chordHistory: [],
     direction: 1,      // 1 for up, -1 for down
@@ -76,7 +76,10 @@ export const sb = {
     patternSteps: 0,     // How many steps remain in current pattern
     phraseSteps: 0,
     isResting: false,
-    currentCell: [1, 0, 1, 0]
+    currentCell: [1, 0, 1, 0],
+    currentLick: null,
+    lickIndex: 0,
+    busySteps: 0
 };
 
 export const getUserPresets = () => JSON.parse(localStorage.getItem('ensemble_userPresets') || '[]');

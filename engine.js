@@ -250,11 +250,15 @@ export function playSoloNote(freq, time, duration, vol = 0.4) {
 
     // Vibrato LFO (kicks in after 150ms)
     const vibrato = ctx.audio.createOscillator();
-    vibrato.frequency.setValueAtTime(5.8, time); // Vibrato speed
+    const vibSpeed = 5.7 + Math.random() * 0.6;
+    vibrato.frequency.setValueAtTime(vibSpeed, time); 
     const vibGain = ctx.audio.createGain();
+    // More aggressive vibrato for longer notes
+    const depthFactor = duration > 0.8 ? 0.012 : 0.007;
+    const vibDepth = freq * (depthFactor + Math.random() * 0.004);
     vibGain.gain.setValueAtTime(0, time);
     vibGain.gain.setValueAtTime(0, time + 0.15);
-    vibGain.gain.linearRampToValueAtTime(freq * 0.007, time + 0.4); 
+    vibGain.gain.linearRampToValueAtTime(vibDepth, time + 0.4); 
     vibrato.connect(vibGain);
     vibGain.connect(osc1.frequency);
     vibGain.connect(osc2.frequency);
@@ -262,9 +266,10 @@ export function playSoloNote(freq, time, duration, vol = 0.4) {
     // Resonant Filter
     const filter = ctx.audio.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(4500, time);
-    filter.frequency.exponentialRampToValueAtTime(1800, time + duration);
-    filter.Q.setValueAtTime(3.5, time); // Resonance
+    filter.frequency.setValueAtTime(4000, time);
+    filter.frequency.exponentialRampToValueAtTime(1500, time + duration);
+    const res = duration > 0.4 ? 4.5 : 3.5;
+    filter.Q.setValueAtTime(res, time); 
 
     // Amplitude Envelope
     gain.gain.setValueAtTime(0, time);

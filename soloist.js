@@ -18,6 +18,14 @@ const RHYTHMIC_CELLS = [
     [1, 0, 0, 1], // Syncopated
 ];
 
+const CANNED_LICKS = {
+    'the_lick': [2, 3, 5, 7, 3, 10, 12], // 2 b3 4 5 b3 b7 1
+    'blues_1': [12, 15, 12, 10, 9, 7], // 1 b3 1 b7 6 5
+    'rock_1': [0, 3, 5, 5, 3, 0],      // 1 b3 4 4 b3 1
+    'bebop_1': [7, 6, 5, 4, 3, 2, 1, 0], // 5 b5 4 3 b3 2 b2 1
+    'shred_1': [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], // Major Arp Sweep
+};
+
 /**
  * Determines the best scale intervals based on chord quality and parent key.
  */
@@ -61,19 +69,39 @@ function getScaleForChord(chord, style) {
 export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = null, centerMidi = 77, style = 'scalar') {
     if (!currentChord) return null;
 
+    let durationMultiplier = 1;
+
+    // Skip steps if we are currently playing a sustained note
+    if (sb.busySteps > 0) {
+        sb.busySteps--;
+        return null;
+    }
+
     const beatInMeasure = Math.floor(measureStep / 4);
     const stepInBeat = measureStep % 4;
 
     // --- Phrasing Logic ---
     if (measureStep === 0 || sb.phraseSteps <= 0) {
         // Decide if we should start a new phrase or rest
-        if (!sb.isResting && Math.random() < 0.4) {
+        const restProb = style === 'shred' ? 0.15 : 0.4; // Shredders rest less
+        if (!sb.isResting && Math.random() < restProb) {
             sb.isResting = true;
             sb.phraseSteps = 4 + Math.floor(Math.random() * 8); // Rest for 1-2 beats
+            sb.currentLick = null;
         } else {
             sb.isResting = false;
-            sb.phraseSteps = 8 + Math.floor(Math.random() * 16); // Phrase for 2-4 beats
+            const phraseBase = style === 'shred' ? 16 : 8;
+            sb.phraseSteps = phraseBase + Math.floor(Math.random() * 16); 
             sb.patternMode = Math.random() < 0.6 ? 'scale' : 'arp';
+            
+            // 20% chance to trigger a canned lick
+            if (Math.random() < 0.2) {
+                const lickKeys = Object.keys(CANNED_LICKS);
+                sb.currentLick = CANNED_LICKS[lickKeys[Math.floor(Math.random() * lickKeys.length)]];
+                sb.lickIndex = 0;
+            } else {
+                sb.currentLick = null;
+            }
         }
     }
     sb.phraseSteps--;
@@ -84,15 +112,17 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     if (stepInBeat === 0) {
         let cellPool = RHYTHMIC_CELLS;
         if (style === 'minimal') cellPool = [[1, 0, 0, 0], [1, 0, 1, 0]];
+        if (style === 'shred') cellPool = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 0, 1, 1]]; // Favor constant 16ths
         sb.currentCell = cellPool[Math.floor(Math.random() * cellPool.length)];
     }
 
     // Check rhythmic cell for current step
-    if (sb.currentCell[stepInBeat] === 0) return null;
+    // If a lick is playing, it overrides the rhythmic cell to ensure the whole lick plays
+    if (sb.currentCell[stepInBeat] === 0 && !sb.currentLick) return null;
 
     // --- Pitch Selection ---
-    const minMidi = centerMidi - 18;
-    const maxMidi = centerMidi + 18;
+    const minMidi = centerMidi - (style === 'shred' ? 24 : 18);
+    const maxMidi = centerMidi + (style === 'shred' ? 30 : 24); 
     const prevMidi = prevFreq ? Math.round(12 * Math.log2(prevFreq / 440) + 69) : centerMidi;
     const rootMidi = currentChord.rootMidi;
     
@@ -101,62 +131,114 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     const scaleTones = scaleIntervals.map(i => rootMidi + i);
 
     let finalMidi = prevMidi;
-
-    // --- Blues Specific Phrasing ---
     let isGraceNote = false;
-    if (style === 'blues' && Math.random() < 0.25 && stepInBeat !== 0) {
-        // Characteristic blues "slip": quick chromatic note 1 semitone below a target
-        isGraceNote = true;
-    }
 
-    // Harmonic Targeting: If we are at the end of a measure and a new chord is coming,
-    // target a strong note (3rd or 7th) of the next chord.
-    const isApproachingChange = measureStep >= 12 && nextChord && nextChord !== currentChord;
-    
-    if (isApproachingChange && Math.random() < 0.7) {
-        const nextRoot = nextChord.rootMidi;
-        const targetIntervals = [nextChord.intervals[1], nextChord.intervals[nextChord.intervals.length-1]]; // 3rd or 7th
-        const targets = targetIntervals.map(i => {
-            let m = nextRoot + i;
-            while (m < minMidi) m += 12;
-            while (m > maxMidi) m -= 12;
-            return m;
-        });
-        // Pick target closest to current
-        targets.sort((a, b) => Math.abs(a - prevMidi) - Math.abs(b - prevMidi));
+    // --- Lick Logic ---
+    if (sb.currentLick) {
+        const lickNote = sb.currentLick[sb.lickIndex];
+        let targetMidi = rootMidi + lickNote;
         
-        // Approach chromatically or by step
-        if (targets[0] > prevMidi) finalMidi = prevMidi + (Math.random() < 0.5 ? 1 : 2);
-        else if (targets[0] < prevMidi) finalMidi = prevMidi - (Math.random() < 0.5 ? 1 : 2);
-        else finalMidi = targets[0];
+        // Ensure it's in a reasonable range
+        while (targetMidi < centerMidi - 12) targetMidi += 12;
+        while (targetMidi > centerMidi + 12) targetMidi -= 12;
+        
+        finalMidi = targetMidi;
+        sb.lickIndex++;
+        
+        // Licks usually play on 8th notes or triplets, let's assume 8ths (2 steps) for now
+        durationMultiplier = 2;
+        
+        if (sb.lickIndex >= sb.currentLick.length) {
+            sb.currentLick = null; // Lick finished
+            // Give it a longer sustain at the end of a lick
+            durationMultiplier = 4;
+        }
+
+        sb.busySteps = durationMultiplier - 1;
+        return { freq: getFrequency(finalMidi), durationMultiplier };
     } else {
-        // Standard pattern motion
-        if (sb.patternSteps <= 0) {
-            sb.patternSteps = 2 + Math.floor(Math.random() * 6);
-            if (prevMidi > centerMidi + 10) sb.direction = -1;
-            else if (prevMidi < centerMidi - 10) sb.direction = 1;
-            else sb.direction = Math.random() > 0.5 ? 1 : -1;
+        // --- Shred Specific Logic ---
+        if (style === 'shred') {
+            if (sb.patternSteps <= 0) {
+                sb.patternSteps = 8 + Math.floor(Math.random() * 16); // Longer sweeps
+                sb.patternMode = Math.random() < 0.9 ? 'arp' : 'scale'; // 90% arpeggios
+                
+                if (prevMidi > centerMidi + 12) sb.direction = -1;
+                else if (prevMidi < centerMidi - 12) sb.direction = 1;
+                else sb.direction = Math.random() > 0.5 ? 1 : -1;
+            }
+        } else {
+            // --- Blues Specific Phrasing ---
+            if (style === 'blues' && Math.random() < 0.25 && stepInBeat !== 0) {
+                // Characteristic blues "slip": quick chromatic note 1 semitone below a target
+                isGraceNote = true;
+            }
+
+            // Harmonic Targeting: If we are at the end of a measure and a new chord is coming,
+            // target a strong note (3rd or 7th) of the next chord.
+            const isApproachingChange = measureStep >= 12 && nextChord && nextChord !== currentChord;
+            
+            if (isApproachingChange && Math.random() < 0.7) {
+                const nextRoot = nextChord.rootMidi;
+                const targetIntervals = [nextChord.intervals[1], nextChord.intervals[nextChord.intervals.length-1]]; // 3rd or 7th
+                const targets = targetIntervals.map(i => {
+                    let m = nextRoot + i;
+                    while (m < minMidi) m += 12;
+                    while (m > maxMidi) m -= 12;
+                    return m;
+                });
+                // Pick target closest to current
+                targets.sort((a, b) => Math.abs(a - prevMidi) - Math.abs(b - prevMidi));
+                
+                // Approach chromatically or by step
+                if (targets[0] > prevMidi) finalMidi = prevMidi + (Math.random() < 0.5 ? 1 : 2);
+                else if (targets[0] < prevMidi) finalMidi = prevMidi - (Math.random() < 0.5 ? 1 : 2);
+                else finalMidi = targets[0];
+            } else {
+                // Standard pattern motion
+                if (sb.patternSteps <= 0) {
+                    sb.patternSteps = 2 + Math.floor(Math.random() * 6);
+                    if (prevMidi > centerMidi + 10) sb.direction = -1;
+                    else if (prevMidi < centerMidi - 10) sb.direction = 1;
+                    else sb.direction = Math.random() > 0.5 ? 1 : -1;
+                }
+            }
         }
         sb.patternSteps--;
 
-        const findNext = (current, list, dir) => {
-            let expanded = [];
-            [-24, -12, 0, 12, 24].forEach(o => list.forEach(n => expanded.push(n + o)));
-            expanded = [...new Set(expanded)].sort((a, b) => a - b);
-            
-            if (dir > 0) {
-                return expanded.find(n => n > current) || current;
-            } else {
-                return [...expanded].reverse().find(n => n < current) || current;
-            }
-        };
+        if (style !== 'shred' || sb.patternSteps >= 0) {
+            const findNext = (current, list, dir) => {
+                let expanded = [];
+                [-36, -24, -12, 0, 12, 24, 36].forEach(o => list.forEach(n => expanded.push(n + o)));
+                expanded = [...new Set(expanded)].sort((a, b) => a - b);
+                
+                let next;
+                if (dir > 0) {
+                    next = expanded.find(n => n > current && n <= maxMidi);
+                } else {
+                    next = [...expanded].reverse().find(n => n < current && n >= minMidi);
+                }
+                
+                if (next === undefined) {
+                    // Change direction if we hit a boundary
+                    sb.direction *= -1;
+                    if (sb.direction > 0) {
+                        return expanded.find(n => n > current && n <= maxMidi) || current;
+                    } else {
+                        return [...expanded].reverse().find(n => n < current && n >= minMidi) || current;
+                    }
+                }
+                return next;
+            };
 
-        if (sb.patternMode === 'arp') {
-            finalMidi = findNext(prevMidi, chordTones, sb.direction);
-        } else {
-            finalMidi = findNext(prevMidi, scaleTones, sb.direction);
+            if (sb.patternMode === 'arp') {
+                finalMidi = findNext(prevMidi, chordTones, sb.direction);
+            } else {
+                finalMidi = findNext(prevMidi, scaleTones, sb.direction);
+            }
         }
     }
+
 
     if (isGraceNote) {
         // Slip from 1 semitone below the target
@@ -179,5 +261,45 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         finalMidi += (sb.direction || 1);
     }
 
-    return getFrequency(finalMidi);
+    // Final check for phrase endings: avoid ending on a chromatic passing tone
+    if (sb.phraseSteps === 0 && !sb.isResting) {
+        const keyRoot = KEY_ORDER.indexOf(cb.key);
+        const keyIntervals = [0, 2, 4, 5, 7, 9, 11];
+        const keyNotes = keyIntervals.map(i => (keyRoot + i) % 12);
+        const midiVal = finalMidi % 12;
+        
+        if (!keyNotes.includes(midiVal) && !chordTones.some(t => (t % 12) === midiVal)) {
+            // Resolve to nearest chord tone
+            let bestMidi = finalMidi;
+            let minDist = 13;
+            chordTones.forEach(t => {
+                let m = t;
+                while (m < finalMidi - 6) m += 12;
+                while (m > finalMidi + 6) m -= 12;
+                const d = Math.abs(m - finalMidi);
+                if (d < minDist) {
+                    minDist = d;
+                    bestMidi = m;
+                }
+            });
+            finalMidi = bestMidi;
+        }
+    }
+
+    if (style === 'minimal') {
+        // Occasionally hold notes longer in minimal style
+        if (Math.random() < 0.4) durationMultiplier = 3 + Math.floor(Math.random() * 5);
+        else durationMultiplier = 2;
+    } else if (style === 'shred' && sb.phraseSteps <= 1 && !sb.isResting) {
+        // Shredders often end a run on a sustained chord tone with vibrato
+        // We check <= 1 to catch the very end of the phrase
+        if (Math.random() < 0.8) durationMultiplier = 8 + Math.floor(Math.random() * 8);
+    }
+
+    sb.busySteps = durationMultiplier - 1;
+
+    return {
+        freq: getFrequency(finalMidi),
+        durationMultiplier
+    };
 }

@@ -313,12 +313,13 @@ function scheduleGlobalEvent(step, swungTime) {
         const nextChordData = getChordAtStep(step + 4);
         if (nextChordData) nextChord = nextChordData.chord;
 
-        const soloFreq = getSoloistNote(chord, nextChord, measureStep, sb.lastFreq, sb.octave, sb.style);
+        const soloResult = getSoloistNote(chord, nextChord, measureStep, sb.lastFreq, sb.octave, sb.style);
         let midi = null;
         let noteName = '--';
         let octave = '';
 
-        if (soloFreq) {
+        if (soloResult && soloResult.freq) {
+            const soloFreq = soloResult.freq;
             sb.lastFreq = soloFreq;
             
             midi = Math.round(12 * Math.log2(soloFreq / 440) + 69);
@@ -327,7 +328,7 @@ function scheduleGlobalEvent(step, swungTime) {
             octave = Math.floor(midi / 12) - 1;
 
             const spb = 60.0 / ctx.bpm;
-            const duration = 0.25 * spb; // 16th note base duration
+            const duration = 0.25 * spb * (soloResult.durationMultiplier || 1);
             playSoloNote(soloFreq, soloistTime, duration, sb.volume);
         }
 

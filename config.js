@@ -47,7 +47,8 @@ export const SOLOIST_STYLES = [
     { id: 'bird', name: 'Bebop' },
     { id: 'blues', name: 'Blues' },
     { id: 'scalar', name: 'Scalar' },
-    { id: 'minimal', name: 'Minimal' }
+    { id: 'minimal', name: 'Minimal' },
+    { id: 'shred', name: 'Shreddy' }
 ];
 
 export const CHORD_PRESETS = [
