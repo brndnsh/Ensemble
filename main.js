@@ -76,7 +76,7 @@ function togglePlay() {
             silentAudio.play().catch(e => console.log("Audio unlock failed", e));
             iosAudioUnlocked = true;
         } else {
-            silentAudio.play();
+            silentAudio.play().catch(e => {});
         }
         ctx.isPlaying = true;
         ui.playBtn.textContent = 'STOP';
