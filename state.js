@@ -64,11 +64,12 @@ export const bb = {
 
 export const sb = {
     enabled: false,
-    volume: 0.3,
+    volume: 0.2,
     reverb: 0.6,
     lastFreq: null,
+    lastNoteEnd: 0,
     octave: 77, // F5
-    style: 'shred',
+    style: 'scalar',
     history: [],
     chordHistory: [],
     direction: 1,      // 1 for up, -1 for down

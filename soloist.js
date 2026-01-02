@@ -95,7 +95,8 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
             sb.patternMode = Math.random() < 0.6 ? 'scale' : 'arp';
             
             // 20% chance to trigger a canned lick
-            if (Math.random() < 0.2) {
+            // Canned licks are fixed intervals, so we avoid them in strict diatonic styles
+            if (style !== 'scalar' && style !== 'shred' && Math.random() < 0.2) {
                 const lickKeys = Object.keys(CANNED_LICKS);
                 sb.currentLick = CANNED_LICKS[lickKeys[Math.floor(Math.random() * lickKeys.length)]];
                 sb.lickIndex = 0;
@@ -190,10 +191,15 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
                 // Pick target closest to current
                 targets.sort((a, b) => Math.abs(a - prevMidi) - Math.abs(b - prevMidi));
                 
-                // Approach chromatically or by step
-                if (targets[0] > prevMidi) finalMidi = prevMidi + (Math.random() < 0.5 ? 1 : 2);
-                else if (targets[0] < prevMidi) finalMidi = prevMidi - (Math.random() < 0.5 ? 1 : 2);
-                else finalMidi = targets[0];
+                if (style === 'scalar' || style === 'shred') {
+                    // Strict styles: snap directly to the target chord tone
+                    finalMidi = targets[0];
+                } else {
+                    // Approach chromatically or by step
+                    if (targets[0] > prevMidi) finalMidi = prevMidi + (Math.random() < 0.5 ? 1 : 2);
+                    else if (targets[0] < prevMidi) finalMidi = prevMidi - (Math.random() < 0.5 ? 1 : 2);
+                    else finalMidi = targets[0];
+                }
             } else {
                 // Standard pattern motion
                 if (sb.patternSteps <= 0) {
@@ -258,7 +264,35 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     const intervalFromRoot = (finalMidi - rootMidi + 120) % 12;
     // Avoid the 4th (interval 5) on downbeats for major and minor chords unless it's a chord tone
     if (stepInBeat === 0 && intervalFromRoot === 5 && !chordTones.includes(finalMidi)) {
-        finalMidi += (sb.direction || 1);
+        // Shift to the next scale tone instead of chromatic shift
+        const currentDir = sb.direction || 1;
+        const currentScaleIndex = scaleTones.indexOf(finalMidi);
+        
+        if (currentScaleIndex !== -1) {
+            // If currently in scale, move to next/prev scale tone
+            let nextIndex = currentScaleIndex + currentDir;
+            // Wrap around logic if needed (though scaleTones are usually one octave, findNext handles registers)
+            // But scaleTones here are just one octave [0..11] + root.
+            // Wait, scaleTones is defined as: scaleIntervals.map(i => rootMidi + i);
+            // This is just one octave. finalMidi might be outside this range.
+            
+            // Safer approach: find nearest scale tone in direction
+            let safeMidi = finalMidi + currentDir;
+            let attempts = 0;
+            while (attempts < 4) {
+                 const norm = (safeMidi % 12);
+                 const scaleNorms = scaleTones.map(t => t % 12);
+                 if (scaleNorms.includes(norm) && norm !== (rootMidi + 5) % 12) {
+                     finalMidi = safeMidi;
+                     break;
+                 }
+                 safeMidi += currentDir;
+                 attempts++;
+            }
+        } else {
+             // If not in scale (e.g. chromatic passing tone landing on avoid note), just shift semitone
+             finalMidi += currentDir;
+        }
     }
 
     // Final check for phrase endings: avoid ending on a chromatic passing tone
