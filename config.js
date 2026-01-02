@@ -44,11 +44,11 @@ export const BASS_STYLES = [
 ];
 
 export const SOLOIST_STYLES = [
+    { id: 'scalar', name: 'Scalar' },
+    { id: 'shred', name: 'Shreddy' },
     { id: 'bird', name: 'Bebop' },
     { id: 'blues', name: 'Blues' },
-    { id: 'scalar', name: 'Scalar' },
-    { id: 'minimal', name: 'Minimal' },
-    { id: 'shred', name: 'Shreddy' }
+    { id: 'minimal', name: 'Minimal' }
 ];
 
 export const CHORD_PRESETS = [

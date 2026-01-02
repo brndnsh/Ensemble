@@ -91,7 +91,20 @@ export function playNote(freq, time, duration, vol = 0.1, att = 0.05, soft = fal
         const randomizedVol = vol * (0.92 + Math.random() * 0.16);
         const gain = ctx.audio.createGain();
         let pan = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
-        if (ctx.audio.createStereoPanner) pan.pan.setValueAtTime((Math.random() * 2 - 1) * 0.6, time);
+        
+        if (ctx.audio.createStereoPanner) {
+            // Pitch-based panning for stable stereo image (Piano style: Lows Left, Highs Right)
+            // Center around Middle C (261.63 Hz)
+            // Map 2 octaves down/up to full pan width
+            if (Number.isFinite(freq)) {
+                let panVal = (Math.log2(freq / 261.63) / 2.5); 
+                panVal = Math.max(-0.7, Math.min(0.7, panVal));
+                pan.pan.setValueAtTime(panVal, time);
+            } else {
+                 pan.pan.setValueAtTime(0, time);
+            }
+        }
+
         const osc1 = ctx.audio.createOscillator();
         osc1.type = 'triangle';
         if (Number.isFinite(freq)) osc1.frequency.setValueAtTime(freq, time);
@@ -159,7 +172,9 @@ export function playBassNote(freq, time, duration) {
 
     const growlFilter = ctx.audio.createBiquadFilter();
     growlFilter.type = 'lowpass';
-    growlFilter.frequency.setValueAtTime(1000, time);
+    // Dynamic brightness based on velocity
+    const dynamicCutoff = 800 + (vol * 1500); 
+    growlFilter.frequency.setValueAtTime(dynamicCutoff, time);
     growlFilter.Q.setValueAtTime(2, time);
 
     // Percussive Thump (Finger/Pick noise)
@@ -194,7 +209,8 @@ export function playBassNote(freq, time, duration) {
 
     const mainFilter = ctx.audio.createBiquadFilter();
     mainFilter.type = 'lowpass';
-    mainFilter.frequency.setValueAtTime(2000, time);
+    // Dynamic filter envelope for punch
+    mainFilter.frequency.setValueAtTime(1000 + (vol * 2000), time);
     mainFilter.frequency.exponentialRampToValueAtTime(600, time + duration);
 
     const gain = ctx.audio.createGain();
@@ -226,7 +242,7 @@ export function playBassNote(freq, time, duration) {
     oscBody.onended = () => safeDisconnect([gain, definition, scoop, weight, mainFilter, growlFilter, growlGain, thumpGain, thumpFilter, oscBody, oscGrowl, thump]);
 }
 
-export function playSoloNote(freq, time, duration, vol = 0.4) {
+export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval = 0) {
     if (!Number.isFinite(freq)) return;
     
     const randomizedVol = vol * (0.95 + Math.random() * 0.1);
@@ -237,44 +253,67 @@ export function playSoloNote(freq, time, duration, vol = 0.4) {
     // Osc 1: Primary Sawtooth
     const osc1 = ctx.audio.createOscillator();
     osc1.type = 'sawtooth';
-    // Slight pitch scoop at the start
-    osc1.frequency.setValueAtTime(freq * 0.97, time);
-    osc1.frequency.exponentialRampToValueAtTime(freq, time + 0.04);
     
     // Osc 2: Detuned Sawtooth for thickness
     const osc2 = ctx.audio.createOscillator();
     osc2.type = 'sawtooth';
-    osc2.frequency.setValueAtTime(freq * 0.97, time);
-    osc2.frequency.exponentialRampToValueAtTime(freq, time + 0.04);
     osc2.detune.setValueAtTime(14, time); // 14 cents detune
 
-    // Vibrato LFO (kicks in after 150ms)
+    // Pitch Envelope
+    if (bendStartInterval > 0) {
+        // Calculate start freq based on semitone interval
+        // freq * 2^(-semitones/12)
+        const startFreq = freq * Math.pow(2, -bendStartInterval / 12);
+        
+        // Slower, expressive bend duration (0.15s to 0.3s depending on note length)
+        // Cap bend duration at note duration to avoid overshooting
+        const bendDuration = Math.min(duration, 0.15 + (Math.random() * 0.1));
+        
+        osc1.frequency.setValueAtTime(startFreq, time);
+        osc1.frequency.exponentialRampToValueAtTime(freq, time + bendDuration);
+        osc2.frequency.setValueAtTime(startFreq, time);
+        osc2.frequency.exponentialRampToValueAtTime(freq, time + bendDuration);
+    } else {
+        // Standard slight attack scoop
+        osc1.frequency.setValueAtTime(freq * 0.98, time);
+        osc1.frequency.exponentialRampToValueAtTime(freq, time + 0.02);
+        osc2.frequency.setValueAtTime(freq * 0.98, time);
+        osc2.frequency.exponentialRampToValueAtTime(freq, time + 0.02);
+    }
+
+    // Vibrato LFO
     const vibrato = ctx.audio.createOscillator();
     const vibSpeed = 5.7 + Math.random() * 0.6;
     vibrato.frequency.setValueAtTime(vibSpeed, time); 
     const vibGain = ctx.audio.createGain();
-    // More aggressive vibrato for longer notes
-    const depthFactor = duration > 0.8 ? 0.012 : 0.007;
+    
+    // More natural vibrato onset
+    const isLong = duration > 0.5;
+    const depthFactor = isLong ? 0.015 : 0.005;
     const vibDepth = freq * (depthFactor + Math.random() * 0.004);
+    
     vibGain.gain.setValueAtTime(0, time);
-    vibGain.gain.setValueAtTime(0, time + 0.15);
-    vibGain.gain.linearRampToValueAtTime(vibDepth, time + 0.4); 
+    // Kick in slightly earlier (100ms) but ramp smoothly
+    vibGain.gain.setValueAtTime(0, time + 0.1);
+    vibGain.gain.linearRampToValueAtTime(vibDepth, time + 0.5); 
+    
     vibrato.connect(vibGain);
     vibGain.connect(osc1.frequency);
     vibGain.connect(osc2.frequency);
 
-    // Resonant Filter
+    // Resonant Filter (Warmer settings)
     const filter = ctx.audio.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(4000, time);
-    filter.frequency.exponentialRampToValueAtTime(1500, time + duration);
-    const res = duration > 0.4 ? 4.5 : 3.5;
+    // Lower start cutoff for warmer sound (was 4000)
+    filter.frequency.setValueAtTime(3000, time);
+    filter.frequency.exponentialRampToValueAtTime(800, time + duration);
+    const res = duration > 0.4 ? 3 : 2; // Slightly less resonance for smoother sound
     filter.Q.setValueAtTime(res, time); 
 
     // Amplitude Envelope
     gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(randomizedVol, time + 0.015);
-    gain.gain.exponentialRampToValueAtTime(randomizedVol * 0.8, time + duration * 0.3);
+    gain.gain.linearRampToValueAtTime(randomizedVol, time + 0.02); // Slower attack
+    gain.gain.exponentialRampToValueAtTime(randomizedVol * 0.7, time + duration * 0.3);
     gain.gain.exponentialRampToValueAtTime(0.001, time + duration * 1.2);
 
     osc1.connect(filter);

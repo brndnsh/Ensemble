@@ -329,7 +329,34 @@ function scheduleGlobalEvent(step, swungTime) {
 
             const spb = 60.0 / ctx.bpm;
             const duration = 0.25 * spb * (soloResult.durationMultiplier || 1);
-            playSoloNote(soloFreq, soloistTime, duration, sb.volume);
+            
+            // Smart Bend Logic
+            const timeSinceLast = soloistTime - sb.lastNoteEnd;
+            const isPhraseStart = timeSinceLast > 0.1;
+            const isLongNote = (soloResult.durationMultiplier || 1) >= 2;
+            
+            let bendStartInterval = 0;
+            
+            // Only bend on longer notes that are either phrase starts or just random expressive moments
+            if (isLongNote && (isPhraseStart || Math.random() < 0.15)) {
+                 let bendProb = 0.25;
+                 
+                 // Style-specific adjustments
+                 if (sb.style === 'blues') bendProb = 0.5; // Blues loves bends
+                 else if (sb.style === 'bird') bendProb = 0.1; // Bebop uses them sparingly
+                 
+                 if (Math.random() < bendProb) {
+                     // Bend from 1 or 2 semitones below
+                     if (sb.style === 'bird') {
+                         bendStartInterval = 1; // Jazz usually slides a semitone
+                     } else {
+                         bendStartInterval = Math.random() < 0.6 ? 2 : 1;
+                     }
+                 }
+            }
+            
+            playSoloNote(soloFreq, soloistTime, duration, sb.volume, bendStartInterval);
+            sb.lastNoteEnd = soloistTime + duration;
         }
 
         // Get the actual MIDI notes Chords is playing
@@ -1041,7 +1068,7 @@ function resetToDefaults() {
     bb.volume = 0.5;
     bb.reverb = 0.05;
     bb.octave = 41;
-    sb.volume = 0.3;
+    sb.volume = 0.2;
     sb.reverb = 0.6;
     sb.octave = 77;
     gb.volume = 0.6;
@@ -1058,7 +1085,7 @@ function resetToDefaults() {
     ui.bassVol.value = 0.5;
     ui.bassReverb.value = 0.05;
     ui.bassOctave.value = 41;
-    ui.soloistVol.value = 0.3;
+    ui.soloistVol.value = 0.2;
     ui.soloistReverb.value = 0.6;
     ui.soloistOctave.value = 77;
     ui.drumVol.value = 0.6;
