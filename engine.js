@@ -174,8 +174,10 @@ export function playNote(freq, time, duration, vol = 0.1, att = 0.05, soft = fal
 }
 
 export function playBassNote(freq, time, duration) {
-    if (!Number.isFinite(freq)) return;
-    // Boosted volume multiplier for better mix presence
+    if (!Number.isFinite(freq) || !Number.isFinite(time) || !Number.isFinite(duration)) return;
+    if (freq < 10 || freq > 24000) return;
+    try {
+        // Boosted volume multiplier for better mix presence
     const vol = 1.1 * (0.9 + Math.random() * 0.2);
     
     // Body (Fundamental + warmth)
@@ -260,6 +262,9 @@ export function playBassNote(freq, time, duration) {
     thump.stop(time + 0.05);
     
     oscBody.onended = () => safeDisconnect([gain, definition, scoop, weight, mainFilter, growlFilter, growlGain, thumpGain, thumpFilter, oscBody, oscGrowl, thump]);
+    } catch (e) {
+        console.error("playBassNote error:", e, { freq, time, duration });
+    }
 }
 
 export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval = 0) {
