@@ -42,7 +42,7 @@ function releaseWakeLock() {
  */
 function updateStyle(type, styleId) {
     const config = {
-        chord: { state: cb, selector: '.style-preset-chip' },
+        chord: { state: cb, selector: '.chord-style-chip' },
         bass: { state: bb, selector: '.bass-style-chip' },
         soloist: { state: sb, selector: '.soloist-style-chip' }
     };
@@ -457,13 +457,13 @@ function renderUserPresets() {
     ui.userPresetsContainer.style.display = 'flex';
     userPresets.forEach((p, idx) => {
         const chip = document.createElement('div');
-        chip.className = 'preset-chip';
+        chip.className = 'preset-chip user-preset-chip';
         chip.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
         chip.innerHTML = `<span>${p.name}</span> <span style="margin-left: 8px; opacity: 0.5;" onclick="event.stopPropagation(); window.deleteUserPreset(${idx})">×</span>`;
         chip.onclick = () => {
             ui.progInput.value = p.prog;
             validateProgression(renderChordVisualizer);
-            document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
         };
         ui.userPresetsContainer.appendChild(chip);
@@ -657,7 +657,7 @@ function setupPresets() {
         chip.onclick = () => {
             ui.progInput.value = p.prog;
             validateProgression(renderChordVisualizer);
-            document.querySelectorAll('.chord-preset-chip').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
         };
         ui.chordPresets.appendChild(chip);
