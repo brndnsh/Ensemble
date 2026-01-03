@@ -9,7 +9,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 ### Key Files
 
 *   **`index.html`**: The main entry point defining the application structure and loading the module graph.
-*   **`main.js`**: Orchestrates the application initialization, event listeners, and connects the UI with the audio engine.
+*   **`main.js`**: Orchestrates the application initialization, event listeners, connects the UI with the audio engine, and registers the Service Worker.
 *   **`engine.js`**: Handles all Web Audio API operations, including the scheduler loop, sound synthesis (oscillators for chords), and drum sample playback.
 *   **`state.js`**: Manages the global application state (playback status, BPM, active instruments, user presets).
 *   **`chords.js`**: Contains logic for parsing chord progressions (Roman Numerals, Nashville Numbers, Chord Names) and calculating voicings.
