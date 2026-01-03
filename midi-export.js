@@ -1,4 +1,5 @@
 import { ctx, gb, cb, bb, sb } from './state.js';
+import { ui, showToast } from './ui.js';
 import { getMidi } from './utils.js';
 import { getBassNote } from './bass.js';
 import { getSoloistNote } from './soloist.js';
@@ -124,6 +125,7 @@ export function exportToMidi() {
 
         const totalSteps = cb.progression.reduce((sum, c) => sum + Math.round(c.beats * 4), 0);
         const drumLoopSteps = gb.measures * 16;
+        let soloistTimeInPulses = 0;
         
         // Header
         const header = [
@@ -195,7 +197,7 @@ export function exportToMidi() {
             
             // Soloist uses a mix of swung and straight time for a "laid-back" feel
             const straightness = 0.65;
-            const soloistTimeInPulses = Math.round((straightTimeInPulses * straightness) + (currentTimeInPulses * (1.0 - straightness)));
+            soloistTimeInPulses = Math.round((straightTimeInPulses * straightness) + (currentTimeInPulses * (1.0 - straightness)));
 
             const measureStep = step % 16;
             const drumStep = step % drumLoopSteps;
