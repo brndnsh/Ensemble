@@ -12,26 +12,38 @@ import { getFrequency, getMidi } from './utils.js';
  */
 export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = null, centerMidi = 41, style = 'quarter') {
     if (!currentChord) return 0;
+    
+    // Ensure centerMidi is a valid number
+    const safeCenterMidi = (typeof centerMidi === 'number' && !isNaN(centerMidi)) ? centerMidi : 41;
 
     const prevMidi = getMidi(prevFreq);
 
     // Hard limits to keep within a consistent bass guitar range
     // D1 (26) is set as the absolute floor.
-    const absMin = Math.max(26, centerMidi - 15); 
-    const absMax = centerMidi + 15;
+    const absMin = Math.max(26, safeCenterMidi - 15); 
+    const absMax = safeCenterMidi + 15;
 
     const clampAndNormalize = (midi) => {
+        if (!Number.isFinite(midi)) return safeCenterMidi;
         let note = midi;
-        while (note > absMax) note -= 12;
-        while (note < absMin) note += 12;
-        return note;
+        // Modulo based normalization is safer than while loops
+        let pc = ((note % 12) + 12) % 12;
+        let octave = Math.floor(safeCenterMidi / 12) * 12;
+        let candidates = [octave - 12 + pc, octave + pc, octave + 12 + pc];
+        candidates = candidates.filter(n => n >= absMin && n <= absMax);
+        if (candidates.length > 0) {
+            candidates.sort((a, b) => Math.abs(a - safeCenterMidi) - Math.abs(b - safeCenterMidi));
+            return candidates[0];
+        }
+        // Fallback if no candidate in range
+        return Math.max(absMin, Math.min(absMax, octave + pc));
     };
 
     const normalizeToRange = (midi) => {
-        if (!Number.isFinite(midi)) return centerMidi;
+        if (!Number.isFinite(midi)) return safeCenterMidi;
         
         const useCommitment = style === 'quarter' && prevMidi !== null;
-        const targetRef = useCommitment ? (prevMidi * 0.7 + centerMidi * 0.3) : centerMidi;
+        const targetRef = useCommitment ? (prevMidi * 0.7 + safeCenterMidi * 0.3) : safeCenterMidi;
         const best = [0, -12, 12].map(o => (Math.floor(targetRef / 12) * 12) + o + (((midi % 12) + 12) % 12))
             .sort((a, b) => Math.abs(a - targetRef) - Math.abs(b - targetRef))[0];
 
