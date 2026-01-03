@@ -16,6 +16,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **`accompaniment.js`**: Defines the rhythmic playback patterns for all chord styles (e.g., Funk, Reggae, Bossa Nova).
 *   **`bass.js`**: Generates walking bass lines and patterns based on chord progressions and desired register.
 *   **`soloist.js`**: Implements advanced algorithmic soloing logic, including phrasing, rhythmic cells, and harmonic targeting.
+*   **`midi-export.js`**: Handles offline generation of Standard MIDI Files (SMF) including track assembly and timing calculations.
 *   **`ui.js`**: Centralizes DOM element references and UI manipulation functions (toasts, visual updates).
 *   **`config.js`**: Stores static configuration, such as default drum presets, chord styles, and musical constants.
 *   **`utils.js`**: Contains common utility functions for frequency calculation and formatting.
@@ -30,9 +31,11 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **Transposition**: Instantly transpose the entire progression to any key.
 
 ### Grooves
-*   **Step Sequencer**: A 16-step grid for programming drum patterns (Kick, Snare, HiHat, Open Hat).
+*   **Step Sequencer**: A multi-measure grid for programming drum patterns (Kick, Snare, HiHat, Open Hat).
+*   **Multi-level Velocity**: Supports Off, Normal, and Accented states per step for realistic dynamics.
 *   **Swing Control**: Adjustable swing amount and subdivision (8th/16th).
-*   **Presets**: Includes standard drum patterns for various genres (Rock, Hip Hop, Jazz, Latin).
+*   **Presets**: Authentic genre-specific drum patterns utilizing the accent system.
+*   **Duplicate Measure**: One-click tool to copy the first measure's pattern across the entire loop.
 
 ### Bassist
 *   **Walking Bass Generator**: Automatically generates melodic walking bass lines using chord tones and approach notes.
@@ -48,8 +51,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ### General
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
-*   **Maximized View**: Toggle a dedicated chord-only view for better visibility during practice.
-*   **Count-in**: Adjustable 4-beat metronome count-in before playback starts.
+*   **MIDI Export**: High-quality SMF export with GM program changes, chord markers, and pitch bends.
 *   **PWA**: Fully installable and works offline.
 *   **Sharing**: Share progressions via URL.
 

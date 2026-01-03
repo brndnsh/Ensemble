@@ -11,9 +11,11 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Transposition**: Instantly transpose the entire progression to any key.
 
 ### 🥁 Grooves
-*   **Step Sequencer**: A 16-step grid for programming drum patterns (Kick, Snare, HiHat, Open Hat).
+*   **Step Sequencer**: A multi-measure grid for programming drum patterns (Kick, Snare, HiHat, Open Hat).
+*   **Multi-level Velocity**: Steps cycle through Off, Normal, and Accented states for more dynamic and musical grooves.
 *   **Swing Control**: Adjustable swing amount and subdivision (8th/16th).
-*   **Presets**: Includes standard drum patterns for various genres (Rock, Hip Hop, Jazz, Latin).
+*   **Presets**: Includes authentic, genre-specific patterns for Rock, Funk, Jazz, Reggae, Bossa Nova, and more.
+*   **Pattern Tools**: Quickly expand your loop with the "Duplicate Measure 1" feature.
 
 ### 🎸 Bassist
 *   **Walking Bass Generator**: Automatically generates melodic walking bass lines that follow your chord progression.
@@ -28,6 +30,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Melodic Visualizer**: Real-time visualization of the soloist's melodic path.
 
 ### General
+*   **MIDI Export**: Export your progression, bass line, and drum groove as a multi-track MIDI file (Format 1) with appropriate instrument assignments, chord name markers, and soloist pitch bends.
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
 *   **Maximized View**: Enter a focused mode that expands the chord visualizer to fill the screen for easier reading.
 *   **Count-in**: Enable a metronome count-in to help you prepare before the rhythm section kicks in.
