@@ -289,17 +289,44 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
     let midi = null, name = '--', octave = '';
     if (soloResult?.freq) {
         sb.lastFreq = soloResult.freq;
-        midi = getMidi(soloResult.freq);
+        midi = soloResult.midi || getMidi(soloResult.freq);
         ({ name, octave } = midiToNote(midi));
 
         const spb = 60.0 / ctx.bpm;
         const duration = 0.25 * spb * (soloResult.durationMultiplier || 1);
+        const vel = soloResult.velocity || 1.0;
         
-        playSoloNote(soloResult.freq, unswungTime, duration, 1.0, soloResult.bendStartInterval || 0, soloResult.style);
-        sb.lastNoteEnd = unswungTime + duration;
+        // Neo-soul "Lazy" Lag: Additional fixed delay for neo style
+        const styleLag = soloResult.style === 'neo' ? 0.025 : 0;
+        const playTime = unswungTime + styleLag;
+
+        playSoloNote(soloResult.freq, playTime, duration, vel, soloResult.bendStartInterval || 0, soloResult.style);
+
+        // Double/Triple Stop Handling
+        if (soloResult.extraFreq && soloResult.extraMidi) {
+            playSoloNote(soloResult.extraFreq, playTime, duration, vel * 0.7, soloResult.bendStartInterval || 0, soloResult.style);
+            const extra = midiToNote(soloResult.extraMidi);
+            ctx.drawQueue.push({ 
+                type: 'soloist_vis', name: extra.name, octave: extra.octave, midi: soloResult.extraMidi, time: playTime,
+                chordNotes: chord.freqs.map(f => getMidi(f)),
+                duration
+            });
+        }
+        
+        if (soloResult.extraFreq2 && soloResult.extraMidi2) {
+            playSoloNote(soloResult.extraFreq2, playTime, duration, vel * 0.5, soloResult.bendStartInterval || 0, soloResult.style);
+            const extra2 = midiToNote(soloResult.extraMidi2);
+            ctx.drawQueue.push({ 
+                type: 'soloist_vis', name: extra2.name, octave: extra2.octave, midi: soloResult.extraMidi2, time: playTime,
+                chordNotes: chord.freqs.map(f => getMidi(f)),
+                duration
+            });
+        }
+
+        sb.lastNoteEnd = playTime + duration;
 
         ctx.drawQueue.push({ 
-            type: 'soloist_vis', name, octave, midi, time: unswungTime,
+            type: 'soloist_vis', name, octave, midi, time: playTime,
             chordNotes: chord.freqs.map(f => getMidi(f)),
             duration
         });
@@ -333,7 +360,9 @@ function scheduleGlobalEvent(step, swungTime) {
     const drumStep = step % (gb.measures * 16);
     const jitter = (Math.random() - 0.5) * 0.004;
     const t = swungTime + jitter;
-    const straightness = 0.65;
+    
+    // Dynamic straightness based on soloist style
+    const straightness = sb.style === 'neo' ? 0.35 : 0.65;
     const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + jitter;
 
     if (gb.enabled) {

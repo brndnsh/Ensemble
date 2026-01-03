@@ -51,6 +51,7 @@ export const SOLOIST_STYLES = [
     { id: 'shred', name: 'Shreddy' },
     { id: 'bird', name: 'Bebop' },
     { id: 'blues', name: 'Blues' },
+    { id: 'neo', name: 'Neo-Soul' },
     { id: 'minimal', name: 'Minimal' }
 ];
 
