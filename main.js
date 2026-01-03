@@ -7,6 +7,7 @@ import { validateProgression } from './chords.js';
 import { getBassNote } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 import { chordPatterns } from './accompaniment.js';
+import { exportToMidi } from './midi-export.js';
 
 let userPresets = storage.get('userPresets');
 let userDrumPresets = storage.get('userDrumPresets');
@@ -565,6 +566,7 @@ function setupUIHandlers() {
         [ui.settingsBtn, 'click', () => ui.settingsOverlay.classList.add('active')],
         [ui.closeSettings, 'click', () => ui.settingsOverlay.classList.remove('active')],
         [ui.resetSettingsBtn, 'click', () => confirm("Reset all settings?") && resetToDefaults()],
+        [ui.exportMidiBtn, 'click', exportToMidi],
         [ui.clearDrums, 'click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); }],
         [ui.maximizeChordBtn, 'click', () => {
             const isMax = document.querySelector('.app-container').classList.toggle('chord-maximized');

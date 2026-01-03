@@ -341,9 +341,14 @@
                 <input type="range" id="soloistOctaveSlider" min="48" max="96" value="77" style="width: 100%;" aria-label="Soloist Octave">
             </div>
 
-            <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">
-                <button id="resetSettingsBtn" style="width: 100%; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--error-color);">Reset to Defaults</button>
-            </div>
+                    <div class="setting-item" style="margin-top: 1rem;">
+                        <button id="exportMidiBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--panel-color); border: 1px solid #475569;">
+                            <span>🎹</span> Export Progression as MIDI
+                        </button>
+                    </div>
+                    <div class="setting-item" style="margin-top: 0.5rem;">
+                        <button id="resetSettingsBtn" style="width: 100%; color: var(--error-color); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);">Reset All Settings</button>
+                    </div>
         </div>
 
         <div class="settings-help" style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem; border-top: none;">
