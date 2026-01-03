@@ -269,21 +269,43 @@ export function exportToMidi() {
                     const soloResult = getSoloistNote(activeChord, nextChord, step % 16, lastSoloFreq, sb.octave, sb.style);
                     if (soloResult && soloResult.freq) {
                         lastSoloFreq = soloResult.freq;
-                        const midi = getMidi(soloResult.freq);
+                        const midi = soloResult.midi || getMidi(soloResult.freq);
+                        const notesToPlay = [midi];
+                        if (soloResult.extraMidi) notesToPlay.push(soloResult.extraMidi);
+                        if (soloResult.extraMidi2) notesToPlay.push(soloResult.extraMidi2);
+
                         const delta = Math.max(0, soloistTimeInPulses - soloistTrack.currentTime);
+                        const velFactor = soloResult.velocity || 1.0;
+                        const primaryVel = Math.min(127, Math.round(100 * velFactor));
+                        const extraVel = Math.min(127, Math.round(70 * velFactor));
+                        const extraVel2 = Math.min(127, Math.round(50 * velFactor));
+                        
                         if (soloResult.bendStartInterval) {
                             const bendValue = Math.round(-(soloResult.bendStartInterval / 2) * 8192);
                             soloistTrack.pitchBend(delta, 2, bendValue);
-                            soloistTrack.noteOn(0, 2, midi, 100);
+                            notesToPlay.forEach((n, i) => {
+                                let v = primaryVel;
+                                if (i === 1) v = extraVel;
+                                if (i === 2) v = extraVel2;
+                                soloistTrack.noteOn(0, 2, n, v);
+                            });
                             const bendReleaseTime = Math.min(Math.round(pulsesPerStep * 0.8), 48); 
                             soloistTrack.pitchBend(bendReleaseTime, 2, 0);
                             soloistTrack.currentTime = soloistTimeInPulses + bendReleaseTime;
                         } else {
-                            soloistTrack.noteOn(delta, 2, midi, 100);
+                            notesToPlay.forEach((n, i) => {
+                                let v = primaryVel;
+                                if (i === 1) v = extraVel;
+                                if (i === 2) v = extraVel2;
+                                soloistTrack.noteOn(i === 0 ? delta : 0, 2, n, v);
+                            });
                             soloistTrack.currentTime = soloistTimeInPulses;
                         }
                         const durSteps = soloResult.durationMultiplier;
-                        soloistNotesOff.push({ time: soloistTimeInPulses + Math.round(durSteps * pulsesPerStep * 0.9), notes: [midi] });
+                        soloistNotesOff.push({ 
+                            time: soloistTimeInPulses + Math.round(durSteps * pulsesPerStep * 0.9), 
+                            notes: notesToPlay 
+                        });
                         soloBusySteps = durSteps - 1;
                     }
                 }
