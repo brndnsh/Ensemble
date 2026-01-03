@@ -75,9 +75,28 @@ function togglePlay() {
         timerWorker.postMessage('stop');
         silentAudio.pause();
         silentAudio.currentTime = 0;
-        if (ctx.audio) ctx.audio.suspend();
         releaseWakeLock();
+
+        // Immediate Visual Reset
+        ctx.drawQueue = [];
+        document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
+        document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
+        if (viz) viz.clear();
+        
+        // Reset scroll position to start
+        ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
+
+        // Let tails ring out, then suspend AudioContext to save power
+        if (ctx.audio) {
+            if (ctx.suspendTimeout) clearTimeout(ctx.suspendTimeout);
+            ctx.suspendTimeout = setTimeout(() => {
+                if (!ctx.isPlaying && ctx.audio.state === 'running') {
+                    ctx.audio.suspend();
+                }
+            }, 3000); 
+        }
     } else {
+        if (ctx.suspendTimeout) clearTimeout(ctx.suspendTimeout);
         initAudio();
         if (!iosAudioUnlocked) {
             silentAudio.play().catch(e => console.log("Audio unlock failed", e));
