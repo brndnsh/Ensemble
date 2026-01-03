@@ -44,23 +44,47 @@ const SEQUENCES = {
 
 /**
  * Finds a note in the scale based on a starting midi note and a relative scale offset.
+ * Optimized to avoid creating large arrays.
  */
 function getScaleNote(midi, list, offset) {
-    let expanded = [];
-    [-48, -36, -24, -12, 0, 12, 24, 36, 48].forEach(o => list.forEach(n => expanded.push(n + o)));
-    expanded = [...new Set(expanded)].sort((a, b) => a - b);
+    if (!list || list.length === 0) return midi;
+
+    // 1. Find the best matching index in the source list (based on PC)
+    const targetPC = midi % 12;
+    let bestIdx = 0;
+    let minDiff = 100;
     
-    let idx = expanded.findIndex(n => n >= midi);
-    if (idx === -1) return midi;
+    // Create a normalized 0-11 list from the input list for comparison
+    const normalizedList = list.map(n => n % 12);
     
-    if (idx > 0 && Math.abs(expanded[idx-1] - midi) < Math.abs(expanded[idx] - midi)) {
-        idx--;
+    for (let i = 0; i < normalizedList.length; i++) {
+        let diff = Math.abs(normalizedList[i] - targetPC);
+        if (diff > 6) diff = 12 - diff; // Wrap around distance
+        if (diff < minDiff) {
+            minDiff = diff;
+            bestIdx = i;
+        }
     }
     
-    let targetIdx = idx + offset;
-    targetIdx = Math.max(0, Math.min(expanded.length - 1, targetIdx));
-    return expanded[targetIdx];
+    // 2. Determine the register (octave) of the input note relative to the matched list note
+    // We want to shift the list note so it's closest to the input 'midi'
+    const baseNoteInList = list[bestIdx];
+    const octaveCorrection = Math.round((midi - baseNoteInList) / 12) * 12;
+    
+    // 3. Apply the offset to the index
+    const len = list.length;
+    let targetIndex = bestIdx + offset;
+    
+    // 4. Calculate wrapping
+    const octaveShift = Math.floor(targetIndex / len);
+    const wrappedIndex = ((targetIndex % len) + len) % len;
+    
+    // 5. Reconstruct
+    // Take the target note from the list, apply the input's register correction, 
+    // and then add any octaves gained/lost from the index offset.
+    return list[wrappedIndex] + octaveCorrection + (octaveShift * 12);
 }
+
 
 /**
  * Determines the best scale intervals based on chord quality and parent key.
@@ -344,26 +368,63 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
 
         if (style !== 'shred' || sb.patternSteps >= 0) {
             const findNext = (current, list, dir) => {
-                let expanded = [];
-                [-36, -24, -12, 0, 12, 24, 36].forEach(o => list.forEach(n => expanded.push(n + o)));
-                expanded = [...new Set(expanded)].sort((a, b) => a - b);
+                // Optimized local search: check list shifted by -1, 0, +1 octaves
+                let best = null;
                 
-                let next;
-                if (dir > 0) {
-                    next = expanded.find(n => n > current && n <= maxMidi);
-                } else {
-                    next = [...expanded].reverse().find(n => n < current && n >= minMidi);
-                }
+                // Since 'list' contains absolute MIDI numbers (e.g., 60, 62, 64), 
+                // we simply create virtual candidates by adding/subtracting 12.
+                // We check the octave below, current octave, and octave above relative to the list's definition.
+                // But specifically, we need to find neighbors to 'current'. 
+                // A standard scale list spans ~1 octave. So checking -1, 0, 1 shifts of the list covers the range.
                 
-                if (next === undefined) {
-                    sb.direction *= -1;
-                    if (sb.direction > 0) {
-                        return expanded.find(n => n > current && n <= maxMidi) || current;
-                    } else {
-                        return [...expanded].reverse().find(n => n < current && n >= minMidi) || current;
+                // Center the search around the 'current' note to ensure we cover enough range
+                // Determine approximate octave difference between list definition and current note
+                const baseShift = Math.floor((current - list[0]) / 12) * 12;
+
+                for (let o = -1; o <= 1; o++) {
+                    const octaveOffset = baseShift + (o * 12);
+                    
+                    for (let i = 0; i < list.length; i++) {
+                         const candidate = list[i] + octaveOffset;
+                         
+                         if (dir > 0) {
+                             if (candidate > current && candidate <= maxMidi) {
+                                 if (best === null || candidate < best) best = candidate;
+                             }
+                         } else {
+                             if (candidate < current && candidate >= minMidi) {
+                                 if (best === null || candidate > best) best = candidate;
+                             }
+                         }
                     }
                 }
-                return next;
+                
+                if (best !== undefined && best !== null) return best;
+                
+                // Change direction if we hit a boundary
+                sb.direction *= -1;
+                // Simple recursive fallback (inline)
+                if (Math.abs(sb.direction) === 1) { 
+                     let retryBest = null;
+                     const newDir = sb.direction;
+                     for (let o = -1; o <= 1; o++) {
+                        const octaveOffset = baseShift + (o * 12);
+                        for (let i = 0; i < list.length; i++) {
+                             const candidate = list[i] + octaveOffset;
+                             if (newDir > 0) {
+                                 if (candidate > current && candidate <= maxMidi) {
+                                     if (retryBest === null || candidate < retryBest) retryBest = candidate;
+                                 }
+                             } else {
+                                 if (candidate < current && candidate >= minMidi) {
+                                     if (retryBest === null || candidate > retryBest) retryBest = candidate;
+                                 }
+                             }
+                        }
+                    }
+                    if (retryBest !== null) return retryBest;
+                }
+                return current;
             };
 
             if (sb.patternMode === 'arp') {

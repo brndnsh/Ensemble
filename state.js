@@ -31,7 +31,8 @@ export const cb = {
     reverb: 0.3,
     octave: 65,
     valid: false,
-    cachedCards: []
+    cachedCards: [],
+    lastActiveChordIndex: null
 };
 
 export const gb = {
@@ -84,6 +85,10 @@ export const sb = {
     currentLick: null,
     lickIndex: 0,
     busySteps: 0
+};
+
+export const vizState = {
+    enabled: true
 };
 
 // Persistence Helpers

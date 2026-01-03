@@ -1,4 +1,4 @@
-import { ctx, gb, cb, bb, sb, storage } from './state.js';
+import { ctx, gb, cb, bb, sb, vizState, storage } from './state.js';
 import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
 import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES } from './config.js';
@@ -81,6 +81,7 @@ function togglePlay() {
         ctx.drawQueue = [];
         document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
         document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
+        cb.lastActiveChordIndex = null;
         if (viz) viz.clear();
         
         // Reset scroll position to start
@@ -135,7 +136,8 @@ function togglePower(type) {
         chord: { state: cb, el: ui.chordPowerBtn, panel: 'chordPanel' },
         groove: { state: gb, el: ui.groovePowerBtn, panel: 'groovePanel', cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
         bass: { state: bb, el: ui.bassPowerBtn, panel: 'bassPanel' },
-        soloist: { state: sb, el: ui.soloistPowerBtn, panel: 'soloistPanel' }
+        soloist: { state: sb, el: ui.soloistPowerBtn, panel: 'soloistPanel' },
+        viz: { state: vizState, el: ui.vizPowerBtn, panel: 'visualizerPanel', cleanup: () => { if (viz) viz.clear(); } }
     };
     const c = config[type];
     if (!c) return;
@@ -400,9 +402,15 @@ function updateDrumVis(ev) {
 }
 
 function updateChordVis(ev) {
-    cb.cachedCards.forEach((c, i) => {
-        c.classList.toggle('active', i === ev.index);
-    });
+    if (cb.lastActiveChordIndex !== undefined && cb.lastActiveChordIndex !== null) {
+        if (cb.cachedCards[cb.lastActiveChordIndex]) {
+            cb.cachedCards[cb.lastActiveChordIndex].classList.remove('active');
+        }
+    }
+    if (cb.cachedCards[ev.index]) {
+        cb.cachedCards[ev.index].classList.add('active');
+        cb.lastActiveChordIndex = ev.index;
+    }
 }
 
 /**
@@ -432,7 +440,7 @@ function draw() {
         if (ev.type === 'drum_vis') updateDrumVis(ev);
         else if (ev.type === 'chord_vis') {
             updateChordVis(ev);
-            if (viz) viz.pushChord({ 
+            if (viz && vizState.enabled) viz.pushChord({ 
                 time: ev.time, 
                 notes: ev.chordNotes, 
                 rootMidi: ev.rootMidi, 
@@ -441,15 +449,15 @@ function draw() {
             });
         }
         else if (ev.type === 'bass_vis') {
-            if (viz) viz.pushNote('bass', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+            if (viz && vizState.enabled) viz.pushNote('bass', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
         }
         else if (ev.type === 'soloist_vis') {
-            if (viz) viz.pushNote('soloist', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+            if (viz && vizState.enabled) viz.pushNote('soloist', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
         }
         else if (ev.type === 'flash') triggerFlash(ev.intensity);
     }
     
-    if (viz) {
+    if (viz && vizState.enabled) {
         viz.setRegister('bass', bb.octave);
         viz.setRegister('soloist', sb.octave);
         viz.setRegister('chords', cb.octave);
@@ -642,7 +650,7 @@ function setupUIHandlers() {
     ui.swingSlider.addEventListener('input', e => gb.swing = parseInt(e.target.value));
     ui.swingBase.addEventListener('change', e => gb.swingSub = e.target.value);
 
-    ['chord', 'groove', 'bass', 'soloist'].forEach(type => {
+    ['chord', 'groove', 'bass', 'soloist', 'viz'].forEach(type => {
         ui[`${type}PowerBtn`].addEventListener('click', () => togglePower(type));
     });
 
@@ -740,6 +748,13 @@ function setBpm(val) {
         if (unswungNoteTimeRemaining > 0) ctx.unswungNextNoteTime = now + (unswungNoteTimeRemaining * ratio);
     }
     ctx.bpm = newBpm; ui.bpmInput.value = newBpm;
+
+    if (viz && ctx.isPlaying) {
+        const secondsPerBeat = 60.0 / ctx.bpm;
+        const sixteenth = 0.25 * secondsPerBeat;
+        const beatTime = ctx.nextNoteTime - (ctx.step % 4) * sixteenth;
+        viz.setBeatReference(beatTime);
+    }
 }
 
 function transposeKey(delta) {

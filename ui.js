@@ -13,6 +13,7 @@ export const ui = {
     groovePowerBtn: document.getElementById('groovePowerBtn'),
     bassPowerBtn: document.getElementById('bassPowerBtn'),
     soloistPowerBtn: document.getElementById('soloistPowerBtn'),
+    vizPowerBtn: document.getElementById('vizPowerBtn'),
     progInput: document.getElementById('progressionInput'),
     saveBtn: document.getElementById('saveBtn'),
     shareBtn: document.getElementById('shareBtn'),
