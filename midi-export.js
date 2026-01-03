@@ -164,13 +164,39 @@ export function exportToMidi() {
         // Track 4: Drums (Channel 9)
         const drumTrack = new MidiTrack();
         drumTrack.setName('Drums');
-        const drumNotesOff = [];
+    const drumNotesOff = [];
         const drumMap = { 'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46 };
 
-        const pulsesPerStep = Math.round(PPQ / 4);
+        const pulsesPerStep = PPQ / 4;
+
+        /**
+         * Calculates the swung pulse position for a given global step.
+         * Matches the logic in main.js:advanceGlobalStep()
+         */
+        const getSwungPulse = (step) => {
+            let pulse = step * pulsesPerStep;
+            if (gb.swing > 0) {
+                const shift = (pulsesPerStep / 3) * (gb.swing / 100);
+                if (gb.swingSub === '16th') {
+                    if (step % 2 === 1) pulse += shift;
+                } else {
+                    const mod = step % 4;
+                    if (mod === 1) pulse += shift;
+                    else if (mod === 2) pulse += shift * 2;
+                    else if (mod === 3) pulse += shift;
+                }
+            }
+            return Math.round(pulse);
+        };
 
         for (let step = 0; step < totalSteps; step++) {
-            const currentTimeInPulses = step * pulsesPerStep;
+            const currentTimeInPulses = getSwungPulse(step);
+            const straightTimeInPulses = Math.round(step * pulsesPerStep);
+            
+            // Soloist uses a mix of swung and straight time for a "laid-back" feel
+            const straightness = 0.65;
+            const soloistTimeInPulses = Math.round((straightTimeInPulses * straightness) + (currentTimeInPulses * (1.0 - straightness)));
+
             const measureStep = step % 16;
             const drumStep = step % drumLoopSteps;
 
@@ -186,16 +212,10 @@ export function exportToMidi() {
                 current += chordSteps;
             }
 
-            // Add chord markers at the beginning of each chord
-            if (activeChord && stepInChord === 0) {
-                metaTrack.currentTime = currentTimeInPulses;
-                metaTrack.setMarker(activeChord.absName);
-            }
-
             // --- Process Note Offs ---
-            const processOffs = (track, list, channel) => {
+            const processOffs = (track, list, channel, targetTime = currentTimeInPulses) => {
                 list.sort((a, b) => a.time - b.time);
-                while (list.length > 0 && list[0].time <= currentTimeInPulses) {
+                while (list.length > 0 && list[0].time <= targetTime) {
                     const off = list.shift();
                     const delta = Math.max(0, off.time - track.currentTime);
                     off.notes.forEach((n, i) => {
@@ -207,7 +227,7 @@ export function exportToMidi() {
 
             processOffs(chordTrack, chordNotesOff, 0);
             processOffs(bassTrack, bassNotesOff, 1);
-            processOffs(soloistTrack, soloistNotesOff, 2);
+            processOffs(soloistTrack, soloistNotesOff, 2, soloistTimeInPulses);
             processOffs(drumTrack, drumNotesOff, 9);
 
             // --- Process Note Ons ---
@@ -222,7 +242,11 @@ export function exportToMidi() {
                         chordTrack.noteOn(i === 0 ? delta : 0, 0, n, 80);
                     });
                     chordTrack.currentTime = currentTimeInPulses;
-                    chordNotesOff.push({ time: currentTimeInPulses + Math.round(ev.dur * pulsesPerStep * 0.9), notes: ev.midi });
+                    
+                    // Note duration also needs to be swung
+                    const endStep = step + Math.round(ev.dur);
+                    const endTime = getSwungPulse(endStep);
+                    chordNotesOff.push({ time: Math.round(endTime - (pulsesPerStep * 0.1)), notes: ev.midi });
                 });
             }
 
@@ -252,8 +276,10 @@ export function exportToMidi() {
                         const delta = Math.max(0, currentTimeInPulses - bassTrack.currentTime);
                         bassTrack.noteOn(delta, 1, midi, 90);
                         bassTrack.currentTime = currentTimeInPulses;
-                        const dur = (bb.style === 'whole' ? activeChord.beats : (bb.style === 'half' ? 2 : 1)) * 4;
-                        bassNotesOff.push({ time: currentTimeInPulses + Math.round(dur * pulsesPerStep * 0.9), notes: [midi] });
+                        
+                        const durSteps = (bb.style === 'whole' ? activeChord.beats : (bb.style === 'half' ? 2 : 1)) * 4;
+                        const endTime = getSwungPulse(step + durSteps);
+                        bassNotesOff.push({ time: Math.round(endTime - (pulsesPerStep * 0.1)), notes: [midi] });
                     }
                 }
             }
@@ -278,27 +304,28 @@ export function exportToMidi() {
                     if (soloResult && soloResult.freq) {
                         lastSoloFreq = soloResult.freq;
                         const midi = getMidi(soloResult.freq);
-                        const delta = Math.max(0, currentTimeInPulses - soloistTrack.currentTime);
+                        const delta = Math.max(0, soloistTimeInPulses - soloistTrack.currentTime);
                         
                         // Handle Pitch Bend (Scoop)
                         if (soloResult.bendStartInterval && soloResult.bendStartInterval !== 0) {
-                            // MIDI Pitch bend range is usually +/- 2 semitones by default
                             const bendValue = Math.round(-(soloResult.bendStartInterval / 2) * 8192);
                             soloistTrack.pitchBend(delta, 2, bendValue);
                             soloistTrack.noteOn(0, 2, midi, 100);
                             
-                            // Ramp bend back to 0 over ~100ms
                             const bendReleaseTime = Math.min(Math.round(pulsesPerStep * 0.8), 48); 
                             soloistTrack.pitchBend(bendReleaseTime, 2, 0);
-                            soloistTrack.currentTime = currentTimeInPulses + bendReleaseTime;
+                            soloistTrack.currentTime = soloistTimeInPulses + bendReleaseTime;
                         } else {
                             soloistTrack.noteOn(delta, 2, midi, 100);
-                            soloistTrack.currentTime = currentTimeInPulses;
+                            soloistTrack.currentTime = soloistTimeInPulses;
                         }
                         
-                        const dur = soloResult.durationMultiplier;
-                        soloistNotesOff.push({ time: currentTimeInPulses + Math.round(dur * pulsesPerStep * 0.9), notes: [midi] });
-                        soloBusySteps = dur - 1;
+                        const durSteps = soloResult.durationMultiplier;
+                        // For duration, we calculate the swung end time relative to soloistTimeInPulses
+                        // We use a simplified approximation for soloist duration to keep the "laid back" logic consistent
+                        const endTime = soloistTimeInPulses + Math.round(durSteps * pulsesPerStep * 0.9);
+                        soloistNotesOff.push({ time: endTime, notes: [midi] });
+                        soloBusySteps = durSteps - 1;
                     }
                 }
             }
@@ -320,10 +347,10 @@ export function exportToMidi() {
         }
 
         // Finalize tracks
-        finalize(chordTrack, chordNotesOff, 0);
-        finalize(bassTrack, bassNotesOff, 1);
-        finalize(soloistTrack, soloistNotesOff, 2);
-        finalize(drumTrack, drumNotesOff, 9);
+        finalize(chordTrack, chordNotesOff, 0, getSwungPulse(totalSteps));
+        finalize(bassTrack, bassNotesOff, 1, getSwungPulse(totalSteps));
+        finalize(soloistTrack, soloistNotesOff, 2, soloistTimeInPulses);
+        finalize(drumTrack, drumNotesOff, 9, getSwungPulse(totalSteps));
 
         const result = new Uint8Array([
             ...header,
@@ -347,14 +374,20 @@ export function exportToMidi() {
     }
 }
 
-function finalize(track, offList, channel) {
+function finalize(track, offList, channel, targetTime) {
     offList.sort((a, b) => a.time - b.time);
     offList.forEach(off => {
-        const delta = Math.max(0, off.time - track.currentTime);
-        off.notes.forEach((n, i) => {
-            track.noteOff(i === 0 ? delta : 0, channel, n);
-        });
-        track.currentTime = off.time;
+        if (off.time > track.currentTime) {
+            const delta = off.time - track.currentTime;
+            off.notes.forEach((n, i) => {
+                track.noteOff(i === 0 ? delta : 0, channel, n);
+            });
+            track.currentTime = off.time;
+        }
     });
+    // Ensure track length matches targetTime
+    if (targetTime > track.currentTime) {
+        track.addEvent(targetTime - track.currentTime, [0x00]); // No-op event to pad length
+    }
     track.endOfTrack();
 }
