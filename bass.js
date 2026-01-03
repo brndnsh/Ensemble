@@ -25,17 +25,35 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
 
     const clampAndNormalize = (midi) => {
         if (!Number.isFinite(midi)) return safeCenterMidi;
-        let note = midi;
-        // Modulo based normalization is safer than while loops
-        let pc = ((note % 12) + 12) % 12;
+        
+        let pc = ((midi % 12) + 12) % 12;
         let octave = Math.floor(safeCenterMidi / 12) * 12;
-        let candidates = [octave - 12 + pc, octave + pc, octave + 12 + pc];
-        candidates = candidates.filter(n => n >= absMin && n <= absMax);
-        if (candidates.length > 0) {
-            candidates.sort((a, b) => Math.abs(a - safeCenterMidi) - Math.abs(b - safeCenterMidi));
-            return candidates[0];
+        
+        // Unrolled candidate search to avoid array allocation
+        let best = -1;
+        let minDiff = 999999;
+        
+        const c1 = octave - 12 + pc;
+        if (c1 >= absMin && c1 <= absMax) {
+            const diff = Math.abs(c1 - safeCenterMidi);
+            if (diff < minDiff) { minDiff = diff; best = c1; }
         }
-        // Fallback if no candidate in range
+        
+        const c2 = octave + pc;
+        if (c2 >= absMin && c2 <= absMax) {
+            const diff = Math.abs(c2 - safeCenterMidi);
+            if (diff < minDiff) { minDiff = diff; best = c2; }
+        }
+        
+        const c3 = octave + 12 + pc;
+        if (c3 >= absMin && c3 <= absMax) {
+            const diff = Math.abs(c3 - safeCenterMidi);
+            if (diff < minDiff) { minDiff = diff; best = c3; }
+        }
+        
+        if (best !== -1) return best;
+
+        // Fallback
         return Math.max(absMin, Math.min(absMax, octave + pc));
     };
 
@@ -44,10 +62,22 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
         
         const useCommitment = style === 'quarter' && prevMidi !== null;
         const targetRef = useCommitment ? (prevMidi * 0.7 + safeCenterMidi * 0.3) : safeCenterMidi;
-        const best = [0, -12, 12].map(o => (Math.floor(targetRef / 12) * 12) + o + (((midi % 12) + 12) % 12))
-            .sort((a, b) => Math.abs(a - targetRef) - Math.abs(b - targetRef))[0];
+        
+        // Optimize: Find best octave offset without sorting arrays
+        let bestCandidate = 0;
+        let minDiff = 999999;
+        const pc = ((midi % 12) + 12) % 12;
+        const baseOctave = Math.floor(targetRef / 12) * 12;
 
-        return clampAndNormalize(best);
+        const check = (offset) => {
+             const val = baseOctave + offset + pc;
+             const diff = Math.abs(val - targetRef);
+             if (diff < minDiff) { minDiff = diff; bestCandidate = val; }
+        };
+        
+        check(0); check(-12); check(12);
+
+        return clampAndNormalize(bestCandidate);
     };
 
     let baseRoot = normalizeToRange(currentChord.rootMidi);
