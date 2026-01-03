@@ -51,9 +51,9 @@ export function initAudio() {
         // Instrument Buses and Reverb Sends
         const modules = [
             { name: 'chords', state: cb, mult: 1.25 },
-            { name: 'bass', state: bb, mult: 1.25 },
+            { name: 'bass', state: bb, mult: 1.1 },
             { name: 'soloist', state: sb, mult: 0.8 },
-            { name: 'drums', state: gb, mult: 1.0 }
+            { name: 'drums', state: gb, mult: 1.15 }
         ];
 
         modules.forEach(m => {
@@ -231,7 +231,7 @@ export function playBassNote(freq, time, duration) {
     const weight = ctx.audio.createBiquadFilter();
     weight.type = 'lowshelf';
     weight.frequency.setValueAtTime(100, time);
-    weight.gain.setValueAtTime(4, time);
+    weight.gain.setValueAtTime(2, time);
 
     const scoop = ctx.audio.createBiquadFilter();
     scoop.type = 'peaking';
@@ -383,24 +383,37 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
 }
 
 export function playDrumSound(name, time, velocity = 1.0) {
-    const masterVol = velocity * 1.2;
+    const masterVol = velocity * 1.35;
     if (name === 'Kick') {
         const osc = ctx.audio.createOscillator();
         const gain = ctx.audio.createGain();
         gain.connect(ctx.drumsGain);
         
-        const pitch = 150 + (Math.random() * 10 - 5);
-        const decay = 0.4 + (Math.random() * 0.2);
+        // Add a transient 'click' for definition
+        const click = ctx.audio.createOscillator();
+        const clickGain = ctx.audio.createGain();
+        click.type = 'sine';
+        click.frequency.setValueAtTime(2500, time);
+        clickGain.gain.setValueAtTime(velocity * 0.15, time);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+        click.connect(clickGain);
+        clickGain.connect(ctx.drumsGain);
+
+        const pitch = 120 + (Math.random() * 10 - 5);
+        const decay = 0.45 + (Math.random() * 0.2);
         const vol = masterVol * (0.95 + Math.random() * 0.1);
 
         osc.frequency.setValueAtTime(pitch, time);
+        osc.frequency.exponentialRampToValueAtTime(40, time + 0.04);
         osc.frequency.exponentialRampToValueAtTime(0.01, time + decay);
         gain.gain.setValueAtTime(vol, time);
         gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
-        osc.onended = () => safeDisconnect([gain, osc]);
+        osc.onended = () => safeDisconnect([gain, osc, click, clickGain]);
         osc.connect(gain);
         osc.start(time);
         osc.stop(time + decay);
+        click.start(time);
+        click.stop(time + 0.02);
     } else if (name === 'Snare') {
         const vol = masterVol * (0.9 + Math.random() * 0.2);
         const decay = 0.2 + (Math.random() * 0.1);
