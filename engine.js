@@ -1,5 +1,6 @@
 import { ctx, gb, cb, bb, sb } from './state.js';
 import { ui, triggerFlash } from './ui.js';
+import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 
 /**
  * Creates a simple algorithmic reverb impulse response.
@@ -55,10 +56,10 @@ export function initAudio() {
 
         // Instrument Buses and Reverb Sends
         const modules = [
-            { name: 'chords', state: cb, mult: 1.25 },
-            { name: 'bass', state: bb, mult: 1.1 },
-            { name: 'soloist', state: sb, mult: 0.8 },
-            { name: 'drums', state: gb, mult: 1.15 }
+            { name: 'chords', state: cb, mult: MIXER_GAIN_MULTIPLIERS.chords },
+            { name: 'bass', state: bb, mult: MIXER_GAIN_MULTIPLIERS.bass },
+            { name: 'soloist', state: sb, mult: MIXER_GAIN_MULTIPLIERS.soloist },
+            { name: 'drums', state: gb, mult: MIXER_GAIN_MULTIPLIERS.drums }
         ];
 
         modules.forEach(m => {
