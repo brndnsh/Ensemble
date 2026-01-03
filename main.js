@@ -215,14 +215,15 @@ function getChordAtStep(step) {
 
 function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat) {
     gb.instruments.forEach(inst => {
-        if (inst.steps[step] && !inst.muted) {
-            let velocity = 1.0;
+        const stepVal = inst.steps[step];
+        if (stepVal > 0 && !inst.muted) {
+            let velocity = stepVal === 2 ? 1.25 : 0.9;
             if (inst.name === 'Kick') {
-                velocity = isDownbeat ? 1.15 : (isQuarter ? 1.05 : 0.9);
+                velocity *= isDownbeat ? 1.15 : (isQuarter ? 1.05 : 0.9);
             } else if (inst.name === 'Snare') {
-                velocity = isBackbeat ? 1.1 : 0.9;
+                velocity *= isBackbeat ? 1.1 : 0.9;
             } else if (inst.name === 'HiHat' || inst.name === 'Open') {
-                velocity = isQuarter ? 1.1 : 0.85;
+                velocity *= isQuarter ? 1.1 : 0.85;
             }
             playDrumSound(inst.name, time, velocity);
         }
@@ -536,6 +537,20 @@ window.deleteUserDrumPreset = (idx) => {
     }
 };
 
+function copyMeasure1() {
+    if (gb.measures <= 1) return;
+    gb.instruments.forEach(inst => {
+        const firstMeasure = inst.steps.slice(0, 16);
+        for (let m = 1; m < gb.measures; m++) {
+            for (let i = 0; i < 16; i++) {
+                inst.steps[m * 16 + i] = firstMeasure[i];
+            }
+        }
+    });
+    renderGridState();
+    showToast("Measure 1 duplicated");
+}
+
 function setupUIHandlers() {
     const listeners = [
         [ui.playBtn, 'click', togglePlay],
@@ -543,6 +558,7 @@ function setupUIHandlers() {
         [ui.tapBtn, 'click', handleTap],
         [ui.saveBtn, 'click', saveProgression],
         [ui.saveDrumBtn, 'click', saveDrumPattern],
+        [ui.copyMeasureBtn, 'click', copyMeasure1],
         [ui.shareBtn, 'click', shareProgression],
         [ui.transUpBtn, 'click', () => transposeKey(1)],
         [ui.transDownBtn, 'click', () => transposeKey(-1)],

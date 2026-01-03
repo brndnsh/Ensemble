@@ -29,6 +29,7 @@ export const ui = {
     soloistVol: document.getElementById('soloistVolume'),
     soloistReverb: document.getElementById('soloistReverb'),
     drumBarsSelect: document.getElementById('drumBarsSelect'),
+    copyMeasureBtn: document.getElementById('copyMeasureBtn'),
     drumPresets: document.getElementById('drumPresets'),
     userDrumPresetsContainer: document.getElementById('userDrumPresetsContainer'),
     sequencerGrid: document.getElementById('sequencerGrid'),
@@ -169,9 +170,13 @@ export function renderGrid() {
             const measureDiv = document.createElement('div'); measureDiv.className = 'steps';
             for (let b = 0; b < 16; b++) {
                 const globalIdx = m * 16 + b, step = document.createElement('div');
-                const active = inst.steps[globalIdx];
-                step.className = `step ${active ? 'active' : ''}`; step.dataset.step = globalIdx;
-                step.onclick = () => { inst.steps[globalIdx] = inst.steps[globalIdx] ? 0 : 1; renderGridState(); };
+                const val = inst.steps[globalIdx];
+                step.className = `step ${val === 2 ? 'accented' : (val === 1 ? 'active' : '')}`; 
+                step.dataset.step = globalIdx;
+                step.onclick = () => { 
+                    inst.steps[globalIdx] = (inst.steps[globalIdx] + 1) % 3; 
+                    renderGridState(); 
+                };
                 measureDiv.appendChild(step);
                 if (!gb.cachedSteps[globalIdx]) gb.cachedSteps[globalIdx] = [];
                 gb.cachedSteps[globalIdx].push(step);
@@ -217,7 +222,7 @@ export function renderGrid() {
 }
 
 /**
- * Updates only the 'active' classes in the drum grid without re-rendering the full DOM.
+ * Updates only the 'active' and 'accented' classes in the drum grid without re-rendering the full DOM.
  */
 export function renderGridState() {
     const totalSteps = gb.measures * 16;
@@ -225,8 +230,11 @@ export function renderGridState() {
         const elements = gb.cachedSteps[i];
         if (elements) {
             gb.instruments.forEach((inst, tIdx) => {
-                if (elements[tIdx]) {
-                    elements[tIdx].classList.toggle('active', !!inst.steps[i]);
+                const stepEl = elements[tIdx];
+                if (stepEl) {
+                    const val = inst.steps[i];
+                    stepEl.classList.toggle('active', val === 1);
+                    stepEl.classList.toggle('accented', val === 2);
                 }
             });
         }
