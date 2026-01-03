@@ -752,7 +752,7 @@ function resetToDefaults() {
     cb.reverb = 0.3;
     cb.octave = 65;
     cb.notation = 'roman';
-    bb.volume = 0.5;
+    bb.volume = 0.45;
     bb.reverb = 0.05;
     bb.octave = 41;
     sb.volume = 0.5;
@@ -769,7 +769,7 @@ function resetToDefaults() {
     ui.chordReverb.value = 0.3;
     ui.octave.value = 65;
     ui.notationSelect.value = 'roman';
-    ui.bassVol.value = 0.5;
+    ui.bassVol.value = 0.45;
     ui.bassReverb.value = 0.05;
     ui.bassOctave.value = 41;
     ui.soloistVol.value = 0.5;
@@ -789,7 +789,7 @@ function resetToDefaults() {
     
     // Update instrument buses with mixing multipliers
     if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5 * 1.25, ctx.audio.currentTime, 0.02);
-    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.5 * 1.1, ctx.audio.currentTime, 0.02);
+    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.45 * 1.1, ctx.audio.currentTime, 0.02);
     if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5 * 0.8, ctx.audio.currentTime, 0.02);
     if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5 * 1.15, ctx.audio.currentTime, 0.02);
 

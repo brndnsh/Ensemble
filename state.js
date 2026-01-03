@@ -53,7 +53,7 @@ export const gb = {
 
 export const bb = {
     enabled: false,
-    volume: 0.5,
+    volume: 0.45,
     reverb: 0.05,
     lastFreq: null,
     octave: 41,
