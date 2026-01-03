@@ -42,17 +42,7 @@ export class UnifiedVisualizer {
         this.initDOM();
         
         // Initialize pools
-        this.gridLinePool = new SVGPool(() => {
-            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            line.setAttribute("y1", "0"); line.setAttribute("y2", "100");
-            return line;
-        }, this.gridGroup);
-
-        this.chordRectPool = new SVGPool(() => {
-             const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-             rect.setAttribute("rx", "1");
-             return rect;
-        }, this.chordGroup);
+        // Pool only used for track heads (circles) and labels now
     }
 
     initDOM() {
@@ -85,9 +75,36 @@ export class UnifiedVisualizer {
         this.gridGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
         this.svg.appendChild(this.gridGroup);
 
+        this.beatPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        this.beatPath.setAttribute("fill", "none");
+        this.beatPath.setAttribute("stroke", "white");
+        this.beatPath.setAttribute("stroke-opacity", "0.2");
+        this.beatPath.setAttribute("stroke-width", "0.5");
+        this.gridGroup.appendChild(this.beatPath);
+
+        this.measurePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        this.measurePath.setAttribute("fill", "none");
+        this.measurePath.setAttribute("stroke", "#38bdf8");
+        this.measurePath.setAttribute("stroke-opacity", "0.7");
+        this.measurePath.setAttribute("stroke-width", "1.0");
+        this.gridGroup.appendChild(this.measurePath);
+
         this.chordGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        this.chordGroup.setAttribute("opacity", "0.15");
+        this.chordGroup.setAttribute("opacity", "1.0");
         this.svg.appendChild(this.chordGroup);
+
+        // Path-based chord rendering for stability and performance
+        this.chordPaths = {
+            root_hl: this.createChordPath("rgba(37, 99, 235, 1)", 0.9),   // Vibrant Blue
+            third_hl: this.createChordPath("rgba(16, 185, 129, 1)", 0.9), // Emerald Green
+            fifth_hl: this.createChordPath("rgba(245, 158, 11, 1)", 0.9), // Amber/Gold
+            ext_hl: this.createChordPath("rgba(217, 70, 239, 1)", 0.8),   // Fuchsia/Purple
+            
+            root_bg: this.createChordPath("rgba(37, 99, 235, 1)", 0.15),  // Faded Blue
+            third_bg: this.createChordPath("rgba(16, 185, 129, 1)", 0.12), // Faded Green
+            fifth_bg: this.createChordPath("rgba(245, 158, 11, 1)", 0.12), // Faded Gold
+            ext_bg: this.createChordPath("rgba(217, 70, 239, 1)", 0.1)    // Faded Purple
+        };
 
         this.tracksGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
         this.svg.appendChild(this.tracksGroup);
@@ -101,6 +118,14 @@ export class UnifiedVisualizer {
 
         svgContainer.appendChild(this.svg);
         this.container.appendChild(svgContainer);
+    }
+
+    createChordPath(color, opacity = 0.3) {
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("fill", color);
+        path.setAttribute("fill-opacity", opacity.toString());
+        this.chordGroup.appendChild(path);
+        return path;
     }
 
     addTrack(name, color) {
@@ -121,16 +146,16 @@ export class UnifiedVisualizer {
         const strokePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
         strokePath.setAttribute("fill", "none");
         strokePath.setAttribute("stroke", `url(#${trackGradId})`);
-        strokePath.setAttribute("stroke-width", name === 'soloist' ? "2.5" : "3.5"); // Thicker lines to compensate for no glow
+        strokePath.setAttribute("stroke-width", name === 'soloist' ? "3.5" : "4.5"); // Thicker lines for better visibility
         strokePath.setAttribute("stroke-linecap", "round");
         strokePath.setAttribute("stroke-linejoin", "round");
         group.appendChild(strokePath);
         
         const head = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        head.setAttribute("r", "4"); // Slightly larger head
+        head.setAttribute("r", "5"); // Larger head
         head.setAttribute("fill", "#fff");
         head.setAttribute("stroke", color);
-        head.setAttribute("stroke-width", "2");
+        head.setAttribute("stroke-width", "2.5");
         head.style.opacity = "0";
         // Removed drop-shadow filter
         group.appendChild(head);
@@ -172,7 +197,12 @@ export class UnifiedVisualizer {
     }
 
     pushChord(event) {
-        this.chordEvents.push(event);
+        // Explicitly clone arrays to prevent shared reference mutations from changing history colors
+        this.chordEvents.push({
+            ...event,
+            notes: event.notes ? [...event.notes] : [],
+            intervals: event.intervals ? [...event.intervals] : []
+        });
     }
 
     render(currentTime, bpm) {
@@ -187,44 +217,52 @@ export class UnifiedVisualizer {
         };
 
         // 0. Render Rhythmic Grid
-        this.gridLinePool.reset();
+        let beatPathD = "";
+        let measurePathD = "";
         
         if (bpm && this.beatReferenceTime !== null) {
             const beatLen = 60 / bpm;
-            const measureLen = beatLen * 4;
             
-            let t = this.beatReferenceTime;
-            const beatsToRewind = Math.ceil((t - minTime) / beatLen);
-            t -= beatsToRewind * beatLen;
-            
-            while (t > minTime) t -= beatLen; 
-            while (t < minTime) t += beatLen; 
+            // Calculate integer beat index relative to reference. 
+            // Subtract 1 to ensure we have coverage slightly off-screen to avoid popping.
+            const startBeat = Math.floor((minTime - this.beatReferenceTime) / beatLen) - 1;
+            let i = startBeat;
 
-            while (t < currentTime) {
+            while (true) {
+                const t = this.beatReferenceTime + i * beatLen;
+                if (t > currentTime + beatLen) break;
+
                 const x = ((t - minTime) / this.windowSize) * width;
-                if (x >= -1 && x <= 101) {
-                    const timeFromRef = Math.round((t - this.beatReferenceTime) * 1000) / 1000;
-                    const rem = Math.abs(timeFromRef % measureLen);
-                    const isMeasure = rem < 0.01 || Math.abs(rem - measureLen) < 0.01;
-                    
-                    const line = this.gridLinePool.get();
-                    line.setAttribute("x1", x.toFixed(2)); 
-                    line.setAttribute("x2", x.toFixed(2));
-                    line.setAttribute("stroke", "white");
-                    line.setAttribute("stroke-opacity", isMeasure ? "0.15" : "0.05");
-                    line.setAttribute("stroke-width", isMeasure ? "0.4" : "0.2");
+                if (x >= -5 && x <= 105) {
+                    const lineCmd = `M ${x.toFixed(2)},0 L ${x.toFixed(2)},100 `;
+                    if (i % 4 === 0) {
+                        measurePathD += lineCmd;
+                    } else {
+                        beatPathD += lineCmd;
+                    }
                 }
-                t += beatLen;
+                i++;
             }
         }
-        this.gridLinePool.hideRest();
+        this.beatPath.setAttribute("d", beatPathD);
+        this.measurePath.setAttribute("d", measurePathD);
 
         // 1. Render Chords
-        this.chordRectPool.reset();
         const chordReg = this.registers['chords'] || 60;
-        
         this.chordEvents = this.chordEvents.filter(e => e.time + (e.duration || 0) >= minTime);
         
+        const paths = { 
+            root_hl: "", third_hl: "", fifth_hl: "", ext_hl: "",
+            root_bg: "", third_bg: "", fifth_bg: "", ext_bg: "" 
+        };
+
+        const getCategory = (interval) => {
+            if (interval === 0) return "root";
+            if (interval === 3 || interval === 4) return "third";
+            if (interval === 7) return "fifth";
+            return "ext";
+        };
+
         for (const ev of this.chordEvents) {
             const chordEnd = ev.time + (ev.duration || 2.0);
             const start = Math.max(ev.time, minTime);
@@ -235,68 +273,41 @@ export class UnifiedVisualizer {
                 const w = ((end - start) / this.windowSize) * width;
                 const rootPC = ev.rootMidi % 12;
 
+                // Render Background Tones (Octave shifted)
                 if (ev.intervals) {
                     for (const interval of ev.intervals) {
                         const pc = (rootPC + interval) % 12;
-                        
-                        // Determine base color based on interval function
-                        let baseColor = "255, 255, 255";
-                        let baseOpacity = 0.08; 
-                        
-                        if (interval === 0) { baseColor = "59, 130, 246"; baseOpacity = 0.25; } // Root (Blue)
-                        else if (interval === 3 || interval === 4) { baseColor = "16, 185, 129"; baseOpacity = 0.2; } // 3rd (Green)
-                        else if (interval === 7) { baseColor = "249, 115, 22"; baseOpacity = 0.2; } // 5th (Orange)
-                        else if (interval >= 9) { baseColor = "168, 85, 247"; baseOpacity = 0.2; } // 7th+ (Purple)
+                        const cat = getCategory(interval);
+                        const pathKey = `${cat}_bg`;
 
-                        // Render copies in multiple octaves with fading
-                        // We iterate relative octaves around the register
                         for (let oct = -2; oct <= 2; oct++) {
                             const m = pc + (Math.floor(chordReg / 12) + oct) * 12;
                             const y = getY(m, chordReg);
-                            
                             if (y >= -10 && y <= 110) {
-                                const rect = this.chordRectPool.get();
-                                rect.setAttribute("x", x.toFixed(2)); 
-                                rect.setAttribute("y", (y-1).toFixed(2));
-                                rect.setAttribute("width", w.toFixed(2)); 
-                                rect.setAttribute("height", "2");
-                                
-                                // Fade out chords further from the center register
-                                const dist = Math.abs(oct); // 0, 1, 2
-                                const fade = Math.max(0.3, 1 - (dist * 0.3)); // 1.0, 0.7, 0.4
-                                const finalOpacity = baseOpacity * fade;
-                                
-                                rect.setAttribute("fill", `rgba(${baseColor}, ${finalOpacity.toFixed(3)})`); 
-                                rect.style.filter = ''; 
+                                paths[pathKey] += `M ${x.toFixed(2)},${(y-1).toFixed(2)} h ${w.toFixed(2)} v 2 h -${w.toFixed(2)} z `;
                             }
                         }
                     }
                 }
 
+                // Render Played Notes (Highlighted)
                 if (ev.notes) {
                     for (const midi of ev.notes) {
                         const y = getY(midi, chordReg);
-                        const interval = (midi % 12 - rootPC + 12) % 12;
-                        let color = "rgba(255,255,255,0.8)";
-                        if (interval === 0) color = "rgba(59, 130, 246, 0.9)";
-                        else if (interval === 3 || interval === 4) color = "rgba(16, 185, 129, 0.9)";
-                        else if (interval === 7) color = "rgba(249, 115, 22, 0.9)";
-                        else if (interval >= 9) color = "rgba(168, 85, 247, 0.9)";
-
                         if (y >= -5 && y <= 105) {
-                            const rect = this.chordRectPool.get();
-                            rect.setAttribute("x", x.toFixed(2)); 
-                            rect.setAttribute("y", (y-1.1).toFixed(2));
-                            rect.setAttribute("width", w.toFixed(2)); 
-                            rect.setAttribute("height", "2.2");
-                            rect.setAttribute("fill", color);
-                            rect.style.filter = ''; 
+                            const interval = (midi % 12 - rootPC + 12) % 12;
+                            const cat = getCategory(interval);
+                            const pathKey = `${cat}_hl`;
+                            paths[pathKey] += `M ${x.toFixed(2)},${(y-1.1).toFixed(2)} h ${w.toFixed(2)} v 2.2 h -${w.toFixed(2)} z `;
                         }
                     }
                 }
             }
         }
-        this.chordRectPool.hideRest();
+
+        for (const key in this.chordPaths) {
+            this.chordPaths[key].setAttribute("d", paths[key] || "");
+        }
 
         // 2. Render Tracks
         const trackNames = Object.keys(this.tracks);
@@ -357,10 +368,11 @@ export class UnifiedVisualizer {
             t.elements.head.style.opacity = "0";
         });
         this.chordEvents = [];
-        this.gridLinePool.reset();
-        this.gridLinePool.hideRest();
-        this.chordRectPool.reset();
-        this.chordRectPool.hideRest();
+        this.beatPath.setAttribute("d", "");
+        this.measurePath.setAttribute("d", "");
+        for (const key in this.chordPaths) {
+            this.chordPaths[key].setAttribute("d", "");
+        }
         this.beatReferenceTime = null;
     }
 }

@@ -147,7 +147,16 @@ function togglePower(type) {
     c.state.enabled = !c.state.enabled;
     c.el.classList.toggle('active', c.state.enabled);
     document.getElementById(c.panel).classList.toggle('panel-disabled', !c.state.enabled);
-    if (!c.state.enabled && c.cleanup) c.cleanup();
+    
+    if (!c.state.enabled && c.cleanup) {
+        c.cleanup();
+    } else if (type === 'viz' && c.state.enabled && ctx.isPlaying && ctx.audio) {
+        // Restore beat reference if enabled mid-playback
+        const secondsPerBeat = 60.0 / ctx.bpm;
+        const sixteenth = 0.25 * secondsPerBeat;
+        const beatTime = ctx.nextNoteTime - (ctx.step % 4) * sixteenth;
+        viz.setBeatReference(beatTime);
+    }
 }
 
 /**
@@ -344,9 +353,9 @@ function scheduleChords(chordData, step, time) {
     if (stepInChord === 0) {
         ctx.drawQueue.push({ 
             type: 'chord_vis', index: chordIndex, time,
-            chordNotes: chord.freqs.map(f => getMidi(f)),
+            chordNotes: [...chord.freqs.map(f => getMidi(f))],
             rootMidi: chord.rootMidi,
-            intervals: chord.intervals,
+            intervals: [...chord.intervals],
             duration: chord.beats * spb
         });
     }
