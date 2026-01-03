@@ -51,6 +51,18 @@ class MidiTrack {
         this.addEvent(deltaTime, [0x80 | channel, note, 0]);
     }
 
+    programChange(deltaTime, channel, program) {
+        this.addEvent(deltaTime, [0xC0 | channel, program]);
+    }
+
+    pitchBend(deltaTime, channel, value) {
+        // value is -8192 to 8191. MIDI uses 14-bit (two 7-bit bytes), 0x2000 is center.
+        const normalized = Math.max(0, Math.min(16383, value + 8192));
+        const lsb = normalized & 0x7F;
+        const msb = (normalized >> 7) & 0x7F;
+        this.addEvent(deltaTime, [0xE0 | channel, lsb, msb]);
+    }
+
     setTempo(bpm) {
         const microsecondsPerBeat = Math.round(60000000 / bpm);
         this.addEvent(0, [0xFF, 0x51, 0x03, (microsecondsPerBeat >> 16) & 0xFF, (microsecondsPerBeat >> 8) & 0xFF, microsecondsPerBeat & 0xFF]);
@@ -59,6 +71,11 @@ class MidiTrack {
     setName(name) {
         const bytes = writeString(name);
         this.addEvent(0, [0xFF, 0x03, ...writeVarInt(bytes.length), ...bytes]);
+    }
+
+    setMarker(text) {
+        const bytes = writeString(text);
+        this.addEvent(0, [0xFF, 0x06, ...writeVarInt(bytes.length), ...bytes]);
     }
 
     endOfTrack() {
@@ -126,17 +143,20 @@ export function exportToMidi() {
         // Track 1: Chords (Channel 0)
         const chordTrack = new MidiTrack();
         chordTrack.setName('Chords');
+        chordTrack.programChange(0, 0, 4); // Electric Piano 1
         const chordNotesOff = []; 
 
         // Track 2: Bass (Channel 1)
         const bassTrack = new MidiTrack();
         bassTrack.setName('Bass');
+        bassTrack.programChange(0, 1, 34); // Picked Bass
         const bassNotesOff = [];
         let lastBassFreq = null;
 
         // Track 3: Soloist (Channel 2)
         const soloistTrack = new MidiTrack();
         soloistTrack.setName('Soloist');
+        soloistTrack.programChange(0, 2, 80); // Square Lead
         const soloistNotesOff = [];
         let lastSoloFreq = null;
         let soloBusySteps = 0;
@@ -164,6 +184,12 @@ export function exportToMidi() {
                     break;
                 }
                 current += chordSteps;
+            }
+
+            // Add chord markers at the beginning of each chord
+            if (activeChord && stepInChord === 0) {
+                metaTrack.currentTime = currentTimeInPulses;
+                metaTrack.setMarker(activeChord.absName);
             }
 
             // --- Process Note Offs ---
@@ -253,8 +279,23 @@ export function exportToMidi() {
                         lastSoloFreq = soloResult.freq;
                         const midi = getMidi(soloResult.freq);
                         const delta = Math.max(0, currentTimeInPulses - soloistTrack.currentTime);
-                        soloistTrack.noteOn(delta, 2, midi, 100);
-                        soloistTrack.currentTime = currentTimeInPulses;
+                        
+                        // Handle Pitch Bend (Scoop)
+                        if (soloResult.bendStartInterval && soloResult.bendStartInterval !== 0) {
+                            // MIDI Pitch bend range is usually +/- 2 semitones by default
+                            const bendValue = Math.round(-(soloResult.bendStartInterval / 2) * 8192);
+                            soloistTrack.pitchBend(delta, 2, bendValue);
+                            soloistTrack.noteOn(0, 2, midi, 100);
+                            
+                            // Ramp bend back to 0 over ~100ms
+                            const bendReleaseTime = Math.min(Math.round(pulsesPerStep * 0.8), 48); 
+                            soloistTrack.pitchBend(bendReleaseTime, 2, 0);
+                            soloistTrack.currentTime = currentTimeInPulses + bendReleaseTime;
+                        } else {
+                            soloistTrack.noteOn(delta, 2, midi, 100);
+                            soloistTrack.currentTime = currentTimeInPulses;
+                        }
+                        
                         const dur = soloResult.durationMultiplier;
                         soloistNotesOff.push({ time: currentTimeInPulses + Math.round(dur * pulsesPerStep * 0.9), notes: [midi] });
                         soloBusySteps = dur - 1;
