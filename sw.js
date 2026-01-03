@@ -1,5 +1,6 @@
-const CACHE_NAME = 'ensemble-v1.1';
+const CACHE_NAME = 'ensemble-v1.2';
 const ASSETS = [
+    './',
     './index.html',
     './main.js',
     './engine.js',
