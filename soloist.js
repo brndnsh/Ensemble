@@ -1,4 +1,4 @@
-import { getFrequency } from './utils.js';
+import { getFrequency, getMidi } from './utils.js';
 import { sb, cb } from './state.js';
 import { KEY_ORDER } from './config.js';
 
@@ -124,7 +124,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     // --- Pitch Selection ---
     const minMidi = centerMidi - (style === 'shred' ? 24 : 18);
     const maxMidi = centerMidi + (style === 'shred' ? 30 : 24); 
-    const prevMidi = prevFreq ? Math.round(12 * Math.log2(prevFreq / 440) + 69) : centerMidi;
+    const prevMidi = prevFreq ? getMidi(prevFreq) : centerMidi;
     const rootMidi = currentChord.rootMidi;
     
     const chordTones = currentChord.intervals.map(i => rootMidi + i);

@@ -83,8 +83,8 @@ export const sb = {
     busySteps: 0
 };
 
-export const getUserPresets = () => JSON.parse(localStorage.getItem('ensemble_userPresets') || '[]');
-export const getUserDrumPresets = () => JSON.parse(localStorage.getItem('ensemble_userDrumPresets') || '[]');
-
-export const saveUserPresets = (presets) => localStorage.setItem('ensemble_userPresets', JSON.stringify(presets));
-export const saveUserDrumPresets = (presets) => localStorage.setItem('ensemble_userDrumPresets', JSON.stringify(presets));
+// Persistence Helpers
+export const storage = {
+    get: (key) => JSON.parse(localStorage.getItem(`ensemble_${key}`) || '[]'),
+    save: (key, val) => localStorage.setItem(`ensemble_${key}`, JSON.stringify(val))
+};

@@ -19,6 +19,28 @@ export function getFrequency(midi) {
 }
 
 /**
+ * Converts a MIDI note number to an object containing its note name and octave.
+ * @param {number} midi - The MIDI note number.
+ * @returns {{name: string, octave: number}}
+ */
+export function midiToNote(midi) {
+    const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+    return {
+        name: notes[midi % 12],
+        octave: Math.floor(midi / 12) - 1
+    };
+}
+
+/**
+ * Converts a frequency in Hertz to a MIDI note number.
+ * @param {number} freq - The frequency in Hz.
+ * @returns {number} The MIDI note number.
+ */
+export function getMidi(freq) {
+    return Math.round(12 * Math.log2(freq / 440) + 69);
+}
+
+/**
  * Formats a chord name with its suffix in a small superscript-like span.
  * @param {string} root - The root note or numeral.
  * @param {string} suffix - The chord suffix (e.g., maj7).

@@ -91,6 +91,12 @@ header h1 { margin: 0; font-size: 1.5rem; color: white; }
     width: 100%;
     box-sizing: border-box;
     transition: all 0.3s ease;
+    opacity: 0;
+    transition: opacity 0.4s ease-in;
+}
+
+.app-container.loaded {
+    opacity: 1;
 }
 
 @media (min-width: 1300px) {
