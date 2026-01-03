@@ -563,9 +563,9 @@ function setupUIHandlers() {
 
     const volumeNodes = [
         { el: ui.chordVol, state: cb, gain: 'chordsGain', mult: 1.25 },
-        { el: ui.bassVol, state: bb, gain: 'bassGain', mult: 1.25 },
+        { el: ui.bassVol, state: bb, gain: 'bassGain', mult: 1.1 },
         { el: ui.soloistVol, state: sb, gain: 'soloistGain', mult: 0.8 },
-        { el: ui.drumVol, state: gb, gain: 'drumsGain', mult: 1.0 },
+        { el: ui.drumVol, state: gb, gain: 'drumsGain', mult: 1.15 },
         { el: ui.masterVol, state: ctx, gain: 'masterGain', mult: 1.0 }
     ];
     volumeNodes.forEach(({ el, state, gain, mult }) => {
@@ -789,9 +789,9 @@ function resetToDefaults() {
     
     // Update instrument buses with mixing multipliers
     if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5 * 1.25, ctx.audio.currentTime, 0.02);
-    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.5 * 1.25, ctx.audio.currentTime, 0.02);
+    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.5 * 1.1, ctx.audio.currentTime, 0.02);
     if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5 * 0.8, ctx.audio.currentTime, 0.02);
-    if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+    if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5 * 1.15, ctx.audio.currentTime, 0.02);
 
     if (ctx.chordsReverb) ctx.chordsReverb.gain.setTargetAtTime(0.3, ctx.audio.currentTime, 0.02);
     if (ctx.bassReverb) ctx.bassReverb.gain.setTargetAtTime(0.05, ctx.audio.currentTime, 0.02);
