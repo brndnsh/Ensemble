@@ -13,6 +13,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **`engine.js`**: Handles all Web Audio API operations, including the scheduler loop, sound synthesis (oscillators for chords), and drum sample playback.
 *   **`state.js`**: Manages the global application state (playback status, BPM, active instruments, user presets).
 *   **`chords.js`**: Contains logic for parsing chord progressions (Roman Numerals, Nashville Numbers, Chord Names) and calculating voicings.
+*   **`accompaniment.js`**: Defines the rhythmic playback patterns for all chord styles (e.g., Funk, Reggae, Bossa Nova).
 *   **`bass.js`**: Generates walking bass lines and patterns based on chord progressions and desired register.
 *   **`soloist.js`**: Implements advanced algorithmic soloing logic, including phrasing, rhythmic cells, and harmonic targeting.
 *   **`ui.js`**: Centralizes DOM element references and UI manipulation functions (toasts, visual updates).
@@ -24,7 +25,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ### Chords
 *   **Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`). Use the pipe symbol (`|`) to explicitly delimit measures (e.g., `I | IV | V | I`).
-*   **Playback Styles**: Choose from various accompaniment styles like Pad, Pulse, Strum, Funk, Reggae, Double Skank, Jazz Comp, Freddy Green, Bossa Nova, and more.
+*   **Playback Styles**: Choose from various accompaniment styles like Pad, Pulse, Strum, Funk, Reggae, Double Skank, Jazz Comp, Freddie Green, Bossa Nova, and more.
 *   **Smart Voicing**: Automatically calculates smooth voice leading for chords.
 *   **Transposition**: Instantly transpose the entire progression to any key.
 
@@ -47,6 +48,8 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ### General
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
+*   **Maximized View**: Toggle a dedicated chord-only view for better visibility during practice.
+*   **Count-in**: Adjustable 4-beat metronome count-in before playback starts.
 *   **PWA**: Fully installable and works offline.
 *   **Sharing**: Share progressions via URL.
 

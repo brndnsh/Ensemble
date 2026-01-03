@@ -35,7 +35,7 @@ export const CHORD_STYLES = [
     { id: 'clave', name: 'Clave' },
     { id: 'afrobeat', name: 'Afrobeat' },
     { id: 'jazz', name: 'Jazz Comp' },
-    { id: 'green', name: 'Freddy Green' },
+    { id: 'green', name: 'Freddie Green' },
     { id: 'bossa', name: 'Bossa' }
 ];
 
