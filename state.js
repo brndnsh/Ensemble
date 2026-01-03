@@ -75,6 +75,9 @@ export const sb = {
     direction: 1,      // 1 for up, -1 for down
     patternMode: 'scale', // 'scale', 'arp', 'stay'
     patternSteps: 0,     // How many steps remain in current pattern
+    sequenceType: null,   // Type of sequence currently playing
+    sequenceIndex: 0,    // Current step in the sequence
+    sequenceBaseMidi: null, // The starting midi note for the sequence
     phraseSteps: 0,
     isResting: false,
     currentCell: [1, 0, 1, 0],

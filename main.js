@@ -257,13 +257,7 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
         const spb = 60.0 / ctx.bpm;
         const duration = 0.25 * spb * (soloResult.durationMultiplier || 1);
         
-        let bendStartInterval = 0;
-        if ((soloResult.durationMultiplier || 1) >= 2 && (unswungTime - sb.lastNoteEnd > 0.1 || Math.random() < 0.15)) {
-            let bendProb = sb.style === 'blues' ? 0.5 : (sb.style === 'bird' ? 0.1 : 0.25);
-            if (Math.random() < bendProb) bendStartInterval = (sb.style === 'bird' || Math.random() < 0.4) ? 1 : 2;
-        }
-        
-        playSoloNote(soloResult.freq, unswungTime, duration, 1.0, bendStartInterval);
+        playSoloNote(soloResult.freq, unswungTime, duration, 1.0, soloResult.bendStartInterval || 0, soloResult.style);
         sb.lastNoteEnd = unswungTime + duration;
     }
 
@@ -568,17 +562,17 @@ function setupUIHandlers() {
     });
 
     const volumeNodes = [
-        { el: ui.chordVol, state: cb, gain: 'chordsGain' },
-        { el: ui.bassVol, state: bb, gain: 'bassGain' },
-        { el: ui.soloistVol, state: sb, gain: 'soloistGain' },
-        { el: ui.drumVol, state: gb, gain: 'drumsGain' },
-        { el: ui.masterVol, state: ctx, gain: 'masterGain' }
+        { el: ui.chordVol, state: cb, gain: 'chordsGain', mult: 1.25 },
+        { el: ui.bassVol, state: bb, gain: 'bassGain', mult: 1.25 },
+        { el: ui.soloistVol, state: sb, gain: 'soloistGain', mult: 0.8 },
+        { el: ui.drumVol, state: gb, gain: 'drumsGain', mult: 1.0 },
+        { el: ui.masterVol, state: ctx, gain: 'masterGain', mult: 1.0 }
     ];
-    volumeNodes.forEach(({ el, state, gain }) => {
+    volumeNodes.forEach(({ el, state, gain, mult }) => {
         el.addEventListener('input', e => {
             const val = parseFloat(e.target.value);
             if (state !== ctx) state.volume = val;
-            if (ctx[gain]) ctx[gain].gain.setTargetAtTime(val, ctx.audio.currentTime, 0.02);
+            if (ctx[gain]) ctx[gain].gain.setTargetAtTime(val * mult, ctx.audio.currentTime, 0.02);
         });
     });
 
@@ -793,10 +787,10 @@ function resetToDefaults() {
 
     if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
     
-    // Update instrument buses
-    if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
-    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
-    if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+    // Update instrument buses with mixing multipliers
+    if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5 * 1.25, ctx.audio.currentTime, 0.02);
+    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.5 * 1.25, ctx.audio.currentTime, 0.02);
+    if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5 * 0.8, ctx.audio.currentTime, 0.02);
     if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
 
     if (ctx.chordsReverb) ctx.chordsReverb.gain.setTargetAtTime(0.3, ctx.audio.currentTime, 0.02);

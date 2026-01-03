@@ -26,6 +26,42 @@ const CANNED_LICKS = {
     'shred_1': [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], // Major Arp Sweep
 };
 
+const SEQUENCES = {
+    'up3': { offsets: [0, 1, 2], nextBase: 1 },
+    'down3': { offsets: [0, -1, -2], nextBase: -1 },
+    'up4': { offsets: [0, 1, 2, 3], nextBase: 1 },
+    'down4': { offsets: [0, -1, -2, -3], nextBase: -1 },
+    'up3down1': { offsets: [0, 1, 2, 1], nextBase: 2 },
+    'down3up1': { offsets: [0, -1, -2, -1], nextBase: -2 },
+    'broken3rdsUp': { offsets: [0, 2, 1, 3], nextBase: 2 },
+    'broken3rdsDown': { offsets: [0, -2, -1, -3], nextBase: -2 },
+    'up4down2': { offsets: [0, 1, 2, 3, 1, 2, 3, 4], nextBase: 2 },
+    'down4up2': { offsets: [0, -1, -2, -3, -1, -2, -3, -4], nextBase: -2 },
+    'zigzag': { offsets: [0, 2, -1, 1], nextBase: 1 },
+    'broken4ths': { offsets: [0, 3, 1, 4], nextBase: 2 },
+    'groupsOf6': { offsets: [0, 1, 2, 3, 2, 1], nextBase: 3 },
+};
+
+/**
+ * Finds a note in the scale based on a starting midi note and a relative scale offset.
+ */
+function getScaleNote(midi, list, offset) {
+    let expanded = [];
+    [-48, -36, -24, -12, 0, 12, 24, 36, 48].forEach(o => list.forEach(n => expanded.push(n + o)));
+    expanded = [...new Set(expanded)].sort((a, b) => a - b);
+    
+    let idx = expanded.findIndex(n => n >= midi);
+    if (idx === -1) return midi;
+    
+    if (idx > 0 && Math.abs(expanded[idx-1] - midi) < Math.abs(expanded[idx] - midi)) {
+        idx--;
+    }
+    
+    let targetIdx = idx + offset;
+    targetIdx = Math.max(0, Math.min(expanded.length - 1, targetIdx));
+    return expanded[targetIdx];
+}
+
 /**
  * Determines the best scale intervals based on chord quality and parent key.
  */
@@ -88,11 +124,13 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
             sb.isResting = true;
             sb.phraseSteps = 4 + Math.floor(Math.random() * 8); // Rest for 1-2 beats
             sb.currentLick = null;
+            sb.sequenceType = null;
         } else {
             sb.isResting = false;
             const phraseBase = style === 'shred' ? 16 : 8;
             sb.phraseSteps = phraseBase + Math.floor(Math.random() * 16); 
             sb.patternMode = Math.random() < 0.6 ? 'scale' : 'arp';
+            sb.sequenceType = null;
             
             // 20% chance to trigger a canned lick
             // Canned licks are fixed intervals, so we avoid them in strict diatonic styles
@@ -123,7 +161,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
 
     // --- Pitch Selection ---
     const minMidi = centerMidi - (style === 'shred' ? 24 : 18);
-    const maxMidi = centerMidi + (style === 'shred' ? 30 : 24); 
+    const maxMidi = Math.min(centerMidi + (style === 'shred' ? 30 : 24), 100); // Reasonable ceiling (E7-ish)
     const prevMidi = prevFreq ? getMidi(prevFreq) : centerMidi;
     const rootMidi = currentChord.rootMidi;
     
@@ -133,6 +171,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
 
     let finalMidi = prevMidi;
     let isGraceNote = false;
+    let bendStartInterval = 0;
 
     // --- Lick Logic ---
     if (sb.currentLick) {
@@ -157,7 +196,38 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
 
         sb.busySteps = durationMultiplier - 1;
         return { freq: getFrequency(finalMidi), durationMultiplier };
+    } else if (sb.sequenceType) {
+        const seq = SEQUENCES[sb.sequenceType];
+        const offset = seq.offsets[sb.sequenceIndex];
+        const list = (sb.patternMode === 'arp' || (style === 'shred' && Math.random() < 0.7)) ? chordTones : scaleTones;
+        
+        finalMidi = getScaleNote(sb.sequenceBaseMidi, list, offset);
+        sb.sequenceIndex++;
+        
+        if (sb.sequenceIndex >= seq.offsets.length) {
+            sb.sequenceIndex = 0;
+            sb.sequenceBaseMidi = getScaleNote(sb.sequenceBaseMidi, list, seq.nextBase);
+            // End sequence after some cycles or if out of range
+            if (Math.random() < 0.25 || sb.sequenceBaseMidi > maxMidi || sb.sequenceBaseMidi < minMidi) {
+                sb.sequenceType = null;
+            }
+        }
+        
+        durationMultiplier = (style === 'shred') ? 1 : 2;
+        sb.busySteps = durationMultiplier - 1;
+        return { freq: getFrequency(finalMidi), durationMultiplier };
     } else {
+        // Trigger a sequence sometimes in many modes
+        // Shred, Scalar, Bird, and Blues all benefit from sequences
+        const sequenceProb = (style === 'shred' || style === 'scalar') ? 0.25 : 0.15;
+        if (!sb.sequenceType && Math.random() < sequenceProb) {
+            const keys = Object.keys(SEQUENCES);
+            // Blues/Bird prefer specific sequences if we had them, but standard ones work well
+            sb.sequenceType = keys[Math.floor(Math.random() * keys.length)];
+            sb.sequenceIndex = 0;
+            sb.sequenceBaseMidi = prevMidi;
+        }
+
         // --- Shred Specific Logic ---
         if (style === 'shred') {
             if (sb.patternSteps <= 0) {
@@ -320,6 +390,18 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         }
     }
 
+    // Decide if we should bend into this note
+    // Usually on strong target notes (3rds/7ths) or long notes at the end of a phrase
+    const isTarget = chordTones.some(t => (t % 12) === (finalMidi % 12));
+    const isLongNote = (style === 'shred' && durationMultiplier > 4) || style === 'minimal' || sb.phraseSteps <= 0;
+    
+    const bendProb = style === 'blues' ? 0.35 : (style === 'shred' ? 0.05 : 0.2);
+    if (Math.random() < bendProb && (isTarget || isLongNote)) {
+        // Blues/Scalar bend from 1 or 2 semitones
+        // Shred just does a tiny 1-semitone "scoop"
+        bendStartInterval = style === 'shred' ? 1 : (Math.random() > 0.6 ? 2 : 1);
+    }
+
     if (style === 'minimal') {
         // Occasionally hold notes longer in minimal style
         if (Math.random() < 0.4) durationMultiplier = 3 + Math.floor(Math.random() * 5);
@@ -334,6 +416,8 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
 
     return {
         freq: getFrequency(finalMidi),
-        durationMultiplier
+        durationMultiplier,
+        bendStartInterval,
+        style
     };
 }
