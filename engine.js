@@ -27,6 +27,11 @@ function createReverbImpulse(audioCtx, duration = 2.0, decay = 2.0) {
  */
 export function initAudio() {
     if (!ctx.audio) {
+        // Modern AudioSession API to bypass silent switch on iOS
+        if (navigator.audioSession) {
+            navigator.audioSession.type = 'playback';
+        }
+
         ctx.audio = new (window.AudioContext || window.webkitAudioContext)();
 
         ctx.masterGain = ctx.audio.createGain();

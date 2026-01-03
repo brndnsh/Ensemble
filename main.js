@@ -12,7 +12,14 @@ let userPresets = storage.get('userPresets');
 let userDrumPresets = storage.get('userDrumPresets');
 let iosAudioUnlocked = false;
 
+// Web Worker for robust background timing
+const timerWorker = new Worker('./timer.js');
+timerWorker.onmessage = (e) => {
+    if (e.data === 'tick') scheduler();
+};
+
 /** @type {HTMLAudioElement} */
+// Use a slightly longer silent wav to ensure OS recognition as media playback
 const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ");
 silentAudio.loop = true;
 
@@ -62,8 +69,10 @@ function togglePlay() {
         ctx.isPlaying = false;
         ui.playBtn.textContent = 'START';
         ui.playBtn.classList.remove('playing');
-        clearTimeout(ctx.timerID);
+        timerWorker.postMessage('stop');
         silentAudio.pause();
+        silentAudio.currentTime = 0;
+        if (ctx.audio) ctx.audio.suspend();
         releaseWakeLock();
     } else {
         initAudio();
@@ -87,6 +96,8 @@ function togglePlay() {
             ctx.isDrawing = true;
             requestAnimationFrame(draw);
         }
+        
+        timerWorker.postMessage('start');
         scheduler();
     }
 }
@@ -127,7 +138,6 @@ function scheduler() {
             advanceGlobalStep();
         }
     }
-    if (ctx.isPlaying) ctx.timerID = setTimeout(scheduler, ctx.lookahead);
 }
 
 function advanceCountIn() {
