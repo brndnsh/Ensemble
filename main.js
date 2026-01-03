@@ -1,7 +1,7 @@
 import { ctx, gb, cb, bb, sb, vizState, storage } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
-import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES } from './config.js';
+import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { normalizeKey, getMidi, midiToNote } from './utils.js';
 import { validateProgression } from './chords.js';
 import { getBassNote } from './bass.js';
@@ -79,10 +79,8 @@ function togglePlay() {
 
         // Immediate Visual Reset
         ctx.drawQueue = [];
-        document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
-        document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
         cb.lastActiveChordIndex = null;
-        if (viz) viz.clear();
+        clearActiveVisuals(viz);
         
         // Reset scroll position to start
         ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
@@ -109,8 +107,12 @@ function togglePlay() {
         ui.playBtn.textContent = 'STOP';
         ui.playBtn.classList.add('playing');
         ctx.step = 0;
-        ctx.nextNoteTime = ctx.audio.currentTime;
-        ctx.unswungNextNoteTime = ctx.audio.currentTime;
+        
+        // Add a small 50ms padding to the start time to prevent scheduling in the "past"
+        const startTime = ctx.audio.currentTime + 0.05;
+        ctx.nextNoteTime = startTime;
+        ctx.unswungNextNoteTime = startTime;
+        
         ctx.isCountingIn = ui.countIn.checked;
         ctx.countInBeat = 0;
         requestWakeLock();
@@ -133,7 +135,7 @@ function togglePlay() {
  */
 function togglePower(type) {
     const config = {
-        chord: { state: cb, el: ui.chordPowerBtn, panel: 'chordPanel' },
+        chord: { state: cb, el: ui.chordPowerBtn, panel: 'chordPanel', cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
         groove: { state: gb, el: ui.groovePowerBtn, panel: 'groovePanel', cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
         bass: { state: bb, el: ui.bassPowerBtn, panel: 'bassPanel' },
         soloist: { state: sb, el: ui.soloistPowerBtn, panel: 'soloistPanel' },
@@ -145,7 +147,6 @@ function togglePower(type) {
     c.state.enabled = !c.state.enabled;
     c.el.classList.toggle('active', c.state.enabled);
     document.getElementById(c.panel).classList.toggle('panel-disabled', !c.state.enabled);
-    if (!c.state.enabled && type === 'chord') document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active'));
     if (!c.state.enabled && c.cleanup) c.cleanup();
 }
 
@@ -420,16 +421,15 @@ function draw() {
     if (!ctx.audio) return;
     if (!ctx.isPlaying && ctx.drawQueue.length === 0) {
         ctx.isDrawing = false;
-        document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
-        document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
-        
-        if (viz) viz.clear();
+        clearActiveVisuals(viz);
         return;
     }
 
+    // Attempt to use high-precision latency if available, else fallback
+    const outputLatency = ctx.audio.outputLatency || 0;
     const isChromium = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    const offset = isChromium ? 0.015 : 0.045;
-    const now = ctx.audio.currentTime - (ctx.audio.outputLatency || 0) - offset;
+    const offset = outputLatency > 0 ? outputLatency : (isChromium ? 0.015 : 0.045);
+    const now = ctx.audio.currentTime - offset;
     
     if (ctx.drawQueue.length > 200) {
         ctx.drawQueue = ctx.drawQueue.filter(ev => ev.time >= now - 0.5);
@@ -607,11 +607,11 @@ function setupUIHandlers() {
     });
 
     const volumeNodes = [
-        { el: ui.chordVol, state: cb, gain: 'chordsGain', mult: 1.25 },
-        { el: ui.bassVol, state: bb, gain: 'bassGain', mult: 1.1 },
-        { el: ui.soloistVol, state: sb, gain: 'soloistGain', mult: 0.8 },
-        { el: ui.drumVol, state: gb, gain: 'drumsGain', mult: 1.15 },
-        { el: ui.masterVol, state: ctx, gain: 'masterGain', mult: 1.0 }
+        { el: ui.chordVol, state: cb, gain: 'chordsGain', mult: MIXER_GAIN_MULTIPLIERS.chords },
+        { el: ui.bassVol, state: bb, gain: 'bassGain', mult: MIXER_GAIN_MULTIPLIERS.bass },
+        { el: ui.soloistVol, state: sb, gain: 'soloistGain', mult: MIXER_GAIN_MULTIPLIERS.soloist },
+        { el: ui.drumVol, state: gb, gain: 'drumsGain', mult: MIXER_GAIN_MULTIPLIERS.drums },
+        { el: ui.masterVol, state: ctx, gain: 'masterGain', mult: MIXER_GAIN_MULTIPLIERS.master }
     ];
     volumeNodes.forEach(({ el, state, gain, mult }) => {
         el.addEventListener('input', e => {
@@ -739,6 +739,7 @@ function init() {
 function setBpm(val) {
     const newBpm = Math.max(40, Math.min(240, parseInt(val)));
     if (newBpm === ctx.bpm) return;
+    
     if (ctx.isPlaying && ctx.audio) {
         const now = ctx.audio.currentTime, ratio = ctx.bpm / newBpm;
         const noteTimeRemaining = ctx.nextNoteTime - now;
@@ -749,7 +750,7 @@ function setBpm(val) {
     }
     ctx.bpm = newBpm; ui.bpmInput.value = newBpm;
 
-    if (viz && ctx.isPlaying) {
+    if (viz && ctx.isPlaying && ctx.audio) {
         const secondsPerBeat = 60.0 / ctx.bpm;
         const sixteenth = 0.25 * secondsPerBeat;
         const beatTime = ctx.nextNoteTime - (ctx.step % 4) * sixteenth;
@@ -762,10 +763,17 @@ function transposeKey(delta) {
     const newKey = KEY_ORDER[(currentIndex + delta + 12) % 12];
     ui.keySelect.value = newKey;
     cb.key = newKey;
-    const parts = ui.progInput.value.split(/([\s,-]+)/);
+    
+    // Improved exclusion regex to avoid transposing Roman/NNS accidentals or numerals
+    const isMusicalNotation = (part) => {
+        return part.match(/^(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i) || 
+               part.match(/^[#b](III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i);
+    };
+
+    const parts = ui.progInput.value.split(/([\s,|,-]+)/);
     const transposed = parts.map(part => {
         const noteMatch = part.match(/^([A-G][#b]?)(.*)/i);
-        if (noteMatch && !part.match(/^(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v)/)) {
+        if (noteMatch && !isMusicalNotation(part)) {
             const root = normalizeKey(noteMatch[1].charAt(0).toUpperCase() + noteMatch[1].slice(1).toLowerCase());
             const newRoot = KEY_ORDER[(KEY_ORDER.indexOf(root) + delta + 12) % 12];
             return newRoot + noteMatch[2];
@@ -841,13 +849,13 @@ function resetToDefaults() {
     ui.visualFlash.checked = false;
     ui.haptic.checked = false;
 
-    if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5, ctx.audio.currentTime, 0.02);
+    if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.master, ctx.audio.currentTime, 0.02);
     
     // Update instrument buses with mixing multipliers
-    if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5 * 1.25, ctx.audio.currentTime, 0.02);
-    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.45 * 1.1, ctx.audio.currentTime, 0.02);
-    if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5 * 0.8, ctx.audio.currentTime, 0.02);
-    if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5 * 1.15, ctx.audio.currentTime, 0.02);
+    if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.chords, ctx.audio.currentTime, 0.02);
+    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.45 * MIXER_GAIN_MULTIPLIERS.bass, ctx.audio.currentTime, 0.02);
+    if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.soloist, ctx.audio.currentTime, 0.02);
+    if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.drums, ctx.audio.currentTime, 0.02);
 
     if (ctx.chordsReverb) ctx.chordsReverb.gain.setTargetAtTime(0.3, ctx.audio.currentTime, 0.02);
     if (ctx.bassReverb) ctx.bassReverb.gain.setTargetAtTime(0.05, ctx.audio.currentTime, 0.02);

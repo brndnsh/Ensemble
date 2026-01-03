@@ -5,6 +5,14 @@ export const NNS_OFFSETS = [0, 2, 4, 5, 7, 9, 11];
 export const INTERVAL_TO_NNS = { 0: '1', 1: 'b2', 2: '2', 3: 'b3', 4: '3', 5: '4', 6: 'b5', 7: '5', 8: 'b6', 9: '6', 10: 'b7', 11: '7' };
 export const INTERVAL_TO_ROMAN = { 0: 'I', 1: 'bII', 2: 'II', 3: 'bIII', 4: 'III', 5: 'IV', 6: 'bV', 7: 'V', 8: 'bVI', 9: 'VI', 10: 'bVII', 11: 'VII' };
 
+export const MIXER_GAIN_MULTIPLIERS = {
+    chords: 1.25,
+    bass: 1.1,
+    soloist: 0.8,
+    drums: 1.15,
+    master: 1.0
+};
+
 export const DRUM_PRESETS = {
     'Standard': { swing: 0, sub: '8th', 'Kick': [2,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], 'Snare': [0,0,0,0, 2,0,0,0, 0,0,0,0, 2,0,0,0], 'HiHat': [2,0,1,0, 2,0,1,0, 2,0,1,0, 2,0,1,0], 'Open': [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] },
     'Backbeat Only': { swing: 0, sub: '8th', 'Kick': [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], 'Snare': [0,0,0,0, 2,0,0,0, 0,0,0,0, 2,0,0,0], 'HiHat': [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], 'Open': [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] },

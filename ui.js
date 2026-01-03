@@ -234,3 +234,13 @@ export function renderGridState() {
         }
     }
 }
+
+/**
+ * Clears all active/playing visual indicators from the DOM.
+ * @param {UnifiedVisualizer|null} viz - The visualizer instance to clear.
+ */
+export function clearActiveVisuals(viz) {
+    document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
+    document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
+    if (viz) viz.clear();
+}
