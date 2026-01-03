@@ -90,7 +90,7 @@
                 <button id="copyMeasureBtn" title="Duplicate Measure 1 to all bars" style="background: transparent; border: 1px solid #475569; color: #94a3b8; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.9rem;" aria-label="Duplicate Measure 1">⧉</button>
                 <div class="control-group">
                     <span class="control-label" style="font-size: 0.7rem;">Bars</span>
-                    <select id="drumBarsSelect" style="width: 40px; border: none; background: transparent; font-size: 0.9rem; padding: 0; color: white;" aria-label="Number of Bars">
+                    <select id="drumBarsSelect" style="border: none; background: transparent; color: white; cursor: pointer;" aria-label="Number of Bars">
                         <option value="1">1</option>
                         <option value="2">2</option>
                         <option value="4">4</option>
@@ -341,9 +341,14 @@
                 <input type="range" id="soloistOctaveSlider" min="48" max="96" value="77" style="width: 100%;" aria-label="Soloist Octave">
             </div>
 
-            <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">
-                <button id="resetSettingsBtn" style="width: 100%; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: var(--error-color);">Reset to Defaults</button>
-            </div>
+                    <div class="setting-item" style="margin-top: 1rem;">
+                        <button id="exportMidiBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--panel-color); border: 1px solid #475569;">
+                            <span>🎹</span> Export Progression as MIDI
+                        </button>
+                    </div>
+                    <div class="setting-item" style="margin-top: 0.5rem;">
+                        <button id="resetSettingsBtn" style="width: 100%; color: var(--error-color); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);">Reset All Settings</button>
+                    </div>
         </div>
 
         <div class="settings-help" style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem; border-top: none;">

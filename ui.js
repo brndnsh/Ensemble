@@ -63,6 +63,7 @@ export const ui = {
     swingBase: document.getElementById('swingBaseSelect'),
     visualFlash: document.getElementById('visualFlashCheck'),
     haptic: document.getElementById('hapticCheck'),
+    exportMidiBtn: document.getElementById('exportMidiBtn'),
     flashOverlay: document.getElementById('flashOverlay'),
     resetSettingsBtn: document.getElementById('resetSettingsBtn')
 };
