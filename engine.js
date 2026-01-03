@@ -48,43 +48,26 @@ export function initAudio() {
         ctx.reverbNode.buffer = createReverbImpulse(ctx.audio, 1.5, 3.0);
         ctx.reverbNode.connect(ctx.masterGain);
 
-        // Instrument Buses
-        ctx.chordsGain = ctx.audio.createGain();
-        ctx.chordsGain.gain.value = cb.volume;
-        ctx.chordsGain.connect(ctx.masterGain);
+        // Instrument Buses and Reverb Sends
+        const modules = [
+            { name: 'chords', state: cb },
+            { name: 'bass', state: bb },
+            { name: 'soloist', state: sb },
+            { name: 'drums', state: gb }
+        ];
 
-        ctx.bassGain = ctx.audio.createGain();
-        ctx.bassGain.gain.value = bb.volume;
-        ctx.bassGain.connect(ctx.masterGain);
+        modules.forEach(m => {
+            const gainNode = ctx.audio.createGain();
+            gainNode.gain.value = m.state.volume;
+            gainNode.connect(ctx.masterGain);
+            ctx[`${m.name}Gain`] = gainNode;
 
-        ctx.soloistGain = ctx.audio.createGain();
-        ctx.soloistGain.gain.value = sb.volume;
-        ctx.soloistGain.connect(ctx.masterGain);
-
-        ctx.drumsGain = ctx.audio.createGain();
-        ctx.drumsGain.gain.value = gb.volume;
-        ctx.drumsGain.connect(ctx.masterGain);
-
-        // Reverb Sends (Post-Fader from Buses)
-        ctx.chordsReverb = ctx.audio.createGain();
-        ctx.chordsReverb.gain.value = cb.reverb;
-        ctx.chordsGain.connect(ctx.chordsReverb);
-        ctx.chordsReverb.connect(ctx.reverbNode);
-
-        ctx.drumsReverb = ctx.audio.createGain();
-        ctx.drumsReverb.gain.value = gb.reverb;
-        ctx.drumsGain.connect(ctx.drumsReverb);
-        ctx.drumsReverb.connect(ctx.reverbNode);
-
-        ctx.bassReverb = ctx.audio.createGain();
-        ctx.bassReverb.gain.value = bb.reverb;
-        ctx.bassGain.connect(ctx.bassReverb);
-        ctx.bassReverb.connect(ctx.reverbNode);
-
-        ctx.soloistReverb = ctx.audio.createGain();
-        ctx.soloistReverb.gain.value = sb.reverb;
-        ctx.soloistGain.connect(ctx.soloistReverb);
-        ctx.soloistReverb.connect(ctx.reverbNode);
+            const reverbGain = ctx.audio.createGain();
+            reverbGain.gain.value = m.state.reverb;
+            gainNode.connect(reverbGain);
+            reverbGain.connect(ctx.reverbNode);
+            ctx[`${m.name}Reverb`] = reverbGain;
+        });
 
         const bufSize = ctx.audio.sampleRate * 2;
         const buffer = ctx.audio.createBuffer(1, bufSize, ctx.audio.sampleRate);

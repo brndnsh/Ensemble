@@ -1,4 +1,4 @@
-import { getFrequency } from './utils.js';
+import { getFrequency, getMidi } from './utils.js';
 
 /**
  * Generates a frequency for a bass line.
@@ -13,8 +13,6 @@ import { getFrequency } from './utils.js';
 export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = null, centerMidi = 41, style = 'quarter') {
     if (!currentChord) return 0;
 
-    // Helper to get MIDI from Freq
-    const getMidi = (f) => f ? Math.round(12 * Math.log2(f / 440) + 69) : null;
     const prevMidi = getMidi(prevFreq);
 
     // Hard limits to keep within a consistent bass guitar range
@@ -22,38 +20,22 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
     const absMin = Math.max(26, centerMidi - 15); 
     const absMax = centerMidi + 15;
 
+    const clampAndNormalize = (midi) => {
+        let note = midi;
+        while (note > absMax) note -= 12;
+        while (note < absMin) note += 12;
+        return note;
+    };
+
     const normalizeToRange = (midi) => {
         if (!Number.isFinite(midi)) return centerMidi;
         
-        // Register commitment pull: Only apply for walking bass (quarter)
-        // Others (arp, whole, half) should stay anchored to center for stability.
         const useCommitment = style === 'quarter' && prevMidi !== null;
         const targetRef = useCommitment ? (prevMidi * 0.7 + centerMidi * 0.3) : centerMidi;
-        
-        // Robust modulo to get pitch class 0-11
-        let m = ((midi % 12) + 12) % 12;
-        
-        // Find the octave of 'm' closest to 'targetRef'
-        let baseOct = Math.floor(targetRef / 12) * 12;
-        let candidates = [baseOct + m, baseOct - 12 + m, baseOct + 12 + m];
-        
-        candidates.sort((a, b) => {
-            const distA = Math.abs(a - targetRef);
-            const distB = Math.abs(b - targetRef);
-            if (Math.abs(distA - distB) < 0.1) {
-                return Math.abs(a - centerMidi) - Math.abs(b - centerMidi);
-            }
-            return distA - distB;
-        });
-        
-        let best = candidates[0];
+        const best = [0, -12, 12].map(o => (Math.floor(targetRef / 12) * 12) + o + (((midi % 12) + 12) % 12))
+            .sort((a, b) => Math.abs(a - targetRef) - Math.abs(b - targetRef))[0];
 
-        // Hard Safety Rail
-        let iterations = 0;
-        while (best < absMin && iterations < 10) { best += 12; iterations++; }
-        while (best > absMax && iterations < 10) { best -= 12; iterations++; }
-        
-        return best;
+        return clampAndNormalize(best);
     };
 
     let baseRoot = normalizeToRange(currentChord.rootMidi);
@@ -92,9 +74,7 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
 
         const hasFlat5 = currentChord.quality === 'dim' || currentChord.quality === 'halfdim';
         let fifth = baseRoot + (hasFlat5 ? 6 : 7);
-        while (fifth > absMax) fifth -= 12;
-        while (fifth < absMin) fifth += 12;
-        return getFrequency(fifth);
+        return getFrequency(clampAndNormalize(fifth));
     }
 
     // --- ARP STYLE: 1-3-5-3 Pattern (Stable) ---
@@ -111,10 +91,7 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
             targetInterval = intervals[2] || 7;
         }
         
-        let note = baseRoot + targetInterval;
-        while (note > absMax) note -= 12;
-        while (note < absMin) note += 12;
-        return getFrequency(note);
+        return getFrequency(clampAndNormalize(baseRoot + targetInterval));
     }
 
     // --- QUARTER NOTE (WALKING) STYLE ---
@@ -127,10 +104,7 @@ export function getBassNote(currentChord, nextChord, stepInChord, prevFreq = nul
         if (Math.random() < 0.4) {
              const intervals = currentChord.intervals;
              const targetInt = intervals.length > 2 ? intervals[intervals.length - 1] : (intervals[1] || 4);
-             let altNote = baseRoot + targetInt;
-             while (altNote > absMax) altNote -= 12;
-             while (altNote < absMin) altNote += 12;
-             return getFrequency(withOctaveJump(altNote));
+             return getFrequency(withOctaveJump(clampAndNormalize(baseRoot + targetInt)));
         }
         return getFrequency(withOctaveJump(baseRoot));
     }

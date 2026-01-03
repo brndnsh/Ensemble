@@ -1,3 +1,6 @@
+import { midiToNote } from './utils.js';
+import { cb, gb } from './state.js';
+
 export const ui = {
     playBtn: document.getElementById('playBtn'),
     bpmInput: document.getElementById('bpmInput'),
@@ -93,27 +96,139 @@ export function triggerFlash(intensity = 0.2) {
     }
 }
 
-export function updateOctaveLabel(midi) {
-    const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-    const noteName = notes[midi % 12];
-    const octave = Math.floor(midi / 12) - 1;
-    ui.octaveLabel.textContent = `${noteName}${octave}`;
+/**
+ * Updates an octave label element with formatted note and octave text.
+ * @param {HTMLElement} element - The label element to update.
+ * @param {number} midi - The MIDI note number.
+ * @param {HTMLElement|null} headerElement - Optional additional header element to update.
+ */
+export function updateOctaveLabel(element, midi, headerElement = null) {
+    const { name, octave } = midiToNote(midi);
+    const label = `${name}${octave}`;
+    if (element) element.textContent = label;
+    if (headerElement) headerElement.textContent = label;
 }
 
-export function updateBassOctaveLabel(midi) {
-    const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-    const noteName = notes[midi % 12];
-    const octave = Math.floor(midi / 12) - 1;
-    const label = `${noteName}${octave}`;
-    ui.bassOctaveLabel.textContent = label;
-    if (ui.bassHeaderReg) ui.bassHeaderReg.textContent = label;
+/**
+ * Renders the visual chord progression cards in the DOM.
+ */
+export function renderChordVisualizer() {
+    ui.chordVisualizer.innerHTML = '';
+    cb.cachedCards = [];
+    if (cb.progression.length === 0) return;
+
+    let measureBox = document.createElement('div');
+    measureBox.className = 'measure-box';
+    ui.chordVisualizer.appendChild(measureBox);
+    
+    let currentBeatsInBar = 0;
+
+    cb.progression.forEach((chord, i) => {
+        if (currentBeatsInBar >= 4) {
+            measureBox = document.createElement('div');
+            measureBox.className = 'measure-box';
+            ui.chordVisualizer.appendChild(measureBox);
+            currentBeatsInBar = 0;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'chord-card';
+        if (chord.beats < 4) div.classList.add('small');
+        if (chord.isMinor) div.classList.add('minor');
+        
+        if (cb.notation === 'name') div.innerHTML = chord.absName;
+        else if (cb.notation === 'nns') div.innerHTML = chord.nnsName;
+        else div.innerHTML = chord.romanName;
+        
+        measureBox.appendChild(div);
+        cb.cachedCards.push(div);
+        currentBeatsInBar += chord.beats;
+    });
 }
 
-export function updateSoloistOctaveLabel(midi) {
-    const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-    const noteName = notes[midi % 12];
-    const octave = Math.floor(midi / 12) - 1;
-    const label = `${noteName}${octave}`;
-    ui.soloistOctaveLabel.textContent = label;
-    if (ui.soloistHeaderReg) ui.soloistHeaderReg.textContent = label;
+/**
+ * Renders the drum sequencer grid.
+ */
+export function renderGrid() {
+    ui.sequencerGrid.innerHTML = '';
+    gb.cachedSteps = [];
+    const fragment = document.createDocumentFragment();
+
+    gb.instruments.forEach((inst, tIdx) => {
+        const row = document.createElement('div');
+        row.className = 'track';
+        const header = document.createElement('div');
+        header.className = 'track-header';
+        header.innerHTML = `<span>${inst.symbol} <span>${inst.name}</span></span>`;
+        header.style.cursor = "pointer"; if (inst.muted) header.style.opacity = 0.5;
+        header.onclick = () => { inst.muted = !inst.muted; header.style.opacity = inst.muted ? 0.5 : 1; };
+        row.appendChild(header);
+        const stepsWrapper = document.createElement('div');
+        stepsWrapper.className = 'steps-wrapper';
+        for (let m = 0; m < gb.measures; m++) {
+            const measureDiv = document.createElement('div'); measureDiv.className = 'steps';
+            for (let b = 0; b < 16; b++) {
+                const globalIdx = m * 16 + b, step = document.createElement('div');
+                const active = inst.steps[globalIdx];
+                step.className = `step ${active ? 'active' : ''}`; step.dataset.step = globalIdx;
+                step.onclick = () => { inst.steps[globalIdx] = inst.steps[globalIdx] ? 0 : 1; renderGridState(); };
+                measureDiv.appendChild(step);
+                if (!gb.cachedSteps[globalIdx]) gb.cachedSteps[globalIdx] = [];
+                gb.cachedSteps[globalIdx].push(step);
+            }
+            stepsWrapper.appendChild(measureDiv);
+        }
+        row.appendChild(stepsWrapper); 
+        fragment.appendChild(row);
+    });
+
+    // Add beat labels row
+    const labelRow = document.createElement('div');
+    labelRow.className = 'track label-row';
+    const labelHeader = document.createElement('div');
+    labelHeader.className = 'track-header label-header';
+    labelHeader.innerHTML = '<span></span>';
+    labelRow.appendChild(labelHeader);
+
+    const labelsWrapper = document.createElement('div');
+    labelsWrapper.className = 'steps-wrapper';
+    
+    const beatLabels = ['1', 'e', '&', 'a', '2', 'e', '&', 'a', '3', 'e', '&', 'a', '4', 'e', '&', 'a'];
+    
+    for (let m = 0; m < gb.measures; m++) {
+        const measureDiv = document.createElement('div');
+        measureDiv.className = 'steps label-steps';
+        beatLabels.forEach((text, i) => {
+            const label = document.createElement('div');
+            label.className = 'step-label';
+            label.textContent = text;
+            if (i % 4 === 0) label.classList.add('beat-start');
+            measureDiv.appendChild(label);
+            
+            const globalIdx = m * 16 + i;
+            if (!gb.cachedSteps[globalIdx]) gb.cachedSteps[globalIdx] = [];
+            gb.cachedSteps[globalIdx].push(label);
+        });
+        labelsWrapper.appendChild(measureDiv);
+    }
+    labelRow.appendChild(labelsWrapper);
+    fragment.appendChild(labelRow);
+    ui.sequencerGrid.appendChild(fragment);
+}
+
+/**
+ * Updates only the 'active' classes in the drum grid without re-rendering the full DOM.
+ */
+export function renderGridState() {
+    const totalSteps = gb.measures * 16;
+    for (let i = 0; i < totalSteps; i++) {
+        const elements = gb.cachedSteps[i];
+        if (elements) {
+            gb.instruments.forEach((inst, tIdx) => {
+                if (elements[tIdx]) {
+                    elements[tIdx].classList.toggle('active', !!inst.steps[i]);
+                }
+            });
+        }
+    }
 }
