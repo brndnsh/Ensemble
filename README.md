@@ -20,14 +20,20 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 ### 🎸 Bassist
 *   **Walking Bass Generator**: Automatically generates melodic walking bass lines that follow your chord progression.
 *   **Rhythmic Styles**: Choose between Whole Note, Half Note, Arpeggio, and Walking (Quarter Note) patterns.
-*   **Melodic Visualizer**: Real-time visualization of the bass line contour and chord tones.
 *   **Register Control**: Adjustable bass register (center octave) to fit different musical contexts.
 
 ### 🎷 Soloist
 *   **Algorithmic Soloing**: Generates melodic lines over your progression using rhythmic cells and harmonic targeting.
 *   **Diverse Styles**: Choose from Scalar, Shreddy (arpeggio sweeps), Bebop (enclosures), Blues, and Minimalist approaches.
 *   **Key-Aware & Blues Logic**: Melodies strictly adhere to the parent key signature for diatonic chords and employ Major/Minor blues scales with chromatic grace note slips for authentic phrasing.
-*   **Melodic Visualizer**: Real-time visualization of the soloist's melodic path.
+
+### 📊 Unified Visualizer
+*   **Harmonic Context**: A centralized, high-fidelity graph that superimposes Bass and Soloist tracks on top of your chord progression.
+*   **Color-Coded Analysis**: Real-time interval mapping using a vivid color scheme (Blue: Root, Green: 3rd, Orange: 5th, Purple: 7th+) helps you visualize melodic choices relative to the harmonic foundation.
+*   **Piano Roll Background**: Displays the full harmonic structure across all octaves, making it easy to see targeting and tension.
+*   **Rhythmic Grid**: Vertical lines for beats and measures provide a clear reference for timing and phrasing.
+*   **Smart Wrapping**: Automatically shifts notes by an octave to ensure they stay visible while maintaining their functional harmonic position.
+*   **Polished Interface**: Features neon glow effects, smooth legato curves, and a trailing opacity fade for a professional look.
 
 ### General
 *   **MIDI Export**: Export your progression, bass line, and drum groove as a multi-track MIDI file (Format 1) with appropriate instrument assignments, chord name markers, and soloist pitch bends.

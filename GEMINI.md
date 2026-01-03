@@ -16,6 +16,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **`accompaniment.js`**: Defines the rhythmic playback patterns for all chord styles (e.g., Funk, Reggae, Bossa Nova).
 *   **`bass.js`**: Generates walking bass lines and patterns based on chord progressions and desired register.
 *   **`soloist.js`**: Implements advanced algorithmic soloing logic, including phrasing, rhythmic cells, and harmonic targeting.
+*   **`visualizer.js`**: Implements the `UnifiedVisualizer` class for multi-track, time-based harmonic and melodic visualization.
 *   **`midi-export.js`**: Handles offline generation of Standard MIDI Files (SMF) including track assembly and timing calculations.
 *   **`ui.js`**: Centralizes DOM element references and UI manipulation functions (toasts, visual updates).
 *   **`config.js`**: Stores static configuration, such as default drum presets, chord styles, and musical constants.
@@ -41,13 +42,17 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **Walking Bass Generator**: Automatically generates melodic walking bass lines using chord tones and approach notes.
 *   **Rhythmic Styles**: Supports Whole Note, Half Note, Arpeggio, and Walking (Quarter Note) patterns.
 *   **Register Control**: Adjustable bass register to fit different musical contexts.
-*   **Visualizer**: A real-time sparkline graph showing melodic contour alongside chord tone "lanes".
 
 ### Soloist
 *   **Algorithmic Soloing**: Generates melodic lines over progressions using rhythmic cells and harmonic targeting.
 *   **Styles**: Supports various soloing styles including Scalar, Shreddy, Bebop, Blues, and Minimal.
 *   **Dual-Clock Scheduling**: Employs an unswung clock for a more laid-back, human-like melodic feel relative to the rhythm section.
-*   **Visualizer**: Real-time path visualization of the generated melody.
+
+### Unified Visualizer
+*   **Harmonic Superimposition**: Centralized graph that overlays Bass, Soloist, and Chords in a single visual timeline.
+*   **Color-Coded Intervals**: Uses a vivid harmonic color scheme (Blue: Root, Green: 3rd, Orange: 5th, Purple: 7th+) to show the function of every note in real-time.
+*   **Rhythmic Reference**: Integrated vertical grid for beats and measures.
+*   **Smart Octave Wrapping**: Automatically ensures notes stay within the visual range while preserving their harmonic context.
 
 ### General
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
