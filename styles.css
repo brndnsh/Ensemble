@@ -321,6 +321,11 @@ input[type="number"], select, input[type="text"] {
     font-size: 1rem;
 }
 
+option {
+    background-color: var(--panel-color);
+    color: white;
+}
+
 input[type="range"] {
     accent-color: var(--accent-color);
     cursor: pointer;
