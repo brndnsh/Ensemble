@@ -8,10 +8,12 @@ import { getBassNote } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 import { chordPatterns } from './accompaniment.js';
 import { exportToMidi } from './midi-export.js';
+import { UnifiedVisualizer } from './visualizer.js';
 
 let userPresets = storage.get('userPresets');
 let userDrumPresets = storage.get('userDrumPresets');
 let iosAudioUnlocked = false;
+let viz;
 
 // Web Worker for robust background timing
 const timerWorker = new Worker('./timer.js');
@@ -93,6 +95,8 @@ function togglePlay() {
         ctx.countInBeat = 0;
         requestWakeLock();
         
+        if (viz) viz.setBeatReference(ctx.nextNoteTime);
+
         if (!ctx.isDrawing) {
             ctx.isDrawing = true;
             requestAnimationFrame(draw);
@@ -245,11 +249,12 @@ function scheduleBass(chordData, step, time) {
             bb.lastFreq = bassFreq;
             const midi = getMidi(bassFreq);
             const { name, octave } = midiToNote(midi);
+            const duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * (60.0 / ctx.bpm);
             ctx.drawQueue.push({ 
                 type: 'bass_vis', name, octave, midi, time,
-                chordNotes: chord.freqs.map(f => getMidi(f))
+                chordNotes: chord.freqs.map(f => getMidi(f)),
+                duration
             });
-            const duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * (60.0 / ctx.bpm);
             playBassNote(bassFreq, time, duration);
         }
     }
@@ -271,12 +276,15 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
         
         playSoloNote(soloResult.freq, unswungTime, duration, 1.0, soloResult.bendStartInterval || 0, soloResult.style);
         sb.lastNoteEnd = unswungTime + duration;
+
+        ctx.drawQueue.push({ 
+            type: 'soloist_vis', name, octave, midi, time: unswungTime,
+            chordNotes: chord.freqs.map(f => getMidi(f)),
+            duration
+        });
     }
 
-    ctx.drawQueue.push({ 
-        type: 'soloist_vis', name, octave, midi, time: unswungTime,
-        chordNotes: chord.freqs.map(f => getMidi(f))
-    });
+    // Keep legacy fallback for now if needed, or just let the queue handle it
 }
 
 function scheduleChords(chordData, step, time) {
@@ -284,7 +292,15 @@ function scheduleChords(chordData, step, time) {
     const spb = 60.0 / ctx.bpm;
     const measureStep = step % 16;
     
-    if (stepInChord === 0) ctx.drawQueue.push({ type: 'chord_vis', index: chordIndex, time });
+    if (stepInChord === 0) {
+        ctx.drawQueue.push({ 
+            type: 'chord_vis', index: chordIndex, time,
+            chordNotes: chord.freqs.map(f => getMidi(f)),
+            rootMidi: chord.rootMidi,
+            intervals: chord.intervals,
+            duration: chord.beats * spb
+        });
+    }
     
     const pattern = chordPatterns[cb.style];
     if (pattern) {
@@ -341,77 +357,6 @@ function updateChordVis(ev) {
     });
 }
 
-function updateInstrumentVis(ev, type) {
-    const isBass = type === 'bass';
-    const config = isBass ? 
-        { state: bb, nameEl: ui.bassNoteName, octEl: ui.bassNoteOctave, tonesEl: ui.bassChordTones, pathEl: ui.bassPolyline, range: 12 } :
-        { state: sb, nameEl: ui.soloistNoteName, octEl: ui.soloistNoteOctave, tonesEl: ui.soloistChordTones, pathEl: ui.soloistPath, range: 30 };
-    
-    if (config.nameEl) config.nameEl.textContent = ev.name;
-    if (config.octEl) config.octEl.textContent = ev.octave;
-    
-    config.state.history.push(ev.midi);
-    config.state.chordHistory.push(ev.chordNotes);
-    if (config.state.history.length > 16) {
-        config.state.history.shift();
-        config.state.chordHistory.shift();
-    }
-
-    if (config.pathEl && config.state.history.length > 1) {
-        const width = 100, height = 100;
-        const min = config.state.octave - config.range;
-        const max = config.state.octave + config.range;
-        
-        if (config.tonesEl) {
-            config.tonesEl.innerHTML = '';
-            const historyLen = config.state.chordHistory.length;
-            const stepWidth = width / (historyLen > 1 ? historyLen - 1 : 1);
-            
-            config.state.chordHistory.forEach((notes, historyIdx) => {
-                const x = historyIdx * stepWidth;
-                notes.forEach(midi => {
-                    let m = midi;
-                    while (m > max) m -= 12;
-                    while (m < min) m += 12;
-                    if (m >= min && m <= max) {
-                        const y = height - ((m - min) / (max - min)) * height;
-                        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                        line.setAttribute("x1", (x - stepWidth/2).toString());
-                        line.setAttribute("y1", y.toString());
-                        line.setAttribute("x2", (x + stepWidth/2).toString());
-                        line.setAttribute("y2", y.toString());
-                        line.setAttribute("stroke", "#ffffff");
-                        line.setAttribute("stroke-width", "1");
-                        line.setAttribute("stroke-opacity", ((historyIdx / historyLen) * 0.4).toString());
-                        config.tonesEl.appendChild(line);
-                    }
-                });
-            });
-        }
-
-        if (isBass) {
-            const points = config.state.history.map((midi, i) => {
-                const x = (i / (config.state.history.length - 1)) * width;
-                const val = Math.max(min, Math.min(max, midi));
-                const y = height - ((val - min) / (max - min)) * height;
-                return `${x},${y}`;
-            }).join(' ');
-            config.pathEl.setAttribute('points', points);
-        } else {
-            let pathD = "", hasMoved = false;
-            config.state.history.forEach((midi, i) => {
-                const x = (i / (config.state.history.length - 1)) * width;
-                if (midi === null) { hasMoved = false; return; }
-                const val = Math.max(min, Math.min(max, midi));
-                const y = height - ((val - min) / (max - min)) * height;
-                if (!hasMoved) { pathD += `M ${x},${y} `; hasMoved = true; } 
-                else { pathD += `L ${x},${y} `; }
-            });
-            config.pathEl.setAttribute('d', pathD);
-        }
-    }
-}
-
 /**
  * The main animation loop for visual feedback.
  */
@@ -421,13 +366,8 @@ function draw() {
         ctx.isDrawing = false;
         document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
         document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
-        [ui.bassNoteName, ui.soloistNoteName].forEach(el => { if(el) el.textContent = '--'; });
-        [ui.bassNoteOctave, ui.soloistNoteOctave].forEach(el => { if(el) el.textContent = ''; });
-        [ui.bassChordTones, ui.soloistChordTones].forEach(el => { if(el) el.innerHTML = ''; });
-        if (ui.bassPolyline) ui.bassPolyline.setAttribute('points', '');
-        if (ui.soloistPath) ui.soloistPath.setAttribute('d', '');
-        bb.history = []; bb.chordHistory = [];
-        sb.history = []; sb.chordHistory = [];
+        
+        if (viz) viz.clear();
         return;
     }
 
@@ -442,11 +382,32 @@ function draw() {
     while (ctx.drawQueue.length && ctx.drawQueue[0].time <= now) {
         const ev = ctx.drawQueue.shift();
         if (ev.type === 'drum_vis') updateDrumVis(ev);
-        else if (ev.type === 'chord_vis') updateChordVis(ev);
-        else if (ev.type === 'bass_vis') updateInstrumentVis(ev, 'bass');
-        else if (ev.type === 'soloist_vis') updateInstrumentVis(ev, 'soloist');
+        else if (ev.type === 'chord_vis') {
+            updateChordVis(ev);
+            if (viz) viz.pushChord({ 
+                time: ev.time, 
+                notes: ev.chordNotes, 
+                rootMidi: ev.rootMidi, 
+                intervals: ev.intervals, 
+                duration: ev.duration 
+            });
+        }
+        else if (ev.type === 'bass_vis') {
+            if (viz) viz.pushNote('bass', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+        }
+        else if (ev.type === 'soloist_vis') {
+            if (viz) viz.pushNote('soloist', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+        }
         else if (ev.type === 'flash') triggerFlash(ev.intensity);
     }
+    
+    if (viz) {
+        viz.setRegister('bass', bb.octave);
+        viz.setRegister('soloist', sb.octave);
+        viz.setRegister('chords', cb.octave);
+        viz.render(now, ctx.bpm);
+    }
+
     requestAnimationFrame(draw);
 }
 
@@ -699,6 +660,10 @@ function setupPresets() {
 // --- INITIALIZATION ---
 function init() {
     try {
+        viz = new UnifiedVisualizer('unifiedVizContainer');
+        viz.addTrack('bass', 'var(--accent-color)');
+        viz.addTrack('soloist', '#f472b6');
+        
         renderGrid();
         loadDrumPreset('Standard');
         setupPresets();

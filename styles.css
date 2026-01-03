@@ -117,6 +117,10 @@ header h1 { margin: 0; font-size: 1.5rem; color: white; }
     grid-column: 1 / -1;
 }
 
+.app-container.chord-maximized #visualizerPanel {
+    grid-column: 1 / -1;
+}
+
 .app-container.chord-maximized .display-area {
     grid-template-columns: repeat(4, 1fr);
     min-height: 500px;
@@ -685,3 +689,37 @@ input[type="range"] {
     color: #94a3b8;
     margin-bottom: 0.25rem;
 }
+
+/* --- Visualizer Legend --- */
+.viz-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #334155;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.swatch-root { background-color: #3b82f6; box-shadow: 0 0 5px #3b82f6; }
+.swatch-third { background-color: #10b981; box-shadow: 0 0 5px #10b981; }
+.swatch-fifth { background-color: #f97316; box-shadow: 0 0 5px #f97316; }
+.swatch-seventh { background-color: #a855f7; box-shadow: 0 0 5px #a855f7; }
+.swatch-bass { border: 2px solid #3b82f6; background: transparent; }
+.swatch-soloist { border: 2px solid #f472b6; background: transparent; }
