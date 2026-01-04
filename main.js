@@ -154,8 +154,9 @@ function togglePower(type) {
         // Restore beat reference if enabled mid-playback
         const secondsPerBeat = 60.0 / ctx.bpm;
         const sixteenth = 0.25 * secondsPerBeat;
-        const beatTime = ctx.nextNoteTime - (ctx.step % 4) * sixteenth;
-        viz.setBeatReference(beatTime);
+        // Use unswung time and measure alignment (16 steps) for stable grid
+        const measureTime = ctx.unswungNextNoteTime - (ctx.step % 16) * sixteenth;
+        viz.setBeatReference(measureTime);
     }
 }
 
@@ -193,7 +194,9 @@ function advanceCountIn() {
  * @param {number} time 
  */
 function scheduleCountIn(beat, time) {
-     ctx.drawQueue.push({ type: 'flash', time: time, intensity: 0.3, beat: 1 });
+     if (ui.visualFlash.checked) {
+        ctx.drawQueue.push({ type: 'flash', time: time, intensity: 0.3, beat: 1 });
+     }
      const osc = ctx.audio.createOscillator();
      const gain = ctx.audio.createGain();
      osc.connect(gain);
@@ -281,11 +284,14 @@ function scheduleBass(chordData, step, time) {
             const midi = getMidi(bassFreq);
             const { name, octave } = midiToNote(midi);
             const duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * (60.0 / ctx.bpm);
-            ctx.drawQueue.push({ 
-                type: 'bass_vis', name, octave, midi, time,
-                chordNotes: chord.freqs.map(f => getMidi(f)),
-                duration
-            });
+            
+            if (vizState.enabled) {
+                ctx.drawQueue.push({ 
+                    type: 'bass_vis', name, octave, midi, time,
+                    chordNotes: chord.freqs.map(f => getMidi(f)),
+                    duration
+                });
+            }
             playBassNote(bassFreq, time, duration);
         }
     }
@@ -312,37 +318,41 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
 
         playSoloNote(soloResult.freq, playTime, duration, vel, soloResult.bendStartInterval || 0, soloResult.style);
 
-        // Double/Triple Stop Handling
-        if (soloResult.extraFreq && soloResult.extraMidi) {
-            playSoloNote(soloResult.extraFreq, playTime, duration, vel * 0.7, soloResult.bendStartInterval || 0, soloResult.style);
-            const extra = midiToNote(soloResult.extraMidi);
+        if (vizState.enabled) {
+            // Double/Triple Stop Handling
+            if (soloResult.extraFreq && soloResult.extraMidi) {
+                playSoloNote(soloResult.extraFreq, playTime, duration, vel * 0.7, soloResult.bendStartInterval || 0, soloResult.style);
+                const extra = midiToNote(soloResult.extraMidi);
+                ctx.drawQueue.push({ 
+                    type: 'soloist_vis', name: extra.name, octave: extra.octave, midi: soloResult.extraMidi, time: playTime,
+                    chordNotes: chord.freqs.map(f => getMidi(f)),
+                    duration
+                });
+            }
+            
+            if (soloResult.extraFreq2 && soloResult.extraMidi2) {
+                playSoloNote(soloResult.extraFreq2, playTime, duration, vel * 0.5, soloResult.bendStartInterval || 0, soloResult.style);
+                const extra2 = midiToNote(soloResult.extraMidi2);
+                ctx.drawQueue.push({ 
+                    type: 'soloist_vis', name: extra2.name, octave: extra2.octave, midi: soloResult.extraMidi2, time: playTime,
+                    chordNotes: chord.freqs.map(f => getMidi(f)),
+                    duration
+                });
+            }
+
             ctx.drawQueue.push({ 
-                type: 'soloist_vis', name: extra.name, octave: extra.octave, midi: soloResult.extraMidi, time: playTime,
+                type: 'soloist_vis', name, octave, midi, time: playTime,
                 chordNotes: chord.freqs.map(f => getMidi(f)),
                 duration
             });
-        }
-        
-        if (soloResult.extraFreq2 && soloResult.extraMidi2) {
-            playSoloNote(soloResult.extraFreq2, playTime, duration, vel * 0.5, soloResult.bendStartInterval || 0, soloResult.style);
-            const extra2 = midiToNote(soloResult.extraMidi2);
-            ctx.drawQueue.push({ 
-                type: 'soloist_vis', name: extra2.name, octave: extra2.octave, midi: soloResult.extraMidi2, time: playTime,
-                chordNotes: chord.freqs.map(f => getMidi(f)),
-                duration
-            });
+        } else {
+            // Still play extra notes if not visualizing
+            if (soloResult.extraFreq) playSoloNote(soloResult.extraFreq, playTime, duration, vel * 0.7, soloResult.bendStartInterval || 0, soloResult.style);
+            if (soloResult.extraFreq2) playSoloNote(soloResult.extraFreq2, playTime, duration, vel * 0.5, soloResult.bendStartInterval || 0, soloResult.style);
         }
 
         sb.lastNoteEnd = playTime + duration;
-
-        ctx.drawQueue.push({ 
-            type: 'soloist_vis', name, octave, midi, time: playTime,
-            chordNotes: chord.freqs.map(f => getMidi(f)),
-            duration
-        });
     }
-
-    // Keep legacy fallback for now if needed, or just let the queue handle it
 }
 
 function scheduleChords(chordData, step, time) {
@@ -376,7 +386,9 @@ function scheduleGlobalEvent(step, swungTime) {
     const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + jitter;
 
     if (gb.enabled) {
-        if (drumStep % 4 === 0) ctx.drawQueue.push({ type: 'flash', time: swungTime, intensity: (drumStep % 16 === 0 ? 0.2 : 0.1), beat: (drumStep % 16 === 0 ? 1 : 0) });
+        if (drumStep % 4 === 0 && ui.visualFlash.checked) {
+            ctx.drawQueue.push({ type: 'flash', time: swungTime, intensity: (drumStep % 16 === 0 ? 0.2 : 0.1), beat: (drumStep % 16 === 0 ? 1 : 0) });
+        }
         ctx.drawQueue.push({ type: 'drum_vis', step: drumStep, time: swungTime });
         scheduleDrums(drumStep, t, drumStep % 16 === 0, drumStep % 4 === 0, [4, 12].includes(drumStep % 16));
     }
@@ -399,13 +411,14 @@ function updateDrumVis(ev) {
         // Only trigger layout/scrolling once per measure
         if (ev.step % 16 === 0) {
             const container = ui.sequencerGrid;
-            const step = activeSteps[0];
-            const containerRect = container.getBoundingClientRect();
-            const stepRect = step.getBoundingClientRect();
-            container.scrollTo({ 
-                left: stepRect.left - containerRect.left + container.scrollLeft - 100, 
-                behavior: 'smooth' 
-            });
+            const scrollOffset = gb.stepOffsets ? gb.stepOffsets[ev.step] : null;
+            
+            if (scrollOffset !== null) {
+                container.scrollTo({ 
+                    left: scrollOffset, 
+                    behavior: 'smooth' 
+                });
+            }
         }
     }
     ctx.lastPlayingStep = ev.step;
@@ -762,8 +775,9 @@ function setBpm(val) {
     if (viz && ctx.isPlaying && ctx.audio) {
         const secondsPerBeat = 60.0 / ctx.bpm;
         const sixteenth = 0.25 * secondsPerBeat;
-        const beatTime = ctx.nextNoteTime - (ctx.step % 4) * sixteenth;
-        viz.setBeatReference(beatTime);
+        // Use unswung time and measure alignment (16 steps) for stable grid
+        const measureTime = ctx.unswungNextNoteTime - (ctx.step % 16) * sixteenth;
+        viz.setBeatReference(measureTime);
     }
 }
 

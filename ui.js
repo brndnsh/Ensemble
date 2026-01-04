@@ -213,6 +213,19 @@ export function renderGrid() {
     labelRow.appendChild(labelsWrapper);
     fragment.appendChild(labelRow);
     ui.sequencerGrid.appendChild(fragment);
+
+    // Cache step offsets for efficient scrolling during playback
+    setTimeout(() => {
+        gb.stepOffsets = [];
+        const containerRect = ui.sequencerGrid.getBoundingClientRect();
+        for (let i = 0; i < gb.measures * 16; i++) {
+            const steps = gb.cachedSteps[i];
+            if (steps && steps[0]) {
+                const rect = steps[0].getBoundingClientRect();
+                gb.stepOffsets[i] = rect.left - containerRect.left + ui.sequencerGrid.scrollLeft - 100;
+            }
+        }
+    }, 100);
 }
 
 /**
