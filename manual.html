@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ensemble User Manual</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            line-height: 1.6;
+            color: #e2e8f0;
+            overflow-y: auto;
+        }
+        .manual-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 5rem;
+        }
+        header {
+            position: static;
+            border-bottom: none;
+            padding: 2rem 0;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            color: white;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover {
+            color: var(--accent-hover);
+        }
+        section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 2rem;
+        }
+        h2 {
+            font-size: 1.8rem;
+            color: var(--accent-color);
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 0.5rem;
+        }
+        h3 {
+            font-size: 1.3rem;
+            color: white;
+            margin: 2rem 0 1rem;
+        }
+        p {
+            margin-bottom: 1rem;
+            color: #94a3b8;
+        }
+        code {
+            background: #1e293b;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: ui-monospace, monospace;
+            color: #3b82f6;
+            font-size: 0.9em;
+        }
+        .toc {
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 3rem;
+            border: 1px solid #334155;
+        }
+        .toc h4 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: white;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+        }
+        .toc ul {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+        @media (max-width: 600px) {
+            .toc ul { grid-template-columns: 1fr; }
+            header h1 { font-size: 2rem; }
+        }
+        .toc a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .toc a:hover {
+            color: var(--accent-color);
+        }
+        .feature-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+        .feature-card h4 {
+            margin-top: 0;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        ul.list-detailed {
+            padding-left: 1.2rem;
+            color: #94a3b8;
+        }
+        ul.list-detailed li {
+            margin-bottom: 0.75rem;
+        }
+        .shortcut-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+        .shortcut-key {
+            background: #475569;
+            color: white;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            box-shadow: 0 2px 0 #1e293b;
+            font-size: 0.85rem;
+        }
+        .notation-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.9rem;
+        }
+        .notation-table th, .notation-table td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid #334155;
+        }
+        .notation-table th {
+            color: white;
+            background: rgba(255,255,255,0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="manual-container">
+        <header>
+            <a href="index.html" class="back-link">← Back to Ensemble</a>
+            <h1>User Manual</h1>
+        </header>
+
+        <nav class="toc">
+            <h4>Table of Contents</h4>
+            <ul>
+                <li><a href="#intro">Introduction</a></li>
+                <li><a href="#examples">Interactive Examples</a></li>
+                <li><a href="#chords">Chords & Notation</a></li>
+                <li><a href="#grooves">Grooves & Rhythm</a></li>
+                <li><a href="#bassist">Algorithmic Bassist</a></li>
+                <li><a href="#soloist">Algorithmic Soloist</a></li>
+                <li><a href="#visualizer">Unified Visualizer</a></li>
+                <li><a href="#midi">MIDI Export</a></li>
+                <li><a href="#shortcuts">Shortcuts</a></li>
+            </ul>
+        </nav>
+
+        <section id="intro">
+            <h2>Introduction</h2>
+            <p>Ensemble is a tool for musicians to practice, jam, and experiment with musical ideas. It combines a flexible chord engine with a multi-part rhythm section and melodic soloist.</p>
+            <p>The application works entirely in your browser using the Web Audio API. No installation is required, and it works offline as a PWA (Progressive Web App).</p>
+        </section>
+
+        <section id="examples">
+            <h2>Interactive Examples</h2>
+            <p>Click any of these links to instantly load a curated setup into the app. These are great starting points for jamming.</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <a href="index.html?prog=I+vi+IV+V&style=pop&bpm=120" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Classic Pop Rock</h4>
+                    <p style="font-size: 0.8rem; margin: 0;">Standard 4-chord progression with a driving drum beat.</p>
+                </a>
+                <a href="index.html?prog=ii7+V7+Imaj7&style=jazz&bpm=90" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Jazz II-V-I</h4>
+                    <p style="font-size: 0.8rem; margin: 0;">Sophisticated jazz comping with a walking bass line.</p>
+                </a>
+                <a href="index.html?prog=IVmaj7+iii7+ii7+Imaj7&style=funk&bpm=85" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Neo-Soul Chill</h4>
+                    <p style="font-size: 0.8rem; margin: 0;">Laid back rhythm with lush extended voicings.</p>
+                </a>
+                <a href="index.html?prog=i7+IV7&style=skank&bpm=140" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Reggae Jam</h4>
+                    <p style="font-size: 0.8rem; margin: 0;">Classic skank rhythm with a syncopated bass line.</p>
+                </a>
+            </div>
+        </section>
+
+        <section id="chords">
+            <h2>Chords & Notation</h2>
+            <p>The Chord engine is the heart of Ensemble. It parses your input and generates smooth, musical voicings (voice leading) automatically.</p>
+            
+            <h3>Notation Systems</h3>
+            <p>Ensemble supports three main ways to enter chords. You can toggle between these in the Settings menu.</p>
+            
+            <table class="notation-table">
+                <thead>
+                    <tr>
+                        <th>System</th>
+                        <th>Example</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Names</strong></td>
+                        <td><code>C Am F G</code></td>
+                        <td>Standard chord names. Good for specific songs.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Roman</strong></td>
+                        <td><code>I vi IV V</code></td>
+                        <td>Functional harmony. Automatically transposes when you change keys.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Nashville</strong></td>
+                        <td><code>1 6- 4 5</code></td>
+                        <td>Popular number system. Use <code>-</code> for minor chords.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Complex Chords</h3>
+            <p>Ensemble understands a wide variety of chord qualities and extensions:</p>
+            <ul class="list-detailed">
+                <li><code>maj7, maj9</code>: Major 7th/9th chords.</li>
+                <li><code>m7, m9, m6</code>: Minor extensions.</li>
+                <li><code>7, 9, 13</code>: Dominant extensions.</li>
+                <li><code>dim, o7</code>: Diminished chords.</li>
+                <li><code>m7b5, ø</code>: Half-diminished chords.</li>
+                <li><code>sus4, sus2</code>: Suspended chords.</li>
+                <li><code>add9, 5</code>: Color tones and power chords.</li>
+            </ul>
+
+            <h3>Measures and Timing</h3>
+            <p>By default, each chord gets 4 beats (one measure). Use the pipe symbol <code>|</code> to explicitly define measure boundaries.</p>
+            <div class="feature-card">
+                <p><code>I | IV V | I</code></p>
+                <p>In this example, <strong>I</strong> gets a full measure, while <strong>IV</strong> and <strong>V</strong> share a measure (2 beats each).</p>
+            </div>
+        </section>
+
+        <section id="grooves">
+            <h2>Grooves & Rhythm</h2>
+            <p>The Grooves section is a programmable drum sequencer featuring four classic drum sounds:</p>
+            
+            <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                <div class="feature-card" style="flex: 1; text-align: center; padding: 1rem;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🥁</div>
+                    <div style="font-weight: bold; color: white;">Kick</div>
+                </div>
+                <div class="feature-card" style="flex: 1; text-align: center; padding: 1rem;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">👏</div>
+                    <div style="font-weight: bold; color: white;">Snare</div>
+                </div>
+                <div class="feature-card" style="flex: 1; text-align: center; padding: 1rem;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🎩</div>
+                    <div style="font-weight: bold; color: white;">Hi-Hat</div>
+                </div>
+                <div class="feature-card" style="flex: 1; text-align: center; padding: 1rem;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📀</div>
+                    <div style="font-weight: bold; color: white;">Open</div>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <h4>Dynamic Velocity</h4>
+                <p>Each step in the grid has three states:</p>
+                <ul class="list-detailed" style="margin-bottom:0;">
+                    <li><strong>Off</strong> (Empty): No sound.</li>
+                    <li><strong>Standard</strong> (Blue): Normal hit.</li>
+                    <li><strong>Accented</strong> (Green): Harder hit with more "snap" and volume.</li>
+                </ul>
+            </div>
+
+            <h3>Swing & Feel</h3>
+            <p>Use the <strong>Swing</strong> slider to move away from a "robotic" feel. You can choose between 1/8 and 1/16 note swing bases. Higher swing percentages create a "shuffled" or "triplet" feel typical of Jazz, Blues, and Hip-Hop.</p>
+            
+            <h3>Pattern Length</h3>
+            <p>Adjust the <strong>Bars</strong> selector to create longer loops (up to 4 measures). Use the ⧉ button to quickly copy your first measure's pattern to the rest of the loop.</p>
+        </section>
+
+        <section id="bassist">
+            <h2>Algorithmic Bassist</h2>
+            <p>The Bassist module generates bass lines in real-time based on your chord progression.</p>
+            <ul class="list-detailed">
+                <li><strong>Whole:</strong> Plays only the root on the downbeat. Great for ambient pads.</li>
+                <li><strong>Half:</strong> Plays on beats 1 and 3, often using the 5th or a leading tone. Good for country or folk.</li>
+                <li><strong>Arp:</strong> A rhythmic pattern using the root, 3rd, and 5th of the chord. Useful for pop and disco.</li>
+                <li><strong>Walking:</strong> A classic quarter-note walking line that uses scale tones and chromatic approach notes to lead into the next chord. Essential for Jazz and Blues.</li>
+            </ul>
+        </section>
+
+        <section id="soloist">
+            <h2>Algorithmic Soloist</h2>
+            <p>The Soloist uses advanced logic to generate melodies. It doesn't just play random notes; it thinks in phrases and rhythmic "cells."</p>
+            
+            <div class="feature-card">
+                <h4>Soloing Styles</h4>
+                <ul class="list-detailed" style="margin-bottom:0;">
+                    <li><strong>Scalar:</strong> Stays strictly within the parent key or chord scale.</li>
+                    <li><strong>Bebop:</strong> Uses 8-note scales and chromatic passing tones.</li>
+                    <li><strong>Blues:</strong> Focuses on minor pentatonic and "blue notes" (b5).</li>
+                    <li><strong>Neo-Soul:</strong> Features laid-back timing, slides, and occasional double-stops.</li>
+                    <li><strong>Shreddy:</strong> Fast, constant rhythms and wide arpeggio sweeps.</li>
+                </ul>
+            </div>
+
+            <p><strong>Pro Tip:</strong> The Soloist uses a "Dual-Clock" system. While the drums and bass might have a heavy swing, the Soloist often stays slightly "straighter" or more "laid back" to sound more human.</p>
+        </section>
+
+        <section id="visualizer">
+            <h2>Unified Visualizer</h2>
+            <p>The visualizer provides a real-time "Piano Roll" view of your music. It uses a <strong>Harmonic Color Scheme</strong> to help you see the function of every note.</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #3b82f6; box-shadow: 0 0 10px #3b82f6;"></div>
+                    <span style="color: white; font-weight: bold;">Root</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #10b981; box-shadow: 0 0 10px #10b981;"></div>
+                    <span style="color: white; font-weight: bold;">3rd (Quality)</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #f97316; box-shadow: 0 0 10px #f97316;"></div>
+                    <span style="color: white; font-weight: bold;">5th (Stability)</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #a855f7; box-shadow: 0 0 10px #a855f7;"></div>
+                    <span style="color: white; font-weight: bold;">7th+ (Color)</span>
+                </div>
+            </div>
+
+            <p><strong>Note:</strong> The Bass track is outlined in blue, while the Soloist track is outlined in pink, allowing you to see how they interact with the underlying chord tones.</p>
+        </section>
+
+        <section id="troubleshooting">
+            <h2>Tips & Troubleshooting</h2>
+            <div class="feature-card">
+                <h4 style="color: var(--error-color);">No Sound?</h4>
+                <p style="font-size: 0.9rem;">Web browsers require a user gesture (like clicking "START") before audio can begin. If you still hear nothing, check your device's silent switch (especially on iOS) and ensure the module's ⏻ power button is glowing green.</p>
+            </div>
+            <div class="feature-card">
+                <h4>Performance Issues?</h4>
+                <p style="font-size: 0.9rem;">Ensemble is optimized for mobile, but complex visual effects can sometimes cause lag. Disable the <strong>Visualizer</strong> or <strong>Visual Flash</strong> in settings if you experience audio glitches.</p>
+            </div>
+        </section>
+
+        <section id="midi">
+            <h2>MIDI Export</h2>
+            <p>You can export your current progression, bass line, and drum groove as a Standard MIDI File (SMF). This allows you to import your Ensemble creations into any DAW (like Ableton, Logic, or FL Studio) for further production.</p>
+            <p>The export includes:</p>
+            <ul class="list-detailed">
+                <li>Track 1: Chords (with naming markers)</li>
+                <li>Track 2: Bass</li>
+                <li>Track 3: Soloist (including pitch bends)</li>
+                <li>Track 10: Drums (GM Compatible)</li>
+            </ul>
+        </section>
+
+        <section id="shortcuts">
+            <h2>Shortcuts</h2>
+            <div class="shortcut-grid">
+                <span class="shortcut-key">Space</span>
+                <span>Start / Stop Playback</span>
+
+                <span class="shortcut-key">⛶</span>
+                <span>Maximize Chords (Practice Mode)</span>
+
+                <span class="shortcut-key">🎲</span>
+                <span>Generate Random Progression</span>
+
+                <span class="shortcut-key">⚙️</span>
+                <span>Open Settings</span>
+            </div>
+        </section>
+
+        <footer style="text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 5rem;">
+            Ensemble &copy; 2026. All rights reserved.
+        </footer>
+    </div>
+</body>
+</html>
