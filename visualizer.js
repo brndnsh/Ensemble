@@ -208,52 +208,51 @@ export class UnifiedVisualizer {
     render(currentTime, bpm) {
         const minTime = currentTime - this.windowSize;
         const width = 100;
+        const windowInverse = 1 / this.windowSize;
+        const yScale = 100 / this.visualRange;
 
         // Linear Y calculation for better melodic contour visibility
         const getY = (midi, register) => {
-            const diff = midi - register;
-            const y = 50 - (diff / this.visualRange) * 100;
-            return y;
+            return 50 - (midi - register) * yScale;
         };
 
         // 0. Render Rhythmic Grid
-        let beatPathD = "";
-        let measurePathD = "";
+        let beatPathParts = [];
+        let measurePathParts = [];
         
         if (bpm && this.beatReferenceTime !== null) {
             const beatLen = 60 / bpm;
-            
-            // Calculate integer beat index relative to reference. 
-            // Subtract 1 to ensure we have coverage slightly off-screen to avoid popping.
-            const startBeat = Math.floor((minTime - this.beatReferenceTime) / beatLen) - 1;
+            const startBeat = Math.floor((minTime - this.beatReferenceTime) / beatLen);
             let i = startBeat;
 
             while (true) {
                 const t = this.beatReferenceTime + i * beatLen;
                 if (t > currentTime + beatLen) break;
 
-                const x = ((t - minTime) / this.windowSize) * width;
-                if (x >= -5 && x <= 105) {
-                    const lineCmd = `M ${x.toFixed(2)},0 L ${x.toFixed(2)},100 `;
-                    if (i % 4 === 0) {
-                        measurePathD += lineCmd;
-                    } else {
-                        beatPathD += lineCmd;
-                    }
+                const x = (t - minTime) * windowInverse * width;
+                if (x >= -1 && x <= 101) {
+                    const xStr = Math.round(x * 100) / 100;
+                    const lineCmd = `M ${xStr},0 L ${xStr},100 `;
+                    if (i % 4 === 0) measurePathParts.push(lineCmd);
+                    else beatPathParts.push(lineCmd);
                 }
                 i++;
             }
         }
-        this.beatPath.setAttribute("d", beatPathD);
-        this.measurePath.setAttribute("d", measurePathD);
+        this.beatPath.setAttribute("d", beatPathParts.join(''));
+        this.measurePath.setAttribute("d", measurePathParts.join(''));
 
         // 1. Render Chords
         const chordReg = this.registers['chords'] || 60;
-        this.chordEvents = this.chordEvents.filter(e => e.time + (e.duration || 0) >= minTime);
         
-        const paths = { 
-            root_hl: "", third_hl: "", fifth_hl: "", ext_hl: "",
-            root_bg: "", third_bg: "", fifth_bg: "", ext_bg: "" 
+        // More efficient filtering: only filter if list is getting long
+        if (this.chordEvents.length > 50) {
+            this.chordEvents = this.chordEvents.filter(e => e.time + (e.duration || 2) >= minTime);
+        }
+        
+        const pathParts = { 
+            root_hl: [], third_hl: [], fifth_hl: [], ext_hl: [],
+            root_bg: [], third_bg: [], fifth_bg: [], ext_bg: [] 
         };
 
         const getCategory = (interval) => {
@@ -263,28 +262,37 @@ export class UnifiedVisualizer {
             return "ext";
         };
 
-        for (const ev of this.chordEvents) {
+        for (let i = 0; i < this.chordEvents.length; i++) {
+            const ev = this.chordEvents[i];
             const chordEnd = ev.time + (ev.duration || 2.0);
-            const start = Math.max(ev.time, minTime);
-            const end = Math.min(chordEnd, currentTime);
+            if (chordEnd < minTime) continue;
+            
+            const start = ev.time < minTime ? minTime : ev.time;
+            const end = chordEnd > currentTime ? currentTime : chordEnd;
             
             if (end > start) {
-                const x = ((start - minTime) / this.windowSize) * width;
-                const w = ((end - start) / this.windowSize) * width;
+                const x = (start - minTime) * windowInverse * width;
+                const w = (end - start) * windowInverse * width;
                 const rootPC = ev.rootMidi % 12;
+
+                const xStr = Math.round(x * 100) / 100;
+                const wStr = Math.round(w * 100) / 100;
 
                 // Render Background Tones (Octave shifted)
                 if (ev.intervals) {
-                    for (const interval of ev.intervals) {
+                    for (let j = 0; j < ev.intervals.length; j++) {
+                        const interval = ev.intervals[j];
                         const pc = (rootPC + interval) % 12;
                         const cat = getCategory(interval);
-                        const pathKey = `${cat}_bg`;
+                        const partsArray = pathParts[`${cat}_bg`];
+                        const baseOctave = Math.floor(chordReg / 12);
 
                         for (let oct = -2; oct <= 2; oct++) {
-                            const m = pc + (Math.floor(chordReg / 12) + oct) * 12;
+                            const m = pc + (baseOctave + oct) * 12;
                             const y = getY(m, chordReg);
                             if (y >= -10 && y <= 110) {
-                                paths[pathKey] += `M ${x.toFixed(2)},${(y-1).toFixed(2)} h ${w.toFixed(2)} v 2 h -${w.toFixed(2)} z `;
+                                const yStr = Math.round(y * 100) / 100;
+                                partsArray.push(`M ${xStr},${(yStr-1)} h ${wStr} v 2 h -${wStr} z `);
                             }
                         }
                     }
@@ -292,13 +300,15 @@ export class UnifiedVisualizer {
 
                 // Render Played Notes (Highlighted)
                 if (ev.notes) {
-                    for (const midi of ev.notes) {
+                    for (let j = 0; j < ev.notes.length; j++) {
+                        const midi = ev.notes[j];
                         const y = getY(midi, chordReg);
                         if (y >= -5 && y <= 105) {
                             const interval = (midi % 12 - rootPC + 12) % 12;
                             const cat = getCategory(interval);
-                            const pathKey = `${cat}_hl`;
-                            paths[pathKey] += `M ${x.toFixed(2)},${(y-1.1).toFixed(2)} h ${w.toFixed(2)} v 2.2 h -${w.toFixed(2)} z `;
+                            const partsArray = pathParts[`${cat}_hl`];
+                            const yStr = Math.round(y * 100) / 100;
+                            partsArray.push(`M ${xStr},${(yStr-1.1)} h ${wStr} v 2.2 h -${wStr} z `);
                         }
                     }
                 }
@@ -306,44 +316,48 @@ export class UnifiedVisualizer {
         }
 
         for (const key in this.chordPaths) {
-            this.chordPaths[key].setAttribute("d", paths[key] || "");
+            this.chordPaths[key].setAttribute("d", pathParts[key].join(''));
         }
 
         // 2. Render Tracks
         const trackNames = Object.keys(this.tracks);
-        for (const name of trackNames) {
+        for (let t = 0; t < trackNames.length; t++) {
+            const name = trackNames[t];
             const track = this.tracks[name];
             const pathCmds = []; 
             let headX = -10, headY = -10;
             let active = false;
             const reg = this.registers[name] || 60;
 
-            // Clean history
-            track.history = track.history.filter(e => e.time + (e.duration || 0) >= minTime);
+            if (track.history.length > 100) {
+                track.history = track.history.filter(e => e.time + (e.duration || 0.25) >= minTime);
+            }
             
-            const len = track.history.length;
-            for (let i = 0; i < len; i++) {
+            for (let i = 0; i < track.history.length; i++) {
                 const ev = track.history[i];
                 if (ev.time > currentTime) break;
 
-                const nextEv = track.history[i+1];
                 const noteEnd = ev.time + (ev.duration || 0.25);
-                const startT = Math.max(ev.time, minTime);
-                const endT = Math.min(noteEnd, currentTime);
+                if (noteEnd < minTime) continue;
+
+                const startT = ev.time < minTime ? minTime : ev.time;
+                const endT = noteEnd > currentTime ? currentTime : noteEnd;
 
                 if (endT > startT) {
-                    const x1 = ((startT - minTime) / this.windowSize) * width;
-                    const x2 = ((endT - minTime) / this.windowSize) * width;
+                    const x1 = (startT - minTime) * windowInverse * width;
+                    const x2 = (endT - minTime) * windowInverse * width;
                     const y = getY(ev.midi, reg);
 
                     if (y >= -10 && y <= 110) {
-                        if (pathCmds.length === 0) pathCmds.push(`M ${x1.toFixed(2)},${y.toFixed(2)} L ${x2.toFixed(2)},${y.toFixed(2)}`);
-                        else pathCmds.push(`M ${x1.toFixed(2)},${y.toFixed(2)} L ${x2.toFixed(2)},${y.toFixed(2)}`);
+                        const x1s = Math.round(x1 * 100) / 100;
+                        const x2s = Math.round(x2 * 100) / 100;
+                        const ys = Math.round(y * 100) / 100;
+                        pathCmds.push(`M ${x1s},${ys} L ${x2s},${ys}`);
 
                         if (ev.time <= currentTime && noteEnd >= currentTime) {
-                            headX = x2; headY = y; active = true;
-                        } else if (i === len - 1 && currentTime - noteEnd < 0.1) {
-                            headX = x2; headY = y; active = true;
+                            headX = x2s; headY = ys; active = true;
+                        } else if (i === track.history.length - 1 && currentTime - noteEnd < 0.1) {
+                            headX = x2s; headY = ys; active = true;
                         }
                     }
                 }
@@ -351,8 +365,8 @@ export class UnifiedVisualizer {
 
             track.elements.strokePath.setAttribute("d", pathCmds.join(" "));
             if (active) {
-                track.elements.head.setAttribute("cx", headX.toFixed(2));
-                track.elements.head.setAttribute("cy", headY.toFixed(2));
+                track.elements.head.setAttribute("cx", headX);
+                track.elements.head.setAttribute("cy", headY);
                 track.elements.head.style.opacity = "1";
             } else {
                 track.elements.head.style.opacity = "0";
