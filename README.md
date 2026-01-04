@@ -42,6 +42,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Count-in**: Enable a metronome count-in to help you prepare before the rhythm section kicks in.
 *   **Reset to Defaults**: Quickly restore original settings, volumes, and registers from the Settings menu.
 *   **PWA**: Fully installable and works offline.
+*   **Documentation**: Includes a comprehensive in-app User Manual for deep dives into music theory and app features.
 *   **Sharing**: Share progressions via URL.
 
 ## Usage
