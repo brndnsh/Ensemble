@@ -60,16 +60,19 @@
 
         <div class="display-area" id="chordVisualizer"></div>
 
-        <div style="margin-bottom: 1.5rem; height: 42px;">
-            <div style="display: flex; gap: 0.5rem; height: 100%;">
-                <input type="text" id="progressionInput" value="I | V | vi | IV" placeholder="Progression (e.g., I | V | vi | IV)" aria-label="Chord Progression">
-                <button id="saveBtn" title="Save Progression" style="width: auto; padding: 0.5rem 1rem;" aria-label="Save Progression">💾</button>
-                <button id="shareBtn" title="Share Progression" style="width: auto; padding: 0.5rem 1rem;" aria-label="Share Progression">🔗</button>
+        <div style="margin-bottom: 1.5rem;">
+            <input type="text" id="progressionInput" value="I | V | vi | IV" placeholder="Progression (e.g., I | V | vi | IV)" aria-label="Chord Progression" style="width: 100%; margin-bottom: 0.75rem; height: 42px;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button id="randomizeBtn" title="Randomize Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Randomize Progression">🎲 <span>Random</span></button>
+                <button id="clearProgBtn" title="Clear Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Clear Progression">🗑️ <span>Clear</span></button>
+                <button id="saveBtn" title="Save Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Save Progression">💾 <span>Save</span></button>
+                <button id="shareBtn" title="Share Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Share Progression">🔗 <span>Share</span></button>
             </div>
         </div>
 
         <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 100px;">
-            <div class="presets-container" id="chordPresets"></div>
+            <label style="font-size: 0.9rem; color: #94a3b8;">Library</label>
+            <div class="presets-container" id="chordPresets" style="margin-top: 0.5rem;"></div>
             <div class="presets-container" id="userPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
         </div>
 
@@ -322,6 +325,15 @@
                     <option value="roman">Roman Numerals (I, vi, IV)</option>
                     <option value="name">Chord Names (C, Am, F)</option>
                     <option value="nns">Nashville Numbers (1, 6-, 4)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem;">Voicing Density</label>
+                <select id="densitySelect" style="width: 100%;" aria-label="Voicing Density">
+                    <option value="thin">Thin (3 notes)</option>
+                    <option value="standard" selected>Standard (4 notes)</option>
+                    <option value="rich">Rich (5+ notes)</option>
                 </select>
             </div>
 

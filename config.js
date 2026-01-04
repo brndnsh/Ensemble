@@ -64,16 +64,22 @@ export const SOLOIST_STYLES = [
 ];
 
 export const CHORD_PRESETS = [
-    { name: "Pop", prog: "I | V | vi | IV" },
+    { name: "Pop (Standard)", prog: "I | V | vi | IV" },
+    { name: "Pop (Ballad)", prog: "vi | IV | I | V" },
     { name: "12-Bar Blues", prog: "I7 | I7 | I7 | I7 | IV7 | IV7 | I7 | I7 | V7 | IV7 | I7 | V7" },
     { name: "Jazz Blues", prog: "I7 | IV7 | I7 | v7 I7 | IV7 | IV7 | I7 | iii7 VI7 | ii7 | V7 | I7 VI7 | ii7 V7" },
     { name: "Jazz II-V-I", prog: "ii7 | V7 | Imaj7 | Imaj7" },
+    { name: "Minor II-V-I", prog: "iiø7 | V7 | i7 | i7" },
+    { name: "Rhythm Changes", prog: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I" },
     { name: "Neo-Soul", prog: "IVmaj7 | iii7 | ii7 | Imaj7" },
+    { name: "Neo-Soul (Slash)", prog: "IVmaj7/5 | iii7 | ii7/5 | Imaj7" },
     { name: "Andalusian", prog: "vi | V | IV | III" },
-    { name: "Epic", prog: "vi | IV | V | iii" },
-    { name: "Rock & Roll", prog: "I | IV | I | V" },
-    { name: "50s Rock", prog: "I | vi | IV | V" },
     { name: "Canon", prog: "I | V | vi | iii | IV | I | IV | V" },
     { name: "Royal Road", prog: "IVmaj7 | V7 | iii7 | vi7" },
-    { name: "Moody", prog: "vi | IV | I | V" }
+    { name: "50s Rock", prog: "I | vi | IV | V" },
+    { name: "Funk (i-IV)", prog: "i7 | IV7 | i7 | IV7" },
+    { name: "Jazz Turnaround", prog: "Imaj7 VI7 | ii7 V7 | Imaj7 VI7 | ii7 V7" },
+    { name: "Jazz Cycle", prog: "iii7 | VI7#9 | ii9 | V9 | Imaj9" },
+    { name: "Circle of 4ths", prog: "I7 | IV7 | bVII7 | bIII7 | bVI7 | bII7 | V7 | I7" },
+    { name: "Plagal Flow", prog: "I | IV | I | IV" }
 ];
