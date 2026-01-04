@@ -15,6 +15,8 @@ export const ui = {
     soloistPowerBtn: document.getElementById('soloistPowerBtn'),
     vizPowerBtn: document.getElementById('vizPowerBtn'),
     progInput: document.getElementById('progressionInput'),
+    randomizeBtn: document.getElementById('randomizeBtn'),
+    clearProgBtn: document.getElementById('clearProgBtn'),
     saveBtn: document.getElementById('saveBtn'),
     shareBtn: document.getElementById('shareBtn'),
     chordVisualizer: document.getElementById('chordVisualizer'),
@@ -51,6 +53,7 @@ export const ui = {
     bassHeaderReg: document.getElementById('bassHeaderReg'),
     soloistHeaderReg: document.getElementById('soloistHeaderReg'),
     notationSelect: document.getElementById('notationSelect'),
+    densitySelect: document.getElementById('densitySelect'),
     countIn: document.getElementById('countInCheck'),
     swingSlider: document.getElementById('swingSlider'),
     swingBase: document.getElementById('swingBaseSelect'),
@@ -134,6 +137,8 @@ export function renderChordVisualizer() {
         if (cb.notation === 'name') div.innerHTML = chord.absName;
         else if (cb.notation === 'nns') div.innerHTML = chord.nnsName;
         else div.innerHTML = chord.romanName;
+        
+        div.onclick = () => window.previewChord(i);
         
         measureBox.appendChild(div);
         cb.cachedCards.push(div);

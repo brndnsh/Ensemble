@@ -3,7 +3,7 @@ import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, 
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
 import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { normalizeKey, getMidi, midiToNote } from './utils.js';
-import { validateProgression } from './chords.js';
+import { validateProgression, generateRandomProgression } from './chords.js';
 import { getBassNote } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 import { chordPatterns } from './accompaniment.js';
@@ -509,7 +509,6 @@ function renderUserPresets() {
     userPresets.forEach((p, idx) => {
         const chip = document.createElement('div');
         chip.className = 'preset-chip user-preset-chip';
-        chip.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
         chip.innerHTML = `<span>${p.name}</span> <span style="margin-left: 8px; opacity: 0.5;" onclick="event.stopPropagation(); window.deleteUserPreset(${idx})">×</span>`;
         chip.onclick = () => {
             ui.progInput.value = p.prog;
@@ -596,6 +595,15 @@ function setupUIHandlers() {
         [ui.playBtn, 'click', togglePlay],
         [ui.bpmInput, 'change', e => setBpm(e.target.value)],
         [ui.tapBtn, 'click', handleTap],
+        [ui.randomizeBtn, 'click', () => {
+            ui.progInput.value = generateRandomProgression();
+            validateProgression(renderChordVisualizer);
+        }],
+        [ui.clearProgBtn, 'click', () => {
+            ui.progInput.value = '';
+            validateProgression(renderChordVisualizer);
+            ui.progInput.focus();
+        }],
         [ui.saveBtn, 'click', saveProgression],
         [ui.saveDrumBtn, 'click', saveDrumPattern],
         [ui.copyMeasureBtn, 'click', copyMeasure1],
@@ -618,6 +626,7 @@ function setupUIHandlers() {
     ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); });
     ui.progInput.addEventListener('input', () => validateProgression(renderChordVisualizer));
     ui.notationSelect.addEventListener('change', e => { cb.notation = e.target.value; renderChordVisualizer(); });
+    ui.densitySelect.addEventListener('change', e => { cb.density = e.target.value; validateProgression(renderChordVisualizer); });
     ui.drumBarsSelect.addEventListener('change', e => { 
         const newCount = parseInt(e.target.value);
         gb.instruments.forEach(inst => {
@@ -839,6 +848,7 @@ function resetToDefaults() {
     cb.reverb = 0.3;
     cb.octave = 65;
     cb.notation = 'roman';
+    cb.density = 'standard';
     bb.volume = 0.45;
     bb.reverb = 0.05;
     bb.octave = 41;
@@ -856,6 +866,7 @@ function resetToDefaults() {
     ui.chordReverb.value = 0.3;
     ui.octave.value = 65;
     ui.notationSelect.value = 'roman';
+    ui.densitySelect.value = 'standard';
     ui.bassVol.value = 0.45;
     ui.bassReverb.value = 0.05;
     ui.bassOctave.value = 41;
@@ -907,11 +918,44 @@ function shareProgression() {
     params.set('bpm', ui.bpmInput.value);
     params.set('style', cb.style);
     params.set('notation', cb.notation);
-    const url = window.location.origin + window.location.pathname + '?' + params.toString();
+    window.location.origin + window.location.pathname + '?' + params.toString();
     navigator.clipboard.writeText(url).then(() => {
         showToast("Link copied!");
     });
 }
+
+/**
+ * Auditions a specific chord from the progression.
+ * Used for the "Click to Audition" feature.
+ * @param {number} index 
+ */
+window.previewChord = (index) => {
+    if (ctx.isPlaying) return;
+    initAudio();
+    const chord = cb.progression[index];
+    if (!chord) return;
+    
+    // Play the full chord once
+    const now = ctx.audio.currentTime;
+    chord.freqs.forEach(f => playNote(f, now, 1.0, 0.15, 0.02));
+    
+    // Move cursor and select text in input
+    if (chord.charStart !== undefined && chord.charEnd !== undefined) {
+        ui.progInput.focus();
+        setTimeout(() => {
+            ui.progInput.setSelectionRange(chord.charStart, chord.charEnd);
+        }, 0);
+    }
+
+    // Visual feedback
+    const cards = document.querySelectorAll('.chord-card');
+    if (cards[index]) {
+        cards[index].classList.add('active');
+        setTimeout(() => {
+            if (!ctx.isPlaying) cards[index].classList.remove('active');
+        }, 300);
+    }
+};
 
 function loadFromUrl() {
     const params = new URLSearchParams(window.location.search);

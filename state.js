@@ -28,6 +28,7 @@ export const cb = {
     volume: 0.5,
     reverb: 0.3,
     octave: 65,
+    density: 'standard', // 'thin', 'standard', 'rich'
     valid: false,
     cachedCards: [],
     lastActiveChordIndex: null
