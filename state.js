@@ -86,7 +86,7 @@ export const sb = {
 };
 
 export const vizState = {
-    enabled: true
+    enabled: false
 };
 
 // Persistence Helpers
