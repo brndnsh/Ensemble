@@ -114,6 +114,112 @@ export function generateRandomProgression() {
     return progression.join(' | ');
 }
 
+export function resolveChordRoot(part, keyRootMidi, baseOctave) {
+    const romanMatch = part.match(ROMAN_REGEX);
+    const nnsMatch = part.match(NNS_REGEX);
+    const noteMatch = part.match(NOTE_REGEX);
+    
+    let rootMidi = keyRootMidi; 
+    let rootPart = "";
+
+    if (romanMatch) {
+        rootPart = romanMatch[0];
+        const accidental = romanMatch[1] || "", numeral = romanMatch[2];
+        let rootOffset = ROMAN_VALS[numeral.toUpperCase()];
+        if (accidental === 'b') rootOffset -= 1;
+        if (accidental === '#') rootOffset += 1;
+        rootMidi = keyRootMidi + rootOffset;
+    } else if (nnsMatch) {
+        rootPart = nnsMatch[0];
+        const accidental = nnsMatch[1] || "", number = parseInt(nnsMatch[2]);
+        let rootOffset = NNS_OFFSETS[number - 1];
+        if (accidental === 'b') rootOffset -= 1;
+        if (accidental === '#') rootOffset += 1;
+        rootMidi = keyRootMidi + rootOffset;
+    } else if (noteMatch) {
+        rootPart = noteMatch[0];
+        const note = normalizeKey(noteMatch[1].charAt(0).toUpperCase() + noteMatch[1].slice(1).toLowerCase());
+        rootMidi = baseOctave + KEY_ORDER.indexOf(note);
+    }
+
+    return { rootMidi, rootPart, romanMatch, nnsMatch, noteMatch };
+}
+
+export function getIntervals(quality, is7th, density) {
+    let intervals = [0, 4, 7];
+    if (quality === 'minor') intervals = [0, 3, 7];
+    else if (quality === 'dim') intervals = [0, 3, 6];
+    else if (quality === 'halfdim') intervals = [0, 3, 6];
+    else if (quality === 'aug') intervals = [0, 4, 8];
+    else if (quality === 'sus4') intervals = [0, 5, 7];
+    else if (quality === 'sus2') intervals = [0, 2, 7];
+    else if (quality === 'add9') intervals = [0, 4, 7, 14];
+    else if (quality === '6') intervals = [0, 4, 7, 9];
+    else if (quality === 'm6') intervals = [0, 3, 7, 9];
+    else if (quality === '9') intervals = [0, 4, 7, 10, 14];
+    else if (quality === 'maj9') intervals = [0, 4, 7, 11, 14];
+    else if (quality === 'm9') intervals = [0, 3, 7, 10, 14];
+    else if (quality === '7b9') intervals = [0, 4, 7, 10, 13];
+    else if (quality === '7#9') intervals = [0, 4, 7, 10, 15];
+    else if (quality === '5') intervals = [0, 7];
+
+    if (is7th || quality === 'halfdim') {
+        if (quality === 'maj7' || quality === 'maj9') intervals.push(11);
+        else if (quality === 'dim') intervals.push(9); 
+        else if (quality === 'halfdim') intervals.push(10);
+        else intervals.push(10); 
+    }
+
+    // Apply Voicing Density
+    if (density === 'thin' && intervals.length >= 4) {
+        if (intervals.includes(7)) intervals = intervals.filter(i => i !== 7);
+    } else if (density === 'rich' && intervals.length <= 4 && quality !== '5') {
+        if (!intervals.includes(14) && !intervals.includes(13) && !intervals.includes(15) && quality !== 'sus2') {
+            intervals.push(14);
+        }
+        if (is7th && quality === 'major' && !intervals.includes(21)) {
+            intervals.push(21);
+        }
+    }
+    return intervals;
+}
+
+export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality, is7th) {
+    let absSuffix = "", nnsSuffix = "", romSuffix = "";
+    if (quality === 'minor') { absSuffix = 'm'; nnsSuffix = '-'; }
+    else if (quality === 'dim') { absSuffix = 'dim'; nnsSuffix = '°'; romSuffix = '°'; }
+    else if (quality === 'halfdim') { absSuffix = 'm7b5'; nnsSuffix = 'ø'; romSuffix = 'ø'; }
+    else if (quality === 'aug') { absSuffix = 'aug'; nnsSuffix = '+'; romSuffix = '+'; }
+    else if (quality === 'maj7') { absSuffix = 'maj7'; nnsSuffix = 'maj7'; romSuffix = 'maj7'; }
+    else if (quality === 'maj9') { absSuffix = 'maj9'; nnsSuffix = 'maj9'; romSuffix = 'maj9'; }
+    else if (quality === 'm9') { absSuffix = 'm9'; nnsSuffix = '-9'; romSuffix = '9'; }
+    else if (quality === 'sus4') { absSuffix = 'sus4'; nnsSuffix = 'sus4'; romSuffix = 'sus4'; }
+    else if (quality === 'sus2') { absSuffix = 'sus2'; nnsSuffix = 'sus2'; romSuffix = 'sus2'; }
+    else if (quality === 'add9') { absSuffix = 'add9'; nnsSuffix = 'add9'; romSuffix = 'add9'; }
+    else if (quality === '6') { absSuffix = '6'; nnsSuffix = '6'; romSuffix = '6'; }
+    else if (quality === 'm6') { absSuffix = 'm6'; nnsSuffix = '-6'; romSuffix = '6'; }
+    else if (quality === '9') { absSuffix = '9'; nnsSuffix = '9'; romSuffix = '9'; }
+    else if (quality === '7b9') { absSuffix = '7b9'; nnsSuffix = '7b9'; romSuffix = '7b9'; }
+    else if (quality === '7#9') { absSuffix = '7#9'; nnsSuffix = '7#9'; romSuffix = '7#9'; }
+    else if (quality === '5') { absSuffix = '5'; nnsSuffix = '5'; romSuffix = '5'; }
+    
+    if (is7th && !['maj7', 'maj9', 'halfdim', '7b9', '7#9'].includes(quality)) { 
+        absSuffix += '7'; nnsSuffix += '7'; romSuffix += '7';
+    }
+
+    let romanName;
+    if (quality === 'minor' || quality === 'dim' || quality === 'halfdim') {
+        romanName = formatChordName(rootRomanBase.toLowerCase(), romSuffix);
+    } else {
+        romanName = formatChordName(rootRomanBase, romSuffix);
+    }
+
+    let finalAbsName = formatChordName(rootName, absSuffix);
+    let finalNNSName = formatChordName(rootNNS, nnsSuffix);
+
+    return { finalAbsName, finalNNSName, finalRomName: romanName };
+}
+
 /**
  * Parses the progression input string and updates the chord state.
  * @param {Function} renderCallback - Callback to trigger visual update.
@@ -123,6 +229,7 @@ export function validateProgression(renderCallback) {
     const key = ui.keySelect.value;
     const parsed = [];
     const baseOctave = Math.floor(cb.octave / 12) * 12;
+    const keyRootMidi = baseOctave + KEY_ORDER.indexOf(normalizeKey(key));
     
     // Split by pipes but capture them to track indices
     const barParts = input.split(/(\|)/);
@@ -136,7 +243,6 @@ export function validateProgression(renderCallback) {
         }
         
         const barText = barOrPipe;
-        // Find chords and whitespace within the bar
         const chordTokens = barText.split(/(\s+)/);
         const actualChordParts = chordTokens.filter(t => t.trim() && t !== '|');
         const beatsPerChord = actualChordParts.length > 0 ? 4 / actualChordParts.length : 0;
@@ -147,107 +253,28 @@ export function validateProgression(renderCallback) {
                 const part = token.trim();
                 const [chordPart, bassPart] = part.split('/');
                 
-                const romanMatch = chordPart.match(ROMAN_REGEX);
-                const nnsMatch = chordPart.match(NNS_REGEX);
-                const noteMatch = chordPart.match(NOTE_REGEX);
-                
-                let rootPart = "";
-                if (romanMatch) rootPart = romanMatch[0];
-                else if (nnsMatch) rootPart = nnsMatch[0];
-                else if (noteMatch) rootPart = noteMatch[0];
+                const { rootMidi, rootPart, romanMatch, nnsMatch } = resolveChordRoot(chordPart, keyRootMidi, baseOctave);
 
                 const suffixPart = chordPart.slice(rootPart.length);
                 let { quality, is7th } = getChordDetails(suffixPart);
                 
-                const keyRootMidi = baseOctave + KEY_ORDER.indexOf(normalizeKey(key));
-                let rootMidi;
-                let rootName = "";
-
+                // Adjustment for Roman numerals case/quality
                 if (romanMatch) {
-                    const accidental = romanMatch[1] || "", numeral = romanMatch[2];
-                    let rootOffset = ROMAN_VALS[numeral.toUpperCase()];
-                    if (accidental === 'b') rootOffset -= 1;
-                    if (accidental === '#') rootOffset += 1;
-                    rootMidi = keyRootMidi + rootOffset;
+                    const numeral = romanMatch[2];
                     if (numeral === numeral.toLowerCase() && quality === 'major') quality = 'minor';
                     if (numeral.toLowerCase() === 'vii' && !suffixPart.match(/(maj|min|m|dim|o|aug|\+)/)) quality = 'dim';
-                } else if (nnsMatch) {
-                    const accidental = nnsMatch[1] || "", number = parseInt(nnsMatch[2]);
-                    let rootOffset = NNS_OFFSETS[number - 1];
-                    if (accidental === 'b') rootOffset -= 1;
-                    if (accidental === '#') rootOffset += 1;
-                    rootMidi = keyRootMidi + rootOffset;
-                } else if (noteMatch) {
-                    const note = normalizeKey(noteMatch[1].charAt(0).toUpperCase() + noteMatch[1].slice(1).toLowerCase());
-                    rootMidi = baseOctave + KEY_ORDER.indexOf(note);
-                } else {
-                    rootMidi = keyRootMidi; // Default to key root
                 }
 
-                let intervals = [0, 4, 7];
-                const isMinor = quality === 'minor' || quality === 'dim' || quality === 'halfdim';
-                if (quality === 'minor') intervals = [0, 3, 7];
-                else if (quality === 'dim') intervals = [0, 3, 6];
-                else if (quality === 'halfdim') intervals = [0, 3, 6];
-                else if (quality === 'aug') intervals = [0, 4, 8];
-                else if (quality === 'sus4') intervals = [0, 5, 7];
-                else if (quality === 'sus2') intervals = [0, 2, 7];
-                else if (quality === 'add9') intervals = [0, 4, 7, 14];
-                else if (quality === '6') intervals = [0, 4, 7, 9];
-                else if (quality === 'm6') intervals = [0, 3, 7, 9];
-                else if (quality === '9') intervals = [0, 4, 7, 10, 14];
-                else if (quality === 'maj9') intervals = [0, 4, 7, 11, 14];
-                else if (quality === 'm9') intervals = [0, 3, 7, 10, 14];
-                else if (quality === '7b9') intervals = [0, 4, 7, 10, 13];
-                else if (quality === '7#9') intervals = [0, 4, 7, 10, 15];
-                else if (quality === '5') intervals = [0, 7];
-
-                if (is7th || quality === 'halfdim') {
-                    if (quality === 'maj7' || quality === 'maj9') intervals.push(11);
-                    else if (quality === 'dim') intervals.push(9); 
-                    else if (quality === 'halfdim') intervals.push(10);
-                    else intervals.push(10); 
-                }
-
-                // Apply Voicing Density
-                if (cb.density === 'thin' && intervals.length >= 4) {
-                    if (intervals.includes(7)) intervals = intervals.filter(i => i !== 7);
-                } else if (cb.density === 'rich' && intervals.length <= 4 && quality !== '5') {
-                    if (!intervals.includes(14) && !intervals.includes(13) && !intervals.includes(15) && quality !== 'sus2') {
-                        intervals.push(14);
-                    }
-                    if (is7th && quality === 'major' && !intervals.includes(21)) {
-                        intervals.push(21);
-                    }
-                }
+                let intervals = getIntervals(quality, is7th, cb.density);
 
                 // Handle Slash Bass
                 let bassMidi = null;
                 let bassNameAbs = "", bassNameNNS = "", bassNameRom = "";
 
                 if (bassPart) {
-                    const bRomanMatch = bassPart.match(ROMAN_REGEX);
-                    const bNnsMatch = bassPart.match(NNS_REGEX);
-                    const bNoteMatch = bassPart.match(NOTE_REGEX);
-
-                    let bOffset = 0;
-                    if (bRomanMatch) {
-                        const accidental = bRomanMatch[1] || "", numeral = bRomanMatch[2];
-                        bOffset = ROMAN_VALS[numeral.toUpperCase()];
-                        if (accidental === 'b') bOffset -= 1;
-                        if (accidental === '#') bOffset += 1;
-                        bassMidi = keyRootMidi + bOffset;
-                    } else if (bNnsMatch) {
-                        const accidental = bNnsMatch[1] || "", number = parseInt(bNnsMatch[2]);
-                        bOffset = NNS_OFFSETS[number - 1];
-                        if (accidental === 'b') bOffset -= 1;
-                        if (accidental === '#') bOffset += 1;
-                        bassMidi = keyRootMidi + bOffset;
-                    } else if (bNoteMatch) {
-                        const note = normalizeKey(bNoteMatch[1].charAt(0).toUpperCase() + bNoteMatch[1].slice(1).toLowerCase());
-                        bassMidi = baseOctave + KEY_ORDER.indexOf(note);
-                    }
-
+                    const { rootMidi: bMidi } = resolveChordRoot(bassPart, keyRootMidi, baseOctave);
+                    bassMidi = bMidi;
+                    
                     if (bassMidi !== null) {
                         while (bassMidi >= rootMidi) bassMidi -= 12;
                         while (bassMidi < rootMidi - 12) bassMidi += 12;
@@ -270,46 +297,17 @@ export function validateProgression(renderCallback) {
                 const interval = (rootMidi - keyRootMidi + 24) % 12;
                 const rootNNS = INTERVAL_TO_NNS[interval];
                 const rootRomanBase = INTERVAL_TO_ROMAN[interval];
-                rootName = KEY_ORDER[rootMidi % 12];
+                const rootName = KEY_ORDER[rootMidi % 12];
                 
-                let absSuffix = "", nnsSuffix = "", romSuffix = "";
-                if (quality === 'minor') { absSuffix = 'm'; nnsSuffix = '-'; }
-                else if (quality === 'dim') { absSuffix = 'dim'; nnsSuffix = '°'; romSuffix = '°'; }
-                else if (quality === 'halfdim') { absSuffix = 'm7b5'; nnsSuffix = 'ø'; romSuffix = 'ø'; }
-                else if (quality === 'aug') { absSuffix = 'aug'; nnsSuffix = '+'; romSuffix = '+'; }
-                else if (quality === 'maj7') { absSuffix = 'maj7'; nnsSuffix = 'maj7'; romSuffix = 'maj7'; }
-                else if (quality === 'maj9') { absSuffix = 'maj9'; nnsSuffix = 'maj9'; romSuffix = 'maj9'; }
-                else if (quality === 'm9') { absSuffix = 'm9'; nnsSuffix = '-9'; romSuffix = '9'; }
-                else if (quality === 'sus4') { absSuffix = 'sus4'; nnsSuffix = 'sus4'; romSuffix = 'sus4'; }
-                else if (quality === 'sus2') { absSuffix = 'sus2'; nnsSuffix = 'sus2'; romSuffix = 'sus2'; }
-                else if (quality === 'add9') { absSuffix = 'add9'; nnsSuffix = 'add9'; romSuffix = 'add9'; }
-                else if (quality === '6') { absSuffix = '6'; nnsSuffix = '6'; romSuffix = '6'; }
-                else if (quality === 'm6') { absSuffix = 'm6'; nnsSuffix = '-6'; romSuffix = '6'; }
-                else if (quality === '9') { absSuffix = '9'; nnsSuffix = '9'; romSuffix = '9'; }
-                else if (quality === '7b9') { absSuffix = '7b9'; nnsSuffix = '7b9'; romSuffix = '7b9'; }
-                else if (quality === '7#9') { absSuffix = '7#9'; nnsSuffix = '7#9'; romSuffix = '7#9'; }
-                else if (quality === '5') { absSuffix = '5'; nnsSuffix = '5'; romSuffix = '5'; }
-                
-                if (is7th && !['maj7', 'maj9', 'halfdim', '7b9', '7#9'].includes(quality)) { 
-                    absSuffix += '7'; nnsSuffix += '7'; romSuffix += '7';
-                }
-
-                let romanName;
-                if (quality === 'minor' || quality === 'dim' || quality === 'halfdim') {
-                    romanName = formatChordName(rootRomanBase.toLowerCase(), romSuffix);
-                } else {
-                    romanName = formatChordName(rootRomanBase, romSuffix);
-                }
-
-                let finalAbsName = formatChordName(rootName, absSuffix);
-                let finalNNSName = formatChordName(rootNNS, nnsSuffix);
-                let finalRomName = romanName;
+                let { finalAbsName, finalNNSName, finalRomName } = getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality, is7th);
 
                 if (bassPart && bassNameAbs) {
                     finalAbsName += `/${bassNameAbs}`;
                     finalNNSName += `/${bassNameNNS}`;
                     finalRomName += `/${bassNameRom}`;
                 }
+
+                const isMinor = quality === 'minor' || quality === 'dim' || quality === 'halfdim';
 
                 parsed.push({ 
                     romanName: finalRomName, absName: finalAbsName, nnsName: finalNNSName,
