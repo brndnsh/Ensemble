@@ -176,9 +176,7 @@ export function renderChordVisualizer() {
 export function createPresetChip(name, onDelete, onSelect, className = 'user-preset-chip') {
     const chip = document.createElement('div');
     chip.className = `preset-chip ${className}`;
-    if (className.includes('drum-preset-chip')) {
-        chip.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-    }
+    chip.dataset.category = 'User';
     chip.innerHTML = `<span>${name}</span> <span style="margin-left: 8px; opacity: 0.5; cursor: pointer;" class="delete-btn">×</span>`;
     chip.querySelector('.delete-btn').onclick = (e) => {
         e.stopPropagation();

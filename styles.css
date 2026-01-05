@@ -509,6 +509,8 @@ textarea#progressionInput {
 .preset-chip[data-category="World/Latin"] { --cat-color: #10b981; }
 .preset-chip[data-category="Basic"] { --cat-color: #64748b; }
 .preset-chip[data-category="Rock/Metal"] { --cat-color: #ef4444; }
+.preset-chip[data-category="Electronic"] { --cat-color: #d946ef; }
+.preset-chip[data-category="User"] { --cat-color: #10b981; }
 
 .preset-chip {
     --cat-color: #475569; /* Default */
