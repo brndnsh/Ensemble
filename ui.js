@@ -162,6 +162,12 @@ export function renderChordVisualizer() {
         cb.cachedCards.push(div);
         currentBeatsInBar += chord.beats;
     });
+
+    // Cache dimensions for efficient scrolling without reflows
+    setTimeout(() => {
+        cb.cardOffsets = cb.cachedCards.map(card => card.offsetTop - ui.chordVisualizer.offsetTop);
+        cb.cardHeights = cb.cachedCards.map(card => card.clientHeight);
+    }, 100);
 }
 
 /**

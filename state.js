@@ -31,7 +31,11 @@ export const cb = {
     density: 'standard', // 'thin', 'standard', 'rich'
     valid: false,
     cachedCards: [],
-    lastActiveChordIndex: null
+    lastActiveChordIndex: null,
+    totalSteps: 0,
+    stepMap: [],
+    cardOffsets: [],
+    cardHeights: []
 };
 
 export const gb = {
@@ -56,6 +60,8 @@ export const bb = {
     volume: 0.45,
     reverb: 0.05,
     lastFreq: null,
+    lastPlayedFreq: null,
+    buffer: new Map(),
     octave: 41,
     style: 'arp',
     history: [],
@@ -67,6 +73,8 @@ export const sb = {
     volume: 0.5,
     reverb: 0.6,
     lastFreq: null,
+    lastPlayedFreq: null,
+    buffer: new Map(),
     lastNoteEnd: 0,
     octave: 77, // F5
     style: 'scalar',

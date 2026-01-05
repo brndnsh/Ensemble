@@ -63,6 +63,7 @@ function updateStyle(type, styleId) {
     document.querySelectorAll(c.selector).forEach(chip => {
         chip.classList.toggle('active', chip.dataset.id === styleId);
     });
+    flushBuffers();
 }
 
 /**
@@ -82,6 +83,7 @@ function togglePlay() {
         ctx.drawQueue = [];
         cb.lastActiveChordIndex = null;
         clearActiveVisuals(viz);
+        flushBuffers();
         
         // Reset scroll position to start
         ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
@@ -98,6 +100,7 @@ function togglePlay() {
     } else {
         if (ctx.suspendTimeout) clearTimeout(ctx.suspendTimeout);
         initAudio();
+        flushBuffers();
         if (!iosAudioUnlocked) {
             silentAudio.play().catch(e => console.log("Audio unlock failed", e));
             iosAudioUnlocked = true;
@@ -166,10 +169,87 @@ function togglePower(type) {
     }
 }
 
+const BUFFER_LOOKAHEAD = 64;
+
+function flushBuffers() {
+    if (bb.lastPlayedFreq !== null) bb.lastFreq = bb.lastPlayedFreq;
+    bb.buffer.clear();
+    bb.bufferHead = ctx.step;
+
+    if (sb.lastPlayedFreq !== null) sb.lastFreq = sb.lastPlayedFreq;
+    sb.buffer.clear();
+    sb.bufferHead = ctx.step;
+}
+
+function fillBuffers() {
+    // Initialize buffer heads if needed
+    if (bb.bufferHead === undefined) bb.bufferHead = ctx.step;
+    if (sb.bufferHead === undefined) sb.bufferHead = ctx.step;
+
+    // Ensure we don't fill too far ahead or fall behind
+    if (bb.bufferHead < ctx.step) bb.bufferHead = ctx.step;
+    if (sb.bufferHead < ctx.step) sb.bufferHead = ctx.step;
+
+    const targetStep = ctx.step + BUFFER_LOOKAHEAD;
+
+    // --- Bass Buffering ---
+    if (bb.enabled) {
+        while (bb.bufferHead < targetStep) {
+            const step = bb.bufferHead;
+            const chordData = getChordAtStep(step);
+            let result = null;
+
+            if (chordData) {
+                const { chord, stepInChord } = chordData;
+                let shouldPlay = false;
+                if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
+                else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
+                else if ((bb.style === 'quarter' || bb.style === 'arp') && stepInChord % 4 === 0) shouldPlay = true;
+
+                if (shouldPlay) {
+                    const nextChordData = getChordAtStep(step + 4);
+                    const bassFreq = getBassNote(chord, nextChordData?.chord, Math.floor(stepInChord / 4), bb.lastFreq, bb.octave, bb.style);
+                    if (bassFreq) {
+                        bb.lastFreq = bassFreq;
+                        result = { freq: bassFreq, chordData };
+                    }
+                }
+            }
+            bb.buffer.set(step, result);
+            bb.bufferHead++;
+        }
+    }
+
+    // --- Soloist Buffering ---
+    if (sb.enabled) {
+        while (sb.bufferHead < targetStep) {
+            const step = sb.bufferHead;
+            const chordData = getChordAtStep(step);
+            let result = null;
+
+            if (chordData) {
+                const { chord } = chordData;
+                const nextChordData = getChordAtStep(step + 4);
+                // Note: getSoloistNote is stateful (sb state) and updates it.
+                // We rely on this linear execution order.
+                const soloResult = getSoloistNote(chord, nextChordData?.chord, step % 16, sb.lastFreq, sb.octave, sb.style);
+                
+                if (soloResult?.freq) {
+                    sb.lastFreq = soloResult.freq;
+                    result = { ...soloResult, chordData };
+                }
+            }
+            sb.buffer.set(step, result);
+            sb.bufferHead++;
+        }
+    }
+}
+
 /**
  * The main audio scheduler loop.
  */
 function scheduler() {
+    fillBuffers();
     while (ctx.nextNoteTime < ctx.audio.currentTime + ctx.scheduleAheadTime) {
         if (ctx.isCountingIn) {
             scheduleCountIn(ctx.countInBeat, ctx.nextNoteTime);
@@ -237,23 +317,43 @@ function advanceGlobalStep() {
 }
 
 /**
+ * Caches progression metadata to avoid redundant calculations in the scheduler.
+ */
+export function updateProgressionCache() {
+    if (!cb.progression.length) {
+        cb.totalSteps = 0;
+        cb.stepMap = [];
+        return;
+    }
+
+    let current = 0;
+    cb.stepMap = cb.progression.map(chord => {
+        const steps = Math.round(chord.beats * 4);
+        const entry = { start: current, end: current + steps, chord };
+        current += steps;
+        return entry;
+    });
+    cb.totalSteps = current;
+}
+
+/**
  * Finds the active chord for a given global step.
- * @param {number} step 
+ * Uses the cached step map for O(1) or O(N) lookup without reduction.
  */
 function getChordAtStep(step) {
-    if (!cb.progression.length) return null;
-    let current = 0;
-    const totalSteps = cb.progression.reduce((sum, c) => sum + Math.round(c.beats * 4), 0);
-    if (totalSteps === 0) return null;
+    if (cb.totalSteps === 0) return null;
 
-    const targetStep = step % totalSteps;
+    const targetStep = step % cb.totalSteps;
 
-    for (const chord of cb.progression) {
-        const chordSteps = Math.round(chord.beats * 4);
-        if (targetStep >= current && targetStep < current + chordSteps) {
-            return { chord, stepInChord: targetStep - current, chordIndex: cb.progression.indexOf(chord) };
+    for (let i = 0; i < cb.stepMap.length; i++) {
+        const entry = cb.stepMap[i];
+        if (targetStep >= entry.start && targetStep < entry.end) {
+            return { 
+                chord: entry.chord, 
+                stepInChord: targetStep - entry.start, 
+                chordIndex: i 
+            };
         }
-        current += chordSteps;
     }
     return null;
 }
@@ -276,71 +376,68 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat) {
 }
 
 function scheduleBass(chordData, step, time) {
-    const { chord, stepInChord } = chordData;
-    let shouldPlay = false;
-    if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
-    else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
-    else if ((bb.style === 'quarter' || bb.style === 'arp') && stepInChord % 4 === 0) shouldPlay = true;
+    const noteEntry = bb.buffer.get(step);
+    bb.buffer.delete(step); // Cleanup
 
-    if (shouldPlay) {
-        const nextChordData = getChordAtStep(step + 4);
-        const bassFreq = getBassNote(chord, nextChordData?.chord, Math.floor(stepInChord / 4), bb.lastFreq, bb.octave, bb.style);
-        if (bassFreq) {
-            bb.lastFreq = bassFreq;
-            const midi = getMidi(bassFreq);
-            const { name, octave } = midiToNote(midi);
-            const duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * (60.0 / ctx.bpm);
-            
-            if (vizState.enabled) {
-                ctx.drawQueue.push({ 
-                    type: 'bass_vis', name, octave, midi, time,
-                    chordNotes: chord.freqs.map(f => getMidi(f)),
-                    duration
-                });
-            }
-            playBassNote(bassFreq, time, duration);
+    if (noteEntry && noteEntry.freq) {
+        const { freq, chordData: cData } = noteEntry; // Use buffered chordData to match generation context
+        const { chord } = cData || chordData;
+        
+        bb.lastPlayedFreq = freq;
+        const midi = getMidi(freq);
+        const { name, octave } = midiToNote(midi);
+        const duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * (60.0 / ctx.bpm);
+        
+        if (vizState.enabled) {
+            ctx.drawQueue.push({ 
+                type: 'bass_vis', name, octave, midi, time,
+                chordNotes: chord.freqs.map(f => getMidi(f)),
+                duration
+            });
         }
+        playBassNote(freq, time, duration);
     }
 }
 
 function scheduleSoloist(chordData, step, time, unswungTime) {
-    const { chord, stepInChord } = chordData;
-    const nextChordData = getChordAtStep(step + 4);
-    const soloResult = getSoloistNote(chord, nextChordData?.chord, step % 16, sb.lastFreq, sb.octave, sb.style);
-    
-    let midi = null, name = '--', octave = '';
-    if (soloResult?.freq) {
-        sb.lastFreq = soloResult.freq;
-        midi = soloResult.midi || getMidi(soloResult.freq);
-        ({ name, octave } = midiToNote(midi));
+    const noteEntry = sb.buffer.get(step);
+    sb.buffer.delete(step); // Cleanup
+
+    if (noteEntry && noteEntry.freq) {
+        const { freq, extraFreq, extraMidi, extraFreq2, extraMidi2, durationMultiplier, velocity, bendStartInterval, style, chordData: cData } = noteEntry;
+        const { chord } = cData || chordData;
+        
+        sb.lastPlayedFreq = freq;
+        const midi = noteEntry.midi || getMidi(freq);
+        const { name, octave } = midiToNote(midi);
 
         const spb = 60.0 / ctx.bpm;
-        const duration = 0.25 * spb * (soloResult.durationMultiplier || 1);
-        const vel = soloResult.velocity || 1.0;
+        const duration = 0.25 * spb * (durationMultiplier || 1);
+        const vel = velocity || 1.0;
         
         // Neo-soul "Lazy" Lag: Additional fixed delay for neo style
-        const styleLag = soloResult.style === 'neo' ? 0.025 : 0;
+        const styleLag = style === 'neo' ? 0.025 : 0;
         const playTime = unswungTime + styleLag;
 
-        playSoloNote(soloResult.freq, playTime, duration, vel, soloResult.bendStartInterval || 0, soloResult.style);
+        playSoloNote(freq, playTime, duration, vel, bendStartInterval || 0, style);
 
         if (vizState.enabled) {
             // Double/Triple Stop Handling
-            if (soloResult.extraFreq && soloResult.extraMidi) {
-                playSoloNote(soloResult.extraFreq, playTime, duration, vel * 0.7, soloResult.bendStartInterval || 0, soloResult.style);
-                const extra = midiToNote(soloResult.extraMidi);
+            if (extraFreq && extraMidi) {
+                playSoloNote(extraFreq, playTime, duration, vel * 0.7, bendStartInterval || 0, style);
+                const extra = midiToNote(extraMidi);
                 ctx.drawQueue.push({ 
-                    type: 'soloist_vis', name: extra.name, octave: extra.octave, midi: soloResult.extraMidi, time: playTime,
+                    type: 'soloist_vis', name: extra.name, octave: extra.octave, midi: extraMidi, time: playTime,
                     chordNotes: chord.freqs.map(f => getMidi(f)),
                     duration
                 });
             }
             
-            if (soloResult.extraFreq2 && soloResult.extraMidi2) {
-                playSoloNote(soloResult.extraFreq2, playTime, duration, vel * 0.5, soloResult.bendStartInterval || 0, soloResult.style);
-                const extra2 = midiToNote(soloResult.extraMidi2);
+            if (extraFreq2 && extraMidi2) {
+                playSoloNote(extraFreq2, playTime, duration, vel * 0.5, bendStartInterval || 0, style);
+                const extra2 = midiToNote(extraMidi2);
                 ctx.drawQueue.push({ 
-                    type: 'soloist_vis', name: extra2.name, octave: extra2.octave, midi: soloResult.extraMidi2, time: playTime,
+                    type: 'soloist_vis', name: extra2.name, octave: extra2.octave, midi: extraMidi2, time: playTime,
                     chordNotes: chord.freqs.map(f => getMidi(f)),
                     duration
                 });
@@ -353,8 +450,8 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
             });
         } else {
             // Still play extra notes if not visualizing
-            if (soloResult.extraFreq) playSoloNote(soloResult.extraFreq, playTime, duration, vel * 0.7, soloResult.bendStartInterval || 0, soloResult.style);
-            if (soloResult.extraFreq2) playSoloNote(soloResult.extraFreq2, playTime, duration, vel * 0.5, soloResult.bendStartInterval || 0, soloResult.style);
+            if (extraFreq) playSoloNote(extraFreq, playTime, duration, vel * 0.7, bendStartInterval || 0, style);
+            if (extraFreq2) playSoloNote(extraFreq2, playTime, duration, vel * 0.5, bendStartInterval || 0, style);
         }
 
         sb.lastNoteEnd = playTime + duration;
@@ -441,16 +538,15 @@ function updateChordVis(ev) {
         card.classList.add('active');
         cb.lastActiveChordIndex = ev.index;
 
-        // Auto-scroll logic
+        // Auto-scroll logic using cached dimensions (no reflow)
         const container = ui.chordVisualizer;
-        const cardRect = card.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
-        // Check if out of view (vertically)
-        if (cardRect.top < containerRect.top || cardRect.bottom > containerRect.bottom) {
-            // Scroll neatly to center the card without jumping the whole page
-            const offsetTop = card.offsetTop - container.offsetTop;
-            const scrollPos = offsetTop - (container.clientHeight / 2) + (card.clientHeight / 2);
+        const offsetTop = cb.cardOffsets[ev.index];
+        const cardHeight = cb.cardHeights[ev.index];
+        
+        if (offsetTop !== undefined && cardHeight !== undefined) {
+            const scrollPos = offsetTop - (container.clientHeight / 2) + (cardHeight / 2);
+            // We still use clientHeight for the container, which is usually cheap, 
+            // but we avoid getBoundingClientRect on every card.
             container.scrollTo({ top: scrollPos, behavior: 'smooth' });
         }
     }
@@ -473,10 +569,26 @@ function draw() {
     const offset = outputLatency > 0 ? outputLatency : (isChromium ? 0.015 : 0.045);
     const now = ctx.audio.currentTime - offset;
     
-    if (ctx.drawQueue.length > 200) {
-        ctx.drawQueue = ctx.drawQueue.filter(ev => ev.time >= now - 0.5);
+    // Efficient queue cleanup: remove only old events from the front
+    while (ctx.drawQueue.length > 0 && ctx.drawQueue[0].time < now - 2.0) {
+        ctx.drawQueue.shift();
+    }
+    
+    // Safety cap for extremely long queues (unlikely but safe)
+    if (ctx.drawQueue.length > 300) {
+        ctx.drawQueue = ctx.drawQueue.slice(ctx.drawQueue.length - 200);
     }
 
+    // Process events ready to draw
+    // We iterate without shifting immediately so we can render things that started slightly in the past but are still valid?
+    // Actually, the original logic shifted them as it processed them. 
+    // BUT, the original logic checked: while (ctx.drawQueue.length && ctx.drawQueue[0].time <= now)
+    // This consumes the event.
+    
+    // The visualization needs persistent state for things like "currently active chord".
+    // "drum_vis" sets a class. "chord_vis" sets a class. 
+    // If we shift them out, they are "processed".
+    
     while (ctx.drawQueue.length && ctx.drawQueue[0].time <= now) {
         const ev = ctx.drawQueue.shift();
         if (ev.type === 'drum_vis') updateDrumVis(ev);
@@ -530,6 +642,7 @@ function renderUserPresets() {
         const chip = createPresetChip(p.name, () => window.deleteUserPreset(idx), () => {
             ui.progInput.value = p.prog;
             validateProgression(renderChordVisualizer);
+            flushBuffers();
             document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
         });
@@ -611,10 +724,12 @@ function setupUIHandlers() {
         [ui.randomizeBtn, 'click', () => {
             ui.progInput.value = generateRandomProgression();
             validateProgression(renderChordVisualizer);
+            flushBuffers();
         }],
         [ui.clearProgBtn, 'click', () => {
             ui.progInput.value = '';
             validateProgression(renderChordVisualizer);
+            flushBuffers();
             ui.progInput.focus();
         }],
         [ui.saveBtn, 'click', saveProgression],
@@ -636,10 +751,10 @@ function setupUIHandlers() {
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));
 
     ui.settingsOverlay.addEventListener('click', e => e.target === ui.settingsOverlay && ui.settingsOverlay.classList.remove('active'));
-    ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); });
-    ui.progInput.addEventListener('input', () => validateProgression(renderChordVisualizer));
+    ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); flushBuffers(); });
+    ui.progInput.addEventListener('input', () => { validateProgression(renderChordVisualizer); flushBuffers(); });
     ui.notationSelect.addEventListener('change', e => { cb.notation = e.target.value; renderChordVisualizer(); });
-    ui.densitySelect.addEventListener('change', e => { cb.density = e.target.value; validateProgression(renderChordVisualizer); });
+    ui.densitySelect.addEventListener('change', e => { cb.density = e.target.value; validateProgression(renderChordVisualizer); flushBuffers(); });
     ui.drumBarsSelect.addEventListener('change', e => { 
         const newCount = parseInt(e.target.value);
         gb.instruments.forEach(inst => {
@@ -688,6 +803,7 @@ function setupUIHandlers() {
             state.octave = parseInt(e.target.value);
             updateOctaveLabel(label, state.octave, header);
             if (callback) callback();
+            flushBuffers();
         });
     });
 
@@ -769,6 +885,7 @@ function setupPresets() {
     renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', 'Pop (Standard)', (item, chip) => {
         ui.progInput.value = item.prog;
         validateProgression(renderChordVisualizer);
+        flushBuffers();
         document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
     });
@@ -844,6 +961,7 @@ function transposeKey(delta) {
     });
     ui.progInput.value = transposed.join('');
     validateProgression(renderChordVisualizer);
+    flushBuffers();
 }
 
 function loadDrumPreset(name) {
@@ -930,6 +1048,7 @@ function resetToDefaults() {
     updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
     updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
     validateProgression(renderChordVisualizer);
+    flushBuffers();
     
     gb.instruments.forEach(inst => {
         inst.steps = new Array(16).fill(0);

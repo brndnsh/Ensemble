@@ -57,7 +57,6 @@ export const BASS_STYLES = [
 export const SOLOIST_STYLES = [
     { id: 'scalar', name: 'Scalar', category: 'Basic' },
     { id: 'shred', name: 'Shreddy', category: 'Rock/Metal' },
-    { id: 'bird', name: 'Bebop', category: 'Jazz' },
     { id: 'blues', name: 'Blues', category: 'Blues' },
     { id: 'neo', name: 'Neo-Soul', category: 'Soul/R&B' },
     { id: 'minimal', name: 'Minimal', category: 'Basic' }
