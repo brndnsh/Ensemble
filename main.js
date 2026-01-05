@@ -437,8 +437,20 @@ function updateChordVis(ev) {
         }
     }
     if (cb.cachedCards[ev.index]) {
-        cb.cachedCards[ev.index].classList.add('active');
+        const card = cb.cachedCards[ev.index];
+        card.classList.add('active');
         cb.lastActiveChordIndex = ev.index;
+
+        // Auto-scroll logic
+        const container = ui.chordVisualizer;
+        const cardRect = card.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        // Check if out of view (vertically)
+        if (cardRect.top < containerRect.top || cardRect.bottom > containerRect.bottom) {
+            // Scroll neatly to center the card
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
 }
 
@@ -692,7 +704,7 @@ function setupUIHandlers() {
     });
 
     window.addEventListener('keydown', e => {
-        if (e.key === ' ' && !['INPUT', 'SELECT'].includes(e.target.tagName)) {
+        if (e.key === ' ' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
             e.preventDefault(); togglePlay();
         }
     });
