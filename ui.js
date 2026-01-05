@@ -107,6 +107,21 @@ export function updateOctaveLabel(element, midi, headerElement = null) {
     if (headerElement) headerElement.textContent = label;
 }
 
+function createChordLabel(data) {
+    const container = document.createElement('span');
+    container.textContent = data.root;
+    if (data.suffix) {
+        const sup = document.createElement('span');
+        sup.className = 'suffix';
+        sup.textContent = data.suffix;
+        container.appendChild(sup);
+    }
+    if (data.bass) {
+        container.appendChild(document.createTextNode('/' + data.bass));
+    }
+    return container;
+}
+
 /**
  * Renders the visual chord progression cards in the DOM.
  */
@@ -134,9 +149,12 @@ export function renderChordVisualizer() {
         if (chord.beats < 4) div.classList.add('small');
         if (chord.isMinor) div.classList.add('minor');
         
-        if (cb.notation === 'name') div.innerHTML = chord.absName;
-        else if (cb.notation === 'nns') div.innerHTML = chord.nnsName;
-        else div.innerHTML = chord.romanName;
+        let displayData;
+        if (cb.notation === 'name') displayData = chord.display.abs;
+        else if (cb.notation === 'nns') displayData = chord.display.nns;
+        else displayData = chord.display.rom;
+
+        div.appendChild(createChordLabel(displayData));
         
         div.onclick = () => window.previewChord(i);
         
@@ -144,6 +162,97 @@ export function renderChordVisualizer() {
         cb.cachedCards.push(div);
         currentBeatsInBar += chord.beats;
     });
+}
+
+/**
+ * Helper to create a user preset chip with delete functionality.
+ */
+export function createPresetChip(name, onDelete, onSelect, className = 'user-preset-chip') {
+    const chip = document.createElement('div');
+    chip.className = `preset-chip ${className}`;
+    if (className.includes('drum-preset-chip')) {
+        chip.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+    }
+    chip.innerHTML = `<span>${name}</span> <span style="margin-left: 8px; opacity: 0.5; cursor: pointer;" class="delete-btn">×</span>`;
+    chip.querySelector('.delete-btn').onclick = (e) => {
+        e.stopPropagation();
+        onDelete();
+    };
+    chip.onclick = onSelect;
+    return chip;
+}
+
+function createTrackRow(inst, measures, cachedSteps) {
+    const row = document.createElement('div');
+    row.className = 'track';
+    
+    const header = document.createElement('div');
+    header.className = 'track-header';
+    header.innerHTML = `<span>${inst.symbol} <span>${inst.name}</span></span>`;
+    header.style.cursor = "pointer"; 
+    if (inst.muted) header.style.opacity = 0.5;
+    header.onclick = () => { inst.muted = !inst.muted; header.style.opacity = inst.muted ? 0.5 : 1; };
+    row.appendChild(header);
+
+    const stepsWrapper = document.createElement('div');
+    stepsWrapper.className = 'steps-wrapper';
+    
+    for (let m = 0; m < measures; m++) {
+        const measureDiv = document.createElement('div'); 
+        measureDiv.className = 'steps';
+        for (let b = 0; b < 16; b++) {
+            const globalIdx = m * 16 + b;
+            const step = document.createElement('div');
+            const val = inst.steps[globalIdx];
+            step.className = `step ${val === 2 ? 'accented' : (val === 1 ? 'active' : '')}`; 
+            step.dataset.step = globalIdx;
+            step.onclick = () => { 
+                inst.steps[globalIdx] = (inst.steps[globalIdx] + 1) % 3; 
+                renderGridState(); 
+            };
+            measureDiv.appendChild(step);
+            
+            if (!cachedSteps[globalIdx]) cachedSteps[globalIdx] = [];
+            cachedSteps[globalIdx].push(step);
+        }
+        stepsWrapper.appendChild(measureDiv);
+    }
+    row.appendChild(stepsWrapper);
+    return row;
+}
+
+function createLabelRow(measures, cachedSteps) {
+    const labelRow = document.createElement('div');
+    labelRow.className = 'track label-row';
+    
+    const labelHeader = document.createElement('div');
+    labelHeader.className = 'track-header label-header';
+    labelHeader.innerHTML = '<span></span>';
+    labelRow.appendChild(labelHeader);
+
+    const labelsWrapper = document.createElement('div');
+    labelsWrapper.className = 'steps-wrapper';
+    
+    const beatLabels = ['1', 'e', '&', 'a', '2', 'e', '&', 'a', '3', 'e', '&', 'a', '4', 'e', '&', 'a'];
+    
+    for (let m = 0; m < measures; m++) {
+        const measureDiv = document.createElement('div');
+        measureDiv.className = 'steps label-steps';
+        beatLabels.forEach((text, i) => {
+            const label = document.createElement('div');
+            label.className = 'step-label';
+            label.textContent = text;
+            if (i % 4 === 0) label.classList.add('beat-start');
+            measureDiv.appendChild(label);
+            
+            const globalIdx = m * 16 + i;
+            if (!cachedSteps[globalIdx]) cachedSteps[globalIdx] = [];
+            cachedSteps[globalIdx].push(label);
+        });
+        labelsWrapper.appendChild(measureDiv);
+    }
+    labelRow.appendChild(labelsWrapper);
+    return labelRow;
 }
 
 /**
@@ -155,68 +264,10 @@ export function renderGrid() {
     const fragment = document.createDocumentFragment();
 
     gb.instruments.forEach((inst, tIdx) => {
-        const row = document.createElement('div');
-        row.className = 'track';
-        const header = document.createElement('div');
-        header.className = 'track-header';
-        header.innerHTML = `<span>${inst.symbol} <span>${inst.name}</span></span>`;
-        header.style.cursor = "pointer"; if (inst.muted) header.style.opacity = 0.5;
-        header.onclick = () => { inst.muted = !inst.muted; header.style.opacity = inst.muted ? 0.5 : 1; };
-        row.appendChild(header);
-        const stepsWrapper = document.createElement('div');
-        stepsWrapper.className = 'steps-wrapper';
-        for (let m = 0; m < gb.measures; m++) {
-            const measureDiv = document.createElement('div'); measureDiv.className = 'steps';
-            for (let b = 0; b < 16; b++) {
-                const globalIdx = m * 16 + b, step = document.createElement('div');
-                const val = inst.steps[globalIdx];
-                step.className = `step ${val === 2 ? 'accented' : (val === 1 ? 'active' : '')}`; 
-                step.dataset.step = globalIdx;
-                step.onclick = () => { 
-                    inst.steps[globalIdx] = (inst.steps[globalIdx] + 1) % 3; 
-                    renderGridState(); 
-                };
-                measureDiv.appendChild(step);
-                if (!gb.cachedSteps[globalIdx]) gb.cachedSteps[globalIdx] = [];
-                gb.cachedSteps[globalIdx].push(step);
-            }
-            stepsWrapper.appendChild(measureDiv);
-        }
-        row.appendChild(stepsWrapper); 
-        fragment.appendChild(row);
+        fragment.appendChild(createTrackRow(inst, gb.measures, gb.cachedSteps));
     });
 
-    // Add beat labels row
-    const labelRow = document.createElement('div');
-    labelRow.className = 'track label-row';
-    const labelHeader = document.createElement('div');
-    labelHeader.className = 'track-header label-header';
-    labelHeader.innerHTML = '<span></span>';
-    labelRow.appendChild(labelHeader);
-
-    const labelsWrapper = document.createElement('div');
-    labelsWrapper.className = 'steps-wrapper';
-    
-    const beatLabels = ['1', 'e', '&', 'a', '2', 'e', '&', 'a', '3', 'e', '&', 'a', '4', 'e', '&', 'a'];
-    
-    for (let m = 0; m < gb.measures; m++) {
-        const measureDiv = document.createElement('div');
-        measureDiv.className = 'steps label-steps';
-        beatLabels.forEach((text, i) => {
-            const label = document.createElement('div');
-            label.className = 'step-label';
-            label.textContent = text;
-            if (i % 4 === 0) label.classList.add('beat-start');
-            measureDiv.appendChild(label);
-            
-            const globalIdx = m * 16 + i;
-            if (!gb.cachedSteps[globalIdx]) gb.cachedSteps[globalIdx] = [];
-            gb.cachedSteps[globalIdx].push(label);
-        });
-        labelsWrapper.appendChild(measureDiv);
-    }
-    labelRow.appendChild(labelsWrapper);
-    fragment.appendChild(labelRow);
+    fragment.appendChild(createLabelRow(gb.measures, gb.cachedSteps));
     ui.sequencerGrid.appendChild(fragment);
 
     // Cache step offsets for efficient scrolling during playback

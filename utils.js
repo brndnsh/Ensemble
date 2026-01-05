@@ -40,12 +40,4 @@ export function getMidi(freq) {
     return Math.round(12 * Math.log2(freq / 440) + 69);
 }
 
-/**
- * Formats a chord name with its suffix in a small superscript-like span.
- * @param {string} root - The root note or numeral.
- * @param {string} suffix - The chord suffix (e.g., maj7).
- * @returns {string} HTML string of the formatted chord name.
- */
-export function formatChordName(root, suffix) { 
-    return suffix ? `${root}<span class="suffix">${suffix}</span>` : root; 
-}
+

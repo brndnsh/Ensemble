@@ -1,5 +1,5 @@
 import { ctx, gb, cb, bb, sb, vizState, storage } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
 import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { normalizeKey, getMidi, midiToNote } from './utils.js';
@@ -50,13 +50,14 @@ function releaseWakeLock() {
  * @param {string} type - 'chord', 'bass', or 'soloist'
  * @param {string} styleId - The ID of the selected style
  */
+const UPDATE_STYLE_CONFIG = {
+    chord: { state: cb, selector: '.chord-style-chip' },
+    bass: { state: bb, selector: '.bass-style-chip' },
+    soloist: { state: sb, selector: '.soloist-style-chip' }
+};
+
 function updateStyle(type, styleId) {
-    const config = {
-        chord: { state: cb, selector: '.chord-style-chip' },
-        bass: { state: bb, selector: '.bass-style-chip' },
-        soloist: { state: sb, selector: '.soloist-style-chip' }
-    };
-    const c = config[type];
+    const c = UPDATE_STYLE_CONFIG[type];
     if (!c) return;
     c.state.style = styleId;
     document.querySelectorAll(c.selector).forEach(chip => {
@@ -129,23 +130,28 @@ function togglePlay() {
     }
 }
 
+const POWER_CONFIG = {
+    chord: { state: cb, el: () => ui.chordPowerBtn, panel: 'chordPanel', cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
+    groove: { state: gb, el: () => ui.groovePowerBtn, panel: 'groovePanel', cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
+    bass: { state: bb, el: () => ui.bassPowerBtn, panel: 'bassPanel' },
+    soloist: { state: sb, el: () => ui.soloistPowerBtn, panel: 'soloistPanel' },
+    viz: { state: vizState, el: () => ui.vizPowerBtn, panel: 'visualizerPanel', cleanup: () => { if (viz) viz.clear(); } }
+};
+
 /**
  * Toggles the enabled state of a module.
  * @param {'chord'|'groove'|'bass'|'soloist'} type 
  */
 function togglePower(type) {
-    const config = {
-        chord: { state: cb, el: ui.chordPowerBtn, panel: 'chordPanel', cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
-        groove: { state: gb, el: ui.groovePowerBtn, panel: 'groovePanel', cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
-        bass: { state: bb, el: ui.bassPowerBtn, panel: 'bassPanel' },
-        soloist: { state: sb, el: ui.soloistPowerBtn, panel: 'soloistPanel' },
-        viz: { state: vizState, el: ui.vizPowerBtn, panel: 'visualizerPanel', cleanup: () => { if (viz) viz.clear(); } }
-    };
-    const c = config[type];
+    const c = POWER_CONFIG[type];
     if (!c) return;
     
+    // Resolve element getter if it's a function (to handle potentially uninitialized UI refs if config defined too early, though here UI is imported)
+    // Actually ui is imported so we can access it directly, but let's stick to the pattern.
+    const el = typeof c.el === 'function' ? c.el() : c.el;
+
     c.state.enabled = !c.state.enabled;
-    c.el.classList.toggle('active', c.state.enabled);
+    el.classList.toggle('active', c.state.enabled);
     document.getElementById(c.panel).classList.toggle('panel-disabled', !c.state.enabled);
     
     if (!c.state.enabled && c.cleanup) {
@@ -431,8 +437,20 @@ function updateChordVis(ev) {
         }
     }
     if (cb.cachedCards[ev.index]) {
-        cb.cachedCards[ev.index].classList.add('active');
+        const card = cb.cachedCards[ev.index];
+        card.classList.add('active');
         cb.lastActiveChordIndex = ev.index;
+
+        // Auto-scroll logic
+        const container = ui.chordVisualizer;
+        const cardRect = card.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        // Check if out of view (vertically)
+        if (cardRect.top < containerRect.top || cardRect.bottom > containerRect.bottom) {
+            // Scroll neatly to center the card
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
 }
 
@@ -507,15 +525,12 @@ function renderUserPresets() {
     if (userPresets.length === 0) { ui.userPresetsContainer.style.display = 'none'; return; }
     ui.userPresetsContainer.style.display = 'flex';
     userPresets.forEach((p, idx) => {
-        const chip = document.createElement('div');
-        chip.className = 'preset-chip user-preset-chip';
-        chip.innerHTML = `<span>${p.name}</span> <span style="margin-left: 8px; opacity: 0.5;" onclick="event.stopPropagation(); window.deleteUserPreset(${idx})">×</span>`;
-        chip.onclick = () => {
+        const chip = createPresetChip(p.name, () => window.deleteUserPreset(idx), () => {
             ui.progInput.value = p.prog;
             validateProgression(renderChordVisualizer);
             document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
-        };
+        });
         ui.userPresetsContainer.appendChild(chip);
     });
 }
@@ -544,11 +559,7 @@ function renderUserDrumPresets() {
     if (userDrumPresets.length === 0) { ui.userDrumPresetsContainer.style.display = 'none'; return; }
     ui.userDrumPresetsContainer.style.display = 'flex';
     userDrumPresets.forEach((p, idx) => {
-        const chip = document.createElement('div');
-        chip.className = 'preset-chip drum-preset-chip';
-        chip.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-        chip.innerHTML = `<span>${p.name}</span> <span style="margin-left: 8px; opacity: 0.5;" onclick="event.stopPropagation(); window.deleteUserDrumPreset(${idx})">×</span>`;
-        chip.onclick = () => {
+        const chip = createPresetChip(p.name, () => window.deleteUserDrumPreset(idx), () => {
             if (p.measures) {
                 gb.measures = p.measures;
                 ui.drumBarsSelect.value = p.measures;
@@ -563,7 +574,7 @@ function renderUserDrumPresets() {
             renderGridState();
             document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
-        };
+        }, 'drum-preset-chip');
         ui.userDrumPresetsContainer.appendChild(chip);
     });
 }
@@ -693,29 +704,56 @@ function setupUIHandlers() {
     });
 
     window.addEventListener('keydown', e => {
-        if (e.key === ' ' && !['INPUT', 'SELECT'].includes(e.target.tagName)) {
+        if (e.key === ' ' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
             e.preventDefault(); togglePlay();
         }
     });
 }
 
 function setupPresets() {
-    const setup = (container, data, type, activeId) => {
+    const renderCategorized = (container, data, type, activeId, onSelect) => {
+        container.innerHTML = '';
+        // Sort by category to keep similar colors together
+        const sorted = [...data].sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+        
+        sorted.forEach(item => {
+            const chip = document.createElement('div');
+            const itemId = item.id || item.name;
+            chip.className = `preset-chip ${type}-chip`;
+            chip.textContent = item.name;
+            chip.dataset.id = itemId;
+            chip.dataset.category = item.category || 'Other';
+            if (itemId === activeId) chip.classList.add('active');
+            chip.onclick = () => onSelect(item, chip);
+            container.appendChild(chip);
+        });
+    };
+
+    // Style Presets
+    renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', cb.style, (item) => updateStyle('chord', item.id));
+    renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', sb.style, (item) => updateStyle('soloist', item.id));
+    
+    // Bass (Flat)
+    const setupFlat = (container, data, type, activeId) => {
         data.forEach(s => {
             const chip = document.createElement('div');
             chip.className = `preset-chip ${type}-style-chip`;
             chip.textContent = s.name;
             chip.dataset.id = s.id;
+            chip.dataset.category = 'Basic';
             if (s.id === activeId) chip.classList.add('active');
             chip.onclick = () => updateStyle(type, s.id);
             container.appendChild(chip);
         });
     };
+    setupFlat(ui.bassStylePresets, BASS_STYLES, 'bass', bb.style);
 
+    // Drum Presets
     Object.keys(DRUM_PRESETS).forEach(k => {
         const chip = document.createElement('div');
         chip.className = 'preset-chip drum-preset-chip';
         chip.textContent = k;
+        chip.dataset.category = 'Basic';
         if (k === 'Standard') chip.classList.add('active');
         chip.onclick = () => {
             loadDrumPreset(k);
@@ -725,23 +763,13 @@ function setupPresets() {
         ui.drumPresets.appendChild(chip);
     });
 
-    CHORD_PRESETS.forEach(p => {
-        const chip = document.createElement('div');
-        chip.className = 'preset-chip chord-preset-chip';
-        chip.textContent = p.name;
-        if (p.name === 'Pop') chip.classList.add('active');
-        chip.onclick = () => {
-            ui.progInput.value = p.prog;
-            validateProgression(renderChordVisualizer);
-            document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-        };
-        ui.chordPresets.appendChild(chip);
+    // Chord Progression Presets
+    renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', 'Pop (Standard)', (item, chip) => {
+        ui.progInput.value = item.prog;
+        validateProgression(renderChordVisualizer);
+        document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
     });
-
-    setup(ui.chordStylePresets, CHORD_STYLES, 'chord', cb.style);
-    setup(ui.bassStylePresets, BASS_STYLES, 'bass', bb.style);
-    setup(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist', sb.style);
 }
 
 // --- INITIALIZATION ---
