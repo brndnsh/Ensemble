@@ -71,6 +71,8 @@ export const CHORD_PRESETS = [
     { name: "Canon", prog: "I | V | vi | iii | IV | I | IV | V", category: "Classical/Trad" },
     { name: "Andalusian", prog: "vi | V | IV | III", category: "Classical/Trad" },
     { name: "12-Bar Blues", prog: "I7 | I7 | I7 | I7 | IV7 | IV7 | I7 | I7 | V7 | IV7 | I7 | V7", category: "Blues" },
+    { name: "Minor Blues", prog: "i7 | i7 | i7 | i7 | iv7 | iv7 | i7 | i7 | bVI7 | V7 | i7 | V7", category: "Blues" },
+    { name: "8-Bar Blues", prog: "I | V7 | IV | IV | I | V7 | I | V7", category: "Blues" },
     { name: "Jazz Blues", prog: "I7 | IV7 | I7 | v7 I7 | IV7 | IV7 | I7 | iii7 VI7 | ii7 | V7 | I7 VI7 | ii7 V7", category: "Blues" },
     { name: "Jazz II-V-I", prog: "ii7 | V7 | Imaj7 | Imaj7", category: "Jazz" },
     { name: "Minor II-V-I", prog: "iiø7 | V7 | i7 | i7", category: "Jazz" },
