@@ -16,6 +16,8 @@ const RHYTHMIC_CELLS = [
     [1, 0, 1, 1], // Reverse gallop
     [0, 1, 1, 1], // Offbeat start
     [1, 0, 0, 1], // Syncopated
+    [1, 1, 0, 1], // Bebop-esque 1
+    [0, 1, 1, 0], // Offbeat syncopation
 ];
 
 const CANNED_LICKS = {
@@ -23,8 +25,42 @@ const CANNED_LICKS = {
     'blues_1': [12, 15, 12, 10, 9, 7], // 1 b3 1 b7 6 5
     'rock_1': [0, 3, 5, 5, 3, 0],      // 1 b3 4 4 b3 1
     'bebop_1': [7, 6, 5, 4, 3, 2, 1, 0], // 5 b5 4 3 b3 2 b2 1
+    'bird_1': [12, 11, 10, 9, 8, 7, 5, 4, 2, 0], // Chromatic descent to root
+    'bird_2': [0, 4, 7, 11, 14, 12], // Arp up to 9th, then root
+    'bird_3': [7, 8, 9, 10, 11, 12], // Chromatic approach to root from 5th
+    'bird_4': [4, 5, 6, 7, 11, 12], // 3 4 #4 5 7 1
     'shred_1': [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], // Major Arp Sweep
 };
+
+/**
+ * Generates an enclosure pattern (group of notes surrounding a target).
+ * @param {number} targetMidi 
+ * @param {number[]} scaleTones 
+ * @returns {number[]} relative to targetMidi
+ */
+function getEnclosure(targetMidi, scaleTones) {
+    const type = Math.random();
+    if (type < 0.4) {
+        // Chromatic: Half step above, half step below, target
+        return [1, -1, 0];
+    } else if (type < 0.7) {
+        // Scale step above, half step below, target
+        let above = 2;
+        for (let t of scaleTones) {
+            let m = t;
+            while (m < targetMidi) m += 12;
+            if (m > targetMidi && m < targetMidi + 4) {
+                above = m - targetMidi;
+                break;
+            }
+        }
+        return [above, -1, 0];
+    } else {
+        // Double chromatic from above: +2, +1, target
+        return [2, 1, 0];
+    }
+}
+
 
 const SEQUENCES = {
     'up3': { offsets: [0, 1, 2], nextBase: 1 },
@@ -112,6 +148,10 @@ function getScaleForChord(chord, style) {
             case 'minor': return [0, 2, 3, 4, 5, 7, 9, 10]; // Bebop Minor (adds maj3)
             case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];   // Locrian
             default: 
+                // Altered Dominant check (look for b5, #5, b9, #9)
+                if (chord.intervals.includes(6) || chord.intervals.includes(8) || chord.intervals.includes(1) || chord.intervals.includes(3)) {
+                    return [0, 1, 3, 4, 6, 8, 10]; // Altered scale (approx)
+                }
                 if (chord.intervals.includes(10)) return [0, 2, 4, 5, 7, 9, 10, 11]; // Bebop Dominant (adds maj7)
                 return [0, 2, 4, 5, 7, 8, 9, 11];
         }
@@ -174,6 +214,16 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     if (style === 'minimal') velocity *= 1.1; // Stronger individual notes
     if (style === 'neo') velocity *= (0.8 + Math.random() * 0.25); // Softer, more expressive
 
+    // --- Pitch Selection Bounds & Tones ---
+    const minMidi = centerMidi - (style === 'shred' ? 24 : 18);
+    const maxMidi = Math.min(centerMidi + (style === 'shred' ? 30 : 24), 91); // Ceiling at G6 (91)
+    const prevMidi = prevFreq ? getMidi(prevFreq) : centerMidi;
+    const rootMidi = currentChord.rootMidi;
+    
+    const chordTones = currentChord.intervals.map(i => rootMidi + i);
+    const scaleIntervals = getScaleForChord(currentChord, style);
+    const scaleTones = scaleIntervals.map(i => rootMidi + i);
+
     // --- Phrasing Logic ---
     if (measureStep === 0 || sb.phraseSteps <= 0) {
         // Decide if we should start a new phrase or rest
@@ -190,14 +240,30 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
             sb.patternMode = Math.random() < 0.6 ? 'scale' : 'arp';
             sb.sequenceType = null;
             
-            // 20% chance to trigger a canned lick
-            // Canned licks are fixed intervals, so we avoid them in strict diatonic styles
-            if (style !== 'scalar' && style !== 'shred' && style !== 'neo' && Math.random() < 0.2) {
+            // 25% chance to trigger a canned lick (Higher for Bird style)
+            const lickProb = style === 'bird' ? 0.35 : 0.2;
+            if (style !== 'scalar' && style !== 'shred' && style !== 'neo' && Math.random() < lickProb) {
                 const lickKeys = Object.keys(CANNED_LICKS);
-                sb.currentLick = CANNED_LICKS[lickKeys[Math.floor(Math.random() * lickKeys.length)]];
+                let pool = lickKeys;
+                if (style === 'bird') pool = lickKeys.filter(k => k.startsWith('bird') || k === 'bebop_1');
+                
+                sb.currentLick = CANNED_LICKS[pool[Math.floor(Math.random() * pool.length)]];
                 sb.lickIndex = 0;
+                sb.lickBaseMidi = rootMidi;
             } else {
                 sb.currentLick = null;
+                
+                // Bird style enclosure chance
+                if (style === 'bird' && Math.random() < 0.4) {
+                    const target = chordTones[Math.floor(Math.random() * chordTones.length)];
+                    let targetMidi = target; // target is already absolute rootMidi + interval
+                    while (targetMidi < minMidi) targetMidi += 12;
+                    while (targetMidi > maxMidi) targetMidi -= 12;
+                    
+                    sb.currentLick = getEnclosure(targetMidi, scaleTones);
+                    sb.lickIndex = 0;
+                    sb.lickBaseMidi = targetMidi;
+                }
             }
         }
     }
@@ -211,7 +277,14 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         if (style === 'minimal') cellPool = [[1, 0, 0, 0], [1, 0, 1, 0]];
         if (style === 'shred') cellPool = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 0, 1, 1]]; // Favor constant 16ths
         if (style === 'neo') cellPool = [[1, 0, 0, 1], [0, 1, 0, 1], [1, 0, 1, 0]]; // Laid back
+        if (style === 'bird') cellPool = [[1, 1, 1, 1], [1, 0, 1, 1], [0, 1, 1, 1], [1, 1, 0, 1]]; // Denser bebop rhythms
         sb.currentCell = cellPool[Math.floor(Math.random() * cellPool.length)];
+        
+        // Rhythmic displacement chance for Bird
+        if (style === 'bird' && measureStep === 0 && Math.random() < 0.3) {
+            sb.busySteps = 1; // Skip the very first 16th for an offbeat start
+            return null;
+        }
     }
 
     // Check rhythmic cell for current step
@@ -219,15 +292,6 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     if (sb.currentCell[stepInBeat] === 0 && !sb.currentLick) return null;
 
     // --- Pitch Selection ---
-    const minMidi = centerMidi - (style === 'shred' ? 24 : 18);
-    const maxMidi = Math.min(centerMidi + (style === 'shred' ? 30 : 24), 91); // Ceiling at G6 (91)
-    const prevMidi = prevFreq ? getMidi(prevFreq) : centerMidi;
-    const rootMidi = currentChord.rootMidi;
-    
-    const chordTones = currentChord.intervals.map(i => rootMidi + i);
-    const scaleIntervals = getScaleForChord(currentChord, style);
-    const scaleTones = scaleIntervals.map(i => rootMidi + i);
-
     let finalMidi = prevMidi;
     let isGraceNote = false;
     let bendStartInterval = 0;
@@ -235,7 +299,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     // --- Lick Logic ---
     if (sb.currentLick) {
         const lickNote = sb.currentLick[sb.lickIndex];
-        let targetMidi = rootMidi + lickNote;
+        let targetMidi = (sb.lickBaseMidi || rootMidi) + lickNote;
         
         // Ensure it's in a reasonable range
         while (targetMidi < minMidi) targetMidi += 12;
@@ -439,8 +503,11 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         finalMidi -= 1;
     }
 
-    if (style === 'bird' && Math.random() < 0.2 && stepInBeat !== 0) {
-        finalMidi += (Math.random() > 0.5 ? 1 : -1);
+    // Bebop chromatic passing tones (Bird style)
+    if (style === 'bird' && stepInBeat !== 0 && !sb.currentLick && Math.random() < 0.3) {
+        // Approach target scale tone chromatically
+        if (sb.direction > 0) finalMidi -= 1;
+        else finalMidi += 1;
     }
 
     // Avoid dissonant "avoid notes" on downbeats
@@ -450,7 +517,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         const normDist = (finalMidi - rootMidi + 120) % 12;
         const isScaleTone = scaleIntervals.includes(normDist);
         
-        if (isScaleTone || style === 'scalar' || style === 'shred') {
+        if (isScaleTone || style === 'scalar' || style === 'shred' || style === 'bird') {
             let safeMidi = finalMidi + currentDir;
             let attempts = 0;
             while (attempts < 12) {
