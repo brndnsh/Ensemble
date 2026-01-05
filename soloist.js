@@ -16,6 +16,8 @@ const RHYTHMIC_CELLS = [
     [1, 0, 1, 1], // Reverse gallop
     [0, 1, 1, 1], // Offbeat start
     [1, 0, 0, 1], // Syncopated
+    [1, 1, 0, 1], // Bebop-esque 1
+    [0, 1, 1, 0], // Offbeat syncopation
 ];
 
 const CANNED_LICKS = {
@@ -23,8 +25,42 @@ const CANNED_LICKS = {
     'blues_1': [12, 15, 12, 10, 9, 7], // 1 b3 1 b7 6 5
     'rock_1': [0, 3, 5, 5, 3, 0],      // 1 b3 4 4 b3 1
     'bebop_1': [7, 6, 5, 4, 3, 2, 1, 0], // 5 b5 4 3 b3 2 b2 1
+    'bird_1': [12, 11, 10, 9, 8, 7, 5, 4, 2, 0], // Chromatic descent to root
+    'bird_2': [0, 4, 7, 11, 14, 12], // Arp up to 9th, then root
+    'bird_3': [7, 8, 9, 10, 11, 12], // Chromatic approach to root from 5th
+    'bird_4': [4, 5, 6, 7, 11, 12], // 3 4 #4 5 7 1
     'shred_1': [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], // Major Arp Sweep
 };
+
+/**
+ * Generates an enclosure pattern (group of notes surrounding a target).
+ * @param {number} targetMidi 
+ * @param {number[]} scaleTones 
+ * @returns {number[]} relative to targetMidi
+ */
+function getEnclosure(targetMidi, scaleTones) {
+    const type = Math.random();
+    if (type < 0.4) {
+        // Chromatic: Half step above, half step below, target
+        return [1, -1, 0];
+    } else if (type < 0.7) {
+        // Scale step above, half step below, target
+        let above = 2;
+        for (let t of scaleTones) {
+            let m = t;
+            while (m < targetMidi) m += 12;
+            if (m > targetMidi && m < targetMidi + 4) {
+                above = m - targetMidi;
+                break;
+            }
+        }
+        return [above, -1, 0];
+    } else {
+        // Double chromatic from above: +2, +1, target
+        return [2, 1, 0];
+    }
+}
+
 
 const SEQUENCES = {
     'up3': { offsets: [0, 1, 2], nextBase: 1 },
@@ -108,11 +144,14 @@ function getScaleForChord(chord, style) {
     // Bebop Scale Logic (8-note scales)
     if (style === 'bird') {
         switch (chord.quality) {
-            case 'maj7': return [0, 2, 4, 5, 7, 8, 9, 11]; // Bebop Major (adds #5)
-            case 'minor': return [0, 2, 3, 4, 5, 7, 9, 10]; // Bebop Minor (adds maj3)
+            case 'maj7': return [0, 2, 4, 5, 7, 8, 9, 11]; // Bebop Major
+            case 'minor': return [0, 2, 3, 4, 5, 7, 9, 10]; // Bebop Minor
             case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];   // Locrian
             default: 
-                if (chord.intervals.includes(10)) return [0, 2, 4, 5, 7, 9, 10, 11]; // Bebop Dominant (adds maj7)
+                // 30% chance of Altered scale on dominant chords for that "Bird" tension
+                if (Math.random() < 0.3) return [0, 1, 3, 4, 6, 8, 10]; 
+                
+                if (chord.intervals.includes(10)) return [0, 2, 4, 5, 7, 9, 10, 11]; // Bebop Dominant
                 return [0, 2, 4, 5, 7, 8, 9, 11];
         }
     }
@@ -174,6 +213,16 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     if (style === 'minimal') velocity *= 1.1; // Stronger individual notes
     if (style === 'neo') velocity *= (0.8 + Math.random() * 0.25); // Softer, more expressive
 
+    // --- Pitch Selection Bounds & Tones ---
+    const minMidi = centerMidi - (style === 'shred' ? 24 : 18);
+    const maxMidi = Math.min(centerMidi + (style === 'shred' ? 30 : 24), 91); // Ceiling at G6 (91)
+    const prevMidi = prevFreq ? getMidi(prevFreq) : centerMidi;
+    const rootMidi = currentChord.rootMidi;
+    
+    const chordTones = currentChord.intervals.map(i => rootMidi + i);
+    const scaleIntervals = getScaleForChord(currentChord, style);
+    const scaleTones = scaleIntervals.map(i => rootMidi + i);
+
     // --- Phrasing Logic ---
     if (measureStep === 0 || sb.phraseSteps <= 0) {
         // Decide if we should start a new phrase or rest
@@ -190,14 +239,30 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
             sb.patternMode = Math.random() < 0.6 ? 'scale' : 'arp';
             sb.sequenceType = null;
             
-            // 20% chance to trigger a canned lick
-            // Canned licks are fixed intervals, so we avoid them in strict diatonic styles
-            if (style !== 'scalar' && style !== 'shred' && style !== 'neo' && Math.random() < 0.2) {
+            // 25% chance to trigger a canned lick (Higher for Bird style)
+            const lickProb = style === 'bird' ? 0.35 : 0.2;
+            if (style !== 'scalar' && style !== 'shred' && style !== 'neo' && Math.random() < lickProb) {
                 const lickKeys = Object.keys(CANNED_LICKS);
-                sb.currentLick = CANNED_LICKS[lickKeys[Math.floor(Math.random() * lickKeys.length)]];
+                let pool = lickKeys;
+                if (style === 'bird') pool = lickKeys.filter(k => k.startsWith('bird') || k === 'bebop_1');
+                
+                sb.currentLick = CANNED_LICKS[pool[Math.floor(Math.random() * pool.length)]];
                 sb.lickIndex = 0;
+                sb.lickBaseMidi = rootMidi;
             } else {
                 sb.currentLick = null;
+                
+                // Bird style enclosure chance
+                if (style === 'bird' && Math.random() < 0.4) {
+                    const target = chordTones[Math.floor(Math.random() * chordTones.length)];
+                    let targetMidi = target; // target is already absolute rootMidi + interval
+                    while (targetMidi < minMidi) targetMidi += 12;
+                    while (targetMidi > maxMidi) targetMidi -= 12;
+                    
+                    sb.currentLick = getEnclosure(targetMidi, scaleTones);
+                    sb.lickIndex = 0;
+                    sb.lickBaseMidi = targetMidi;
+                }
             }
         }
     }
@@ -211,7 +276,14 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         if (style === 'minimal') cellPool = [[1, 0, 0, 0], [1, 0, 1, 0]];
         if (style === 'shred') cellPool = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 0, 1, 1]]; // Favor constant 16ths
         if (style === 'neo') cellPool = [[1, 0, 0, 1], [0, 1, 0, 1], [1, 0, 1, 0]]; // Laid back
+        if (style === 'bird') cellPool = [[1, 1, 1, 1], [1, 0, 1, 1], [0, 1, 1, 1], [1, 1, 0, 1]]; // Denser bebop rhythms
         sb.currentCell = cellPool[Math.floor(Math.random() * cellPool.length)];
+        
+        // Rhythmic displacement chance for Bird
+        if (style === 'bird' && measureStep === 0 && Math.random() < 0.3) {
+            sb.busySteps = 1; // Skip the very first 16th for an offbeat start
+            return null;
+        }
     }
 
     // Check rhythmic cell for current step
@@ -219,15 +291,6 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     if (sb.currentCell[stepInBeat] === 0 && !sb.currentLick) return null;
 
     // --- Pitch Selection ---
-    const minMidi = centerMidi - (style === 'shred' ? 24 : 18);
-    const maxMidi = Math.min(centerMidi + (style === 'shred' ? 30 : 24), 91); // Ceiling at G6 (91)
-    const prevMidi = prevFreq ? getMidi(prevFreq) : centerMidi;
-    const rootMidi = currentChord.rootMidi;
-    
-    const chordTones = currentChord.intervals.map(i => rootMidi + i);
-    const scaleIntervals = getScaleForChord(currentChord, style);
-    const scaleTones = scaleIntervals.map(i => rootMidi + i);
-
     let finalMidi = prevMidi;
     let isGraceNote = false;
     let bendStartInterval = 0;
@@ -235,7 +298,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     // --- Lick Logic ---
     if (sb.currentLick) {
         const lickNote = sb.currentLick[sb.lickIndex];
-        let targetMidi = rootMidi + lickNote;
+        let targetMidi = (sb.lickBaseMidi || rootMidi) + lickNote;
         
         // Ensure it's in a reasonable range
         while (targetMidi < minMidi) targetMidi += 12;
@@ -254,7 +317,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         }
 
         sb.busySteps = durationMultiplier - 1;
-        return { freq: getFrequency(finalMidi), durationMultiplier };
+        return { freq: getFrequency(finalMidi), durationMultiplier, style };
     } else if (sb.sequenceType) {
         const seq = SEQUENCES[sb.sequenceType];
         const offset = seq.offsets[sb.sequenceIndex];
@@ -300,7 +363,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         while (finalMidi > maxMidi) finalMidi -= 12;
         while (finalMidi < minMidi) finalMidi += 12;
         
-        return { freq: getFrequency(finalMidi), durationMultiplier };
+        return { freq: getFrequency(finalMidi), durationMultiplier, style };
     } else {
         // Trigger a sequence sometimes in many modes
         // Shred, Scalar, Bird, and Blues all benefit from sequences
@@ -439,31 +502,70 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         finalMidi -= 1;
     }
 
-    if (style === 'bird' && Math.random() < 0.2 && stepInBeat !== 0) {
-        finalMidi += (Math.random() > 0.5 ? 1 : -1);
+    // Bebop chromatic passing tones (Bird style)
+    if (style === 'bird' && stepInBeat % 2 !== 0 && !sb.currentLick && Math.random() < 0.4) {
+        // Approach target scale tone chromatically on the 16th subdivisions
+        if (sb.direction > 0) finalMidi -= 1;
+        else finalMidi += 1;
+    }
+
+    // --- Bird Specific "Correctness" Fixes ---
+    if (style === 'bird') {
+        const chordTonePCs = chord.intervals.map(i => (rootMidi + i) % 12);
+        const isStrong8th = (stepInBeat % 2 === 0);
+        const currentPC = finalMidi % 12;
+
+        // 1. Force resolution if we just played a chromatic or "outside" note
+        const wasOutside = !scaleTones.some(t => (t % 12) === (prevMidi % 12));
+        if (wasOutside || (isStrong8th && !chordTonePCs.includes(currentPC) && Math.random() < 0.7)) {
+            // Snap to nearest chord tone
+            let bestMidi = finalMidi;
+            let minDist = 13;
+            chordTones.forEach(t => {
+                let m = t;
+                while (m < finalMidi - 6) m += 12;
+                while (m > finalMidi + 6) m -= 12;
+                const d = Math.abs(m - finalMidi);
+                if (d < minDist && m <= maxMidi && m >= minMidi) {
+                    minDist = d;
+                    bestMidi = m;
+                }
+            });
+            finalMidi = bestMidi;
+        }
+
+        // 2. Large Interval Recovery
+        const intervalJump = Math.abs(finalMidi - prevMidi);
+        if (intervalJump > 7) {
+             // If we just jumped a large distance, the NEXT note should be stepwise in the opposite direction
+             sb.patternSteps = 2; 
+             sb.direction = (finalMidi > prevMidi) ? -1 : 1;
+             sb.patternMode = 'scale';
+        }
     }
 
     // Avoid dissonant "avoid notes" on downbeats
     const intervalFromRoot = (finalMidi - rootMidi + 120) % 12;
-    if (stepInBeat === 0 && intervalFromRoot === 5 && !chordTones.some(t => (t % 12) === (finalMidi % 12))) {
+    if (stepInBeat === 0 && !chordTones.some(t => (t % 12) === (finalMidi % 12))) {
         const currentDir = sb.direction || 1;
-        const normDist = (finalMidi - rootMidi + 120) % 12;
-        const isScaleTone = scaleIntervals.includes(normDist);
         
-        if (isScaleTone || style === 'scalar' || style === 'shred') {
+        // Avoid 4th (11) on Major chords
+        const isAvoid11 = (chord.quality === 'maj7' || chord.quality === 'dom') && intervalFromRoot === 5;
+        // Avoid Major 7th on Dominant chords (unless using bebop scale passing tone)
+        const isAvoidMaj7 = (chord.quality === 'dom' && intervalFromRoot === 11 && style !== 'bird');
+
+        if (isAvoid11 || isAvoidMaj7) {
             let safeMidi = finalMidi + currentDir;
             let attempts = 0;
             while (attempts < 12) {
                  const d = (safeMidi - rootMidi + 120) % 12;
-                 if (scaleIntervals.includes(d) && d !== 5 && safeMidi <= maxMidi && safeMidi >= minMidi) {
+                 if (scaleIntervals.includes(d) && d !== 5 && d !== 11 && safeMidi <= maxMidi && safeMidi >= minMidi) {
                      finalMidi = safeMidi;
                      break;
                  }
                  safeMidi += currentDir;
                  attempts++;
             }
-        } else {
-             finalMidi += currentDir;
         }
     }
 

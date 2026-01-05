@@ -83,6 +83,7 @@ export const sb = {
     currentCell: [1, 0, 1, 0],
     currentLick: null,
     lickIndex: 0,
+    lickBaseMidi: null,
     busySteps: 0
 };
 

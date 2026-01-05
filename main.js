@@ -448,8 +448,10 @@ function updateChordVis(ev) {
 
         // Check if out of view (vertically)
         if (cardRect.top < containerRect.top || cardRect.bottom > containerRect.bottom) {
-            // Scroll neatly to center the card
-            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Scroll neatly to center the card without jumping the whole page
+            const offsetTop = card.offsetTop - container.offsetTop;
+            const scrollPos = offsetTop - (container.clientHeight / 2) + (card.clientHeight / 2);
+            container.scrollTo({ top: scrollPos, behavior: 'smooth' });
         }
     }
 }
