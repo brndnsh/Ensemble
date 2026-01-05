@@ -318,7 +318,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         }
 
         sb.busySteps = durationMultiplier - 1;
-        return { freq: getFrequency(finalMidi), durationMultiplier };
+        return { freq: getFrequency(finalMidi), durationMultiplier, style };
     } else if (sb.sequenceType) {
         const seq = SEQUENCES[sb.sequenceType];
         const offset = seq.offsets[sb.sequenceIndex];
@@ -364,7 +364,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         while (finalMidi > maxMidi) finalMidi -= 12;
         while (finalMidi < minMidi) finalMidi += 12;
         
-        return { freq: getFrequency(finalMidi), durationMultiplier };
+        return { freq: getFrequency(finalMidi), durationMultiplier, style };
     } else {
         // Trigger a sequence sometimes in many modes
         // Shred, Scalar, Bird, and Blues all benefit from sequences
