@@ -83,6 +83,7 @@ export const CHORD_PRESETS = [
     { name: "Jazz Cycle", prog: "iii7 | VI7#9 | ii9 | V9 | Imaj9", category: "Jazz" },
     { name: "Neo-Soul", prog: "IVmaj7 | iii7 | ii7 | Imaj7", category: "Soul/R&B" },
     { name: "Neo-Soul (Slash)", prog: "IVmaj7/5 | iii7 | ii7/5 | Imaj7", category: "Soul/R&B" },
+    { name: "Acid Jazz Vamp", prog: "i9 | IV9 | i9 | V7#9", category: "Soul/Funk" },
     { name: "Funk (i-IV)", prog: "i7 | IV7 | i7 | IV7", category: "Soul/R&B" },
     { name: "Circle of 4ths", prog: "I7 | IV7 | bVII7 | bIII7 | bVI7 | bII7 | V7 | I7", category: "Theory" },
     { name: "Plagal Flow", prog: "I | IV | I | IV", category: "Theory" }
