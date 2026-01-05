@@ -859,35 +859,17 @@ function setupPresets() {
     // Style Presets
     renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', cb.style, (item) => updateStyle('chord', item.id));
     renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', sb.style, (item) => updateStyle('soloist', item.id));
-    
-    // Bass (Flat)
-    const setupFlat = (container, data, type, activeId) => {
-        data.forEach(s => {
-            const chip = document.createElement('div');
-            chip.className = `preset-chip ${type}-style-chip`;
-            chip.textContent = s.name;
-            chip.dataset.id = s.id;
-            chip.dataset.category = 'Basic';
-            if (s.id === activeId) chip.classList.add('active');
-            chip.onclick = () => updateStyle(type, s.id);
-            container.appendChild(chip);
-        });
-    };
-    setupFlat(ui.bassStylePresets, BASS_STYLES, 'bass', bb.style);
+    renderCategorized(ui.bassStylePresets, BASS_STYLES, 'bass-style', bb.style, (item) => updateStyle('bass', item.id));
 
     // Drum Presets
-    Object.keys(DRUM_PRESETS).forEach(k => {
-        const chip = document.createElement('div');
-        chip.className = 'preset-chip drum-preset-chip';
-        chip.textContent = k;
-        chip.dataset.category = 'Basic';
-        if (k === 'Standard') chip.classList.add('active');
-        chip.onclick = () => {
-            loadDrumPreset(k);
-            document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-        };
-        ui.drumPresets.appendChild(chip);
+    const drumPresetsArray = Object.keys(DRUM_PRESETS).map(name => ({
+        name,
+        ...DRUM_PRESETS[name]
+    }));
+    renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', 'Standard', (item, chip) => {
+        loadDrumPreset(item.name);
+        document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
     });
 
     // Chord Progression Presets
