@@ -13,13 +13,13 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **`main.js`**: Orchestrates the application initialization, event listeners, connects the UI with the audio engine, and registers the Service Worker.
 *   **`engine.js`**: Handles all Web Audio API operations, including the scheduler loop, sound synthesis (oscillators for chords), and drum sample playback.
 *   **`state.js`**: Manages the global application state (playback status, BPM, active instruments, user presets).
-*   **`chords.js`**: Contains logic for parsing chord progressions (Roman Numerals, Nashville Numbers, Chord Names) and calculating voicings.
+*   **`chords.js`**: Contains logic for parsing chord progressions. Modularized into `resolveChordRoot`, `getIntervals`, and `getFormattedChordNames` returning structured data.
 *   **`accompaniment.js`**: Defines the rhythmic playback patterns for all chord styles (e.g., Funk, Reggae, Bossa Nova).
 *   **`bass.js`**: Generates walking bass lines and patterns based on chord progressions and desired register.
 *   **`soloist.js`**: Implements advanced algorithmic soloing logic, including phrasing, rhythmic cells, and harmonic targeting.
 *   **`visualizer.js`**: Implements the `UnifiedVisualizer` class for multi-track, time-based harmonic and melodic visualization.
 *   **`midi-export.js`**: Handles offline generation of Standard MIDI Files (SMF) including track assembly and timing calculations.
-*   **`ui.js`**: Centralizes DOM element references and UI manipulation functions (toasts, visual updates).
+*   **`ui.js`**: Centralizes DOM element creation and UI manipulation. Contains helpers like `createPresetChip`, `createTrackRow`, and `createChordLabel`.
 *   **`config.js`**: Stores static configuration, such as default drum presets, chord styles, and musical constants.
 *   **`utils.js`**: Contains common utility functions for frequency calculation and formatting.
 *   **`sw.js`**: A Service Worker that caches key assets to enable offline functionality.
@@ -27,7 +27,8 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 ## Features
 
 ### Chords
-*   **Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`). Use the pipe symbol (`|`) to explicitly delimit measures (e.g., `I | IV | V | I`).
+*   **Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`). Use the pipe symbol (`|`) to explicitly delimit measures.
+*   **Extended Form Support**: Resizable multi-line input supports long progressions (32+ bars).
 *   **Playback Styles**: Choose from various accompaniment styles like Pad, Pulse, Strum, Funk, Reggae, Double Skank, Jazz Comp, Freddie Green, Bossa Nova, and more.
 *   **Smart Voicing**: Automatically calculates smooth voice leading for chords.
 *   **Transposition**: Instantly transpose the entire progression to any key.
@@ -52,7 +53,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 ### Unified Visualizer
 *   **Harmonic Superimposition**: Centralized graph that overlays Bass, Soloist, and Chords in a single visual timeline.
 *   **Color-Coded Intervals**: Uses a vivid harmonic color scheme (Blue: Root, Green: 3rd, Orange: 5th, Purple: 7th+) to show the function of every note in real-time.
-*   **Rhythmic Reference**: Integrated vertical grid for beats and measures.
+*   **Auto-Scroll**: Automatically scrolls to keep the active chord in view during playback of long forms.
 *   **Smart Octave Wrapping**: Automatically ensures notes stay within the visual range while preserving their harmonic context.
 
 ### General
@@ -85,9 +86,10 @@ Navigate to `http://localhost:8000` (or the port shown by your server) to view t
 
 ## Architecture Notes
 
-*   **Audio Scheduling**: The `scheduler()` function in `main.js` looks ahead to schedule audio events precisely. It employs a dual-clock system: a "swung" clock for the rhythm section and an "unswung" clock for the soloist, allowing for a more laid-back melodic feel. `requestAnimationFrame` handles visual synchronization, utilizing `outputLatency` (where available) to align the visual playhead with the audible output.
-*   **Centralized Mixing**: Instrumental gain balance is managed via `MIXER_GAIN_MULTIPLIERS` in `config.js`. This ensures that volume ratios remain consistent across manual UI adjustments, programmatic initialization, and settings resets.
-*   **Performance Optimization**: DOM elements for the sequencer grid and chord progression cards are cached in the global state during rendering to minimize query overhead in the high-frequency animation and state-update loops. High-frequency visual state cleanup is handled by a centralized `clearActiveVisuals` utility in `ui.js`.
+*   **Audio Scheduling**: The `scheduler()` function in `main.js` looks ahead to schedule audio events precisely. It employs a dual-clock system: a "swung" clock for the rhythm section and an "unswung" clock for the soloist.
+*   **Data-Driven Rendering**: `chords.js` parses strings into structured data objects (containing root, suffix, bass info). `ui.js` consumes this data to build DOM elements programmatically, avoiding `innerHTML` and enabling clean export logic.
+*   **Centralized Mixing**: Instrumental gain balance is managed via `MIXER_GAIN_MULTIPLIERS` in `config.js`.
+*   **Performance Optimization**: DOM elements for the sequencer grid and chord progression cards are cached in the global state.
 *   **State Management**: State is divided into contexts (`ctx` for audio/runtime, `cb` for Chords, `gb` for Grooves, `bb` for Bassist, `sb` for Soloist) in `state.js`.
 *   **Persistence**: User presets and preferences are saved to `localStorage`.
 
