@@ -713,32 +713,19 @@ function setupUIHandlers() {
 function setupPresets() {
     const renderCategorized = (container, data, type, activeId, onSelect) => {
         container.innerHTML = '';
-        const groups = {};
-        data.forEach(item => {
-            const cat = item.category || 'Other';
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push(item);
-        });
-
-        Object.keys(groups).forEach(cat => {
-            const header = document.createElement('div');
-            header.className = 'preset-category-header';
-            header.textContent = cat;
-            container.appendChild(header);
-
-            const groupDiv = document.createElement('div');
-            groupDiv.className = 'preset-group';
-            groups[cat].forEach(item => {
-                const chip = document.createElement('div');
-                chip.className = `preset-chip ${type}-chip`;
-                chip.textContent = item.name;
-                const itemId = item.id || item.name;
-                chip.dataset.id = itemId;
-                if (itemId === activeId) chip.classList.add('active');
-                chip.onclick = () => onSelect(item, chip);
-                groupDiv.appendChild(chip);
-            });
-            container.appendChild(groupDiv);
+        // Sort by category to keep similar colors together
+        const sorted = [...data].sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+        
+        sorted.forEach(item => {
+            const chip = document.createElement('div');
+            const itemId = item.id || item.name;
+            chip.className = `preset-chip ${type}-chip`;
+            chip.textContent = item.name;
+            chip.dataset.id = itemId;
+            chip.dataset.category = item.category || 'Other';
+            if (itemId === activeId) chip.classList.add('active');
+            chip.onclick = () => onSelect(item, chip);
+            container.appendChild(chip);
         });
     };
 
@@ -746,13 +733,14 @@ function setupPresets() {
     renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', cb.style, (item) => updateStyle('chord', item.id));
     renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', sb.style, (item) => updateStyle('soloist', item.id));
     
-    // Bass (Simple enough to stay flat or use 'Basic' category)
+    // Bass (Flat)
     const setupFlat = (container, data, type, activeId) => {
         data.forEach(s => {
             const chip = document.createElement('div');
             chip.className = `preset-chip ${type}-style-chip`;
             chip.textContent = s.name;
             chip.dataset.id = s.id;
+            chip.dataset.category = 'Basic';
             if (s.id === activeId) chip.classList.add('active');
             chip.onclick = () => updateStyle(type, s.id);
             container.appendChild(chip);
@@ -760,11 +748,12 @@ function setupPresets() {
     };
     setupFlat(ui.bassStylePresets, BASS_STYLES, 'bass', bb.style);
 
-    // Drum Presets (Flat loop for now)
+    // Drum Presets
     Object.keys(DRUM_PRESETS).forEach(k => {
         const chip = document.createElement('div');
         chip.className = 'preset-chip drum-preset-chip';
         chip.textContent = k;
+        chip.dataset.category = 'Basic';
         if (k === 'Standard') chip.classList.add('active');
         chip.onclick = () => {
             loadDrumPreset(k);
