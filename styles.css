@@ -493,10 +493,27 @@ textarea#progressionInput {
 .presets-container {
     display: flex;
     gap: 0.5rem;
-    flex-wrap: wrap; /* Allow wrapping */
+    flex-direction: column; /* Changed to column for groups */
     margin-top: 1rem;
     padding-bottom: 8px;
 }
+
+.preset-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.preset-category-header {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: #64748b;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    margin-top: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
 .preset-chip {
     background: #334155;
     padding: 0.3rem 0.8rem;

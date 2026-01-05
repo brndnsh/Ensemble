@@ -711,7 +711,43 @@ function setupUIHandlers() {
 }
 
 function setupPresets() {
-    const setup = (container, data, type, activeId) => {
+    const renderCategorized = (container, data, type, activeId, onSelect) => {
+        container.innerHTML = '';
+        const groups = {};
+        data.forEach(item => {
+            const cat = item.category || 'Other';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
+
+        Object.keys(groups).forEach(cat => {
+            const header = document.createElement('div');
+            header.className = 'preset-category-header';
+            header.textContent = cat;
+            container.appendChild(header);
+
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'preset-group';
+            groups[cat].forEach(item => {
+                const chip = document.createElement('div');
+                chip.className = `preset-chip ${type}-chip`;
+                chip.textContent = item.name;
+                const itemId = item.id || item.name;
+                chip.dataset.id = itemId;
+                if (itemId === activeId) chip.classList.add('active');
+                chip.onclick = () => onSelect(item, chip);
+                groupDiv.appendChild(chip);
+            });
+            container.appendChild(groupDiv);
+        });
+    };
+
+    // Style Presets
+    renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', cb.style, (item) => updateStyle('chord', item.id));
+    renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', sb.style, (item) => updateStyle('soloist', item.id));
+    
+    // Bass (Simple enough to stay flat or use 'Basic' category)
+    const setupFlat = (container, data, type, activeId) => {
         data.forEach(s => {
             const chip = document.createElement('div');
             chip.className = `preset-chip ${type}-style-chip`;
@@ -722,7 +758,9 @@ function setupPresets() {
             container.appendChild(chip);
         });
     };
+    setupFlat(ui.bassStylePresets, BASS_STYLES, 'bass', bb.style);
 
+    // Drum Presets (Flat loop for now)
     Object.keys(DRUM_PRESETS).forEach(k => {
         const chip = document.createElement('div');
         chip.className = 'preset-chip drum-preset-chip';
@@ -736,23 +774,13 @@ function setupPresets() {
         ui.drumPresets.appendChild(chip);
     });
 
-    CHORD_PRESETS.forEach(p => {
-        const chip = document.createElement('div');
-        chip.className = 'preset-chip chord-preset-chip';
-        chip.textContent = p.name;
-        if (p.name === 'Pop') chip.classList.add('active');
-        chip.onclick = () => {
-            ui.progInput.value = p.prog;
-            validateProgression(renderChordVisualizer);
-            document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-        };
-        ui.chordPresets.appendChild(chip);
+    // Chord Progression Presets
+    renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', 'Pop (Standard)', (item, chip) => {
+        ui.progInput.value = item.prog;
+        validateProgression(renderChordVisualizer);
+        document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
     });
-
-    setup(ui.chordStylePresets, CHORD_STYLES, 'chord', cb.style);
-    setup(ui.bassStylePresets, BASS_STYLES, 'bass', bb.style);
-    setup(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist', sb.style);
 }
 
 // --- INITIALIZATION ---

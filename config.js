@@ -31,20 +31,20 @@ export const DRUM_PRESETS = {
 };
 
 export const CHORD_STYLES = [
-    { id: 'pad', name: 'Pad' },
-    { id: 'strum8', name: 'Strum' },
-    { id: 'pop', name: 'Pop' },
-    { id: 'rock', name: 'Pop-Rock' },
-    { id: 'skank', name: 'Reggae' },
-    { id: 'double_skank', name: 'Double Skank' },
-    { id: 'funk', name: 'Funk' },
-    { id: 'arpeggio', name: 'Arpeggio' },
-    { id: 'tresillo', name: 'Tresillo' },
-    { id: 'clave', name: 'Clave' },
-    { id: 'afrobeat', name: 'Afrobeat' },
-    { id: 'jazz', name: 'Jazz Comp' },
-    { id: 'green', name: 'Freddie Green' },
-    { id: 'bossa', name: 'Bossa' }
+    { id: 'pad', name: 'Pad', category: 'Pop/Rock' },
+    { id: 'strum8', name: 'Strum', category: 'Pop/Rock' },
+    { id: 'pop', name: 'Pop', category: 'Pop/Rock' },
+    { id: 'rock', name: 'Pop-Rock', category: 'Pop/Rock' },
+    { id: 'skank', name: 'Reggae', category: 'World/Latin' },
+    { id: 'double_skank', name: 'Double Skank', category: 'World/Latin' },
+    { id: 'funk', name: 'Funk', category: 'Soul/Funk' },
+    { id: 'arpeggio', name: 'Arpeggio', category: 'Pop/Rock' },
+    { id: 'tresillo', name: 'Tresillo', category: 'World/Latin' },
+    { id: 'clave', name: 'Clave', category: 'World/Latin' },
+    { id: 'afrobeat', name: 'Afrobeat', category: 'World/Latin' },
+    { id: 'jazz', name: 'Jazz Comp', category: 'Jazz' },
+    { id: 'green', name: 'Freddie Green', category: 'Jazz' },
+    { id: 'bossa', name: 'Bossa', category: 'World/Latin' }
 ];
 
 export const BASS_STYLES = [
@@ -55,33 +55,33 @@ export const BASS_STYLES = [
 ];
 
 export const SOLOIST_STYLES = [
-    { id: 'scalar', name: 'Scalar' },
-    { id: 'shred', name: 'Shreddy' },
-    { id: 'bird', name: 'Bebop' },
-    { id: 'blues', name: 'Blues' },
-    { id: 'neo', name: 'Neo-Soul' },
-    { id: 'minimal', name: 'Minimal' }
+    { id: 'scalar', name: 'Scalar', category: 'Basic' },
+    { id: 'shred', name: 'Shreddy', category: 'Rock/Metal' },
+    { id: 'bird', name: 'Bebop', category: 'Jazz' },
+    { id: 'blues', name: 'Blues', category: 'Blues' },
+    { id: 'neo', name: 'Neo-Soul', category: 'Soul/R&B' },
+    { id: 'minimal', name: 'Minimal', category: 'Basic' }
 ];
 
 export const CHORD_PRESETS = [
-    { name: "Pop (Standard)", prog: "I | V | vi | IV" },
-    { name: "Pop (Ballad)", prog: "vi | IV | I | V" },
-    { name: "12-Bar Blues", prog: "I7 | I7 | I7 | I7 | IV7 | IV7 | I7 | I7 | V7 | IV7 | I7 | V7" },
-    { name: "Jazz Blues", prog: "I7 | IV7 | I7 | v7 I7 | IV7 | IV7 | I7 | iii7 VI7 | ii7 | V7 | I7 VI7 | ii7 V7" },
-    { name: "Jazz II-V-I", prog: "ii7 | V7 | Imaj7 | Imaj7" },
-    { name: "Minor II-V-I", prog: "iiø7 | V7 | i7 | i7" },
-    { name: "Rhythm Changes", prog: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I" },
-    { name: "Neo-Soul", prog: "IVmaj7 | iii7 | ii7 | Imaj7" },
-    { name: "Neo-Soul (Slash)", prog: "IVmaj7/5 | iii7 | ii7/5 | Imaj7" },
-    { name: "Andalusian", prog: "vi | V | IV | III" },
-    { name: "Canon", prog: "I | V | vi | iii | IV | I | IV | V" },
-    { name: "Royal Road", prog: "IVmaj7 | V7 | iii7 | vi7" },
-    { name: "50s Rock", prog: "I | vi | IV | V" },
-    { name: "Funk (i-IV)", prog: "i7 | IV7 | i7 | IV7" },
-    { name: "Jazz Turnaround", prog: "Imaj7 VI7 | ii7 V7 | Imaj7 VI7 | ii7 V7" },
-    { name: "Jazz Cycle", prog: "iii7 | VI7#9 | ii9 | V9 | Imaj9" },
-    { name: "Circle of 4ths", prog: "I7 | IV7 | bVII7 | bIII7 | bVI7 | bII7 | V7 | I7" },
-    { name: "Plagal Flow", prog: "I | IV | I | IV" },
-    { name: "Autumn Leaves (32 Bar)", prog: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7" },
-    { name: "Rhythm Changes (32 Bar)", prog: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I | I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I | III7 | III7 | VI7 | VI7 | II7 | II7 | V7 | V7 | I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I" }
+    { name: "Pop (Standard)", prog: "I | V | vi | IV", category: "Pop/Rock" },
+    { name: "Pop (Ballad)", prog: "vi | IV | I | V", category: "Pop/Rock" },
+    { name: "50s Rock", prog: "I | vi | IV | V", category: "Pop/Rock" },
+    { name: "Royal Road", prog: "IVmaj7 | V7 | iii7 | vi7", category: "Pop/Rock" },
+    { name: "Canon", prog: "I | V | vi | iii | IV | I | IV | V", category: "Classical/Trad" },
+    { name: "Andalusian", prog: "vi | V | IV | III", category: "Classical/Trad" },
+    { name: "12-Bar Blues", prog: "I7 | I7 | I7 | I7 | IV7 | IV7 | I7 | I7 | V7 | IV7 | I7 | V7", category: "Blues" },
+    { name: "Jazz Blues", prog: "I7 | IV7 | I7 | v7 I7 | IV7 | IV7 | I7 | iii7 VI7 | ii7 | V7 | I7 VI7 | ii7 V7", category: "Blues" },
+    { name: "Jazz II-V-I", prog: "ii7 | V7 | Imaj7 | Imaj7", category: "Jazz" },
+    { name: "Minor II-V-I", prog: "iiø7 | V7 | i7 | i7", category: "Jazz" },
+    { name: "Rhythm Changes", prog: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I", category: "Jazz" },
+    { name: "Autumn Leaves (32 Bar)", prog: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7", category: "Jazz" },
+    { name: "Rhythm Changes (32 Bar)", prog: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I | I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I | III7 | III7 | VI7 | VI7 | II7 | II7 | V7 | V7 | I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I", category: "Jazz" },
+    { name: "Jazz Turnaround", prog: "Imaj7 VI7 | ii7 V7 | Imaj7 VI7 | ii7 V7", category: "Jazz" },
+    { name: "Jazz Cycle", prog: "iii7 | VI7#9 | ii9 | V9 | Imaj9", category: "Jazz" },
+    { name: "Neo-Soul", prog: "IVmaj7 | iii7 | ii7 | Imaj7", category: "Soul/R&B" },
+    { name: "Neo-Soul (Slash)", prog: "IVmaj7/5 | iii7 | ii7/5 | Imaj7", category: "Soul/R&B" },
+    { name: "Funk (i-IV)", prog: "i7 | IV7 | i7 | IV7", category: "Soul/R&B" },
+    { name: "Circle of 4ths", prog: "I7 | IV7 | bVII7 | bIII7 | bVI7 | bII7 | V7 | I7", category: "Theory" },
+    { name: "Plagal Flow", prog: "I | IV | I | IV", category: "Theory" }
 ];
