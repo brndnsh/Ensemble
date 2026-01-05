@@ -194,6 +194,10 @@ export class UnifiedVisualizer {
         if (event.noteName && event.octave) {
             this.tracks[name].elements.label.textContent = `${event.noteName}${event.octave}`;
         }
+        // Prune periodically
+        if (this.tracks[name].history.length > 150) {
+            this.cleanupTrack(this.tracks[name]);
+        }
     }
 
     pushChord(event) {
@@ -203,6 +207,23 @@ export class UnifiedVisualizer {
             notes: event.notes ? [...event.notes] : [],
             intervals: event.intervals ? [...event.intervals] : []
         });
+        if (this.chordEvents.length > 60) {
+            this.cleanupChords();
+        }
+    }
+    
+    cleanupTrack(track) {
+         // Keep last 100 events roughly, or based on time if we had access to current time easily.
+         // Simple slice is faster than filter for keeping tail.
+         if (track.history.length > 120) {
+             track.history = track.history.slice(track.history.length - 100);
+         }
+    }
+
+    cleanupChords() {
+        if (this.chordEvents.length > 50) {
+            this.chordEvents = this.chordEvents.slice(this.chordEvents.length - 40);
+        }
     }
 
     render(currentTime, bpm) {
@@ -225,7 +246,11 @@ export class UnifiedVisualizer {
             const startBeat = Math.floor((minTime - this.beatReferenceTime) / beatLen);
             let i = startBeat;
 
-            while (true) {
+            // Limit grid drawing to reasonable range
+            const maxBeats = this.windowSize / beatLen + 2; 
+            let count = 0;
+
+            while (count < maxBeats) {
                 const t = this.beatReferenceTime + i * beatLen;
                 if (t > currentTime + beatLen) break;
 
@@ -237,6 +262,7 @@ export class UnifiedVisualizer {
                     else beatPathParts.push(lineCmd);
                 }
                 i++;
+                count++;
             }
         }
         this.beatPath.setAttribute("d", beatPathParts.join(''));
@@ -244,11 +270,6 @@ export class UnifiedVisualizer {
 
         // 1. Render Chords
         const chordReg = this.registers['chords'] || 60;
-        
-        // More efficient filtering: only filter if list is getting long
-        if (this.chordEvents.length > 50) {
-            this.chordEvents = this.chordEvents.filter(e => e.time + (e.duration || 2) >= minTime);
-        }
         
         const pathParts = { 
             root_hl: [], third_hl: [], fifth_hl: [], ext_hl: [],
@@ -262,9 +283,23 @@ export class UnifiedVisualizer {
             return "ext";
         };
 
+        // Iterate backwards for efficiency in finding visible range? 
+        // No, forward is fine, just start checking bounds.
+        let startIndex = 0;
+        // Optimization: Find the first visible event and start loop there
+        // Since events are chronological, we can skip everything that ends before minTime
         for (let i = 0; i < this.chordEvents.length; i++) {
             const ev = this.chordEvents[i];
+            if (ev.time + (ev.duration || 2.0) >= minTime) {
+                startIndex = i;
+                break;
+            }
+        }
+
+        for (let i = startIndex; i < this.chordEvents.length; i++) {
+            const ev = this.chordEvents[i];
             const chordEnd = ev.time + (ev.duration || 2.0);
+            // This check is now redundant for the start, but kept for safety if logic changes
             if (chordEnd < minTime) continue;
             
             const start = ev.time < minTime ? minTime : ev.time;
@@ -279,6 +314,7 @@ export class UnifiedVisualizer {
                 const wStr = Math.round(w * 100) / 100;
 
                 // Render Background Tones (Octave shifted)
+                // OPTIMIZATION: Only render center 3 octaves (-1, 0, 1) instead of 5
                 if (ev.intervals) {
                     for (let j = 0; j < ev.intervals.length; j++) {
                         const interval = ev.intervals[j];
@@ -287,7 +323,7 @@ export class UnifiedVisualizer {
                         const partsArray = pathParts[`${cat}_bg`];
                         const baseOctave = Math.floor(chordReg / 12);
 
-                        for (let oct = -2; oct <= 2; oct++) {
+                        for (let oct = -1; oct <= 1; oct++) {
                             const m = pc + (baseOctave + oct) * 12;
                             const y = getY(m, chordReg);
                             if (y >= -10 && y <= 110) {
@@ -328,17 +364,23 @@ export class UnifiedVisualizer {
             let headX = -10, headY = -10;
             let active = false;
             const reg = this.registers[name] || 60;
-
-            if (track.history.length > 100) {
-                track.history = track.history.filter(e => e.time + (e.duration || 0.25) >= minTime);
+            
+            let trackStartIndex = 0;
+            for(let i = 0; i < track.history.length; i++) {
+                const ev = track.history[i];
+                if (ev.time + (ev.duration || 0.25) >= minTime) {
+                    trackStartIndex = i;
+                    break;
+                }
             }
             
-            for (let i = 0; i < track.history.length; i++) {
+            for (let i = trackStartIndex; i < track.history.length; i++) {
                 const ev = track.history[i];
                 if (ev.time > currentTime) break;
 
                 const noteEnd = ev.time + (ev.duration || 0.25);
-                if (noteEnd < minTime) continue;
+                // Redundant check skipped
+                // if (noteEnd < minTime) continue;
 
                 const startT = ev.time < minTime ? minTime : ev.time;
                 const endT = noteEnd > currentTime ? currentTime : noteEnd;

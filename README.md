@@ -25,7 +25,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ### 🎷 Soloist
 *   **Algorithmic Soloing**: Generates melodic lines over your progression using rhythmic cells and harmonic targeting.
-*   **Diverse Styles**: Choose from Scalar, Shreddy (arpeggio sweeps), Bebop (enclosures), Blues, and Minimalist approaches.
+*   **Diverse Styles**: Choose from Scalar, Shreddy (arpeggio sweeps), Blues, and Minimalist approaches.
 *   **Key-Aware & Blues Logic**: Melodies strictly adhere to the parent key signature for diatonic chords and employ Major/Minor blues scales with chromatic grace note slips for authentic phrasing.
 
 ### 📊 Unified Visualizer
