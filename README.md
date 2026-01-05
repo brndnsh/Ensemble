@@ -38,6 +38,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ### General
 *   **MIDI Export**: Export your progression, bass line, and drum groove as a multi-track MIDI file (Format 1) with appropriate instrument assignments, chord name markers, and soloist pitch bends.
+*   **Color-Coded Library**: Presets and styles are organized by genre using a compact, color-coded chip system (e.g., Purple for Jazz, Blue for Pop/Rock).
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
 *   **Maximized View**: Enter a focused mode that expands the chord visualizer to fill the screen for easier reading.
 *   **Count-in**: Enable a metronome count-in to help you prepare before the rhythm section kicks in.
