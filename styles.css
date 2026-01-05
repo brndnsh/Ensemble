@@ -485,21 +485,21 @@ input[type="range"] {
 /* Progression Presets - more card-like */
 .chord-preset-chip, .user-preset-chip {
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     padding: 0.45rem 0.9rem;
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .chord-preset-chip:hover, .user-preset-chip:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.7);
 }
 
 .chord-preset-chip.active, .user-preset-chip.active {
     background: var(--accent-color);
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* --- Grooves Specific --- */
