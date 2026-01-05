@@ -159,6 +159,8 @@ function togglePower(type) {
     
     if (!c.state.enabled && c.cleanup) {
         c.cleanup();
+    } else if (c.state.enabled && ['chord', 'bass', 'soloist'].includes(type)) {
+        flushBuffers();
     } else if (type === 'viz' && c.state.enabled && ctx.isPlaying && ctx.audio) {
         // Restore beat reference if enabled mid-playback
         const secondsPerBeat = 60.0 / ctx.bpm;
@@ -179,6 +181,13 @@ function flushBuffers() {
     if (sb.lastPlayedFreq !== null) sb.lastFreq = sb.lastPlayedFreq;
     sb.buffer.clear();
     sb.bufferHead = ctx.step;
+    
+    // Reset soloist stateful counters to ensure immediate response to changes
+    sb.phraseSteps = 0;
+    sb.isResting = false;
+    sb.busySteps = 0;
+    sb.currentLick = null;
+    sb.sequenceType = null;
 }
 
 function fillBuffers() {
