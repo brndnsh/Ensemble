@@ -144,15 +144,14 @@ function getScaleForChord(chord, style) {
     // Bebop Scale Logic (8-note scales)
     if (style === 'bird') {
         switch (chord.quality) {
-            case 'maj7': return [0, 2, 4, 5, 7, 8, 9, 11]; // Bebop Major (adds #5)
-            case 'minor': return [0, 2, 3, 4, 5, 7, 9, 10]; // Bebop Minor (adds maj3)
+            case 'maj7': return [0, 2, 4, 5, 7, 8, 9, 11]; // Bebop Major
+            case 'minor': return [0, 2, 3, 4, 5, 7, 9, 10]; // Bebop Minor
             case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];   // Locrian
             default: 
-                // Altered Dominant check (look for b5, #5, b9, #9)
-                if (chord.intervals.includes(6) || chord.intervals.includes(8) || chord.intervals.includes(1) || chord.intervals.includes(3)) {
-                    return [0, 1, 3, 4, 6, 8, 10]; // Altered scale (approx)
-                }
-                if (chord.intervals.includes(10)) return [0, 2, 4, 5, 7, 9, 10, 11]; // Bebop Dominant (adds maj7)
+                // 30% chance of Altered scale on dominant chords for that "Bird" tension
+                if (Math.random() < 0.3) return [0, 1, 3, 4, 6, 8, 10]; 
+                
+                if (chord.intervals.includes(10)) return [0, 2, 4, 5, 7, 9, 10, 11]; // Bebop Dominant
                 return [0, 2, 4, 5, 7, 8, 9, 11];
         }
     }
@@ -504,33 +503,69 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     }
 
     // Bebop chromatic passing tones (Bird style)
-    if (style === 'bird' && stepInBeat !== 0 && !sb.currentLick && Math.random() < 0.3) {
-        // Approach target scale tone chromatically
+    if (style === 'bird' && stepInBeat % 2 !== 0 && !sb.currentLick && Math.random() < 0.4) {
+        // Approach target scale tone chromatically on the 16th subdivisions
         if (sb.direction > 0) finalMidi -= 1;
         else finalMidi += 1;
     }
 
+    // --- Bird Specific "Correctness" Fixes ---
+    if (style === 'bird') {
+        const chordTonePCs = chord.intervals.map(i => (rootMidi + i) % 12);
+        const isStrong8th = (stepInBeat % 2 === 0);
+        const currentPC = finalMidi % 12;
+
+        // 1. Force resolution if we just played a chromatic or "outside" note
+        const wasOutside = !scaleTones.some(t => (t % 12) === (prevMidi % 12));
+        if (wasOutside || (isStrong8th && !chordTonePCs.includes(currentPC) && Math.random() < 0.7)) {
+            // Snap to nearest chord tone
+            let bestMidi = finalMidi;
+            let minDist = 13;
+            chordTones.forEach(t => {
+                let m = t;
+                while (m < finalMidi - 6) m += 12;
+                while (m > finalMidi + 6) m -= 12;
+                const d = Math.abs(m - finalMidi);
+                if (d < minDist && m <= maxMidi && m >= minMidi) {
+                    minDist = d;
+                    bestMidi = m;
+                }
+            });
+            finalMidi = bestMidi;
+        }
+
+        // 2. Large Interval Recovery
+        const intervalJump = Math.abs(finalMidi - prevMidi);
+        if (intervalJump > 7) {
+             // If we just jumped a large distance, the NEXT note should be stepwise in the opposite direction
+             sb.patternSteps = 2; 
+             sb.direction = (finalMidi > prevMidi) ? -1 : 1;
+             sb.patternMode = 'scale';
+        }
+    }
+
     // Avoid dissonant "avoid notes" on downbeats
     const intervalFromRoot = (finalMidi - rootMidi + 120) % 12;
-    if (stepInBeat === 0 && intervalFromRoot === 5 && !chordTones.some(t => (t % 12) === (finalMidi % 12))) {
+    if (stepInBeat === 0 && !chordTones.some(t => (t % 12) === (finalMidi % 12))) {
         const currentDir = sb.direction || 1;
-        const normDist = (finalMidi - rootMidi + 120) % 12;
-        const isScaleTone = scaleIntervals.includes(normDist);
         
-        if (isScaleTone || style === 'scalar' || style === 'shred' || style === 'bird') {
+        // Avoid 4th (11) on Major chords
+        const isAvoid11 = (chord.quality === 'maj7' || chord.quality === 'dom') && intervalFromRoot === 5;
+        // Avoid Major 7th on Dominant chords (unless using bebop scale passing tone)
+        const isAvoidMaj7 = (chord.quality === 'dom' && intervalFromRoot === 11 && style !== 'bird');
+
+        if (isAvoid11 || isAvoidMaj7) {
             let safeMidi = finalMidi + currentDir;
             let attempts = 0;
             while (attempts < 12) {
                  const d = (safeMidi - rootMidi + 120) % 12;
-                 if (scaleIntervals.includes(d) && d !== 5 && safeMidi <= maxMidi && safeMidi >= minMidi) {
+                 if (scaleIntervals.includes(d) && d !== 5 && d !== 11 && safeMidi <= maxMidi && safeMidi >= minMidi) {
                      finalMidi = safeMidi;
                      break;
                  }
                  safeMidi += currentDir;
                  attempts++;
             }
-        } else {
-             finalMidi += currentDir;
         }
     }
 
