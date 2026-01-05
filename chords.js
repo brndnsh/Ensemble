@@ -1,5 +1,5 @@
 import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN } from './config.js';
-import { normalizeKey, getFrequency, formatChordName } from './utils.js';
+import { normalizeKey, getFrequency } from './utils.js';
 import { cb } from './state.js';
 import { ui } from './ui.js';
 
@@ -203,21 +203,22 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
     else if (quality === '7#9') { absSuffix = '7#9'; nnsSuffix = '7#9'; romSuffix = '7#9'; }
     else if (quality === '5') { absSuffix = '5'; nnsSuffix = '5'; romSuffix = '5'; }
     
-    if (is7th && !['maj7', 'maj9', 'halfdim', '7b9', '7#9'].includes(quality)) { 
+    if (is7th && !['maj7', 'maj9', 'halfdim', '7b9', '7#9', '9'].includes(quality)) { 
         absSuffix += '7'; nnsSuffix += '7'; romSuffix += '7';
     }
 
     let romanName;
     if (quality === 'minor' || quality === 'dim' || quality === 'halfdim') {
-        romanName = formatChordName(rootRomanBase.toLowerCase(), romSuffix);
+        romanName = rootRomanBase.toLowerCase();
     } else {
-        romanName = formatChordName(rootRomanBase, romSuffix);
+        romanName = rootRomanBase;
     }
 
-    let finalAbsName = formatChordName(rootName, absSuffix);
-    let finalNNSName = formatChordName(rootNNS, nnsSuffix);
-
-    return { finalAbsName, finalNNSName, finalRomName: romanName };
+    return {
+        abs: { root: rootName, suffix: absSuffix },
+        nns: { root: rootNNS, suffix: nnsSuffix },
+        rom: { root: romanName, suffix: romSuffix }
+    };
 }
 
 /**
@@ -299,18 +300,29 @@ export function validateProgression(renderCallback) {
                 const rootRomanBase = INTERVAL_TO_ROMAN[interval];
                 const rootName = KEY_ORDER[rootMidi % 12];
                 
-                let { finalAbsName, finalNNSName, finalRomName } = getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality, is7th);
+                const formatted = getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality, is7th);
+
+                // Construct strings and display objects
+                let finalAbsName = formatted.abs.root + formatted.abs.suffix;
+                let finalNNSName = formatted.nns.root + formatted.nns.suffix;
+                let finalRomName = formatted.rom.root + formatted.rom.suffix;
 
                 if (bassPart && bassNameAbs) {
                     finalAbsName += `/${bassNameAbs}`;
                     finalNNSName += `/${bassNameNNS}`;
                     finalRomName += `/${bassNameRom}`;
+                    
+                    // Add bass to display objects
+                    formatted.abs.bass = bassNameAbs;
+                    formatted.nns.bass = bassNameNNS;
+                    formatted.rom.bass = bassNameRom;
                 }
 
                 const isMinor = quality === 'minor' || quality === 'dim' || quality === 'halfdim';
 
                 parsed.push({ 
                     romanName: finalRomName, absName: finalAbsName, nnsName: finalNNSName,
+                    display: formatted,
                     isMinor: isMinor, beats: beatsPerChord, 
                     freqs: currentMidis.map(getFrequency),
                     rootMidi: rootMidi, intervals: intervals, quality: quality,

@@ -107,6 +107,21 @@ export function updateOctaveLabel(element, midi, headerElement = null) {
     if (headerElement) headerElement.textContent = label;
 }
 
+function createChordLabel(data) {
+    const container = document.createElement('span');
+    container.textContent = data.root;
+    if (data.suffix) {
+        const sup = document.createElement('span');
+        sup.className = 'suffix';
+        sup.textContent = data.suffix;
+        container.appendChild(sup);
+    }
+    if (data.bass) {
+        container.appendChild(document.createTextNode('/' + data.bass));
+    }
+    return container;
+}
+
 /**
  * Renders the visual chord progression cards in the DOM.
  */
@@ -134,9 +149,12 @@ export function renderChordVisualizer() {
         if (chord.beats < 4) div.classList.add('small');
         if (chord.isMinor) div.classList.add('minor');
         
-        if (cb.notation === 'name') div.innerHTML = chord.absName;
-        else if (cb.notation === 'nns') div.innerHTML = chord.nnsName;
-        else div.innerHTML = chord.romanName;
+        let displayData;
+        if (cb.notation === 'name') displayData = chord.display.abs;
+        else if (cb.notation === 'nns') displayData = chord.display.nns;
+        else displayData = chord.display.rom;
+
+        div.appendChild(createChordLabel(displayData));
         
         div.onclick = () => window.previewChord(i);
         
