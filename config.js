@@ -81,5 +81,6 @@ export const CHORD_PRESETS = [
     { name: "Jazz Turnaround", prog: "Imaj7 VI7 | ii7 V7 | Imaj7 VI7 | ii7 V7" },
     { name: "Jazz Cycle", prog: "iii7 | VI7#9 | ii9 | V9 | Imaj9" },
     { name: "Circle of 4ths", prog: "I7 | IV7 | bVII7 | bIII7 | bVI7 | bII7 | V7 | I7" },
-    { name: "Plagal Flow", prog: "I | IV | I | IV" }
+    { name: "Plagal Flow", prog: "I | IV | I | IV" },
+    { name: "Autumn Leaves (32 Bar)", prog: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7" }
 ];
