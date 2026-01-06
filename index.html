@@ -112,22 +112,37 @@
                 <div class="presets-container" id="chordStylePresets"></div>
             </div>
 
-            <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
-                <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Voicing</h4>
-                <div style="margin-bottom: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem;">Density</label>
-                    <select id="densitySelect" style="width: 100%;" aria-label="Voicing Density">
-                        <option value="thin">Thin (3 notes)</option>
-                        <option value="standard" selected>Standard (4 notes)</option>
-                        <option value="rich">Rich (5+ notes)</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span>Register</span>
-                        <span id="octaveLabel" style="color: var(--accent-color); font-weight: bold;">F4</span>
-                    </label>
-                    <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
+            <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: 8px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Voicing</h4>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Density</label>
+                            <select id="densitySelect" style="width: 100%;" aria-label="Voicing Density">
+                                <option value="thin">Thin (3 notes)</option>
+                                <option value="standard" selected>Standard (4 notes)</option>
+                                <option value="rich">Rich (5+ notes)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
+                                <span>Register</span>
+                                <span id="octaveLabel" style="color: var(--accent-color); font-weight: bold;">F4</span>
+                            </label>
+                            <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Mixer</h4>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Volume</label>
+                            <input type="range" id="chordVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Chord Volume">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Reverb</label>
+                            <input type="range" id="chordReverb" min="0" max="1" step="0.05" value="0.3" style="width: 100%;" aria-label="Chord Reverb">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -139,17 +154,32 @@
                 <div class="presets-container" id="bassStylePresets"></div>
             </div>
 
-            <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
-                <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
-                <div>
-                    <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span>Register</span>
-                        <span id="bassOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F2</span>
-                    </label>
-                    <input type="range" id="bassOctaveSlider" min="24" max="60" value="41" style="width: 100%;" aria-label="Bass Octave">
-                </div>
-                <div style="text-align: right; margin-top: 0.5rem;">
-                     <span id="bassHeaderReg" style="display:none;"></span>
+            <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: 8px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
+                        <div>
+                            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
+                                <span>Register</span>
+                                <span id="bassOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F2</span>
+                            </label>
+                            <input type="range" id="bassOctaveSlider" min="24" max="60" value="41" style="width: 100%;" aria-label="Bass Octave">
+                        </div>
+                        <div style="text-align: right; margin-top: 0.5rem;">
+                             <span id="bassHeaderReg" style="display:none;"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Mixer</h4>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Volume</label>
+                            <input type="range" id="bassVolume" min="0" max="1" step="0.05" value="0.45" style="width: 100%;" aria-label="Bass Volume">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Reverb</label>
+                            <input type="range" id="bassReverb" min="0" max="1" step="0.05" value="0.05" style="width: 100%;" aria-label="Bass Reverb">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -161,48 +191,95 @@
                 <div class="presets-container" id="soloistStylePresets"></div>
             </div>
 
-             <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
-                <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
-                <div>
-                    <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span>Register</span>
-                        <span id="soloistOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F5</span>
-                    </label>
-                    <input type="range" id="soloistOctaveSlider" min="48" max="91" value="77" style="width: 100%;" aria-label="Soloist Octave">
-                </div>
-                 <div style="text-align: right; margin-top: 0.5rem;">
-                     <span id="soloistHeaderReg" style="display:none;"></span>
+             <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: 8px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
+                        <div>
+                            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
+                                <span>Register</span>
+                                <span id="soloistOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F5</span>
+                            </label>
+                            <input type="range" id="soloistOctaveSlider" min="48" max="91" value="77" style="width: 100%;" aria-label="Soloist Octave">
+                        </div>
+                         <div style="text-align: right; margin-top: 0.5rem;">
+                             <span id="soloistHeaderReg" style="display:none;"></span>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Mixer</h4>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Volume</label>
+                            <input type="range" id="soloistVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Soloist Volume">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Reverb</label>
+                            <input type="range" id="soloistReverb" min="0" max="1" step="0.05" value="0.6" style="width: 100%;" aria-label="Soloist Reverb">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- GROOVES TAB -->
-        <div class="tab-content" id="tab-grooves">
-            <div class="sequencer-grid" id="sequencerGrid"></div>
-            
-             <div style="margin-bottom: 1rem; margin-top: 0.5rem;">
-                <div style="font-size: 0.8rem; color: #64748b; font-style: italic; margin-bottom: 0.5rem;">Tap steps to create your own beat...</div>
-                <div class="presets-container" id="drumPresets"></div>
-                <div class="presets-container" id="userDrumPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
-            </div>
+                <!-- GROOVES TAB -->
 
-            <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">
-                <div style="display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;">
-                    <div style="flex: 1 1 200px;">
-                        <label class="control-label" style="display: block; margin-bottom: 0.4rem;">Swing</label>
-                        <div style="display: flex; gap: 0.4rem; align-items: center;">
-                            <input type="range" id="swingSlider" min="0" max="100" value="0" style="flex-grow: 1; height: 4px;" aria-label="Swing Amount">
-                            <select id="swingBaseSelect" style="width: 65px; font-size: 0.75rem; padding: 0.2rem; height: 28px;" aria-label="Swing Base Note">
-                                <option value="16th">1/16</option>
-                                <option value="8th" selected>1/8</option>
-                            </select>
-                        </div>
+                <div class="tab-content" id="tab-grooves">
+
+                    <div style="margin-bottom: 1.5rem;">
+
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
+
+                        <div class="presets-container" id="drumPresets"></div>
+
+                        <div class="presets-container" id="userDrumPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
+
                     </div>
-                    <div>
-                        <label class="control-label" style="display: block; margin-bottom: 0.4rem;">Actions</label>
-                        <div style="display: flex; gap: 0.5rem; height: 32px;">
-                            <button id="clearDrumsBtn" style="font-size: 0.75rem; padding: 0 1rem; height: 100%;">Clear</button>
-                            <button id="saveDrumBtn" title="Save Pattern" style="font-size: 0.75rem; padding: 0 1rem; height: 100%;">💾 Save</button>
+
+        
+
+                    <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Step Sequencer</h4>
+
+                        <div class="sequencer-grid" id="sequencerGrid"></div>
+
+                        <div style="font-size: 0.8rem; color: #64748b; font-style: italic; margin-top: 0.75rem; margin-bottom: 1rem;">Tap steps to create your own beat...</div>
+
+        
+
+                        <div style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.25rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: flex-start;">
+                        <div>
+                            <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Feel & Actions</h4>
+                            <div style="margin-bottom: 1rem;">
+                                <label class="control-label" style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Swing</label>
+                                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                    <input type="range" id="swingSlider" min="0" max="100" value="0" style="flex-grow: 1; height: 4px;" aria-label="Swing Amount">
+                                    <select id="swingBaseSelect" style="width: 65px; font-size: 0.75rem; padding: 0.2rem; height: 28px;" aria-label="Swing Base Note">
+                                        <option value="16th">1/16</option>
+                                        <option value="8th" selected>1/8</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; height: 32px;">
+                                <button id="clearDrumsBtn" style="font-size: 0.75rem; flex: 1; height: 100%;">Clear</button>
+                                <button id="saveDrumBtn" title="Save Pattern" style="font-size: 0.75rem; flex: 1; height: 100%;">💾 Save</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Mixer</h4>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
+                                    <span>Volume</span>
+                                </label>
+                                <input type="range" id="drumVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Drum Volume">
+                            </div>
+                            <div>
+                                <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
+                                    <span>Reverb</span>
+                                </label>
+                                <input type="range" id="drumReverb" min="0" max="1" step="0.05" value="0.2" style="width: 100%;" aria-label="Drum Reverb">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -262,92 +339,43 @@
         
         <div class="settings-controls">
             <div class="settings-section">
-                <h3>Mixer</h3>
+                <h3>Global Mixer</h3>
                 <div class="setting-item">
                     <label class="setting-label">
                         <span>Master Volume</span>
                     </label>
                     <input type="range" id="masterVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Master Volume">
                 </div>
-                <div class="setting-item">
-                    <label class="setting-label">
-                        <span>Chord Volume</span>
-                    </label>
-                    <input type="range" id="chordVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Chord Volume">
-                </div>
-                <div class="setting-item">
-                    <label class="setting-label">
-                        <span>Bass Volume</span>
-                    </label>
-                    <input type="range" id="bassVolume" min="0" max="1" step="0.05" value="0.45" style="width: 100%;" aria-label="Bass Volume">
-                </div>
-                <div class="setting-item">
-                    <label class="setting-label">
-                        <span>Soloist Volume</span>
-                    </label>
-                    <input type="range" id="soloistVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Soloist Volume">
-                </div>
-                <div class="setting-item">
-                    <label class="setting-label">
-                        <span>Drum Volume</span>
-                    </label>
-                    <input type="range" id="drumVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Drum Volume">
-                </div>
             </div>
 
-            <div class="settings-section">
-                <h3>Reverb</h3>
-                <div class="setting-item">
-                    <label class="setting-label">
-                        <span>Chord Reverb</span>
+            <div class="settings-section" style="border-bottom: none;">
+                <h3>Options</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="countInCheck" checked>
+                        Count-in (4 Beats)
                     </label>
-                    <input type="range" id="chordReverb" min="0" max="1" step="0.05" value="0.3" style="width: 100%;" aria-label="Chord Reverb">
                 </div>
-                <div class="setting-item">
-                    <label class="setting-label">
-                        <span>Bass Reverb</span>
-                    </label>
-                    <input type="range" id="bassReverb" min="0" max="1" step="0.05" value="0.05" style="width: 100%;" aria-label="Bass Reverb">
-                </div>
-                <div class="setting-item">
-                    <label class="setting-label">
-                        <span>Soloist Reverb</span>
-                    </label>
-                    <input type="range" id="soloistReverb" min="0" max="1" step="0.05" value="0.6" style="width: 100%;" aria-label="Soloist Reverb">
-                </div>
-                <div class="setting-item">
-                    <label class="setting-label">
-                        <span>Drum Reverb</span>
-                    </label>
-                    <input type="range" id="drumReverb" min="0" max="1" step="0.05" value="0.2" style="width: 100%;" aria-label="Drum Reverb">
-                </div>
-            </div>
 
-            <div style="margin-bottom: 1rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" id="countInCheck" checked>
-                    Count-in (4 Beats)
-                </label>
-            </div>
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="visualFlashCheck">
+                        Visual Flash
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="hapticCheck">
+                        Haptic
+                    </label>
+                </div>
 
-            <div style="margin-bottom: 1rem; display: flex; gap: 1rem;">
-                <label style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" id="visualFlashCheck">
-                    Visual Flash
-                </label>
-                <label style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" id="hapticCheck">
-                    Haptic
-                </label>
-            </div>
-
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; margin-bottom: 0.5rem;">Notation</label>
-                <select id="notationSelect" style="width: 100%;" aria-label="Chord Notation">
-                    <option value="roman">Roman Numerals (I, vi, IV)</option>
-                    <option value="name">Chord Names (C, Am, F)</option>
-                    <option value="nns">Nashville Numbers (1, 6-, 4)</option>
-                </select>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem;">Notation</label>
+                    <select id="notationSelect" style="width: 100%;" aria-label="Chord Notation">
+                        <option value="roman">Roman Numerals (I, vi, IV)</option>
+                        <option value="name">Chord Names (C, Am, F)</option>
+                        <option value="nns">Nashville Numbers (1, 6-, 4)</option>
+                    </select>
+                </div>
             </div>
             
             <div class="setting-item" style="margin-top: 1rem;">
