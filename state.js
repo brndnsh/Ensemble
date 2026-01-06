@@ -67,10 +67,8 @@ export const bb = {
     lastFreq: null,
     lastPlayedFreq: null,
     buffer: new Map(),
-    octave: 36,
-    style: 'arp',
-    history: [],
-    chordHistory: []
+    octave: 41,
+    style: 'arp'
 };
 
 export const sb = {
@@ -83,8 +81,6 @@ export const sb = {
     lastNoteEnd: 0,
     octave: 77, // F5
     style: 'scalar',
-    history: [],
-    chordHistory: [],
     direction: 1,      // 1 for up, -1 for down
     patternMode: 'scale', // 'scale', 'arp', 'stay'
     patternSteps: 0,     // How many steps remain in current pattern
