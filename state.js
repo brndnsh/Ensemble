@@ -46,14 +46,17 @@ export const cb = {
 export const gb = {
     enabled: true,
     instruments: [
-        { name: 'Kick',  symbol: '🥁', steps: new Array(16).fill(0), muted: false },
-        { name: 'Snare', symbol: '👏', steps: new Array(16).fill(0), muted: false },
-        { name: 'HiHat', symbol: '🎩', steps: new Array(16).fill(0), muted: false },
-        { name: 'Open',  symbol: '📀', steps: new Array(16).fill(0), muted: false }
+        { name: 'Kick',  symbol: '🥁', steps: new Array(128).fill(0), muted: false },
+        { name: 'Snare', symbol: '👏', steps: new Array(128).fill(0), muted: false },
+        { name: 'HiHat', symbol: '🎩', steps: new Array(128).fill(0), muted: false },
+        { name: 'Open',  symbol: '📀', steps: new Array(128).fill(0), muted: false }
     ],
     volume: 0.5,
     reverb: 0.2,
     measures: 1,
+    currentMeasure: 0,
+    autoFollow: true,
+    humanize: 20,
     swing: 0,
     swingSub: '8th',
     audioBuffers: {},

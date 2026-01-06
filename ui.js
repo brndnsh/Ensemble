@@ -41,6 +41,11 @@ export const ui = {
     drumPresets: document.getElementById('drumPresets'),
     userDrumPresetsContainer: document.getElementById('userDrumPresetsContainer'),
     sequencerGrid: document.getElementById('sequencerGrid'),
+    measurePagination: document.getElementById('measurePagination'),
+    drumBarsSelect: document.getElementById('drumBarsSelect'),
+    cloneMeasureBtn: document.getElementById('cloneMeasureBtn'),
+    autoFollowCheck: document.getElementById('autoFollowCheck'),
+    humanizeSlider: document.getElementById('humanizeSlider'),
     clearDrums: document.getElementById('clearDrumsBtn'),
     saveDrumBtn: document.getElementById('saveDrumBtn'),
     drumVol: document.getElementById('drumVolume'),
@@ -311,13 +316,15 @@ function createTrackRow(inst, cachedSteps) {
     const stepsContainer = document.createElement('div');
     stepsContainer.className = 'steps';
     
+    const offset = gb.currentMeasure * 16;
     for (let b = 0; b < 16; b++) {
+        const globalIdx = offset + b;
         const step = document.createElement('div');
-        const val = inst.steps[b];
+        const val = inst.steps[globalIdx];
         step.className = `step ${val === 2 ? 'accented' : (val === 1 ? 'active' : '')}`; 
         if (b % 4 === 0) step.classList.add('beat-marker');
         step.onclick = () => { 
-            inst.steps[b] = (inst.steps[b] + 1) % 3; 
+            inst.steps[globalIdx] = (inst.steps[globalIdx] + 1) % 3; 
             renderGridState(); 
         };
         stepsContainer.appendChild(step);
@@ -358,6 +365,20 @@ function createLabelRow(cachedSteps) {
 }
 
 /**
+ * Renders the pagination controls for drum measures.
+ */
+export function renderMeasurePagination(onSwitch) {
+    ui.measurePagination.innerHTML = '';
+    for (let i = 0; i < gb.measures; i++) {
+        const btn = document.createElement('button');
+        btn.className = `measure-btn ${gb.currentMeasure === i ? 'active' : ''}`;
+        btn.textContent = i + 1;
+        btn.onclick = () => onSwitch(i);
+        ui.measurePagination.appendChild(btn);
+    }
+}
+
+/**
  * Renders the drum sequencer grid.
  */
 export function renderGrid() {
@@ -377,13 +398,15 @@ export function renderGrid() {
  * Updates only the 'active' and 'accented' classes in the drum grid without re-rendering the full DOM.
  */
 export function renderGridState() {
+    const offset = gb.currentMeasure * 16;
     for (let i = 0; i < 16; i++) {
+        const globalIdx = offset + i;
         const elements = gb.cachedSteps[i];
         if (elements) {
             gb.instruments.forEach((inst, tIdx) => {
                 const stepEl = elements[tIdx];
                 if (stepEl) {
-                    const val = inst.steps[i];
+                    const val = inst.steps[globalIdx];
                     stepEl.classList.toggle('active', val === 1);
                     stepEl.classList.toggle('accented', val === 2);
                 }

@@ -1,5 +1,5 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
 import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
@@ -196,7 +196,7 @@ function saveCurrentState() {
         cb: { octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
         bb: { octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
         sb: { octave: sb.octave, volume: sb.volume, reverb: sb.reverb },
-        gb: { volume: gb.volume, reverb: gb.reverb, swing: gb.swing, swingSub: gb.swingSub }
+        gb: { volume: gb.volume, reverb: gb.reverb, swing: gb.swing, swingSub: gb.swingSub, measures: gb.measures, humanize: gb.humanize, autoFollow: gb.autoFollow }
     };
     storage.save('currentState', data);
 }
@@ -568,7 +568,9 @@ function scheduleChords(chordData, step, time) {
 
 function scheduleGlobalEvent(step, swungTime) {
     const drumStep = step % (gb.measures * 16);
-    const jitter = (Math.random() - 0.5) * 0.004;
+    // Dynamic jitter based on humanize setting (0ms to ~25ms)
+    const jitterAmount = (gb.humanize / 100) * 0.025;
+    const jitter = (Math.random() - 0.5) * jitterAmount;
     const t = swungTime + jitter;
     
     // Dynamic straightness based on soloist style
@@ -591,13 +593,40 @@ function scheduleGlobalEvent(step, swungTime) {
     if (cb.enabled) scheduleChords(chordData, step, t);
 }
 
+function cloneMeasure() {
+    const sourceOffset = gb.currentMeasure * 16;
+    gb.instruments.forEach(inst => {
+        const pattern = inst.steps.slice(sourceOffset, sourceOffset + 16);
+        for (let m = 0; m < gb.measures; m++) {
+            if (m === gb.currentMeasure) continue;
+            const targetOffset = m * 16;
+            for (let i = 0; i < 16; i++) {
+                inst.steps[targetOffset + i] = pattern[i];
+            }
+        }
+    });
+    showToast(`Measure ${gb.currentMeasure + 1} copied to all`);
+    renderGridState();
+}
+
 function updateDrumVis(ev) {
-    if (ctx.lastPlayingStep !== undefined && gb.cachedSteps[ctx.lastPlayingStep]) {
-        gb.cachedSteps[ctx.lastPlayingStep].forEach(s => s.classList.remove('playing'));
+    if (ctx.lastPlayingStep !== undefined) {
+        document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
     }
-    const activeSteps = gb.cachedSteps[ev.step];
-    if (activeSteps) {
-        activeSteps.forEach(s => s.classList.add('playing'));
+    
+    // Auto-follow logic: switch measure page if needed
+    const stepMeasure = Math.floor(ev.step / 16);
+    if (gb.autoFollow && stepMeasure !== gb.currentMeasure && ctx.isPlaying) {
+        switchMeasure(stepMeasure);
+    }
+
+    const offset = gb.currentMeasure * 16;
+    if (ev.step >= offset && ev.step < offset + 16) {
+        const localStep = ev.step - offset;
+        const activeSteps = gb.cachedSteps[localStep];
+        if (activeSteps) {
+            activeSteps.forEach(s => s.classList.add('playing'));
+        }
     }
     ctx.lastPlayingStep = ev.step;
 }
@@ -769,12 +798,17 @@ function renderUserDrumPresets() {
         const chip = createPresetChip(p.name, () => window.deleteUserDrumPreset(idx), () => {
             if (p.measures) {
                 gb.measures = p.measures;
+                gb.currentMeasure = 0;
                 ui.drumBarsSelect.value = p.measures;
+                renderMeasurePagination(switchMeasure);
                 renderGrid();
             }
             p.pattern.forEach(savedInst => {
                 const inst = gb.instruments.find(i => i.name === savedInst.name);
-                if (inst) inst.steps = [...savedInst.steps];
+                if (inst) {
+                    inst.steps.fill(0); // Clear existing
+                    savedInst.steps.forEach((v, i) => { if (i < 128) inst.steps[i] = v; });
+                }
             });
             if (p.swing !== undefined) { gb.swing = p.swing; ui.swingSlider.value = p.swing; }
             if (p.swingSub) { gb.swingSub = p.swingSub; ui.swingBase.value = p.swingSub; }
@@ -808,6 +842,21 @@ function duplicateBar1Chords() {
     flushBuffers();
     saveCurrentState();
     showToast(`${section.label}: Bar 1 duplicated`);
+}
+
+function updateMeasures(val) {
+    gb.measures = parseInt(val);
+    if (gb.currentMeasure >= gb.measures) gb.currentMeasure = 0;
+    renderMeasurePagination(switchMeasure);
+    renderGrid();
+    saveCurrentState();
+}
+
+function switchMeasure(idx) {
+    if (gb.currentMeasure === idx) return;
+    gb.currentMeasure = idx;
+    renderMeasurePagination(switchMeasure);
+    renderGrid();
 }
 
 function setupUIHandlers() {
@@ -905,6 +954,10 @@ function setupUIHandlers() {
 
     ui.swingSlider.addEventListener('input', e => gb.swing = parseInt(e.target.value));
     ui.swingBase.addEventListener('change', e => gb.swingSub = e.target.value);
+    ui.humanizeSlider.addEventListener('input', e => gb.humanize = parseInt(e.target.value));
+    ui.autoFollowCheck.addEventListener('change', e => gb.autoFollow = e.target.checked);
+    ui.drumBarsSelect.addEventListener('change', e => updateMeasures(e.target.value));
+    ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
 
     ['chord', 'groove', 'bass', 'soloist', 'viz'].forEach(type => {
         const btn = ui[`${type}PowerBtn`];
@@ -930,6 +983,14 @@ function setupUIHandlers() {
                 const btn = tabItem.querySelector('.tab-btn');
                 if (btn) btn.click();
             }
+        }
+        if (e.key === '[' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
+            const next = (gb.currentMeasure - 1 + gb.measures) % gb.measures;
+            switchMeasure(next);
+        }
+        if (e.key === ']' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
+            const next = (gb.currentMeasure + 1) % gb.measures;
+            switchMeasure(next);
         }
     });
 }
@@ -1022,6 +1083,10 @@ function init() {
                 gb.reverb = savedState.gb.reverb;
                 gb.swing = savedState.gb.swing;
                 gb.swingSub = savedState.gb.swingSub;
+                gb.measures = savedState.gb.measures || 1;
+                gb.humanize = savedState.gb.humanize !== undefined ? savedState.gb.humanize : 20;
+                gb.autoFollow = savedState.gb.autoFollow !== undefined ? savedState.gb.autoFollow : true;
+                gb.currentMeasure = 0;
             }
 
             // Sync UI
@@ -1042,6 +1107,9 @@ function init() {
             ui.drumReverb.value = gb.reverb;
             ui.swingSlider.value = gb.swing;
             ui.swingBase.value = gb.swingSub;
+            ui.humanizeSlider.value = gb.humanize;
+            ui.autoFollowCheck.checked = gb.autoFollow;
+            ui.drumBarsSelect.value = gb.measures;
 
             updateOctaveLabel(ui.octaveLabel, cb.octave);
             updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
@@ -1055,6 +1123,7 @@ function init() {
         initTabs(); // New Tab Logic
 
         renderGrid();
+        renderMeasurePagination(switchMeasure);
         loadDrumPreset('Standard');
         setupPresets();
         setupUIHandlers();
@@ -1128,13 +1197,19 @@ function transposeKey(delta) {
 
 function loadDrumPreset(name) {
     const p = DRUM_PRESETS[name];
+    gb.measures = p.measures || 1; 
+    gb.currentMeasure = 0;
+    ui.drumBarsSelect.value = String(gb.measures);
+    
     if (p.swing !== undefined) { gb.swing = p.swing; ui.swingSlider.value = p.swing; }
     if (p.sub) { gb.swingSub = p.sub; ui.swingBase.value = p.sub; }
     gb.instruments.forEach(inst => {
         const pattern = p[inst.name] || new Array(16).fill(0);
-        inst.steps = [...pattern];
+        inst.steps.fill(0);
+        pattern.forEach((v, i) => { if (i < 128) inst.steps[i] = v; });
     });
-    renderGridState();
+    renderMeasurePagination(switchMeasure);
+    renderGrid();
 }
 
 let tapTimes = [];
