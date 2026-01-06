@@ -28,36 +28,6 @@ const CANNED_LICKS = {
     'shred_1': [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], // Major Arp Sweep
 };
 
-/**
- * Generates an enclosure pattern (group of notes surrounding a target).
- * @param {number} targetMidi 
- * @param {number[]} scaleTones 
- * @returns {number[]} relative to targetMidi
- */
-function getEnclosure(targetMidi, scaleTones) {
-    const type = Math.random();
-    if (type < 0.4) {
-        // Chromatic: Half step above, half step below, target
-        return [1, -1, 0];
-    } else if (type < 0.7) {
-        // Scale step above, half step below, target
-        let above = 2;
-        for (let t of scaleTones) {
-            let m = t;
-            while (m < targetMidi) m += 12;
-            if (m > targetMidi && m < targetMidi + 4) {
-                above = m - targetMidi;
-                break;
-            }
-        }
-        return [above, -1, 0];
-    } else {
-        // Double chromatic from above: +2, +1, target
-        return [2, 1, 0];
-    }
-}
-
-
 const SEQUENCES = {
     'up3': { offsets: [0, 1, 2], nextBase: 1 },
     'down3': { offsets: [0, -1, -2], nextBase: -1 },
@@ -469,9 +439,9 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         const currentDir = sb.direction || 1;
         
         // Avoid 4th (11) on Major chords
-        const isAvoid11 = (chord.quality === 'maj7' || chord.quality === 'dom') && intervalFromRoot === 5;
+        const isAvoid11 = (currentChord.quality === 'maj7' || currentChord.quality === 'dom') && intervalFromRoot === 5;
         // Avoid Major 7th on Dominant chords
-        const isAvoidMaj7 = (chord.quality === 'dom' && intervalFromRoot === 11);
+        const isAvoidMaj7 = (currentChord.quality === 'dom' && intervalFromRoot === 11);
 
         if (isAvoid11 || isAvoidMaj7) {
             let safeMidi = finalMidi + currentDir;

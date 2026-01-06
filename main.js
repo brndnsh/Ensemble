@@ -134,11 +134,11 @@ function togglePlay() {
 }
 
 const POWER_CONFIG = {
-    chord: { state: cb, el: () => ui.chordPowerBtn, panel: 'tab-chords', cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
-    groove: { state: gb, el: () => ui.groovePowerBtn, panel: 'tab-grooves', cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
-    bass: { state: bb, el: () => ui.bassPowerBtn, panel: 'tab-bass' },
-    soloist: { state: sb, el: () => ui.soloistPowerBtn, panel: 'tab-soloist' },
-    viz: { state: vizState, el: () => ui.vizPowerBtn, panel: 'visualizerPanel', cleanup: () => { if (viz) viz.clear(); } }
+    chord: { state: cb, el: () => ui.chordPowerBtn, cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
+    groove: { state: gb, el: () => ui.groovePowerBtn, cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
+    bass: { state: bb, el: () => ui.bassPowerBtn },
+    soloist: { state: sb, el: () => ui.soloistPowerBtn },
+    viz: { state: vizState, el: () => ui.vizPowerBtn, cleanup: () => { if (viz) viz.clear(); } }
 };
 
 /**
@@ -598,18 +598,6 @@ function updateDrumVis(ev) {
     const activeSteps = gb.cachedSteps[ev.step];
     if (activeSteps) {
         activeSteps.forEach(s => s.classList.add('playing'));
-        // Only trigger layout/scrolling once per measure
-        if (ev.step % 16 === 0) {
-            const container = ui.sequencerGrid;
-            const scrollOffset = gb.stepOffsets ? gb.stepOffsets[ev.step] : null;
-            
-            if (scrollOffset !== null) {
-                container.scrollTo({ 
-                    left: scrollOffset, 
-                    behavior: 'smooth' 
-                });
-            }
-        }
     }
     ctx.lastPlayingStep = ev.step;
 }
@@ -1175,7 +1163,7 @@ function resetToDefaults() {
     
     bb.volume = 0.45;
     bb.reverb = 0.05;
-    bb.octave = 36;
+    bb.octave = 41;
     
     sb.volume = 0.5;
     sb.reverb = 0.6;
@@ -1191,7 +1179,7 @@ function resetToDefaults() {
     ui.notationSelect.value = 'roman';
     ui.densitySelect.value = 'standard';
     ui.octave.value = 65;
-    ui.bassOctave.value = 36;
+    ui.bassOctave.value = 41;
     ui.soloistOctave.value = 77;
     ui.chordVol.value = 0.5;
     ui.chordReverb.value = 0.3;
