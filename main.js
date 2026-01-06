@@ -192,7 +192,11 @@ function saveCurrentState() {
         key: arranger.key,
         notation: arranger.notation,
         bpm: ctx.bpm,
-        style: cb.style
+        style: cb.style,
+        cb: { octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
+        bb: { octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
+        sb: { octave: sb.octave, volume: sb.volume, reverb: sb.reverb },
+        gb: { volume: gb.volume, reverb: gb.reverb, swing: gb.swing, swingSub: gb.swingSub }
     };
     storage.save('currentState', data);
 }
@@ -804,17 +808,18 @@ window.deleteUserDrumPreset = (idx) => {
 
 function duplicateBar1Chords() {
     if (arranger.sections.length === 0) return;
-    const firstSection = arranger.sections[0];
-    const bars = firstSection.value.split('|').map(b => b.trim()).filter(b => b);
+    const section = arranger.sections[0]; // Apply to first section consistently for now
+    const bars = section.value.split('|').map(b => b.trim()).filter(b => b);
     if (bars.length === 0) return;
     
     const bar1 = bars[0];
-    firstSection.value = `${bar1} | ${bar1} | ${bar1} | ${bar1}`;
+    section.value = `${bar1} | ${bar1} | ${bar1} | ${bar1}`;
     
     renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(renderChordVisualizer);
     flushBuffers();
-    showToast("Section 1: Bar 1 duplicated");
+    saveCurrentState();
+    showToast(`${section.label}: Bar 1 duplicated`);
 }
 
 function setupUIHandlers() {
@@ -1007,9 +1012,52 @@ function init() {
             ctx.bpm = savedState.bpm || 100;
             cb.style = savedState.style || 'pad';
             
+            // Restore Accompanist Settings
+            if (savedState.cb) {
+                cb.octave = savedState.cb.octave;
+                cb.density = savedState.cb.density;
+                cb.volume = savedState.cb.volume;
+                cb.reverb = savedState.cb.reverb;
+            }
+            if (savedState.bb) {
+                bb.octave = savedState.bb.octave;
+                bb.volume = savedState.bb.volume;
+                bb.reverb = savedState.bb.reverb;
+            }
+            if (savedState.sb) {
+                sb.octave = savedState.sb.octave;
+                sb.volume = savedState.sb.volume;
+                sb.reverb = savedState.sb.reverb;
+            }
+            if (savedState.gb) {
+                gb.volume = savedState.gb.volume;
+                gb.reverb = savedState.gb.reverb;
+                gb.swing = savedState.gb.swing;
+                gb.swingSub = savedState.gb.swingSub;
+            }
+
+            // Sync UI
             ui.keySelect.value = arranger.key;
             ui.bpmInput.value = ctx.bpm;
             ui.notationSelect.value = arranger.notation;
+            ui.densitySelect.value = cb.density;
+            ui.octave.value = cb.octave;
+            ui.bassOctave.value = bb.octave;
+            ui.soloistOctave.value = sb.octave;
+            ui.chordVol.value = cb.volume;
+            ui.chordReverb.value = cb.reverb;
+            ui.bassVol.value = bb.volume;
+            ui.bassReverb.value = bb.reverb;
+            ui.soloistVol.value = sb.volume;
+            ui.soloistReverb.value = sb.reverb;
+            ui.drumVol.value = gb.volume;
+            ui.drumReverb.value = gb.reverb;
+            ui.swingSlider.value = gb.swing;
+            ui.swingBase.value = gb.swingSub;
+
+            updateOctaveLabel(ui.octaveLabel, cb.octave);
+            updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
+            updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
         }
 
         viz = new UnifiedVisualizer('unifiedVizContainer');
@@ -1116,10 +1164,9 @@ function handleTap() {
 
 function resetToDefaults() {
     ctx.bpm = 100;
-    
-    // Arranger Defaults
     arranger.notation = 'roman';
-    // We don't necessarily reset sections? Probably just settings.
+    arranger.key = 'C';
+    arranger.sections.forEach(s => s.color = '#3b82f6');
     
     cb.volume = 0.5;
     cb.reverb = 0.3;
@@ -1138,20 +1185,20 @@ function resetToDefaults() {
     gb.reverb = 0.2;
     gb.swing = 0;
     gb.swingSub = '8th';
-    gb.measures = 1;
 
     ui.bpmInput.value = 100;
-    ui.chordVol.value = 0.5;
-    ui.chordReverb.value = 0.3;
-    ui.octave.value = 65;
+    ui.keySelect.value = 'C';
     ui.notationSelect.value = 'roman';
     ui.densitySelect.value = 'standard';
+    ui.octave.value = 65;
+    ui.bassOctave.value = 36;
+    ui.soloistOctave.value = 77;
+    ui.chordVol.value = 0.5;
+    ui.chordReverb.value = 0.3;
     ui.bassVol.value = 0.45;
     ui.bassReverb.value = 0.05;
-    ui.bassOctave.value = 36;
     ui.soloistVol.value = 0.5;
     ui.soloistReverb.value = 0.6;
-    ui.soloistOctave.value = 77;
     ui.drumVol.value = 0.5;
     ui.drumReverb.value = 0.2;
     ui.swingSlider.value = 0;
@@ -1162,21 +1209,16 @@ function resetToDefaults() {
     ui.haptic.checked = false;
 
     if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.master, ctx.audio.currentTime, 0.02);
-    
-    // Update instrument buses with mixing multipliers
     if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.chords, ctx.audio.currentTime, 0.02);
     if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.45 * MIXER_GAIN_MULTIPLIERS.bass, ctx.audio.currentTime, 0.02);
     if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.soloist, ctx.audio.currentTime, 0.02);
     if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.drums, ctx.audio.currentTime, 0.02);
 
-    if (ctx.chordsReverb) ctx.chordsReverb.gain.setTargetAtTime(0.3, ctx.audio.currentTime, 0.02);
-    if (ctx.bassReverb) ctx.bassReverb.gain.setTargetAtTime(0.05, ctx.audio.currentTime, 0.02);
-    if (ctx.soloistReverb) ctx.soloistReverb.gain.setTargetAtTime(0.6, ctx.audio.currentTime, 0.02);
-    if (ctx.drumsReverb) ctx.drumsReverb.gain.setTargetAtTime(0.2, ctx.audio.currentTime, 0.02);
-
     updateOctaveLabel(ui.octaveLabel, cb.octave);
     updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
     updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
+    
+    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(renderChordVisualizer);
     flushBuffers();
     
@@ -1187,6 +1229,7 @@ function resetToDefaults() {
     loadDrumPreset('Standard');
     renderGrid(); 
 
+    saveCurrentState();
     showToast("Settings reset");
 }
 

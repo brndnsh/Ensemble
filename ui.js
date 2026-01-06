@@ -132,16 +132,37 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         const card = document.createElement('div');
         card.className = 'section-card';
         card.dataset.id = section.id;
+        if (section.color) card.style.borderLeft = `4px solid ${section.color}`;
         
         const header = document.createElement('div');
         header.className = 'section-header';
         
+        const labelGroup = document.createElement('div');
+        labelGroup.style.display = 'flex';
+        labelGroup.style.alignItems = 'center';
+        labelGroup.style.gap = '0.5rem';
+        labelGroup.style.flexGrow = '1';
+
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = section.color || '#3b82f6';
+        colorInput.style.width = '24px';
+        colorInput.style.height = '24px';
+        colorInput.style.padding = '0';
+        colorInput.style.border = 'none';
+        colorInput.style.background = 'transparent';
+        colorInput.style.cursor = 'pointer';
+        colorInput.oninput = (e) => onUpdate(section.id, 'color', e.target.value);
+
         const labelInput = document.createElement('input');
         labelInput.className = 'section-label-input';
         labelInput.value = section.label;
         labelInput.placeholder = 'Section Name';
         labelInput.oninput = (e) => onUpdate(section.id, 'label', e.target.value);
         
+        labelGroup.appendChild(colorInput);
+        labelGroup.appendChild(labelInput);
+
         const actions = document.createElement('div');
         actions.style.display = 'flex';
         actions.style.gap = '0.5rem';
@@ -158,7 +179,7 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         deleteBtn.title = 'Delete Section';
         deleteBtn.onclick = () => onDelete(section.id);
         
-        header.appendChild(labelInput);
+        header.appendChild(labelGroup);
         actions.appendChild(duplicateBtn);
         if (sections.length > 1) actions.appendChild(deleteBtn);
         header.appendChild(actions);
@@ -230,6 +251,13 @@ export function renderChordVisualizer() {
         div.className = 'chord-card';
         if (chord.beats < 4) div.classList.add('small');
         if (chord.isMinor) div.classList.add('minor');
+        
+        // Apply section color
+        const section = arranger.sections.find(s => s.id === chord.sectionId);
+        if (section && section.color) {
+            div.style.borderTop = `3px solid ${section.color}`;
+            div.style.background = `linear-gradient(to bottom, ${section.color}15, var(--card-bg))`;
+        }
         
         let displayData;
         if (arranger.notation === 'name') displayData = chord.display.abs;
