@@ -67,6 +67,23 @@ function updateStyle(type, styleId) {
 }
 
 /**
+ * Applies the selected theme to the document.
+ * @param {'auto'|'light'|'dark'} theme 
+ */
+function applyTheme(theme) {
+    ctx.theme = theme;
+    if (theme === 'auto') {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    } else {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+    }
+    if (ui.themeSelect) ui.themeSelect.value = theme;
+}
+
+/**
  * Toggles the global play/stop state.
  */
 function togglePlay() {
@@ -191,7 +208,9 @@ function saveCurrentState() {
         sections: arranger.sections,
         key: arranger.key,
         notation: arranger.notation,
+        theme: ctx.theme,
         bpm: ctx.bpm,
+        metronome: ui.metronome.checked,
         style: cb.style,
         cb: { octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
         bb: { octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
@@ -202,13 +221,26 @@ function saveCurrentState() {
 }
 
 function onSectionUpdate(id, field, value) {
-    const section = arranger.sections.find(s => s.id === id);
-    if (section) {
+    const index = arranger.sections.findIndex(s => s.id === id);
+    if (index === -1) return;
+    const section = arranger.sections[index];
+
+    if (field === 'move') {
+        const newIndex = index + value;
+        if (newIndex >= 0 && newIndex < arranger.sections.length) {
+            // Swap sections
+            const temp = arranger.sections[index];
+            arranger.sections[index] = arranger.sections[newIndex];
+            arranger.sections[newIndex] = temp;
+            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+        }
+    } else {
         section[field] = value;
-        validateProgression(renderChordVisualizer);
-        flushBuffers();
-        saveCurrentState();
     }
+    
+    validateProgression(renderChordVisualizer);
+    flushBuffers();
+    saveCurrentState();
 }
 
 function onSectionDelete(id) {
@@ -573,6 +605,21 @@ function scheduleGlobalEvent(step, swungTime) {
     const jitter = (Math.random() - 0.5) * jitterAmount;
     const t = swungTime + jitter;
     
+    // Metronome Click
+    if (ui.metronome.checked && step % 4 === 0) {
+        const isDownbeat = step % 16 === 0;
+        const osc = ctx.audio.createOscillator();
+        const gain = ctx.audio.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.masterGain);
+        osc.frequency.setValueAtTime(isDownbeat ? 1000 : 600, swungTime);
+        gain.gain.setValueAtTime(0.15, swungTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, swungTime + 0.05);
+        osc.start(swungTime);
+        osc.stop(swungTime + 0.05);
+        osc.onended = () => { gain.disconnect(); osc.disconnect(); };
+    }
+
     // Dynamic straightness based on soloist style
     const straightness = sb.style === 'neo' ? 0.35 : 0.65;
     const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + jitter;
@@ -908,6 +955,19 @@ function setupUIHandlers() {
         renderChordVisualizer(); 
         saveCurrentState();
     });
+
+    ui.themeSelect.addEventListener('change', e => {
+        applyTheme(e.target.value);
+        saveCurrentState();
+    });
+
+    // Listen for system theme changes if in 'auto' mode
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (ctx.theme === 'auto') {
+            document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+        }
+    });
+
     ui.densitySelect.addEventListener('change', e => { cb.density = e.target.value; validateProgression(renderChordVisualizer); flushBuffers(); });
 
     const volumeNodes = [
@@ -1058,6 +1118,7 @@ function init() {
             arranger.sections = savedState.sections;
             arranger.key = savedState.key || 'C';
             arranger.notation = savedState.notation || 'roman';
+            ctx.theme = savedState.theme || 'auto';
             ctx.bpm = savedState.bpm || 100;
             cb.style = savedState.style || 'pad';
             
@@ -1110,10 +1171,15 @@ function init() {
             ui.humanizeSlider.value = gb.humanize;
             ui.autoFollowCheck.checked = gb.autoFollow;
             ui.drumBarsSelect.value = gb.measures;
+            ui.metronome.checked = savedState.metronome || false;
+
+            applyTheme(ctx.theme);
 
             updateOctaveLabel(ui.octaveLabel, cb.octave);
             updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
             updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
+        } else {
+            applyTheme('auto');
         }
 
         viz = new UnifiedVisualizer('unifiedVizContainer');
@@ -1229,6 +1295,7 @@ function resetToDefaults() {
     ctx.bpm = 100;
     arranger.notation = 'roman';
     arranger.key = 'C';
+    applyTheme('auto');
     arranger.sections.forEach(s => s.color = '#3b82f6');
     
     cb.volume = 0.5;
@@ -1268,9 +1335,9 @@ function resetToDefaults() {
     ui.swingBase.value = '8th';
     ui.masterVol.value = 0.5;
     ui.countIn.checked = true;
+    ui.metronome.checked = false;
     ui.visualFlash.checked = false;
     ui.haptic.checked = false;
-
     if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.master, ctx.audio.currentTime, 0.02);
     if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.chords, ctx.audio.currentTime, 0.02);
     if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.45 * MIXER_GAIN_MULTIPLIERS.bass, ctx.audio.currentTime, 0.02);

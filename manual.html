@@ -19,6 +19,8 @@
         }
         header {
             position: static;
+            height: auto;
+            box-shadow: none;
             border-bottom: none;
             padding: 2rem 0;
             background: transparent;
@@ -52,37 +54,37 @@
             font-size: 1.8rem;
             color: var(--accent-color);
             margin-bottom: 1.5rem;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--border-color);
             padding-bottom: 0.5rem;
         }
         h3 {
             font-size: 1.3rem;
-            color: white;
+            color: var(--text-color);
             margin: 2rem 0 1rem;
         }
         p {
             margin-bottom: 1rem;
-            color: #94a3b8;
+            color: var(--text-secondary);
         }
         code {
-            background: #1e293b;
+            background: var(--input-bg);
             padding: 0.2rem 0.4rem;
             border-radius: 4px;
             font-family: ui-monospace, monospace;
-            color: #3b82f6;
+            color: var(--accent-color);
             font-size: 0.9em;
         }
         .toc {
-            background: #1e293b;
+            background: var(--panel-color);
             padding: 1.5rem;
             border-radius: 12px;
             margin-bottom: 3rem;
-            border: 1px solid #334155;
+            border: 1px solid var(--border-color);
         }
         .toc h4 {
             margin-top: 0;
             margin-bottom: 1rem;
-            color: white;
+            color: var(--text-color);
             text-transform: uppercase;
             font-size: 0.8rem;
             letter-spacing: 0.1em;
@@ -99,7 +101,7 @@
             header h1 { font-size: 2rem; }
         }
         .toc a {
-            color: #94a3b8;
+            color: var(--text-secondary);
             text-decoration: none;
             font-size: 0.9rem;
             transition: color 0.2s;
@@ -108,22 +110,22 @@
             color: var(--accent-color);
         }
         .feature-card {
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--panel-color);
+            border: 1px solid var(--border-color);
             padding: 1.5rem;
             border-radius: 12px;
             margin-bottom: 1.5rem;
         }
         .feature-card h4 {
             margin-top: 0;
-            color: white;
+            color: var(--text-color);
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
         ul.list-detailed {
             padding-left: 1.2rem;
-            color: #94a3b8;
+            color: var(--text-secondary);
         }
         ul.list-detailed li {
             margin-bottom: 0.75rem;
@@ -135,13 +137,13 @@
             align-items: center;
         }
         .shortcut-key {
-            background: #475569;
-            color: white;
+            background: var(--card-bg-hover);
+            color: var(--text-color);
             padding: 0.25rem 0.6rem;
             border-radius: 4px;
             font-family: monospace;
             font-weight: bold;
-            box-shadow: 0 2px 0 #1e293b;
+            box-shadow: 0 2px 0 var(--panel-color);
             font-size: 0.85rem;
         }
         .notation-table {
@@ -153,11 +155,11 @@
         .notation-table th, .notation-table td {
             text-align: left;
             padding: 0.75rem;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--border-color);
         }
         .notation-table th {
-            color: white;
-            background: rgba(255,255,255,0.05);
+            color: var(--text-color);
+            background: var(--input-bg);
         }
     </style>
 </head>
@@ -192,6 +194,9 @@
             </ul>
             <p>The application works entirely in your browser using the Web Audio API. Your arrangements are <strong>automatically saved</strong> as you work, so you can pick up right where you left off after a refresh.</p>
             
+            <h3>Solarized Themes</h3>
+            <p>Ensemble includes professional <strong>Solarized Dark</strong> and <strong>Solarized Light</strong> themes. You can choose your preferred theme in the Settings menu or set it to <strong>Auto</strong> to automatically sync with your operating system's dark/light mode preference.</p>
+
             <h3>Color-Coded Library</h3>
             <p>Ensemble uses a <strong>color-coded categorization system</strong> for presets. Each genre is assigned a unique color, shown as a border on the chips (e.g., Purple for Jazz, Blue for Pop, Pink for Soul). User-created presets are marked with a distinct white border.</p>
         </section>
@@ -273,7 +278,13 @@
             </div>
 
             <h3>Extended Form Support</h3>
-            <p>For longer progressions (like 32-bar Jazz standards), the input box automatically supports multiple lines. You can organize your song form visually (e.g., 4 bars per line) to make editing easier.</p>
+            <p>For longer progressions (like 32-bar Jazz standards), you can add multiple sections. Organize your arrangement into named sections (e.g., "Verse", "Chorus"). The Arranger allows you to:</p>
+            <ul class="list-detailed">
+                <li><strong>Reorder:</strong> Use the <code>↑</code> and <code>↓</code> arrows to move sections within the song form.</li>
+                <li><strong>Duplicate:</strong> Use the <code>⧉</code> button to quickly copy a section's structure.</li>
+                <li><strong>Color-Code:</strong> Assign custom colors to sections to visually distinguish them in the chord visualizer.</li>
+            </ul>
+            <p>Each section supports multiple lines. You can organize your song form visually (e.g., 4 bars per line) to make editing easier.</p>
         </section>
 
         <section id="grooves">
@@ -304,13 +315,26 @@
                 <p>Each step in the grid has three states:</p>
                 <ul class="list-detailed" style="margin-bottom:0;">
                     <li><strong>Off</strong> (Empty): No sound.</li>
-                    <li><strong>Standard</strong> (Blue): Normal hit.</li>
-                    <li><strong>Accented</strong> (Pink): Harder hit with more "snap" and volume.</li>
+                    <li><strong>Standard</strong> (Accent Color): Normal hit.</li>
+                    <li><strong>Accented</strong> (Soloist Color): Harder hit with more "snap" and volume.</li>
                 </ul>
             </div>
 
+            <h3>Pattern Management</h3>
+            <p>Ensemble supports complex drum structures beyond a single measure:</p>
+            <ul class="list-detailed">
+                <li><strong>Multiple Measures:</strong> Select between 1, 2, 4, or 8 measures. This allows you to create evolving patterns and fills.</li>
+                <li><strong>Pagination:</strong> Use the measure buttons (1, 2, 3...) to switch between pages of the sequencer.</li>
+                <li><strong>Copy to All:</strong> Use the <code>⧉ Copy to All</code> button to instantly duplicate your current measure's pattern to every other measure in the sequence.</li>
+                <li><strong>Auto-follow:</strong> When enabled, the sequencer grid will automatically switch pages to show you the currently playing measure during playback.</li>
+            </ul>
+
             <h3>Swing & Feel</h3>
-            <p>Use the <strong>Swing</strong> slider to move away from a "robotic" feel. You can choose between 1/8 and 1/16 note swing bases. Higher swing percentages create a "shuffled" or "triplet" feel typical of Jazz, Blues, and Hip-Hop.</p>
+            <p>Fine-tune the "pocket" of your rhythm section:</p>
+            <ul class="list-detailed">
+                <li><strong>Swing:</strong> Use the slider to move away from a "robotic" feel. You can choose between 1/8 and 1/16 note swing bases. Higher swing percentages create a "shuffled" or "triplet" feel typical of Jazz, Blues, and Hip-Hop.</li>
+                <li><strong>Humanize:</strong> Adds subtle, random timing offsets (jitter) to every drum hit, simulating the natural imperfections of a real drummer.</li>
+            </ul>
         </section>
 
         <section id="bassist">
@@ -362,20 +386,20 @@
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #3b82f6; box-shadow: 0 0 10px #3b82f6;"></div>
-                    <span style="color: white; font-weight: bold;">Root</span>
+                    <div style="width: 24px; height: 24px; border-radius: 4px; background: var(--blue); box-shadow: 0 0 10px var(--blue);"></div>
+                    <span style="color: var(--text-color); font-weight: bold;">Root</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #10b981; box-shadow: 0 0 10px #10b981;"></div>
-                    <span style="color: white; font-weight: bold;">3rd (Quality)</span>
+                    <div style="width: 24px; height: 24px; border-radius: 4px; background: var(--green); box-shadow: 0 0 10px var(--green);"></div>
+                    <span style="color: var(--text-color); font-weight: bold;">3rd (Quality)</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #f97316; box-shadow: 0 0 10px #f97316;"></div>
-                    <span style="color: white; font-weight: bold;">5th (Stability)</span>
+                    <div style="width: 24px; height: 24px; border-radius: 4px; background: var(--orange); box-shadow: 0 0 10px var(--orange);"></div>
+                    <span style="color: var(--text-color); font-weight: bold;">5th (Stability)</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 24px; height: 24px; border-radius: 4px; background: #a855f7; box-shadow: 0 0 10px #a855f7;"></div>
-                    <span style="color: white; font-weight: bold;">7th+ (Color)</span>
+                    <div style="width: 24px; height: 24px; border-radius: 4px; background: var(--violet); box-shadow: 0 0 10px var(--violet);"></div>
+                    <span style="color: var(--text-color); font-weight: bold;">7th+ (Color)</span>
                 </div>
             </div>
 
@@ -390,6 +414,10 @@
             <div class="feature-card">
                 <h4 style="color: var(--error-color);">No Sound?</h4>
                 <p style="font-size: 0.9rem;">Web browsers require a user gesture (like clicking "START") before audio can begin. If you still hear nothing, check your device's silent switch (especially on iOS) and ensure the module's ⏻ power button is glowing green.</p>
+            </div>
+            <div class="feature-card">
+                <h4>Steady Practice</h4>
+                <p style="font-size: 0.9rem;">While the <strong>Count-in</strong> helps you start, you can enable the permanent <strong>Metronome Click</strong> in Settings to help you maintain a perfect tempo throughout the entire progression.</p>
             </div>
             <div class="feature-card">
                 <h4>Performance Issues?</h4>
@@ -433,5 +461,33 @@
             Ensemble &copy; 2026. All rights reserved.
         </footer>
     </div>
+
+    <script>
+        // Theme Sync for Manual
+        function applyTheme() {
+            try {
+                const savedState = JSON.parse(localStorage.getItem('ensemble_currentState') || '{}');
+                const theme = savedState.theme || 'auto';
+                
+                let effectiveTheme = theme;
+                if (theme === 'auto') {
+                    effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                
+                document.documentElement.setAttribute('data-theme', effectiveTheme);
+                document.documentElement.style.colorScheme = effectiveTheme;
+            } catch (e) {
+                console.error("Theme sync failed", e);
+            }
+        }
+
+        applyTheme();
+        
+        // Listen for system changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            const savedState = JSON.parse(localStorage.getItem('ensemble_currentState') || '{}');
+            if (!savedState.theme || savedState.theme === 'auto') applyTheme();
+        });
+    </script>
 </body>
 </html>

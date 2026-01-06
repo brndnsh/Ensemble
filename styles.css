@@ -1,19 +1,79 @@
 :root {
-    --bg-color: #0f172a;
-    --panel-color: #1e293b;
-    --text-color: #f1f5f9;
-    --accent-color: #3b82f6;
-    --accent-hover: #2563eb;
-    --success-color: #10b981;
-    --soloist-color: #f472b6;
-    --error-color: #ef4444;
-    --card-bg: #334155;
+    color-scheme: dark light;
     
-    /* Metronome specific overrides adapted to theme */
-    --beat-active: #facc15;
-    --beat-inactive-odd: #334155;
-    --beat-inactive-even: #475569;
-    --beat-playing: #fbbf24;
+    /* Solarized Dark (Default) */
+    --base03: #002b36;
+    --base02: #073642;
+    --base01: #586e75;
+    --base00: #657b83;
+    --base0: #839496;
+    --base1: #93a1a1;
+    --base2: #eee8d5;
+    --base3: #fdf6e3;
+    --yellow: #b58900;
+    --orange: #cb4b16;
+    --red: #dc322f;
+    --magenta: #d33682;
+    --violet: #6c71c4;
+    --blue: #268bd2;
+    --cyan: #2aa198;
+    --green: #859900;
+
+    --bg-color: var(--base03);
+    --panel-color: var(--base02);
+    --text-color: var(--base1);
+    --text-secondary: var(--base0);
+    --text-muted: var(--base01);
+    --accent-color: var(--blue);
+    --accent-hover: var(--cyan);
+    --success-color: var(--green);
+    --soloist-color: var(--magenta);
+    --error-color: var(--red);
+    --card-bg: #0a404e; /* Slightly lighter than base02 for contrast */
+    --card-bg-hover: var(--base01);
+    --border-color: rgba(147, 161, 161, 0.15);
+    --input-bg: rgba(0, 43, 54, 0.4);
+    
+    /* Sequencer Specific */
+    --step-bg: rgba(147, 161, 161, 0.15);
+    --step-bg-hover: rgba(147, 161, 161, 0.25);
+    --step-bg-marker: rgba(147, 161, 161, 0.2);
+    --step-border-marker: rgba(147, 161, 161, 0.4);
+
+    /* Metronome */
+    --beat-active: var(--yellow);
+    --beat-inactive-odd: var(--base02);
+    --beat-inactive-even: var(--base01);
+    --beat-playing: var(--orange);
+}
+
+[data-theme="light"] {
+    color-scheme: light;
+    --bg-color: var(--base3);
+    --panel-color: var(--base2);
+    --text-color: var(--base02);
+    --text-secondary: var(--base01);
+    --text-muted: var(--base00);
+    --accent-color: var(--blue);
+    --accent-hover: var(--cyan);
+    --success-color: var(--green);
+    --soloist-color: var(--magenta);
+    --error-color: var(--red);
+    --card-bg: var(--base3);
+    --card-bg-hover: var(--base2);
+    --border-color: rgba(7, 54, 66, 0.15);
+    --input-bg: rgba(238, 232, 213, 0.5);
+
+    /* Sequencer Specific */
+    --step-bg: rgba(7, 54, 66, 0.1);
+    --step-bg-hover: rgba(7, 54, 66, 0.2);
+    --step-bg-marker: rgba(7, 54, 66, 0.15);
+    --step-border-marker: rgba(7, 54, 66, 0.3);
+
+    /* Metronome */
+    --beat-active: var(--yellow);
+    --beat-inactive-odd: var(--base2);
+    --beat-inactive-even: var(--base3);
 }
 
 * {
@@ -31,6 +91,7 @@ body {
     min-height: 100dvh;
     overflow-x: hidden;
     touch-action: manipulation;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
 }
 
 #flashOverlay {
@@ -45,7 +106,7 @@ body {
 
 /* --- Layout --- */
 header {
-    background: rgba(30, 41, 59, 0.8); /* Semi-transparent panel color */
+    background: var(--panel-color);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     padding: 1rem 2rem;
@@ -58,34 +119,39 @@ header {
     height: 80px;
     position: sticky;
     top: 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid var(--border-color);
 }
 
 @media (max-width: 600px) {
     header {
-        padding: 0.5rem 0.5rem;
+        padding: 0.5rem 0.25rem;
         height: 64px;
-        gap: 0.25rem;
+        gap: 0.2rem;
     }
     
     h1 {
-        font-size: 1.1rem;
+        font-size: 1rem;
         letter-spacing: -0.02em;
     }
 
     .main-controls {
-        gap: 0.4rem;
+        gap: 0.25rem;
     }
 
     .primary-btn {
-        min-width: 65px;
-        font-size: 0.85rem;
-        padding: 0.4rem 0.5rem;
+        min-width: 60px;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.4rem;
     }
 
     input[type="number"] {
-        width: 40px;
+        width: 48px;
         font-size: 0.9rem;
+        padding: 0;
+    }
+
+    .control-group {
+        padding: 0.2rem 0.25rem;
     }
 
     .control-label {
@@ -96,7 +162,7 @@ header {
 h1 {
     margin: 0;
     font-size: 1.5rem;
-    background: linear-gradient(45deg, var(--accent-color), #8b5cf6);
+    background: linear-gradient(45deg, var(--accent-color), var(--violet));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     white-space: nowrap; /* Prevent title wrapping */
@@ -118,7 +184,7 @@ h1 {
     cursor: pointer;
     transition: all 0.2s;
     font-size: 1rem;
-    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     min-width: 100px; /* Prevent width shifting between START/STOP */
     height: 42px; /* Fixed height to prevent vertical jitter */
     display: inline-flex;
@@ -138,22 +204,22 @@ h1 {
 
 .primary-btn.playing {
     background-color: var(--error-color);
-    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3);
 }
 
 .control-group {
     display: flex;
     align-items: center;
-    background: rgba(0,0,0,0.2);
+    background: var(--input-bg);
     border-radius: 6px;
     padding: 0.2rem 0.5rem;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid var(--border-color);
 }
 
 .control-label {
     font-size: 0.75rem;
     text-transform: uppercase;
-    color: #94a3b8;
+    color: var(--text-secondary);
     margin-right: 0.5rem;
     font-weight: bold;
 }
@@ -161,9 +227,9 @@ h1 {
 input[type="number"] {
     background: transparent;
     border: none;
-    color: white;
+    color: var(--text-color);
     font-size: 1rem;
-    width: 50px;
+    width: 60px;
     text-align: center;
     font-weight: bold;
 }
@@ -174,7 +240,7 @@ input[type="number"]:focus {
 
 button {
     background: var(--card-bg);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid var(--border-color);
     color: var(--text-color);
     border-radius: 4px;
     cursor: pointer;
@@ -182,7 +248,7 @@ button {
 }
 
 button:hover {
-    background: rgba(255,255,255,0.1);
+    background: var(--card-bg-hover);
 }
 
 /* --- Layout --- */
@@ -201,11 +267,12 @@ button:hover {
     background: var(--panel-color);
     border-radius: 16px;
     padding: 2rem;
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
     position: relative;
+    transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
 }
 
 /* Section-specific subtle accents */
@@ -219,13 +286,13 @@ button:hover {
     align-items: center;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid var(--border-color);
 }
 
 
 .chord-panel-header h2 { color: var(--accent-color); }
-.groove-panel-header h2 { color: #facc15; }
-.bass-panel-header h2 { color: #10b981; }
+.groove-panel-header h2 { color: var(--yellow); }
+.bass-panel-header h2 { color: var(--success-color); }
 .soloist-panel-header h2 { color: var(--soloist-color); }
 
 h2 {
@@ -237,8 +304,8 @@ h2 {
 
 .power-btn {
     background: transparent;
-    border: 2px solid #475569;
-    color: #475569;
+    border: 2px solid var(--text-muted);
+    color: var(--text-muted);
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -253,7 +320,7 @@ h2 {
 .power-btn.active {
     border-color: var(--success-color);
     color: var(--success-color);
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 10px rgba(133, 153, 0, 0.2);
 }
 
 .power-btn:hover {
@@ -276,22 +343,22 @@ h2 {
     gap: 0.5rem;
     padding: 0.6rem 1rem;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
 }
 
 .tab-item:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--card-bg-hover);
+    border-color: var(--text-secondary);
     transform: translateY(-1px);
 }
 
 .tab-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--text-secondary);
     padding: 0;
     cursor: pointer;
     font-weight: bold;
@@ -302,13 +369,12 @@ h2 {
 }
 
 .tab-item:has(.tab-btn.active) {
-    background: rgba(16, 185, 129, 0.1);
+    background: rgba(133, 153, 0, 0.1);
     border-color: var(--success-color);
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
 }
 
 .tab-item:has(.tab-btn.active) .tab-btn {
-    color: white;
+    color: var(--text-color);
 }
 
 .tabs .power-btn {
@@ -335,7 +401,7 @@ h2 {
 
 /* --- Chord Visualizer --- */
 .display-area {
-    background: rgba(0,0,0,0.3);
+    background: var(--input-bg);
     border-radius: 8px;
     padding: 0.75rem;
     font-family: monospace;
@@ -348,9 +414,10 @@ h2 {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+    border: 1px solid var(--border-color);
     /* Custom Scrollbar */
     scrollbar-width: thin;
-    scrollbar-color: #475569 transparent;
+    scrollbar-color: var(--text-muted) transparent;
 }
 
 .measure-box {
@@ -358,11 +425,12 @@ h2 {
     min-width: 100px;
     display: flex;
     gap: 2px;
-    background: rgba(255,255,255,0.03);
+    background: var(--input-bg);
     border-radius: 6px;
     padding: 2px;
-    border: 1px solid rgba(255,255,255,0.05);
+    border: 1px solid var(--border-color);
     min-height: 60px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 
 @media (min-width: 600px) {
@@ -393,34 +461,37 @@ h2 {
     background: var(--card-bg);
     padding: 0.5rem;
     border-radius: 4px;
-    border: 1px solid transparent;
+    border: 1px solid var(--border-color);
     transition: all 0.2s;
     cursor: pointer;
     min-width: 0; /* Prevents overflow in flex */
     text-align: center;
+    color: var(--text-color);
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .chord-card:hover {
-    background: #475569;
+    background: var(--card-bg-hover);
 }
 
 .chord-card.active {
-    background: rgba(59, 130, 246, 0.2);
+    background: rgba(38, 139, 210, 0.2);
     border-color: var(--accent-color);
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 15px rgba(38, 139, 210, 0.3);
     transform: scale(1.05);
     animation: chordPulse 1s infinite alternate ease-in-out;
 }
 
 @keyframes chordPulse {
-    from { box-shadow: 0 0 10px rgba(59, 130, 246, 0.2); }
-    to { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+    from { box-shadow: 0 0 10px rgba(38, 139, 210, 0.2); }
+    to { box-shadow: 0 0 20px rgba(38, 139, 210, 0.5); }
 }
 
 .measure-btn {
     background: var(--panel-color);
-    border: 1px solid #475569;
-    color: #94a3b8;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
     padding: 0.3rem 0.6rem;
     border-radius: 4px;
     cursor: pointer;
@@ -430,8 +501,8 @@ h2 {
 }
 
 .measure-btn:hover {
-    background: #334155;
-    color: white;
+    background: var(--card-bg-hover);
+    color: var(--text-color);
 }
 
 .measure-btn.active {
@@ -446,10 +517,11 @@ h2 {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    background: rgba(0,0,0,0.2);
+    background: var(--input-bg);
     padding: 1rem;
     border-radius: 8px;
     overflow-x: auto;
+    border: 1px solid var(--border-color);
 }
 
 .track {
@@ -462,7 +534,7 @@ h2 {
     width: 80px;
     min-width: 80px;
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--text-color);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -477,20 +549,21 @@ h2 {
 
 .step {
     aspect-ratio: 1;
-    background: rgba(255,255,255,0.05);
+    background: var(--step-bg);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.1s;
     min-width: 20px;
+    border: 1px solid transparent;
 }
 
 .step:hover {
-    background: rgba(255,255,255,0.1);
+    background: var(--step-bg-hover);
 }
 
 .step.beat-marker {
-    background: rgba(255,255,255,0.08);
-    border-left: 2px solid rgba(255,255,255,0.15);
+    background: var(--step-bg-marker);
+    border-left: 2px solid var(--step-border-marker);
 }
 
 .step-label.beat-start {
@@ -499,10 +572,10 @@ h2 {
 }
 
 .step.active { background: var(--accent-color) !important; box-shadow: 0 0 8px var(--accent-color); } 
-.step.accented { background: #f472b6 !important; box-shadow: 0 0 12px #f472b6; } 
+.step.accented { background: var(--soloist-color) !important; box-shadow: 0 0 12px var(--soloist-color); } 
 
 .step.playing {
-    outline: 2px solid white;
+    outline: 2px solid var(--text-color);
     outline-offset: 1px;
     z-index: 2;
 }
@@ -516,11 +589,11 @@ h2 {
     text-align: center;
     font-size: 0.7rem;
     font-weight: bold;
-    color: #64748b;
+    color: var(--text-muted);
 }
 
 .step-label.beat-start {
-    color: white;
+    color: var(--text-color);
 }
 
 /* --- Presets & Genre Colors --- */
@@ -533,56 +606,56 @@ h2 {
 .preset-chip {
     font-size: 0.75rem;
     padding: 0.3rem 0.6rem;
-    background: rgba(255,255,255,0.05);
+    background: var(--input-bg);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s;
-    border: 1px solid transparent;
-    color: #94a3b8;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
 }
 
 .preset-chip:hover {
-    background: rgba(255,255,255,0.1);
-    color: white;
+    background: var(--card-bg-hover);
+    color: var(--text-color);
 }
 
 .preset-chip.active {
-    outline: 2px solid white;
+    outline: 2px solid var(--text-color);
     outline-offset: 1px;
-    color: white;
+    color: var(--text-color);
 }
 
-/* Genre Color Assignments */
-.preset-chip[data-category="Basic"] { border-color: #64748b; color: #cbd5e1; }
-.preset-chip[data-category="Pop/Rock"] { border-color: #3b82f6; color: #93c5fd; }
-.preset-chip[data-category="Electronic"] { border-color: #a855f7; color: #d8b4fe; }
-.preset-chip[data-category="Soul/R&B"], .preset-chip[data-category="Soul/Funk"] { border-color: #ec4899; color: #f9a8d4; }
-.preset-chip[data-category="Blues"] { border-color: #06b6d4; color: #67e8f9; }
-.preset-chip[data-category="World/Latin"] { border-color: #f59e0b; color: #fcd34d; }
-.preset-chip[data-category="Jazz"] { border-color: #10b981; color: #6ee7b7; }
-.preset-chip[data-category="Classical/Trad"] { border-color: #ef4444; color: #fca5a5; }
-.preset-chip[data-category="Theory"] { border-color: #84cc16; color: #bef264; }
-.preset-chip[data-category="Rock/Metal"] { border-color: #ef4444; color: #fca5a5; }
-.preset-chip[data-category="User"] { border-color: #ffffff; color: #ffffff; opacity: 0.8; }
+/* Genre Color Assignments - Slightly adjusted for Solarized palette harmony */
+.preset-chip[data-category="Basic"] { border-color: var(--base01); }
+.preset-chip[data-category="Pop/Rock"] { border-color: var(--blue); }
+.preset-chip[data-category="Electronic"] { border-color: var(--violet); }
+.preset-chip[data-category="Soul/R&B"], .preset-chip[data-category="Soul/Funk"] { border-color: var(--magenta); }
+.preset-chip[data-category="Blues"] { border-color: var(--cyan); }
+.preset-chip[data-category="World/Latin"] { border-color: var(--orange); }
+.preset-chip[data-category="Jazz"] { border-color: var(--green); }
+.preset-chip[data-category="Classical/Trad"] { border-color: var(--red); }
+.preset-chip[data-category="Theory"] { border-color: var(--yellow); }
+.preset-chip[data-category="Rock/Metal"] { border-color: var(--red); }
+.preset-chip[data-category="User"] { border-color: var(--text-color); opacity: 0.8; }
 
-.preset-chip.active[data-category="Basic"] { background: #64748b; color: white; }
-.preset-chip.active[data-category="Pop/Rock"] { background: #3b82f6; color: white; }
-.preset-chip.active[data-category="Electronic"] { background: #a855f7; color: white; }
-.preset-chip.active[data-category="Soul/R&B"], .preset-chip.active[data-category="Soul/Funk"] { background: #ec4899; color: white; }
-.preset-chip.active[data-category="Blues"] { background: #06b6d4; color: white; }
-.preset-chip.active[data-category="World/Latin"] { background: #f59e0b; color: white; }
-.preset-chip.active[data-category="Jazz"] { background: #10b981; color: white; }
-.preset-chip.active[data-category="Classical/Trad"] { background: #ef4444; color: white; }
-.preset-chip.active[data-category="Theory"] { background: #84cc16; color: white; }
-.preset-chip.active[data-category="Rock/Metal"] { background: #ef4444; color: white; }
+.preset-chip.active[data-category="Basic"] { background: var(--base01); color: white; }
+.preset-chip.active[data-category="Pop/Rock"] { background: var(--blue); color: white; }
+.preset-chip.active[data-category="Electronic"] { background: var(--violet); color: white; }
+.preset-chip.active[data-category="Soul/R&B"], .preset-chip.active[data-category="Soul/Funk"] { background: var(--magenta); color: white; }
+.preset-chip.active[data-category="Blues"] { background: var(--cyan); color: white; }
+.preset-chip.active[data-category="World/Latin"] { background: var(--orange); color: white; }
+.preset-chip.active[data-category="Jazz"] { background: var(--green); color: white; }
+.preset-chip.active[data-category="Classical/Trad"] { background: var(--red); color: white; }
+.preset-chip.active[data-category="Theory"] { background: var(--yellow); color: white; }
+.preset-chip.active[data-category="Rock/Metal"] { background: var(--red); color: white; }
 
 .user-preset-chip {
-    border-color: rgba(255,255,255,0.2);
+    border-color: var(--border-color);
 }
 
 .user-preset-chip.active {
-    background: white;
-    color: black;
+    background: var(--text-color);
+    color: var(--bg-color);
 }
 
 /* --- Settings Overlay --- */
@@ -592,7 +665,7 @@ h2 {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.7);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -616,19 +689,20 @@ h2 {
     max-width: 500px;
     max-height: 85vh;
     overflow-y: auto;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid var(--border-color);
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    color: var(--text-color);
 }
 
 .settings-section {
     margin-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 1rem;
 }
 
 .settings-section h3 {
     margin-top: 0;
-    color: #94a3b8;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     text-transform: uppercase;
     margin-bottom: 1rem;
@@ -645,6 +719,19 @@ h2 {
     font-size: 0.9rem;
 }
 
+/* Select and inputs in settings */
+select, input[type="range"] {
+    accent-color: var(--accent-color);
+}
+
+select {
+    background: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 0.4rem;
+    border-radius: 4px;
+}
+
 /* --- Visualizer --- */
 .viz-legend {
     display: flex;
@@ -652,7 +739,7 @@ h2 {
     margin-top: 1rem;
     flex-wrap: wrap;
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--text-secondary);
 }
 
 .legend-item {
@@ -667,12 +754,12 @@ h2 {
     border-radius: 50%;
 }
 
-.swatch-root { background: #3b82f6; box-shadow: 0 0 5px #3b82f6; }
-.swatch-third { background: #10b981; box-shadow: 0 0 5px #10b981; }
-.swatch-fifth { background: #f97316; box-shadow: 0 0 5px #f97316; }
-.swatch-seventh { background: #8b5cf6; box-shadow: 0 0 5px #8b5cf6; }
-.swatch-bass { background: var(--success-color); border: 2px solid white; }
-.swatch-soloist { background: var(--soloist-color); border: 2px solid white; }
+.swatch-root { background: var(--blue); box-shadow: 0 0 5px var(--blue); }
+.swatch-third { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.swatch-fifth { background: var(--orange); box-shadow: 0 0 5px var(--orange); }
+.swatch-seventh { background: var(--violet); box-shadow: 0 0 5px var(--violet); }
+.swatch-bass { background: var(--success-color); border: 2px solid var(--text-color); }
+.swatch-soloist { background: var(--soloist-color); border: 2px solid var(--text-color); }
 
 /* Toast */
 #toast {
@@ -680,7 +767,7 @@ h2 {
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%) translateY(100px);
-    background: #10b981;
+    background: var(--success-color);
     color: white;
     padding: 0.5rem 1rem;
     border-radius: 20px;
@@ -696,16 +783,16 @@ h2 {
 
 /* Section Editor Styles */
 .section-card {
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(255,255,255,0.05);
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 1rem;
     transition: all 0.2s;
 }
 .section-card.active {
     border-color: var(--accent-color);
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
-    background: rgba(59, 130, 246, 0.05);
+    box-shadow: 0 0 10px rgba(38, 139, 210, 0.2);
+    background: rgba(38, 139, 210, 0.05);
 }
 .section-header {
     display: flex;
@@ -729,7 +816,7 @@ h2 {
 .section-duplicate-btn {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: pointer;
     font-size: 1.1rem;
     padding: 0 0.25rem;
@@ -739,10 +826,23 @@ h2 {
 .section-duplicate-btn:hover {
     color: var(--accent-color);
 }
+.section-move-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 0.25rem;
+    line-height: 1;
+    transition: color 0.2s;
+}
+.section-move-btn:hover {
+    color: var(--accent-color);
+}
 .section-delete-btn {
     background: transparent;
     border: none;
-    color: #64748b;
+    color: var(--text-muted);
     cursor: pointer;
     font-size: 1.2rem;
     padding: 0 0.25rem;
@@ -750,15 +850,15 @@ h2 {
     transition: color 0.2s;
 }
 .section-delete-btn:hover {
-    color: #ef4444;
+    color: var(--error-color);
 }
 .section-prog-input {
     width: 100%;
-    background: rgba(0,0,0,0.2);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     padding: 0.5rem;
-    color: white;
+    color: var(--text-color);
     font-family: monospace;
     font-size: 1.1rem;
     min-height: 60px;
