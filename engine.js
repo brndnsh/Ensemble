@@ -390,7 +390,9 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
 }
 
 export function playDrumSound(name, time, velocity = 1.0) {
-    const masterVol = velocity * 1.35;
+    const humanizeFactor = (gb.humanize || 0) / 100;
+    const velJitter = 1.0 + (Math.random() - 0.5) * (humanizeFactor * 0.4);
+    const masterVol = velocity * 1.35 * velJitter;
     if (name === 'Kick') {
         const osc = ctx.audio.createOscillator();
         const gain = ctx.audio.createGain();
