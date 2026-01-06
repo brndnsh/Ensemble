@@ -786,3 +786,82 @@ textarea#progressionInput {
 .swatch-seventh { background-color: #a855f7; box-shadow: 0 0 5px #a855f7; }
 .swatch-bass { border: 2px solid #3b82f6; background: transparent; }
 .swatch-soloist { border: 2px solid #f472b6; background: transparent; }
+
+/* Sections */
+.section-card {
+    background: var(--card-bg);
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+    transition: all 0.2s ease;
+}
+.section-card:focus-within {
+    border-color: var(--accent-color);
+}
+.section-card.active {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+    background: rgba(59, 130, 246, 0.05);
+}
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+.section-label-input {
+    background: transparent;
+    border: none;
+    color: var(--accent-color);
+    font-weight: bold;
+    font-size: 0.9rem;
+    width: 100%;
+    padding: 0;
+}
+.section-label-input:focus {
+    outline: none;
+    border-bottom: 1px solid var(--accent-color);
+}
+.section-duplicate-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0 0.25rem;
+    line-height: 1;
+    transition: color 0.2s;
+}
+.section-duplicate-btn:hover {
+    color: var(--accent-color);
+}
+.section-delete-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 0.25rem;
+    line-height: 1;
+    transition: color 0.2s;
+}
+.section-delete-btn:hover {
+    color: #ef4444;
+}
+.section-prog-input {
+    width: 100%;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    padding: 0.5rem;
+    color: white;
+    font-family: monospace;
+    font-size: 1.1rem;
+    min-height: 60px;
+    resize: vertical;
+}
+.section-prog-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}

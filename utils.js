@@ -40,4 +40,38 @@ export function getMidi(freq) {
     return Math.round(12 * Math.log2(freq / 440) + 69);
 }
 
+/**
+ * Generates a unique ID for sections.
+ */
+export function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
 
+/**
+ * Compresses the sections array into a Base64 string.
+ * @param {Array} sections 
+ * @returns {string}
+ */
+export function compressSections(sections) {
+    const minified = sections.map(s => ({ l: s.label, v: s.value }));
+    return btoa(JSON.stringify(minified));
+}
+
+/**
+ * Decompresses the Base64 string back into sections.
+ * @param {string} str 
+ * @returns {Array}
+ */
+export function decompressSections(str) {
+    try {
+        const minified = JSON.parse(atob(str));
+        return minified.map((s, i) => ({ 
+            id: generateId(), 
+            label: s.l || `Section ${i+1}`, 
+            value: s.v || '' 
+        }));
+    } catch (e) {
+        console.error("Failed to decompress sections", e);
+        return [{ id: 1, label: 'Intro', value: 'I | IV' }];
+    }
+}

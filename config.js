@@ -76,9 +76,26 @@ export const CHORD_PRESETS = [
     { name: "Jazz Blues", prog: "I7 | IV7 | I7 | v7 I7 | IV7 | IV7 | I7 | iii7 VI7 | ii7 | V7 | I7 VI7 | ii7 V7", category: "Blues" },
     { name: "Jazz II-V-I", prog: "ii7 | V7 | Imaj7 | Imaj7", category: "Jazz" },
     { name: "Minor II-V-I", prog: "iiø7 | V7 | i7 | i7", category: "Jazz" },
-    { name: "Rhythm Changes", prog: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I", category: "Jazz" },
-    { name: "Autumn Leaves (32 Bar)", prog: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7", category: "Jazz" },
-    { name: "Rhythm Changes (32 Bar)", prog: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I | I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I | III7 | III7 | VI7 | VI7 | II7 | II7 | V7 | V7 | I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I", category: "Jazz" },
+    { 
+        name: "Rhythm Changes", 
+        sections: [
+            { label: "A", value: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I" },
+            { label: "A", value: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I" },
+            { label: "B", value: "III7 | III7 | VI7 | VI7 | II7 | II7 | V7 | V7" },
+            { label: "A", value: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I" }
+        ],
+        category: "Jazz" 
+    },
+    { 
+        name: "Autumn Leaves", 
+        sections: [
+            { label: "A", value: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7" },
+            { label: "A", value: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7" },
+            { label: "B", value: "viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7" },
+            { label: "C", value: "viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7" }
+        ],
+        category: "Jazz" 
+    },
     { name: "Jazz Turnaround", prog: "Imaj7 VI7 | ii7 V7 | Imaj7 VI7 | ii7 V7", category: "Jazz" },
     { name: "Jazz Cycle", prog: "iii7 | VI7#9 | ii9 | V9 | Imaj9", category: "Jazz" },
     { name: "Neo-Soul", prog: "IVmaj7 | iii7 | ii7 | Imaj7", category: "Soul/R&B" },

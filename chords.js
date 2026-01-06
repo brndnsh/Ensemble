@@ -223,19 +223,19 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
 }
 
 /**
- * Parses the progression input string and updates the chord state.
- * @param {Function} renderCallback - Callback to trigger visual update.
+ * Parses a single progression string part (e.g., from one section).
+ * @param {string} input 
+ * @param {string} key 
+ * @param {number[]} initialMidis 
+ * @returns {{chords: Array, finalMidis: number[]}}
  */
-export function validateProgression(renderCallback) {
-    const input = ui.progInput.value;
-    const key = ui.keySelect.value;
+function parseProgressionPart(input, key, initialMidis) {
     const parsed = [];
     const baseOctave = Math.floor(cb.octave / 12) * 12;
     const keyRootMidi = baseOctave + KEY_ORDER.indexOf(normalizeKey(key));
     
-    // Split by pipes but capture them to track indices
     const barParts = input.split(/(\|)/);
-    let lastMidis = [];
+    let lastMidis = initialMidis || [];
     let charOffset = 0;
 
     barParts.forEach(barOrPipe => {
@@ -260,7 +260,6 @@ export function validateProgression(renderCallback) {
                 const suffixPart = chordPart.slice(rootPart.length);
                 let { quality, is7th } = getChordDetails(suffixPart);
                 
-                // Adjustment for Roman numerals case/quality
                 if (romanMatch) {
                     const numeral = romanMatch[2];
                     if (numeral === numeral.toLowerCase() && quality === 'major') quality = 'minor';
@@ -269,7 +268,6 @@ export function validateProgression(renderCallback) {
 
                 let intervals = getIntervals(quality, is7th, cb.density);
 
-                // Handle Slash Bass
                 let bassMidi = null;
                 let bassNameAbs = "", bassNameNNS = "", bassNameRom = "";
 
@@ -303,7 +301,6 @@ export function validateProgression(renderCallback) {
                 
                 const formatted = getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality, is7th);
 
-                // Construct strings and display objects
                 let finalAbsName = formatted.abs.root + formatted.abs.suffix;
                 let finalNNSName = formatted.nns.root + formatted.nns.suffix;
                 let finalRomName = formatted.rom.root + formatted.rom.suffix;
@@ -312,8 +309,6 @@ export function validateProgression(renderCallback) {
                     finalAbsName += `/${bassNameAbs}`;
                     finalNNSName += `/${bassNameNNS}`;
                     finalRomName += `/${bassNameRom}`;
-                    
-                    // Add bass to display objects
                     formatted.abs.bass = bassNameAbs;
                     formatted.nns.bass = bassNameNNS;
                     formatted.rom.bass = bassNameRom;
@@ -336,7 +331,30 @@ export function validateProgression(renderCallback) {
         charOffset += barText.length;
     });
 
-    cb.progression = parsed;
+    return { chords: parsed, finalMidis: lastMidis };
+}
+
+/**
+ * Parses the progression input string and updates the chord state.
+ * @param {Function} renderCallback - Callback to trigger visual update.
+ */
+export function validateProgression(renderCallback) {
+    let allChords = [];
+    let lastMidis = [];
+
+    cb.sections.forEach(section => {
+        const { chords, finalMidis } = parseProgressionPart(section.value, cb.key, lastMidis);
+        const taggedChords = chords.map((c, idx) => ({
+            ...c,
+            sectionId: section.id,
+            sectionLabel: section.label,
+            localIndex: idx
+        }));
+        allChords = allChords.concat(taggedChords);
+        lastMidis = finalMidis;
+    });
+
+    cb.progression = allChords;
     updateProgressionCache();
     if (renderCallback) renderCallback();
 }
