@@ -6,7 +6,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ### 🖋️ Arranger (Song Structure)
 *   **Modular Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`).
-*   **Section Management**: Organize your song into named sections (Intro, Verse, Chorus). Duplicate or delete sections to build complex forms.
+*   **Section Management**: Organize your song into named sections (Intro, Verse, Chorus). Reorder, duplicate, or delete sections to build complex forms.
 *   **Auto-Save**: Your arrangement is automatically persisted to local storage. Refreshing the page won't lose your work.
 *   **Smart Layout**: Chords are displayed in measures (4 per row on desktop) for clear structural visualization.
 *   **Transposition**: Instantly transpose the entire progression to any key while preserving your custom chord voicings.
@@ -35,10 +35,11 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ### General
 *   **MIDI Export**: Export your progression, bass line, and drum groove as a multi-track MIDI file (Format 1) with appropriate instrument assignments, chord name markers, and soloist pitch bends.
+*   **Solarized Themes**: Native support for **Solarized Dark** and **Solarized Light** themes, with an "Auto" mode that syncs with your system preferences.
 *   **Color-Coded Library**: Presets and styles are organized by genre using a compact, color-coded chip system (e.g., Purple for Jazz, Blue for Pop/Rock).
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
 *   **Maximized View**: Enter a focused mode that expands the chord visualizer to fill the screen for easier reading.
-*   **Count-in**: Enable a metronome count-in to help you prepare before the rhythm section kicks in.
+*   **Practice Tools**: Includes a metronome count-in and an optional permanent **Metronome Click** to keep you in time during playback.
 *   **Reset to Defaults**: Quickly restore original settings, volumes, and registers from the Settings menu.
 *   **PWA**: Fully installable and works offline.
 *   **Documentation**: Includes a comprehensive in-app User Manual for deep dives into music theory and app features.

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ensemble</title>
+    <meta name="color-scheme" content="light dark">
+    <meta name="darkreader-lock">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <link rel="apple-touch-icon" href="icon-192.png">
@@ -373,10 +375,14 @@
 
             <div class="settings-section" style="border-bottom: none;">
                 <h3>Options</h3>
-                <div style="margin-bottom: 1rem;">
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                     <label style="display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" id="countInCheck" checked>
-                        Count-in (4 Beats)
+                        Count-in
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="metronomeCheck">
+                        Metronome
                     </label>
                 </div>
 
@@ -389,6 +395,15 @@
                         <input type="checkbox" id="hapticCheck">
                         Haptic
                     </label>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem;">Theme</label>
+                    <select id="themeSelect" style="width: 100%;" aria-label="Select Theme">
+                        <option value="auto">Auto (System Default)</option>
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                    </select>
                 </div>
 
                 <div style="margin-bottom: 1rem;">

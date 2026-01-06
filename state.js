@@ -16,6 +16,7 @@ export const ctx = {
     isCountingIn: false,
     countInBeat: 0,
     isDrawing: false,
+    theme: 'auto',
     wakeLock: null
 };
 

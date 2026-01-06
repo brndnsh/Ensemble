@@ -62,9 +62,11 @@ export const ui = {
     soloistOctaveLabel: document.getElementById('soloistOctaveLabel'),
     bassHeaderReg: document.getElementById('bassHeaderReg'),
     soloistHeaderReg: document.getElementById('soloistHeaderReg'),
+    themeSelect: document.getElementById('themeSelect'),
     notationSelect: document.getElementById('notationSelect'),
     densitySelect: document.getElementById('densitySelect'),
     countIn: document.getElementById('countInCheck'),
+    metronome: document.getElementById('metronomeCheck'),
     swingSlider: document.getElementById('swingSlider'),
     swingBase: document.getElementById('swingBaseSelect'),
     visualFlash: document.getElementById('visualFlashCheck'),
@@ -172,6 +174,18 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         actions.style.display = 'flex';
         actions.style.gap = '0.5rem';
 
+        const moveUpBtn = document.createElement('button');
+        moveUpBtn.className = 'section-move-btn';
+        moveUpBtn.innerHTML = '↑';
+        moveUpBtn.title = 'Move Up';
+        moveUpBtn.onclick = () => onUpdate(section.id, 'move', -1);
+
+        const moveDownBtn = document.createElement('button');
+        moveDownBtn.className = 'section-move-btn';
+        moveDownBtn.innerHTML = '↓';
+        moveDownBtn.title = 'Move Down';
+        moveDownBtn.onclick = () => onUpdate(section.id, 'move', 1);
+
         const duplicateBtn = document.createElement('button');
         duplicateBtn.className = 'section-duplicate-btn';
         duplicateBtn.innerHTML = '⧉';
@@ -185,6 +199,8 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         deleteBtn.onclick = () => onDelete(section.id);
         
         header.appendChild(labelGroup);
+        actions.appendChild(moveUpBtn);
+        actions.appendChild(moveDownBtn);
         actions.appendChild(duplicateBtn);
         if (sections.length > 1) actions.appendChild(deleteBtn);
         header.appendChild(actions);
