@@ -185,11 +185,15 @@
 
         <section id="intro">
             <h2>Introduction</h2>
-            <p>Ensemble is a tool for musicians to practice, jam, and experiment with musical ideas. It combines a flexible chord engine with a multi-part rhythm section and melodic soloist.</p>
-            <p>The application works entirely in your browser using the Web Audio API. No installation is required, and it works offline as a PWA (Progressive Web App).</p>
+            <p>Ensemble is a tool for musicians to practice, jam, and experiment with musical ideas. The application is organized into two primary work zones:</p>
+            <ul class="list-detailed">
+                <li><strong>Arranger:</strong> Where you define the "what" of your song — the sections, chords, and harmonic structure.</li>
+                <li><strong>Accompanist:</strong> Where you define the "how" — the performance styles, instrumentation, and rhythmic feel of your virtual band.</li>
+            </ul>
+            <p>The application works entirely in your browser using the Web Audio API. Your arrangements are <strong>automatically saved</strong> as you work, so you can pick up right where you left off after a refresh.</p>
             
             <h3>Color-Coded Library</h3>
-            <p>To help you navigate the growing list of presets and styles, Ensemble uses a <strong>color-coded categorization system</strong>. Each genre or category is assigned a unique color, shown as a border on the preset chips. This allows for a compact layout that remains organized and easy to scan at a glance (e.g., Purple for Jazz, Blue for Pop, Pink for Soul).</p>
+            <p>Ensemble uses a <strong>color-coded categorization system</strong> for presets. Each genre is assigned a unique color, shown as a border on the chips (e.g., Purple for Jazz, Blue for Pop, Pink for Soul). User-created presets are marked with a distinct white border.</p>
         </section>
 
         <section id="examples">
@@ -274,7 +278,7 @@
 
         <section id="grooves">
             <h2>Grooves & Rhythm</h2>
-            <p>The Grooves section is a programmable drum sequencer featuring four classic drum sounds:</p>
+            <p>The Grooves section is a focused 16-step drum sequencer featuring four classic drum sounds:</p>
             
             <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
                 <div class="feature-card" style="flex: 1; text-align: center; padding: 1rem;">
@@ -301,15 +305,12 @@
                 <ul class="list-detailed" style="margin-bottom:0;">
                     <li><strong>Off</strong> (Empty): No sound.</li>
                     <li><strong>Standard</strong> (Blue): Normal hit.</li>
-                    <li><strong>Accented</strong> (Green): Harder hit with more "snap" and volume.</li>
+                    <li><strong>Accented</strong> (Pink): Harder hit with more "snap" and volume.</li>
                 </ul>
             </div>
 
             <h3>Swing & Feel</h3>
             <p>Use the <strong>Swing</strong> slider to move away from a "robotic" feel. You can choose between 1/8 and 1/16 note swing bases. Higher swing percentages create a "shuffled" or "triplet" feel typical of Jazz, Blues, and Hip-Hop.</p>
-            
-            <h3>Pattern Length</h3>
-            <p>Adjust the <strong>Bars</strong> selector to create longer loops (up to 4 measures). Use the ⧉ button to quickly copy your first measure's pattern to the rest of the loop.</p>
         </section>
 
         <section id="bassist">
@@ -357,6 +358,7 @@
         <section id="visualizer">
             <h2>Unified Visualizer</h2>
             <p>The visualizer provides a real-time "Piano Roll" view of your music. It uses a <strong>Harmonic Color Scheme</strong> to help you see the function of every note.</p>
+            <p><strong>Note:</strong> To save on system resources, the visualizer is <strong>disabled by default</strong>. Click the power button ⏻ in the visualizer panel to enable live monitoring.</p>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -412,6 +414,9 @@
             <div class="shortcut-grid">
                 <span class="shortcut-key">Space</span>
                 <span>Start / Stop Playback</span>
+
+                <span class="shortcut-key">1-4</span>
+                <span>Switch Accompanist Tabs (Chords, Grooves, Bass, Soloist)</span>
 
                 <span class="shortcut-key">⛶</span>
                 <span>Maximize Chords (Practice Mode)</span>

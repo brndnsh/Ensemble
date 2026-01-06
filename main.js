@@ -1,5 +1,5 @@
-import { ctx, gb, cb, bb, sb, vizState, storage } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections } from './ui.js';
+import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
 import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
@@ -134,10 +134,10 @@ function togglePlay() {
 }
 
 const POWER_CONFIG = {
-    chord: { state: cb, el: () => ui.chordPowerBtn, panel: 'chordPanel', cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
-    groove: { state: gb, el: () => ui.groovePowerBtn, panel: 'groovePanel', cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
-    bass: { state: bb, el: () => ui.bassPowerBtn, panel: 'bassPanel' },
-    soloist: { state: sb, el: () => ui.soloistPowerBtn, panel: 'soloistPanel' },
+    chord: { state: cb, el: () => ui.chordPowerBtn, panel: 'tab-chords', cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
+    groove: { state: gb, el: () => ui.groovePowerBtn, panel: 'tab-grooves', cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
+    bass: { state: bb, el: () => ui.bassPowerBtn, panel: 'tab-bass' },
+    soloist: { state: sb, el: () => ui.soloistPowerBtn, panel: 'tab-soloist' },
     viz: { state: vizState, el: () => ui.vizPowerBtn, panel: 'visualizerPanel', cleanup: () => { if (viz) viz.clear(); } }
 };
 
@@ -149,25 +149,21 @@ function togglePower(type) {
     const c = POWER_CONFIG[type];
     if (!c) return;
     
-    // Resolve element getter if it's a function (to handle potentially uninitialized UI refs if config defined too early, though here UI is imported)
-    // Actually ui is imported so we can access it directly, but let's stick to the pattern.
     const el = typeof c.el === 'function' ? c.el() : c.el;
 
     c.state.enabled = !c.state.enabled;
     el.classList.toggle('active', c.state.enabled);
-    document.getElementById(c.panel).classList.toggle('panel-disabled', !c.state.enabled);
+    
+    // In tab view, we don't disable the whole panel usually, maybe just dim controls?
+    // For now, let's keep the logic simple: button state toggle.
+    // The panel ID logic was used to gray out the whole panel. 
+    // In tabs, let's skip the panel dimming for now as it's complex with tabs.
+    // Or we can dim the controls container inside the tab.
     
     if (!c.state.enabled && c.cleanup) {
         c.cleanup();
     } else if (c.state.enabled && ['chord', 'bass', 'soloist'].includes(type)) {
         flushBuffers();
-    } else if (type === 'viz' && c.state.enabled && ctx.isPlaying && ctx.audio) {
-        // Restore beat reference if enabled mid-playback
-        const secondsPerBeat = 60.0 / ctx.bpm;
-        const sixteenth = 0.25 * secondsPerBeat;
-        // Use unswung time and measure alignment (16 steps) for stable grid
-        const measureTime = ctx.unswungNextNoteTime - (ctx.step % 16) * sixteenth;
-        viz.setBeatReference(measureTime);
     }
 }
 
@@ -190,43 +186,58 @@ export function flushBuffers() {
     sb.sequenceType = null;
 }
 
+function saveCurrentState() {
+    const data = {
+        sections: arranger.sections,
+        key: arranger.key,
+        notation: arranger.notation,
+        bpm: ctx.bpm,
+        style: cb.style
+    };
+    storage.save('currentState', data);
+}
+
 function onSectionUpdate(id, field, value) {
-    const section = cb.sections.find(s => s.id === id);
+    const section = arranger.sections.find(s => s.id === id);
     if (section) {
         section[field] = value;
         validateProgression(renderChordVisualizer);
         flushBuffers();
+        saveCurrentState();
     }
 }
 
 function onSectionDelete(id) {
-    if (cb.sections.length <= 1) return;
-    cb.sections = cb.sections.filter(s => s.id !== id);
-    renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    if (arranger.sections.length <= 1) return;
+    arranger.sections = arranger.sections.filter(s => s.id !== id);
+    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(renderChordVisualizer);
     flushBuffers();
+    saveCurrentState();
 }
 
 function onSectionDuplicate(id) {
-    const index = cb.sections.findIndex(s => s.id === id);
+    const index = arranger.sections.findIndex(s => s.id === id);
     if (index === -1) return;
-    const section = cb.sections[index];
+    const section = arranger.sections[index];
     const newSection = {
         id: generateId(),
         label: `${section.label} (Copy)`,
         value: section.value
     };
-    cb.sections.splice(index + 1, 0, newSection);
-    renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    arranger.sections.splice(index + 1, 0, newSection);
+    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(renderChordVisualizer);
     flushBuffers();
+    saveCurrentState();
 }
 
 function addSection() {
-    cb.sections.push({ id: generateId(), label: `Section ${cb.sections.length + 1}`, value: 'I' });
-    renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    arranger.sections.push({ id: generateId(), label: `Section ${arranger.sections.length + 1}`, value: 'I' });
+    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(renderChordVisualizer);
     flushBuffers();
+    saveCurrentState();
 }
 
 function fillBuffers() {
@@ -385,20 +396,20 @@ function advanceGlobalStep() {
  * Caches progression metadata to avoid redundant calculations in the scheduler.
  */
 export function updateProgressionCache() {
-    if (!cb.progression.length) {
-        cb.totalSteps = 0;
-        cb.stepMap = [];
+    if (!arranger.progression.length) {
+        arranger.totalSteps = 0;
+        arranger.stepMap = [];
         return;
     }
 
     let current = 0;
-    cb.stepMap = cb.progression.map(chord => {
+    arranger.stepMap = arranger.progression.map(chord => {
         const steps = Math.round(chord.beats * 4);
         const entry = { start: current, end: current + steps, chord };
         current += steps;
         return entry;
     });
-    cb.totalSteps = current;
+    arranger.totalSteps = current;
 }
 
 /**
@@ -406,12 +417,12 @@ export function updateProgressionCache() {
  * Uses the cached step map for O(1) or O(N) lookup without reduction.
  */
 function getChordAtStep(step) {
-    if (cb.totalSteps === 0) return null;
+    if (arranger.totalSteps === 0) return null;
 
-    const targetStep = step % cb.totalSteps;
+    const targetStep = step % arranger.totalSteps;
 
-    for (let i = 0; i < cb.stepMap.length; i++) {
-        const entry = cb.stepMap[i];
+    for (let i = 0; i < arranger.stepMap.length; i++) {
+        const entry = arranger.stepMap[i];
         if (targetStep >= entry.start && targetStep < entry.end) {
             return { 
                 chord: entry.chord, 
@@ -601,16 +612,16 @@ function updateDrumVis(ev) {
 
 function updateChordVis(ev) {
     if (cb.lastActiveChordIndex !== undefined && cb.lastActiveChordIndex !== null) {
-        if (cb.cachedCards[cb.lastActiveChordIndex]) {
-            cb.cachedCards[cb.lastActiveChordIndex].classList.remove('active');
+        if (arranger.cachedCards[cb.lastActiveChordIndex]) {
+            arranger.cachedCards[cb.lastActiveChordIndex].classList.remove('active');
         }
     }
-    if (cb.cachedCards[ev.index]) {
-        const card = cb.cachedCards[ev.index];
+    if (arranger.cachedCards[ev.index]) {
+        const card = arranger.cachedCards[ev.index];
         card.classList.add('active');
         cb.lastActiveChordIndex = ev.index;
 
-        const chordData = cb.progression[ev.index];
+        const chordData = arranger.progression[ev.index];
         if (chordData) {
             ui.activeSectionLabel.textContent = chordData.sectionLabel || "";
             
@@ -622,8 +633,8 @@ function updateChordVis(ev) {
 
         // Auto-scroll logic using cached dimensions (no reflow)
         const container = ui.chordVisualizer;
-        const offsetTop = cb.cardOffsets[ev.index];
-        const cardHeight = cb.cardHeights[ev.index];
+        const offsetTop = arranger.cardOffsets[ev.index];
+        const cardHeight = arranger.cardHeights[ev.index];
         
         if (offsetTop !== undefined && cardHeight !== undefined) {
             const scrollPos = offsetTop - (container.clientHeight / 2) + (cardHeight / 2);
@@ -705,11 +716,11 @@ function draw() {
 
 // --- PERSISTENCE ---
 function saveProgression() {
-    if (cb.progression.length === 0) return;
+    if (arranger.progression.length === 0) return;
     const name = prompt("Name this progression:");
     if (name) {
         // We use compressed sections for storage to keep it compact and structured
-        const compressed = compressSections(cb.sections);
+        const compressed = compressSections(arranger.sections);
         userPresets.push({ name, sections: compressed });
         storage.save('userPresets', userPresets);
         renderUserPresets();
@@ -724,12 +735,12 @@ function renderUserPresets() {
     userPresets.forEach((p, idx) => {
         const chip = createPresetChip(p.name, () => window.deleteUserPreset(idx), () => {
             if (p.sections) {
-                cb.sections = decompressSections(p.sections);
+                arranger.sections = decompressSections(p.sections);
             } else if (p.prog) {
                 // Legacy support
-                cb.sections = [{ id: generateId(), label: 'Main', value: p.prog }];
+                arranger.sections = [{ id: generateId(), label: 'Main', value: p.prog }];
             }
-            renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
             validateProgression(renderChordVisualizer);
             flushBuffers();
             document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
@@ -791,18 +802,19 @@ window.deleteUserDrumPreset = (idx) => {
     }
 };
 
-function copyMeasure1() {
-    if (gb.measures <= 1) return;
-    gb.instruments.forEach(inst => {
-        const firstMeasure = inst.steps.slice(0, 16);
-        for (let m = 1; m < gb.measures; m++) {
-            for (let i = 0; i < 16; i++) {
-                inst.steps[m * 16 + i] = firstMeasure[i];
-            }
-        }
-    });
-    renderGridState();
-    showToast("Measure 1 duplicated");
+function duplicateBar1Chords() {
+    if (arranger.sections.length === 0) return;
+    const firstSection = arranger.sections[0];
+    const bars = firstSection.value.split('|').map(b => b.trim()).filter(b => b);
+    if (bars.length === 0) return;
+    
+    const bar1 = bars[0];
+    firstSection.value = `${bar1} | ${bar1} | ${bar1} | ${bar1}`;
+    
+    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    validateProgression(renderChordVisualizer);
+    flushBuffers();
+    showToast("Section 1: Bar 1 duplicated");
 }
 
 function setupUIHandlers() {
@@ -811,21 +823,21 @@ function setupUIHandlers() {
         [ui.bpmInput, 'change', e => setBpm(e.target.value)],
         [ui.tapBtn, 'click', handleTap],
         [ui.addSectionBtn, 'click', addSection],
+        [ui.dupMeasureChordBtn, 'click', duplicateBar1Chords],
         [ui.randomizeBtn, 'click', () => {
-            cb.sections = [{ id: generateId(), label: 'Random', value: generateRandomProgression() }];
-            renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+            arranger.sections = [{ id: generateId(), label: 'Random', value: generateRandomProgression() }];
+            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
             validateProgression(renderChordVisualizer);
             flushBuffers();
         }],
         [ui.clearProgBtn, 'click', () => {
-            cb.sections = [{ id: generateId(), label: 'Intro', value: '' }];
-            renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+            arranger.sections = [{ id: generateId(), label: 'Intro', value: '' }];
+            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
             validateProgression(renderChordVisualizer);
             flushBuffers();
         }],
         [ui.saveBtn, 'click', saveProgression],
         [ui.saveDrumBtn, 'click', saveDrumPattern],
-        [ui.copyMeasureBtn, 'click', copyMeasure1],
         [ui.shareBtn, 'click', shareProgression],
         [ui.transUpBtn, 'click', () => transposeKey(1)],
         [ui.transDownBtn, 'click', () => transposeKey(-1)],
@@ -835,26 +847,26 @@ function setupUIHandlers() {
         [ui.exportMidiBtn, 'click', exportToMidi],
         [ui.clearDrums, 'click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); }],
         [ui.maximizeChordBtn, 'click', () => {
-            const isMax = document.querySelector('.app-container').classList.toggle('chord-maximized');
+            const isMax = document.querySelector('.app-main-layout').classList.toggle('chord-maximized');
             ui.maximizeChordBtn.textContent = isMax ? '❐' : '⛶';
         }]
     ];
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));
 
     ui.settingsOverlay.addEventListener('click', e => e.target === ui.settingsOverlay && ui.settingsOverlay.classList.remove('active'));
-    ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); flushBuffers(); });
-    
-    ui.notationSelect.addEventListener('change', e => { cb.notation = e.target.value; renderChordVisualizer(); });
-    ui.densitySelect.addEventListener('change', e => { cb.density = e.target.value; validateProgression(renderChordVisualizer); flushBuffers(); });
-    ui.drumBarsSelect.addEventListener('change', e => { 
-        const newCount = parseInt(e.target.value);
-        gb.instruments.forEach(inst => {
-            const old = [...inst.steps];
-            inst.steps = new Array(newCount * 16).fill(0).map((_, i) => old[i % old.length]);
-        });
-        gb.measures = newCount;
-        renderGrid();
+    ui.keySelect.addEventListener('change', e => { 
+        arranger.key = e.target.value; 
+        validateProgression(renderChordVisualizer); 
+        flushBuffers(); 
+        saveCurrentState();
     });
+    
+    ui.notationSelect.addEventListener('change', e => { 
+        arranger.notation = e.target.value; 
+        renderChordVisualizer(); 
+        saveCurrentState();
+    });
+    ui.densitySelect.addEventListener('change', e => { cb.density = e.target.value; validateProgression(renderChordVisualizer); flushBuffers(); });
 
     const volumeNodes = [
         { el: ui.chordVol, state: cb, gain: 'chordsGain', mult: MIXER_GAIN_MULTIPLIERS.chords },
@@ -902,7 +914,8 @@ function setupUIHandlers() {
     ui.swingBase.addEventListener('change', e => gb.swingSub = e.target.value);
 
     ['chord', 'groove', 'bass', 'soloist', 'viz'].forEach(type => {
-        ui[`${type}PowerBtn`].addEventListener('click', () => togglePower(type));
+        const btn = ui[`${type}PowerBtn`];
+        if (btn) btn.addEventListener('click', () => togglePower(type));
     });
 
     document.addEventListener('visibilitychange', () => {
@@ -915,6 +928,15 @@ function setupUIHandlers() {
     window.addEventListener('keydown', e => {
         if (e.key === ' ' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
             e.preventDefault(); togglePlay();
+        }
+        // Numeric hotkeys for Accompanist tabs
+        if (['1', '2', '3', '4'].includes(e.key) && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
+            const index = parseInt(e.key) - 1;
+            const tabItem = document.querySelectorAll('.tab-item')[index];
+            if (tabItem) {
+                const btn = tabItem.querySelector('.tab-btn');
+                if (btn) btn.click();
+            }
         }
     });
 }
@@ -957,16 +979,16 @@ function setupPresets() {
     // Chord Progression Presets
     renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', 'Pop (Standard)', (item, chip) => {
         if (item.sections) {
-            cb.sections = item.sections.map(s => ({
+            arranger.sections = item.sections.map(s => ({
                 id: generateId(),
                 label: s.label,
                 value: s.value
             }));
         } else {
             // Reset to single section for legacy presets
-            cb.sections = [{ id: generateId(), label: 'Main', value: item.prog }];
+            arranger.sections = [{ id: generateId(), label: 'Main', value: item.prog }];
         }
-        renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+        renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         validateProgression(renderChordVisualizer);
         flushBuffers();
         document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
@@ -977,10 +999,25 @@ function setupPresets() {
 // --- INITIALIZATION ---
 function init() {
     try {
+        const savedState = storage.get('currentState');
+        if (savedState && savedState.sections) {
+            arranger.sections = savedState.sections;
+            arranger.key = savedState.key || 'C';
+            arranger.notation = savedState.notation || 'roman';
+            ctx.bpm = savedState.bpm || 100;
+            cb.style = savedState.style || 'pad';
+            
+            ui.keySelect.value = arranger.key;
+            ui.bpmInput.value = ctx.bpm;
+            ui.notationSelect.value = arranger.notation;
+        }
+
         viz = new UnifiedVisualizer('unifiedVizContainer');
         viz.addTrack('bass', 'var(--accent-color)');
         viz.addTrack('soloist', '#f472b6');
         
+        initTabs(); // New Tab Logic
+
         renderGrid();
         loadDrumPreset('Standard');
         setupPresets();
@@ -988,13 +1025,13 @@ function init() {
         renderUserPresets();
         renderUserDrumPresets();
         loadFromUrl();
-        renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+        renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         validateProgression(renderChordVisualizer);
         updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
         updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
         
         // Show the app after everything is ready
-        document.querySelector('.app-container').classList.add('loaded');
+        document.querySelector('.app-main-layout').classList.add('loaded');
     } catch (e) { console.error("Error during init:", e); }
 }
 
@@ -1025,7 +1062,7 @@ function transposeKey(delta) {
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(ui.keySelect.value));
     const newKey = KEY_ORDER[(currentIndex + delta + 12) % 12];
     ui.keySelect.value = newKey;
-    cb.key = newKey;
+    arranger.key = newKey;
     
     // Improved exclusion regex to avoid transposing Roman/NNS accidentals or numerals
     const isMusicalNotation = (part) => {
@@ -1033,7 +1070,7 @@ function transposeKey(delta) {
                part.match(/^[#b](III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i);
     };
 
-    cb.sections.forEach(section => {
+    arranger.sections.forEach(section => {
         const parts = section.value.split(/([\s,|,-]+)/);
         const transposed = parts.map(part => {
             const noteMatch = part.match(/^([A-G][#b]?)(.*)/i);
@@ -1047,9 +1084,10 @@ function transposeKey(delta) {
         section.value = transposed.join('');
     });
     
-    renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(renderChordVisualizer);
     flushBuffers();
+    saveCurrentState();
 }
 
 function loadDrumPreset(name) {
@@ -1058,9 +1096,7 @@ function loadDrumPreset(name) {
     if (p.sub) { gb.swingSub = p.sub; ui.swingBase.value = p.sub; }
     gb.instruments.forEach(inst => {
         const pattern = p[inst.name] || new Array(16).fill(0);
-        const newSteps = new Array(gb.measures * 16).fill(0);
-        for(let i=0; i<newSteps.length; i++) newSteps[i] = pattern[i % pattern.length];
-        inst.steps = newSteps;
+        inst.steps = [...pattern];
     });
     renderGridState();
 }
@@ -1080,17 +1116,24 @@ function handleTap() {
 
 function resetToDefaults() {
     ctx.bpm = 100;
+    
+    // Arranger Defaults
+    arranger.notation = 'roman';
+    // We don't necessarily reset sections? Probably just settings.
+    
     cb.volume = 0.5;
     cb.reverb = 0.3;
     cb.octave = 65;
-    cb.notation = 'roman';
     cb.density = 'standard';
+    
     bb.volume = 0.45;
     bb.reverb = 0.05;
     bb.octave = 36;
+    
     sb.volume = 0.5;
     sb.reverb = 0.6;
     sb.octave = 77;
+    
     gb.volume = 0.5;
     gb.reverb = 0.2;
     gb.swing = 0;
@@ -1113,7 +1156,6 @@ function resetToDefaults() {
     ui.drumReverb.value = 0.2;
     ui.swingSlider.value = 0;
     ui.swingBase.value = '8th';
-    ui.drumBarsSelect.value = 1;
     ui.masterVol.value = 0.5;
     ui.countIn.checked = true;
     ui.visualFlash.checked = false;
@@ -1150,11 +1192,11 @@ function resetToDefaults() {
 
 function shareProgression() {
     const params = new URLSearchParams();
-    params.set('s', compressSections(cb.sections));
+    params.set('s', compressSections(arranger.sections));
     params.set('key', ui.keySelect.value);
     params.set('bpm', ui.bpmInput.value);
     params.set('style', cb.style);
-    params.set('notation', cb.notation);
+    params.set('notation', arranger.notation);
     const url = window.location.origin + window.location.pathname + '?' + params.toString();
     navigator.clipboard.writeText(url).then(() => {
         showToast("Link copied!");
@@ -1169,7 +1211,7 @@ function shareProgression() {
 window.previewChord = (index) => {
     if (ctx.isPlaying) return;
     initAudio();
-    const chord = cb.progression[index];
+    const chord = arranger.progression[index];
     if (!chord) return;
     
     // Play the full chord once
@@ -1189,15 +1231,15 @@ window.previewChord = (index) => {
 function loadFromUrl() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('s')) {
-        cb.sections = decompressSections(params.get('s'));
+        arranger.sections = decompressSections(params.get('s'));
     } else if (params.get('prog')) {
-        cb.sections = [{ id: generateId(), label: 'Main', value: params.get('prog') }];
+        arranger.sections = [{ id: generateId(), label: 'Main', value: params.get('prog') }];
     }
     
-    if (params.get('key')) { ui.keySelect.value = normalizeKey(params.get('key')); cb.key = ui.keySelect.value; }
+    if (params.get('key')) { ui.keySelect.value = normalizeKey(params.get('key')); arranger.key = ui.keySelect.value; }
     if (params.get('bpm')) { ctx.bpm = parseInt(params.get('bpm')); ui.bpmInput.value = ctx.bpm; }
     if (params.get('style')) updateStyle('chord', params.get('style'));
-    if (params.get('notation')) { cb.notation = params.get('notation'); ui.notationSelect.value = cb.notation; }
+    if (params.get('notation')) { arranger.notation = params.get('notation'); ui.notationSelect.value = arranger.notation; }
 }
 
 window.addEventListener('load', () => {

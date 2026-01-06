@@ -19,24 +19,28 @@ export const ctx = {
     wakeLock: null
 };
 
-export const cb = {
-    enabled: true,
-    sections: [{ id: 's1', label: 'Intro', value: 'I | V | vi | IV' }], // Modular sections
+export const arranger = {
+    sections: [{ id: 's1', label: 'Intro', value: 'I | V | vi | IV' }],
     progression: [],
     key: 'C',
-    style: 'pad',
     notation: 'roman',
+    valid: false,
+    totalSteps: 0,
+    stepMap: [],
+    // UI Cache for Visualizer
+    cachedCards: [],
+    cardOffsets: [],
+    cardHeights: []
+};
+
+export const cb = {
+    enabled: true,
+    style: 'pad',
     volume: 0.5,
     reverb: 0.3,
     octave: 65,
-    density: 'standard', // 'thin', 'standard', 'rich'
-    valid: false,
-    cachedCards: [],
-    lastActiveChordIndex: null,
-    totalSteps: 0,
-    stepMap: [],
-    cardOffsets: [],
-    cardHeights: []
+    density: 'standard', // Voicing parameter
+    lastActiveChordIndex: null
 };
 
 export const gb = {

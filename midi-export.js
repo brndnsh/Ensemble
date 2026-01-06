@@ -1,4 +1,4 @@
-import { ctx, gb, cb, bb, sb } from './state.js';
+import { ctx, gb, cb, bb, sb, arranger } from './state.js';
 import { ui, showToast } from './ui.js';
 import { getMidi } from './utils.js';
 import { getBassNote } from './bass.js';
@@ -120,12 +120,12 @@ const midiChordPatterns = {
 
 export function exportToMidi() {
     try {
-        if (cb.progression.length === 0) {
+        if (arranger.progression.length === 0) {
             showToast("No progression to export");
             return;
         }
 
-        const totalSteps = cb.progression.reduce((sum, c) => sum + Math.round(c.beats * 4), 0);
+        const totalSteps = arranger.progression.reduce((sum, c) => sum + Math.round(c.beats * 4), 0);
         const drumLoopSteps = gb.measures * 16;
         let soloistTimeInPulses = 0;
         
@@ -194,7 +194,7 @@ export function exportToMidi() {
 
             // Find current chord
             let current = 0, activeChord = null, stepInChord = 0;
-            for (const chord of cb.progression) {
+            for (const chord of arranger.progression) {
                 const chordSteps = Math.round(chord.beats * 4);
                 if (step >= current && step < current + chordSteps) {
                     activeChord = chord;
@@ -238,7 +238,7 @@ export function exportToMidi() {
 
                 if (shouldPlay) {
                     let nextChord = null, nextCurrent = 0;
-                    for (const c of cb.progression) {
+                    for (const c of arranger.progression) {
                         const cSteps = Math.round(c.beats * 4);
                         if (step + 4 >= nextCurrent && step + 4 < nextCurrent + cSteps) { nextChord = c; break; }
                         nextCurrent += cSteps;
@@ -261,7 +261,7 @@ export function exportToMidi() {
                 if (soloBusySteps > 0) { soloBusySteps--; }
                 else {
                     let nextChord = null, nextCurrent = 0;
-                    for (const c of cb.progression) {
+                    for (const c of arranger.progression) {
                         const cSteps = Math.round(c.beats * 4);
                         if (step + 4 >= nextCurrent && step + 4 < nextCurrent + cSteps) { nextChord = c; break; }
                         nextCurrent += cSteps;
@@ -368,7 +368,7 @@ export function exportToMidi() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `ensemble-${cb.key}-${ctx.bpm}bpm.mid`;
+        a.download = `ensemble-${arranger.key}-${ctx.bpm}bpm.mid`;
         a.click();
         URL.revokeObjectURL(url);
     } catch (e) {
