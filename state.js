@@ -21,6 +21,7 @@ export const ctx = {
 
 export const cb = {
     enabled: true,
+    sections: [{ id: 's1', label: 'Intro', value: 'I | V | vi | IV' }], // Modular sections
     progression: [],
     key: 'C',
     style: 'pad',

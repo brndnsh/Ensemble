@@ -1,8 +1,8 @@
 import { ctx, gb, cb, bb, sb, vizState, storage } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
 import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
-import { normalizeKey, getMidi, midiToNote } from './utils.js';
+import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
 import { validateProgression, generateRandomProgression } from './chords.js';
 import { getBassNote } from './bass.js';
 import { getSoloistNote } from './soloist.js';
@@ -173,7 +173,7 @@ function togglePower(type) {
 
 const BUFFER_LOOKAHEAD = 64;
 
-function flushBuffers() {
+export function flushBuffers() {
     if (bb.lastPlayedFreq !== null) bb.lastFreq = bb.lastPlayedFreq;
     bb.buffer.clear();
     bb.bufferHead = ctx.step;
@@ -188,6 +188,45 @@ function flushBuffers() {
     sb.busySteps = 0;
     sb.currentLick = null;
     sb.sequenceType = null;
+}
+
+function onSectionUpdate(id, field, value) {
+    const section = cb.sections.find(s => s.id === id);
+    if (section) {
+        section[field] = value;
+        validateProgression(renderChordVisualizer);
+        flushBuffers();
+    }
+}
+
+function onSectionDelete(id) {
+    if (cb.sections.length <= 1) return;
+    cb.sections = cb.sections.filter(s => s.id !== id);
+    renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    validateProgression(renderChordVisualizer);
+    flushBuffers();
+}
+
+function onSectionDuplicate(id) {
+    const index = cb.sections.findIndex(s => s.id === id);
+    if (index === -1) return;
+    const section = cb.sections[index];
+    const newSection = {
+        id: generateId(),
+        label: `${section.label} (Copy)`,
+        value: section.value
+    };
+    cb.sections.splice(index + 1, 0, newSection);
+    renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    validateProgression(renderChordVisualizer);
+    flushBuffers();
+}
+
+function addSection() {
+    cb.sections.push({ id: generateId(), label: `Section ${cb.sections.length + 1}`, value: 'I' });
+    renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    validateProgression(renderChordVisualizer);
+    flushBuffers();
 }
 
 function fillBuffers() {
@@ -571,6 +610,16 @@ function updateChordVis(ev) {
         card.classList.add('active');
         cb.lastActiveChordIndex = ev.index;
 
+        const chordData = cb.progression[ev.index];
+        if (chordData) {
+            ui.activeSectionLabel.textContent = chordData.sectionLabel || "";
+            
+            // Highlight active section card in list
+            document.querySelectorAll('.section-card').forEach(card => {
+                card.classList.toggle('active', card.dataset.id == chordData.sectionId);
+            });
+        }
+
         // Auto-scroll logic using cached dimensions (no reflow)
         const container = ui.chordVisualizer;
         const offsetTop = cb.cardOffsets[ev.index];
@@ -656,11 +705,12 @@ function draw() {
 
 // --- PERSISTENCE ---
 function saveProgression() {
-    const prog = ui.progInput.value.trim();
-    if (!prog || cb.progression.length === 0) return;
-    const name = prompt("Name this progression:", prog);
+    if (cb.progression.length === 0) return;
+    const name = prompt("Name this progression:");
     if (name) {
-        userPresets.push({ name, prog });
+        // We use compressed sections for storage to keep it compact and structured
+        const compressed = compressSections(cb.sections);
+        userPresets.push({ name, sections: compressed });
         storage.save('userPresets', userPresets);
         renderUserPresets();
         showToast("Progression saved");
@@ -673,7 +723,13 @@ function renderUserPresets() {
     ui.userPresetsContainer.style.display = 'flex';
     userPresets.forEach((p, idx) => {
         const chip = createPresetChip(p.name, () => window.deleteUserPreset(idx), () => {
-            ui.progInput.value = p.prog;
+            if (p.sections) {
+                cb.sections = decompressSections(p.sections);
+            } else if (p.prog) {
+                // Legacy support
+                cb.sections = [{ id: generateId(), label: 'Main', value: p.prog }];
+            }
+            renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
             validateProgression(renderChordVisualizer);
             flushBuffers();
             document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
@@ -754,16 +810,18 @@ function setupUIHandlers() {
         [ui.playBtn, 'click', togglePlay],
         [ui.bpmInput, 'change', e => setBpm(e.target.value)],
         [ui.tapBtn, 'click', handleTap],
+        [ui.addSectionBtn, 'click', addSection],
         [ui.randomizeBtn, 'click', () => {
-            ui.progInput.value = generateRandomProgression();
+            cb.sections = [{ id: generateId(), label: 'Random', value: generateRandomProgression() }];
+            renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
             validateProgression(renderChordVisualizer);
             flushBuffers();
         }],
         [ui.clearProgBtn, 'click', () => {
-            ui.progInput.value = '';
+            cb.sections = [{ id: generateId(), label: 'Intro', value: '' }];
+            renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
             validateProgression(renderChordVisualizer);
             flushBuffers();
-            ui.progInput.focus();
         }],
         [ui.saveBtn, 'click', saveProgression],
         [ui.saveDrumBtn, 'click', saveDrumPattern],
@@ -785,7 +843,7 @@ function setupUIHandlers() {
 
     ui.settingsOverlay.addEventListener('click', e => e.target === ui.settingsOverlay && ui.settingsOverlay.classList.remove('active'));
     ui.keySelect.addEventListener('change', e => { cb.key = e.target.value; validateProgression(renderChordVisualizer); flushBuffers(); });
-    ui.progInput.addEventListener('input', () => { validateProgression(renderChordVisualizer); flushBuffers(); });
+    
     ui.notationSelect.addEventListener('change', e => { cb.notation = e.target.value; renderChordVisualizer(); });
     ui.densitySelect.addEventListener('change', e => { cb.density = e.target.value; validateProgression(renderChordVisualizer); flushBuffers(); });
     ui.drumBarsSelect.addEventListener('change', e => { 
@@ -898,7 +956,17 @@ function setupPresets() {
 
     // Chord Progression Presets
     renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', 'Pop (Standard)', (item, chip) => {
-        ui.progInput.value = item.prog;
+        if (item.sections) {
+            cb.sections = item.sections.map(s => ({
+                id: generateId(),
+                label: s.label,
+                value: s.value
+            }));
+        } else {
+            // Reset to single section for legacy presets
+            cb.sections = [{ id: generateId(), label: 'Main', value: item.prog }];
+        }
+        renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         validateProgression(renderChordVisualizer);
         flushBuffers();
         document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
@@ -920,6 +988,7 @@ function init() {
         renderUserPresets();
         renderUserDrumPresets();
         loadFromUrl();
+        renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         validateProgression(renderChordVisualizer);
         updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
         updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
@@ -964,17 +1033,21 @@ function transposeKey(delta) {
                part.match(/^[#b](III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i);
     };
 
-    const parts = ui.progInput.value.split(/([\s,|,-]+)/);
-    const transposed = parts.map(part => {
-        const noteMatch = part.match(/^([A-G][#b]?)(.*)/i);
-        if (noteMatch && !isMusicalNotation(part)) {
-            const root = normalizeKey(noteMatch[1].charAt(0).toUpperCase() + noteMatch[1].slice(1).toLowerCase());
-            const newRoot = KEY_ORDER[(KEY_ORDER.indexOf(root) + delta + 12) % 12];
-            return newRoot + noteMatch[2];
-        }
-        return part;
+    cb.sections.forEach(section => {
+        const parts = section.value.split(/([\s,|,-]+)/);
+        const transposed = parts.map(part => {
+            const noteMatch = part.match(/^([A-G][#b]?)(.*)/i);
+            if (noteMatch && !isMusicalNotation(part)) {
+                const root = normalizeKey(noteMatch[1].charAt(0).toUpperCase() + noteMatch[1].slice(1).toLowerCase());
+                const newRoot = KEY_ORDER[(KEY_ORDER.indexOf(root) + delta + 12) % 12];
+                return newRoot + noteMatch[2];
+            }
+            return part;
+        });
+        section.value = transposed.join('');
     });
-    ui.progInput.value = transposed.join('');
+    
+    renderSections(cb.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(renderChordVisualizer);
     flushBuffers();
 }
@@ -1077,12 +1150,12 @@ function resetToDefaults() {
 
 function shareProgression() {
     const params = new URLSearchParams();
-    params.set('prog', ui.progInput.value);
+    params.set('s', compressSections(cb.sections));
     params.set('key', ui.keySelect.value);
     params.set('bpm', ui.bpmInput.value);
     params.set('style', cb.style);
     params.set('notation', cb.notation);
-    window.location.origin + window.location.pathname + '?' + params.toString();
+    const url = window.location.origin + window.location.pathname + '?' + params.toString();
     navigator.clipboard.writeText(url).then(() => {
         showToast("Link copied!");
     });
@@ -1102,14 +1175,6 @@ window.previewChord = (index) => {
     // Play the full chord once
     const now = ctx.audio.currentTime;
     chord.freqs.forEach(f => playNote(f, now, 1.0, 0.15, 0.02));
-    
-    // Move cursor and select text in input
-    if (chord.charStart !== undefined && chord.charEnd !== undefined) {
-        ui.progInput.focus();
-        setTimeout(() => {
-            ui.progInput.setSelectionRange(chord.charStart, chord.charEnd);
-        }, 0);
-    }
 
     // Visual feedback
     const cards = document.querySelectorAll('.chord-card');
@@ -1123,7 +1188,12 @@ window.previewChord = (index) => {
 
 function loadFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('prog')) ui.progInput.value = params.get('prog');
+    if (params.get('s')) {
+        cb.sections = decompressSections(params.get('s'));
+    } else if (params.get('prog')) {
+        cb.sections = [{ id: generateId(), label: 'Main', value: params.get('prog') }];
+    }
+    
     if (params.get('key')) { ui.keySelect.value = normalizeKey(params.get('key')); cb.key = ui.keySelect.value; }
     if (params.get('bpm')) { ctx.bpm = parseInt(params.get('bpm')); ui.bpmInput.value = ctx.bpm; }
     if (params.get('style')) updateStyle('chord', params.get('style'));

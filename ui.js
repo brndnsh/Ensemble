@@ -14,7 +14,9 @@ export const ui = {
     bassPowerBtn: document.getElementById('bassPowerBtn'),
     soloistPowerBtn: document.getElementById('soloistPowerBtn'),
     vizPowerBtn: document.getElementById('vizPowerBtn'),
-    progInput: document.getElementById('progressionInput'),
+    sectionList: document.getElementById('sectionList'),
+    addSectionBtn: document.getElementById('addSectionBtn'),
+    activeSectionLabel: document.getElementById('activeSectionLabel'),
     randomizeBtn: document.getElementById('randomizeBtn'),
     clearProgBtn: document.getElementById('clearProgBtn'),
     saveBtn: document.getElementById('saveBtn'),
@@ -92,6 +94,63 @@ export function triggerFlash(intensity = 0.2) {
     if (ui.haptic.checked && navigator.vibrate) {
         navigator.vibrate(intensity > 0.15 ? 20 : 10);
     }
+}
+
+/**
+ * Renders the list of section inputs.
+ * @param {Array} sections - The sections data.
+ * @param {Function} onUpdate - Callback when a section is updated (id, field, value).
+ * @param {Function} onDelete - Callback when a section is deleted (id).
+ * @param {Function} onDuplicate - Callback when a section is duplicated (id).
+ */
+export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
+    ui.sectionList.innerHTML = '';
+    sections.forEach(section => {
+        const card = document.createElement('div');
+        card.className = 'section-card';
+        card.dataset.id = section.id;
+        
+        const header = document.createElement('div');
+        header.className = 'section-header';
+        
+        const labelInput = document.createElement('input');
+        labelInput.className = 'section-label-input';
+        labelInput.value = section.label;
+        labelInput.placeholder = 'Section Name';
+        labelInput.oninput = (e) => onUpdate(section.id, 'label', e.target.value);
+        
+        const actions = document.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.gap = '0.5rem';
+
+        const duplicateBtn = document.createElement('button');
+        duplicateBtn.className = 'section-duplicate-btn';
+        duplicateBtn.innerHTML = '⧉';
+        duplicateBtn.title = 'Duplicate Section';
+        duplicateBtn.onclick = () => onDuplicate(section.id);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'section-delete-btn';
+        deleteBtn.innerHTML = '&times;';
+        deleteBtn.title = 'Delete Section';
+        deleteBtn.onclick = () => onDelete(section.id);
+        
+        header.appendChild(labelInput);
+        actions.appendChild(duplicateBtn);
+        if (sections.length > 1) actions.appendChild(deleteBtn);
+        header.appendChild(actions);
+        
+        const progInput = document.createElement('textarea');
+        progInput.className = 'section-prog-input';
+        progInput.value = section.value;
+        progInput.placeholder = 'I | IV | V...';
+        progInput.spellcheck = false;
+        progInput.oninput = (e) => onUpdate(section.id, 'value', e.target.value);
+        
+        card.appendChild(header);
+        card.appendChild(progInput);
+        ui.sectionList.appendChild(card);
+    });
 }
 
 /**
@@ -315,5 +374,6 @@ export function renderGridState() {
 export function clearActiveVisuals(viz) {
     document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
     document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.section-card.active').forEach(s => s.classList.remove('active'));
     if (viz) viz.clear();
 }
