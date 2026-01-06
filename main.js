@@ -100,6 +100,7 @@ function togglePlay() {
     } else {
         if (ctx.suspendTimeout) clearTimeout(ctx.suspendTimeout);
         initAudio();
+        ctx.step = 0;
         flushBuffers();
         if (!iosAudioUnlocked) {
             silentAudio.play().catch(e => console.log("Audio unlock failed", e));
@@ -110,7 +111,6 @@ function togglePlay() {
         ctx.isPlaying = true;
         ui.playBtn.textContent = 'STOP';
         ui.playBtn.classList.add('playing');
-        ctx.step = 0;
         
         // Add a small 50ms padding to the start time to prevent scheduling in the "past"
         const startTime = ctx.audio.currentTime + 0.05;
@@ -208,22 +208,39 @@ function fillBuffers() {
             const chordData = getChordAtStep(step);
             let result = null;
 
-            if (chordData) {
-                const { chord, stepInChord } = chordData;
-                let shouldPlay = false;
-                if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
-                else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
-                else if ((bb.style === 'quarter' || bb.style === 'arp') && stepInChord % 4 === 0) shouldPlay = true;
+                if (chordData) {
+                    const { chord, stepInChord } = chordData;
+                    let shouldPlay = false;
+                    if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
+                    else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
+                    else if (bb.style === 'arp' && stepInChord % 4 === 0) shouldPlay = true;
+                    else if (bb.style === 'bossa') {
+                        // Bossa rhythm: 1, 2&, 3, 4& (Steps: 0, 6, 8, 14)
+                        if ([0, 6, 8, 14].includes(step % 16)) shouldPlay = true;
+                    }
+                    else if (bb.style === 'quarter') {
+                        if (stepInChord % 4 === 0) shouldPlay = true;
+                        // 15% chance of an eighth-note skip on the "and" of the beat
+                        else if (stepInChord % 2 === 0 && Math.random() < 0.15) shouldPlay = true;
+                    }
 
-                if (shouldPlay) {
-                    const nextChordData = getChordAtStep(step + 4);
-                    const bassFreq = getBassNote(chord, nextChordData?.chord, Math.floor(stepInChord / 4), bb.lastFreq, bb.octave, bb.style);
-                    if (bassFreq) {
-                        bb.lastFreq = bassFreq;
-                        result = { freq: bassFreq, chordData };
+                    if (shouldPlay) {
+                        const nextChordData = getChordAtStep(step + 4);
+                        const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step);
+                        
+                        if (bassResult) {
+                            const freq = typeof bassResult === 'object' ? bassResult.freq : bassResult;
+                            const durationMultiplier = typeof bassResult === 'object' ? bassResult.durationMultiplier : null;
+                            const velocity = typeof bassResult === 'object' ? bassResult.velocity : 1.0;
+                            const muted = typeof bassResult === 'object' ? bassResult.muted : false;
+                            
+                            if (freq) {
+                                bb.lastFreq = freq;
+                                result = { freq, durationMultiplier, velocity, muted, chordData };
+                            }
+                        }
                     }
                 }
-            }
             bb.buffer.set(step, result);
             bb.bufferHead++;
         }
@@ -389,13 +406,20 @@ function scheduleBass(chordData, step, time) {
     bb.buffer.delete(step); // Cleanup
 
     if (noteEntry && noteEntry.freq) {
-        const { freq, chordData: cData } = noteEntry; // Use buffered chordData to match generation context
+        const { freq, chordData: cData, durationMultiplier, velocity } = noteEntry; // Use buffered chordData to match generation context
         const { chord } = cData || chordData;
         
         bb.lastPlayedFreq = freq;
         const midi = getMidi(freq);
         const { name, octave } = midiToNote(midi);
-        const duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * (60.0 / ctx.bpm);
+        
+        const spb = 60.0 / ctx.bpm;
+        let duration;
+        if (durationMultiplier) {
+            duration = 0.25 * spb * durationMultiplier;
+        } else {
+            duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * spb;
+        }
         
         if (vizState.enabled) {
             ctx.drawQueue.push({ 
@@ -404,7 +428,7 @@ function scheduleBass(chordData, step, time) {
                 duration
             });
         }
-        playBassNote(freq, time, duration);
+        playBassNote(freq, time, duration, velocity || 1.0, noteEntry.muted);
     }
 }
 
@@ -990,7 +1014,7 @@ function resetToDefaults() {
     cb.density = 'standard';
     bb.volume = 0.45;
     bb.reverb = 0.05;
-    bb.octave = 41;
+    bb.octave = 36;
     sb.volume = 0.5;
     sb.reverb = 0.6;
     sb.octave = 77;
@@ -1008,7 +1032,7 @@ function resetToDefaults() {
     ui.densitySelect.value = 'standard';
     ui.bassVol.value = 0.45;
     ui.bassReverb.value = 0.05;
-    ui.bassOctave.value = 41;
+    ui.bassOctave.value = 36;
     ui.soloistVol.value = 0.5;
     ui.soloistReverb.value = 0.6;
     ui.soloistOctave.value = 77;

@@ -51,7 +51,8 @@ export const BASS_STYLES = [
     { id: 'whole', name: 'Whole', category: 'Basic' },
     { id: 'half', name: 'Half', category: 'Basic' },
     { id: 'arp', name: 'Arp (1-3-5-3)', category: 'Basic' },
-    { id: 'quarter', name: 'Walking', category: 'Jazz' }
+    { id: 'quarter', name: 'Walking', category: 'Jazz' },
+    { id: 'bossa', name: 'Bossa Nova', category: 'World/Latin' }
 ];
 
 export const SOLOIST_STYLES = [
