@@ -29,13 +29,12 @@
     </div>
 </header>
 
-<div class="app-container">
-    <!-- CHORD PANEL -->
-    <div class="panel" id="chordPanel">
+<div class="app-main-layout">
+    <!-- ARRANGER PANEL -->
+    <div class="panel" id="arrangerPanel">
         <div class="panel-header chord-panel-header">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button id="chordPowerBtn" class="power-btn active" aria-label="Toggle Chords">⏻</button>
-                <h2>Chords</h2>
+                <h2>Arranger</h2>
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <button id="maximizeChordBtn" title="Maximize" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Maximize Chords">⛶</button>
@@ -66,6 +65,7 @@
             <button id="addSectionBtn" style="width: 100%; padding: 0.75rem; border: 1px dashed #475569; background: transparent; color: #94a3b8; cursor: pointer;">+ Add Section</button>
             
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                <button id="dupMeasureChordBtn" title="Duplicate Measure 1 in Section" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Duplicate Measure 1">⧉ <span>Dup Bar 1</span></button>
                 <button id="randomizeBtn" title="Randomize Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Randomize Progression">🎲 <span>Random</span></button>
                 <button id="clearProgBtn" title="Clear Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Clear Progression">🗑️ <span>Clear</span></button>
                 <button id="saveBtn" title="Save Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Save Progression">💾 <span>Save</span></button>
@@ -78,116 +78,135 @@
             <div class="presets-container" id="chordPresets" style="margin-top: 0.5rem;"></div>
             <div class="presets-container" id="userPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
         </div>
-
-        <div style="margin-top: 1.5rem; border-top: 1px solid #334155; padding-top: 1rem;">
-            <label style="font-size: 0.9rem; color: #94a3b8;">Style</label>
-            <div class="presets-container" id="chordStylePresets" style="margin-top: 0.5rem;"></div>
-        </div>
     </div>
 
-    <!-- GROOVE PANEL -->
-    <div class="panel" id="groovePanel">
-        <div class="panel-header groove-panel-header">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button id="groovePowerBtn" class="power-btn active" aria-label="Toggle Grooves">⏻</button>
-                <h2>Grooves</h2>
+    <!-- ACCOMPANIST PANEL -->
+    <div class="panel" id="accompanistPanel">
+        <div class="panel-header">
+            <h2>Accompanist</h2>
+        </div>
+
+        <div class="tabs">
+            <div class="tab-item">
+                <button class="tab-btn active" data-tab="chords">Chords</button>
+                <button id="chordPowerBtn" class="power-btn active" aria-label="Toggle Chords">⏻</button>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <button id="copyMeasureBtn" title="Duplicate Measure 1 to all bars" style="background: transparent; border: 1px solid #475569; color: #94a3b8; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.9rem;" aria-label="Duplicate Measure 1">⧉</button>
-                <div class="control-group">
-                    <span class="control-label" style="font-size: 0.7rem;">Bars</span>
-                    <select id="drumBarsSelect" style="border: none; background: transparent; color: white; cursor: pointer;" aria-label="Number of Bars">
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="4">4</option>
+            <div class="tab-item">
+                <button class="tab-btn" data-tab="grooves">Grooves</button>
+                <button id="groovePowerBtn" class="power-btn active" aria-label="Toggle Grooves">⏻</button>
+            </div>
+            <div class="tab-item">
+                <button class="tab-btn" data-tab="bass">Bass</button>
+                <button id="bassPowerBtn" class="power-btn" aria-label="Toggle Bassist">⏻</button>
+            </div>
+            <div class="tab-item">
+                <button class="tab-btn" data-tab="soloist">Soloist</button>
+                <button id="soloistPowerBtn" class="power-btn" aria-label="Toggle Soloist">⏻</button>
+            </div>
+        </div>
+
+        <!-- CHORDS TAB -->
+        <div class="tab-content active" id="tab-chords">
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
+                <div class="presets-container" id="chordStylePresets"></div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+                <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Voicing</h4>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem;">Density</label>
+                    <select id="densitySelect" style="width: 100%;" aria-label="Voicing Density">
+                        <option value="thin">Thin (3 notes)</option>
+                        <option value="standard" selected>Standard (4 notes)</option>
+                        <option value="rich">Rich (5+ notes)</option>
                     </select>
                 </div>
-            </div>
-        </div>
-
-        <div class="sequencer-grid" id="sequencerGrid">
-            <!-- Filled by JS -->
-        </div>
-
-        <div style="margin-bottom: 1.5rem; height: 42px; display: flex; align-items: center;">
-            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">Tap steps to create your own beat...</div>
-        </div>
-
-        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 100px;">
-            <div class="presets-container" id="drumPresets"></div>
-            <div class="presets-container" id="userDrumPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
-        </div>
-
-        <div style="margin-top: 1.5rem; border-top: 1px solid #334155; padding-top: 1rem;">
-            <div style="display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;">
-                <div style="flex: 1 1 200px;">
-                    <label class="control-label" style="display: block; margin-bottom: 0.4rem;">Swing</label>
-                    <div style="display: flex; gap: 0.4rem; align-items: center;">
-                        <input type="range" id="swingSlider" min="0" max="100" value="0" style="flex-grow: 1; height: 4px;" aria-label="Swing Amount">
-                        <select id="swingBaseSelect" style="width: 65px; font-size: 0.75rem; padding: 0.2rem; height: 28px;" aria-label="Swing Base Note">
-                            <option value="16th">1/16</option>
-                            <option value="8th" selected>1/8</option>
-                        </select>
-                    </div>
-                </div>
                 <div>
-                    <label class="control-label" style="display: block; margin-bottom: 0.4rem;">Actions</label>
-                    <div style="display: flex; gap: 0.5rem; height: 32px;">
-                        <button id="clearDrumsBtn" style="font-size: 0.75rem; padding: 0 1rem; height: 100%;">Clear</button>
-                        <button id="saveDrumBtn" title="Save Pattern" style="font-size: 0.75rem; padding: 0 1rem; height: 100%;">💾 Save</button>
+                    <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Register</span>
+                        <span id="octaveLabel" style="color: var(--accent-color); font-weight: bold;">F4</span>
+                    </label>
+                    <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
+                </div>
+            </div>
+        </div>
+
+        <!-- BASS TAB -->
+        <div class="tab-content" id="tab-bass">
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
+                <div class="presets-container" id="bassStylePresets"></div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+                <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
+                <div>
+                    <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Register</span>
+                        <span id="bassOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F2</span>
+                    </label>
+                    <input type="range" id="bassOctaveSlider" min="24" max="60" value="41" style="width: 100%;" aria-label="Bass Octave">
+                </div>
+                <div style="text-align: right; margin-top: 0.5rem;">
+                     <span id="bassHeaderReg" style="display:none;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SOLOIST TAB -->
+        <div class="tab-content" id="tab-soloist">
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
+                <div class="presets-container" id="soloistStylePresets"></div>
+            </div>
+
+             <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px;">
+                <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
+                <div>
+                    <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Register</span>
+                        <span id="soloistOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F5</span>
+                    </label>
+                    <input type="range" id="soloistOctaveSlider" min="48" max="91" value="77" style="width: 100%;" aria-label="Soloist Octave">
+                </div>
+                 <div style="text-align: right; margin-top: 0.5rem;">
+                     <span id="soloistHeaderReg" style="display:none;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- GROOVES TAB -->
+        <div class="tab-content" id="tab-grooves">
+            <div class="sequencer-grid" id="sequencerGrid"></div>
+            
+             <div style="margin-bottom: 1rem; margin-top: 0.5rem;">
+                <div style="font-size: 0.8rem; color: #64748b; font-style: italic; margin-bottom: 0.5rem;">Tap steps to create your own beat...</div>
+                <div class="presets-container" id="drumPresets"></div>
+                <div class="presets-container" id="userDrumPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
+            </div>
+
+            <div style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem;">
+                <div style="display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap;">
+                    <div style="flex: 1 1 200px;">
+                        <label class="control-label" style="display: block; margin-bottom: 0.4rem;">Swing</label>
+                        <div style="display: flex; gap: 0.4rem; align-items: center;">
+                            <input type="range" id="swingSlider" min="0" max="100" value="0" style="flex-grow: 1; height: 4px;" aria-label="Swing Amount">
+                            <select id="swingBaseSelect" style="width: 65px; font-size: 0.75rem; padding: 0.2rem; height: 28px;" aria-label="Swing Base Note">
+                                <option value="16th">1/16</option>
+                                <option value="8th" selected>1/8</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="control-label" style="display: block; margin-bottom: 0.4rem;">Actions</label>
+                        <div style="display: flex; gap: 0.5rem; height: 32px;">
+                            <button id="clearDrumsBtn" style="font-size: 0.75rem; padding: 0 1rem; height: 100%;">Clear</button>
+                            <button id="saveDrumBtn" title="Save Pattern" style="font-size: 0.75rem; padding: 0 1rem; height: 100%;">💾 Save</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- BASSIST PANEL -->
-    <div class="panel panel-disabled" id="bassPanel">
-        <div class="panel-header bass-panel-header">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button id="bassPowerBtn" class="power-btn" aria-label="Toggle Bassist">⏻</button>
-                <h2>Bassist</h2>
-            </div>
-            <div style="display: flex; align-items: center;">
-                <div class="control-group">
-                    <span class="control-label" style="font-size: 0.7rem;">Reg</span>
-                    <span id="bassHeaderReg" style="font-size: 0.9rem; color: white; min-width: 25px; text-align: center; font-weight: bold;">F2</span>
-                </div>
-            </div>
-        </div>
-
-        <div style="margin-bottom: 1rem; display: flex; align-items: center;">
-            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">Walking Bass Generator follows your chords...</div>
-        </div>
-
-        <div style="margin-top: auto; border-top: 1px solid #334155; padding-top: 1rem;">
-            <label style="font-size: 0.9rem; color: #94a3b8;">Style</label>
-            <div class="presets-container" id="bassStylePresets" style="margin-top: 0.5rem;"></div>
-        </div>
-    </div>
-
-    <!-- SOLOIST PANEL -->
-    <div class="panel panel-disabled" id="soloistPanel">
-        <div class="panel-header soloist-panel-header">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button id="soloistPowerBtn" class="power-btn" aria-label="Toggle Soloist">⏻</button>
-                <h2>Soloist</h2>
-            </div>
-            <div style="display: flex; align-items: center;">
-                <div class="control-group">
-                    <span class="control-label" style="font-size: 0.7rem;">Reg</span>
-                    <span id="soloistHeaderReg" style="font-size: 0.9rem; color: white; min-width: 25px; text-align: center; font-weight: bold;">F5</span>
-                </div>
-            </div>
-        </div>
-
-        <div style="margin-bottom: 1rem; display: flex; align-items: center;">
-            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">Soloist generates melodic lines over your progression...</div>
-        </div>
-
-        <div style="margin-top: auto; border-top: 1px solid #334155; padding-top: 1rem;">
-            <label style="font-size: 0.9rem; color: #94a3b8;">Style</label>
-            <div class="presets-container" id="soloistStylePresets" style="margin-top: 0.5rem;"></div>
         </div>
     </div>
 
@@ -196,11 +215,11 @@
         <div class="panel-header">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
                 <button id="vizPowerBtn" class="power-btn" aria-label="Toggle Visualizer">⏻</button>
-                <h2>Visualizer</h2>
+                <h2>Unified Visualizer</h2>
             </div>
         </div>
         
-        <div style="flex-grow: 1; min-height: 400px; position: relative; background: rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden;">
+        <div style="flex-grow: 1; min-height: 350px; position: relative; background: rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden;">
             <div id="unifiedVizContainer" style="width: 100%; height: 100%;"></div>
         </div>
 
@@ -243,7 +262,7 @@
         
         <div class="settings-controls">
             <div class="settings-section">
-                <h3>Volume</h3>
+                <h3>Mixer</h3>
                 <div class="setting-item">
                     <label class="setting-label">
                         <span>Master Volume</span>
@@ -330,47 +349,15 @@
                     <option value="nns">Nashville Numbers (1, 6-, 4)</option>
                 </select>
             </div>
-
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; margin-bottom: 0.5rem;">Voicing Density</label>
-                <select id="densitySelect" style="width: 100%;" aria-label="Voicing Density">
-                    <option value="thin">Thin (3 notes)</option>
-                    <option value="standard" selected>Standard (4 notes)</option>
-                    <option value="rich">Rich (5+ notes)</option>
-                </select>
+            
+            <div class="setting-item" style="margin-top: 1rem;">
+                <button id="exportMidiBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--panel-color); border: 1px solid #475569;">
+                    <span>🎹</span> Export Progression as MIDI
+                </button>
             </div>
-
-            <div style="margin-bottom: 1rem;">
-                <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span>Chord Voicing Register</span>
-                    <span id="octaveLabel" style="color: var(--accent-color); font-weight: bold;">F4</span>
-                </label>
-                <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
+            <div class="setting-item" style="margin-top: 0.5rem;">
+                <button id="resetSettingsBtn" style="width: 100%; color: var(--error-color); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);">Reset All Settings</button>
             </div>
-
-            <div style="margin-bottom: 1rem;">
-                <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span>Bass Register</span>
-                    <span id="bassOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F2</span>
-                </label>
-                <input type="range" id="bassOctaveSlider" min="24" max="60" value="41" style="width: 100%;" aria-label="Bass Octave">
-            </div>
-
-            <div style="margin-bottom: 1rem;">
-                <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span>Soloist Register</span>
-                    <span id="soloistOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F5</span>
-                </label>
-                                            <input type="range" id="soloistOctaveSlider" min="48" max="91" value="77" style="width: 100%;" aria-label="Soloist Octave">            </div>
-
-                    <div class="setting-item" style="margin-top: 1rem;">
-                        <button id="exportMidiBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--panel-color); border: 1px solid #475569;">
-                            <span>🎹</span> Export Progression as MIDI
-                        </button>
-                    </div>
-                    <div class="setting-item" style="margin-top: 0.5rem;">
-                        <button id="resetSettingsBtn" style="width: 100%; color: var(--error-color); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);">Reset All Settings</button>
-                    </div>
         </div>
 
         <div class="settings-help" style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem; border-top: none;">
@@ -384,45 +371,6 @@
                         <h4 style="color: var(--accent-color); margin-top: 0; margin-bottom: 0.5rem;">Need more help?</h4>
                         <p style="margin-bottom: 0.8rem;">For a deep dive into notation, soloing styles, and MIDI export, check out the full manual.</p>
                         <a href="manual.html" target="_blank" style="color: white; background: var(--accent-color); padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Open User Manual</a>
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">🎹 Chords</h4>
-                        <p>Enter progressions using three flexible notations. You can separate chords with spaces or use <code>|</code> to denote measures (each measure defaults to 4 beats).</p>
-                        
-                        <ul style="margin-left: 1.2rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
-                            <li><strong>Roman Numerals:</strong> Use <code>I, IV, V, vi, ii</code>. Uppercase for major, lowercase for minor (e.g., <code>I vi IV V</code>).</li>
-                            <li><strong>Nashville Numbers:</strong> Use <code>1, 4, 5, 6-, 2-</code>. Add <code>-</code> for minor (e.g., <code>1 6- 4 5</code>).</li>
-                            <li><strong>Chord Names:</strong> Use standard names like <code>C, Am, F, G, Bb</code>.</li>
-                        </ul>
-
-                        <p style="margin-top: 0.8rem;"><strong>Supported Qualities:</strong></p>
-                        <ul style="margin-left: 1.2rem; margin-top: 0.3rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem;">
-                            <li><code>7</code>: Dominant 7th</li>
-                            <li><code>maj7</code>: Major 7th</li>
-                            <li><code>m, min, -</code>: Minor</li>
-                            <li><code>m7</code>: Minor 7th</li>
-                            <li><code>dim, o</code>: Diminished</li>
-                            <li><code>m7b5, ø</code>: Half-dim</li>
-                            <li><code>aug, +</code>: Augmented</li>
-                            <li><code># / b</code>: Accidentals</li>
-                        </ul>
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
-                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">🥁 Grooves</h4>
-                        <p>Tap grid steps to program beats. Each row represents a drum (Kick, Snare, HiHat, Open Hat). Use the <strong>Bars</strong> selector to change pattern length.</p>
-                        <p style="margin-top: 0.3rem;"><strong>Swing:</strong> Adjust the slider to add a "shuffle" feel. Choose between 1/8 or 1/16 note swing bases.</p>
-                    </div>
-
-                    <div>
-                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">⌨️ Shortcuts & Tips</h4>
-                        <ul style="margin-left: 1.2rem; display: flex; flex-direction: column; gap: 0.2rem;">
-                            <li><code>Space</code>: Start / Stop playback.</li>
-                            <li><code>⛶</code>: Maximize chord display (ideal for practice).</li>
-                            <li><code>🔗</code>: Copy a shareable URL of your current setup.</li>
-                            <li><code>💾</code>: Save your custom progressions or drum beats.</li>
-                        </ul>
                     </div>
                 </div>
             </details>

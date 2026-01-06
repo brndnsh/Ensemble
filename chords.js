@@ -1,6 +1,6 @@
 import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN } from './config.js';
 import { normalizeKey, getFrequency } from './utils.js';
-import { cb } from './state.js';
+import { cb, arranger } from './state.js';
 import { ui } from './ui.js';
 import { updateProgressionCache } from './main.js';
 
@@ -342,8 +342,8 @@ export function validateProgression(renderCallback) {
     let allChords = [];
     let lastMidis = [];
 
-    cb.sections.forEach(section => {
-        const { chords, finalMidis } = parseProgressionPart(section.value, cb.key, lastMidis);
+    arranger.sections.forEach(section => {
+        const { chords, finalMidis } = parseProgressionPart(section.value, arranger.key, lastMidis);
         const taggedChords = chords.map((c, idx) => ({
             ...c,
             sectionId: section.id,
@@ -354,7 +354,7 @@ export function validateProgression(renderCallback) {
         lastMidis = finalMidis;
     });
 
-    cb.progression = allChords;
+    arranger.progression = allChords;
     updateProgressionCache();
     if (renderCallback) renderCallback();
 }

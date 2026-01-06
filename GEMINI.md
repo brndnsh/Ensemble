@@ -26,36 +26,31 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ## Features
 
-### Chords
-*   **Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`). Use the pipe symbol (`|`) to explicitly delimit measures.
-*   **Extended Form Support**: Resizable multi-line input supports long progressions (32+ bars).
-*   **Playback Styles**: Choose from various accompaniment styles like Pad, Pulse, Strum, Funk, Reggae, Double Skank, Jazz Comp, Freddie Green, Bossa Nova, and more.
-*   **Smart Voicing**: Automatically calculates smooth voice leading for chords.
-*   **Transposition**: Instantly transpose the entire progression to any key.
+### Arranger (Song Structure)
+*   **Modular Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`).
+*   **Section Management**: Named sections (Intro, Verse, Chorus) with duplication and deletion tools.
+*   **Auto-Save**: Automatic persistence of the arrangement state to `localStorage`.
+*   **Smart Layout**: Measure-based grid (4 per row) for structural clarity.
+
+### Accompanist (Virtual Band)
+*   **Tabbed Dashboard**: Unified control for Chords, Bass, Soloist, and Grooves.
+*   **Integrated Power Buttons**: Mini-toggle indicators in the tab bar for quick mixing.
+*   **Smart Voicing & Register**: Fine-grained interpretation settings (density, octaves).
+*   **Hotkeys**: Rapid tab switching using keys `1`-`4` (Chords, Grooves, Bass, Soloist).
 
 ### Grooves
-*   **Step Sequencer**: A multi-measure grid for programming drum patterns (Kick, Snare, HiHat, Open Hat).
-*   **Multi-level Velocity**: Supports Off, Normal, and Accented states per step for realistic dynamics.
-*   **Swing Control**: Adjustable swing amount and subdivision (8th/16th).
-*   **Presets**: Authentic genre-specific drum patterns utilizing the accent system.
-*   **Duplicate Measure**: One-click tool to copy the first measure's pattern across the entire loop.
+*   **Step Sequencer**: Focused 16-step horizontal grid for pattern programming.
+*   **Velocity System**: Cycle through Off, Standard, and Accented states.
+*   **Swing & Subdivision**: Advanced rhythmic feel control.
 
-### Bassist
-*   **Walking Bass Generator**: Automatically generates melodic walking bass lines using chord tones, approach notes, and chromatic enclosures. Features adaptive strategies (Scalar, Arp, Chromatic) and ensures Root landing on measure downbeats.
-*   **Rhythmic Styles**: Supports Whole Note, Half Note, Arpeggio, Walking (Quarter Note), and Bossa Nova (syncopated) patterns.
-*   **Register Control**: Adjustable bass register to fit different musical contexts.
-*   **Advanced Articulation**: Employs velocity-sensitive accents on backbeats and percussive "Dead Notes" for realistic performance.
-
-### Soloist
-*   **Algorithmic Soloing**: Generates melodic lines over progressions using rhythmic cells and harmonic targeting.
-*   **Styles**: Supports various soloing styles including Scalar, Shreddy, Bebop, Blues, and Minimal.
-*   **Dual-Clock Scheduling**: Employs an unswung clock for a more laid-back, human-like melodic feel relative to the rhythm section.
+### Bassist & Soloist
+*   **Algorithmic Performance**: Generative lines that react to Arranger data.
+*   **Diverse Styles**: Scalar, Shreddy, Bebop, Blues, Minimal, and Neo-Soul.
 
 ### Unified Visualizer
-*   **Harmonic Superimposition**: Centralized graph that overlays Bass, Soloist, and Chords in a single visual timeline.
-*   **Color-Coded Intervals**: Uses a vivid harmonic color scheme (Blue: Root, Green: 3rd, Orange: 5th, Purple: 7th+) to show the function of every note in real-time.
-*   **Auto-Scroll**: Automatically scrolls to keep the active chord in view during playback of long forms.
-*   **Smart Octave Wrapping**: Automatically ensures notes stay within the visual range while preserving their harmonic context.
+*   **Dedicated Live Monitor**: Full-width harmonic graph superimposing all tracks.
+*   **Color-Coded Analysis**: Vivid interval mapping (Blue: Root, Green: 3rd, Orange: 5th, Purple: 7th+).
+*   **Active Tracking**: Real-time position pulse on Arranger cards.
 
 ### General
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
@@ -87,12 +82,10 @@ Navigate to `http://localhost:8000` (or the port shown by your server) to view t
 
 ## Architecture Notes
 
-*   **Audio Scheduling**: The `scheduler()` function in `main.js` looks ahead to schedule audio events precisely. It employs a dual-clock system: a "swung" clock for the rhythm section and an "unswung" clock for the soloist.
-*   **Data-Driven Rendering**: `chords.js` parses strings into structured data objects (containing root, suffix, bass info). `ui.js` consumes this data to build DOM elements programmatically, avoiding `innerHTML` and enabling clean export logic.
-*   **Centralized Mixing**: Instrumental gain balance is managed via `MIXER_GAIN_MULTIPLIERS` in `config.js`.
-*   **Performance Optimization**: DOM elements for the sequencer grid and chord progression cards are cached in the global state.
-*   **State Management**: State is divided into contexts (`ctx` for audio/runtime, `cb` for Chords, `gb` for Grooves, `bb` for Bassist, `sb` for Soloist) in `state.js`.
-*   **Persistence**: User presets and preferences are saved to `localStorage`.
+*   **State Separation**: State is divided into `arranger` (structural data) and performance contexts (`cb` for Chords, `gb` for Grooves, `bb` for Bassist, `sb` for Soloist).
+*   **Audio Scheduling**: The `scheduler()` in `main.js` syncs performance engines with the flattened `arranger.progression`.
+*   **Data-Driven UI**: `ui.js` programmatically builds the section list and sequencer grid from state.
+*   **Auto-Persistence**: The `saveCurrentState()` function ensures every arrangement change is captured.
 
 ## Gemini Added Memories
 - The user prioritizes performance on mobile devices over complex visual effects and prefers simplified visuals if it prevents glitches/lag.

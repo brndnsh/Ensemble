@@ -1,5 +1,5 @@
 import { midiToNote } from './utils.js';
-import { cb, gb } from './state.js';
+import { cb, gb, arranger } from './state.js';
 
 export const ui = {
     playBtn: document.getElementById('playBtn'),
@@ -14,9 +14,14 @@ export const ui = {
     bassPowerBtn: document.getElementById('bassPowerBtn'),
     soloistPowerBtn: document.getElementById('soloistPowerBtn'),
     vizPowerBtn: document.getElementById('vizPowerBtn'),
+    arrangerPanel: document.getElementById('arrangerPanel'),
+    accompanistPanel: document.getElementById('accompanistPanel'),
+    tabBtns: document.querySelectorAll('.tab-btn'),
+    tabContents: document.querySelectorAll('.tab-content'),
     sectionList: document.getElementById('sectionList'),
     addSectionBtn: document.getElementById('addSectionBtn'),
     activeSectionLabel: document.getElementById('activeSectionLabel'),
+    dupMeasureChordBtn: document.getElementById('dupMeasureChordBtn'),
     randomizeBtn: document.getElementById('randomizeBtn'),
     clearProgBtn: document.getElementById('clearProgBtn'),
     saveBtn: document.getElementById('saveBtn'),
@@ -33,8 +38,6 @@ export const ui = {
     bassReverb: document.getElementById('bassReverb'),
     soloistVol: document.getElementById('soloistVolume'),
     soloistReverb: document.getElementById('soloistReverb'),
-    drumBarsSelect: document.getElementById('drumBarsSelect'),
-    copyMeasureBtn: document.getElementById('copyMeasureBtn'),
     drumPresets: document.getElementById('drumPresets'),
     userDrumPresetsContainer: document.getElementById('userDrumPresetsContainer'),
     sequencerGrid: document.getElementById('sequencerGrid'),
@@ -65,6 +68,26 @@ export const ui = {
     flashOverlay: document.getElementById('flashOverlay'),
     resetSettingsBtn: document.getElementById('resetSettingsBtn')
 };
+
+export function initTabs() {
+    const tabItems = document.querySelectorAll('.tab-item');
+    tabItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            // Don't switch tabs if the power button was clicked
+            if (e.target.classList.contains('power-btn')) return;
+
+            const btn = item.querySelector('.tab-btn');
+            if (!btn) return;
+
+            ui.tabBtns.forEach(b => b.classList.remove('active'));
+            ui.tabContents.forEach(c => c.classList.remove('active'));
+            
+            btn.classList.add('active');
+            const target = document.getElementById(`tab-${btn.dataset.tab}`);
+            if (target) target.classList.add('active');
+        });
+    });
+}
 
 export function showToast(msg) {
     const toast = document.getElementById('toast');
@@ -186,8 +209,8 @@ function createChordLabel(data) {
  */
 export function renderChordVisualizer() {
     ui.chordVisualizer.innerHTML = '';
-    cb.cachedCards = [];
-    if (cb.progression.length === 0) return;
+    arranger.cachedCards = [];
+    if (arranger.progression.length === 0) return;
 
     let measureBox = document.createElement('div');
     measureBox.className = 'measure-box';
@@ -195,7 +218,7 @@ export function renderChordVisualizer() {
     
     let currentBeatsInBar = 0;
 
-    cb.progression.forEach((chord, i) => {
+    arranger.progression.forEach((chord, i) => {
         if (currentBeatsInBar >= 4) {
             measureBox = document.createElement('div');
             measureBox.className = 'measure-box';
@@ -209,8 +232,8 @@ export function renderChordVisualizer() {
         if (chord.isMinor) div.classList.add('minor');
         
         let displayData;
-        if (cb.notation === 'name') displayData = chord.display.abs;
-        else if (cb.notation === 'nns') displayData = chord.display.nns;
+        if (arranger.notation === 'name') displayData = chord.display.abs;
+        else if (arranger.notation === 'nns') displayData = chord.display.nns;
         else displayData = chord.display.rom;
 
         div.appendChild(createChordLabel(displayData));
@@ -218,14 +241,14 @@ export function renderChordVisualizer() {
         div.onclick = () => window.previewChord(i);
         
         measureBox.appendChild(div);
-        cb.cachedCards.push(div);
+        arranger.cachedCards.push(div);
         currentBeatsInBar += chord.beats;
     });
 
     // Cache dimensions for efficient scrolling without reflows
     setTimeout(() => {
-        cb.cardOffsets = cb.cachedCards.map(card => card.offsetTop - ui.chordVisualizer.offsetTop);
-        cb.cardHeights = cb.cachedCards.map(card => card.clientHeight);
+        arranger.cardOffsets = arranger.cachedCards.map(card => card.offsetTop - ui.chordVisualizer.offsetTop);
+        arranger.cardHeights = arranger.cachedCards.map(card => card.clientHeight);
     }, 100);
 }
 
@@ -245,7 +268,7 @@ export function createPresetChip(name, onDelete, onSelect, className = 'user-pre
     return chip;
 }
 
-function createTrackRow(inst, measures, cachedSteps) {
+function createTrackRow(inst, cachedSteps) {
     const row = document.createElement('div');
     row.className = 'track';
     
@@ -257,34 +280,28 @@ function createTrackRow(inst, measures, cachedSteps) {
     header.onclick = () => { inst.muted = !inst.muted; header.style.opacity = inst.muted ? 0.5 : 1; };
     row.appendChild(header);
 
-    const stepsWrapper = document.createElement('div');
-    stepsWrapper.className = 'steps-wrapper';
+    const stepsContainer = document.createElement('div');
+    stepsContainer.className = 'steps';
     
-    for (let m = 0; m < measures; m++) {
-        const measureDiv = document.createElement('div'); 
-        measureDiv.className = 'steps';
-        for (let b = 0; b < 16; b++) {
-            const globalIdx = m * 16 + b;
-            const step = document.createElement('div');
-            const val = inst.steps[globalIdx];
-            step.className = `step ${val === 2 ? 'accented' : (val === 1 ? 'active' : '')}`; 
-            step.dataset.step = globalIdx;
-            step.onclick = () => { 
-                inst.steps[globalIdx] = (inst.steps[globalIdx] + 1) % 3; 
-                renderGridState(); 
-            };
-            measureDiv.appendChild(step);
-            
-            if (!cachedSteps[globalIdx]) cachedSteps[globalIdx] = [];
-            cachedSteps[globalIdx].push(step);
-        }
-        stepsWrapper.appendChild(measureDiv);
+    for (let b = 0; b < 16; b++) {
+        const step = document.createElement('div');
+        const val = inst.steps[b];
+        step.className = `step ${val === 2 ? 'accented' : (val === 1 ? 'active' : '')}`; 
+        if (b % 4 === 0) step.classList.add('beat-marker');
+        step.onclick = () => { 
+            inst.steps[b] = (inst.steps[b] + 1) % 3; 
+            renderGridState(); 
+        };
+        stepsContainer.appendChild(step);
+        
+        if (!cachedSteps[b]) cachedSteps[b] = [];
+        cachedSteps[b].push(step);
     }
-    row.appendChild(stepsWrapper);
+    row.appendChild(stepsContainer);
     return row;
 }
 
-function createLabelRow(measures, cachedSteps) {
+function createLabelRow(cachedSteps) {
     const labelRow = document.createElement('div');
     labelRow.className = 'track label-row';
     
@@ -293,28 +310,22 @@ function createLabelRow(measures, cachedSteps) {
     labelHeader.innerHTML = '<span></span>';
     labelRow.appendChild(labelHeader);
 
-    const labelsWrapper = document.createElement('div');
-    labelsWrapper.className = 'steps-wrapper';
+    const stepsContainer = document.createElement('div');
+    stepsContainer.className = 'steps label-steps';
     
     const beatLabels = ['1', 'e', '&', 'a', '2', 'e', '&', 'a', '3', 'e', '&', 'a', '4', 'e', '&', 'a'];
     
-    for (let m = 0; m < measures; m++) {
-        const measureDiv = document.createElement('div');
-        measureDiv.className = 'steps label-steps';
-        beatLabels.forEach((text, i) => {
-            const label = document.createElement('div');
-            label.className = 'step-label';
-            label.textContent = text;
-            if (i % 4 === 0) label.classList.add('beat-start');
-            measureDiv.appendChild(label);
-            
-            const globalIdx = m * 16 + i;
-            if (!cachedSteps[globalIdx]) cachedSteps[globalIdx] = [];
-            cachedSteps[globalIdx].push(label);
-        });
-        labelsWrapper.appendChild(measureDiv);
-    }
-    labelRow.appendChild(labelsWrapper);
+    beatLabels.forEach((text, i) => {
+        const label = document.createElement('div');
+        label.className = 'step-label';
+        label.textContent = text;
+        if (i % 4 === 0) label.classList.add('beat-start');
+        stepsContainer.appendChild(label);
+        
+        if (!cachedSteps[i]) cachedSteps[i] = [];
+        cachedSteps[i].push(label);
+    });
+    labelRow.appendChild(stepsContainer);
     return labelRow;
 }
 
@@ -326,33 +337,19 @@ export function renderGrid() {
     gb.cachedSteps = [];
     const fragment = document.createDocumentFragment();
 
-    gb.instruments.forEach((inst, tIdx) => {
-        fragment.appendChild(createTrackRow(inst, gb.measures, gb.cachedSteps));
+    gb.instruments.forEach((inst) => {
+        fragment.appendChild(createTrackRow(inst, gb.cachedSteps));
     });
 
-    fragment.appendChild(createLabelRow(gb.measures, gb.cachedSteps));
+    fragment.appendChild(createLabelRow(gb.cachedSteps));
     ui.sequencerGrid.appendChild(fragment);
-
-    // Cache step offsets for efficient scrolling during playback
-    setTimeout(() => {
-        gb.stepOffsets = [];
-        const containerRect = ui.sequencerGrid.getBoundingClientRect();
-        for (let i = 0; i < gb.measures * 16; i++) {
-            const steps = gb.cachedSteps[i];
-            if (steps && steps[0]) {
-                const rect = steps[0].getBoundingClientRect();
-                gb.stepOffsets[i] = rect.left - containerRect.left + ui.sequencerGrid.scrollLeft - 100;
-            }
-        }
-    }, 100);
 }
 
 /**
  * Updates only the 'active' and 'accented' classes in the drum grid without re-rendering the full DOM.
  */
 export function renderGridState() {
-    const totalSteps = gb.measures * 16;
-    for (let i = 0; i < totalSteps; i++) {
+    for (let i = 0; i < 16; i++) {
         const elements = gb.cachedSteps[i];
         if (elements) {
             gb.instruments.forEach((inst, tIdx) => {
