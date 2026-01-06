@@ -162,9 +162,13 @@ header {
 h1 {
     margin: 0;
     font-size: 1.5rem;
+    display: inline-block;
+    width: fit-content;
     background: linear-gradient(45deg, var(--accent-color), var(--violet));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+    color: transparent;
     white-space: nowrap; /* Prevent title wrapping */
 }
 
