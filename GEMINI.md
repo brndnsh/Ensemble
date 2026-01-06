@@ -41,9 +41,10 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **Duplicate Measure**: One-click tool to copy the first measure's pattern across the entire loop.
 
 ### Bassist
-*   **Walking Bass Generator**: Automatically generates melodic walking bass lines using chord tones and approach notes.
-*   **Rhythmic Styles**: Supports Whole Note, Half Note, Arpeggio, and Walking (Quarter Note) patterns.
+*   **Walking Bass Generator**: Automatically generates melodic walking bass lines using chord tones, approach notes, and chromatic enclosures. Features adaptive strategies (Scalar, Arp, Chromatic) and ensures Root landing on measure downbeats.
+*   **Rhythmic Styles**: Supports Whole Note, Half Note, Arpeggio, Walking (Quarter Note), and Bossa Nova (syncopated) patterns.
 *   **Register Control**: Adjustable bass register to fit different musical contexts.
+*   **Advanced Articulation**: Employs velocity-sensitive accents on backbeats and percussive "Dead Notes" for realistic performance.
 
 ### Soloist
 *   **Algorithmic Soloing**: Generates melodic lines over progressions using rhythmic cells and harmonic targeting.

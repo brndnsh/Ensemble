@@ -194,12 +194,13 @@ export function playChordScratch(time, vol = 0.1) {
     } catch (e) { console.error("playChordScratch error:", e); }
 }
 
-export function playBassNote(freq, time, duration) {
+export function playBassNote(freq, time, duration, velocity = 1.0, muted = false) {
     if (!Number.isFinite(freq) || !Number.isFinite(time) || !Number.isFinite(duration)) return;
     if (freq < 10 || freq > 24000) return;
     try {
-        // Boosted volume multiplier for better mix presence
-    const vol = 1.1 * (0.9 + Math.random() * 0.2);
+        // Boosted volume multiplier for better mix presence, mixed with input velocity
+        const vol = 1.1 * velocity * (0.95 + Math.random() * 0.1);
+        const tonalVol = muted ? 0 : vol;
     
     // Body (Fundamental + warmth)
     const oscBody = ctx.audio.createOscillator();
@@ -211,7 +212,7 @@ export function playBassNote(freq, time, duration) {
     oscGrowl.type = 'sawtooth';
     oscGrowl.frequency.setValueAtTime(freq, time);
     const growlGain = ctx.audio.createGain();
-    growlGain.gain.setValueAtTime(vol * 0.4, time);
+    growlGain.gain.setValueAtTime(tonalVol * 0.4, time);
     growlGain.gain.exponentialRampToValueAtTime(0.001, time + duration * 1.2);
 
     const growlFilter = ctx.audio.createBiquadFilter();
@@ -228,8 +229,8 @@ export function playBassNote(freq, time, duration) {
     thumpFilter.type = 'lowpass';
     thumpFilter.frequency.setValueAtTime(1500, time);
     const thumpGain = ctx.audio.createGain();
-    thumpGain.gain.setValueAtTime(vol * 0.2, time);
-    thumpGain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+    thumpGain.gain.setValueAtTime(vol * (muted ? 0.4 : 0.2), time);
+    thumpGain.gain.exponentialRampToValueAtTime(0.001, time + (muted ? 0.03 : 0.04));
     thump.connect(thumpFilter);
     thumpFilter.connect(thumpGain);
     
@@ -254,12 +255,12 @@ export function playBassNote(freq, time, duration) {
     const mainFilter = ctx.audio.createBiquadFilter();
     mainFilter.type = 'lowpass';
     // Dynamic filter envelope for punch
-    mainFilter.frequency.setValueAtTime(1000 + (vol * 2000), time);
+    mainFilter.frequency.setValueAtTime(1000 + (tonalVol * 2000), time);
     mainFilter.frequency.exponentialRampToValueAtTime(600, time + duration);
 
     const gain = ctx.audio.createGain();
     gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(vol, time + 0.015);
+    gain.gain.linearRampToValueAtTime(tonalVol, time + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.001, time + duration * 1.5);
 
     oscBody.connect(mainFilter);
