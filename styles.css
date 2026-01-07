@@ -33,6 +33,9 @@
     --card-bg-hover: var(--base01);
     --border-color: rgba(147, 161, 161, 0.15);
     --input-bg: rgba(0, 43, 54, 0.4);
+    --select-bg: var(--base03);
+    --select-text: var(--base2);
+    --select-border: var(--base01);
     
     /* Sequencer Specific */
     --step-bg: rgba(147, 161, 161, 0.15);
@@ -63,6 +66,9 @@
     --card-bg-hover: var(--base2);
     --border-color: rgba(7, 54, 66, 0.15);
     --input-bg: rgba(238, 232, 213, 0.5);
+    --select-bg: var(--base3);
+    --select-text: var(--base02);
+    --select-border: var(--base1);
 
     /* Sequencer Specific */
     --step-bg: rgba(7, 54, 66, 0.1);
@@ -729,11 +735,43 @@ select, input[type="range"] {
 }
 
 select {
-    background: var(--input-bg);
+    background-color: var(--select-bg);
+    color: var(--select-text);
+    border: 1px solid var(--select-border);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+select:hover {
+    border-color: var(--accent-color);
+    background-color: var(--input-bg);
+}
+
+select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(38, 139, 210, 0.3);
+}
+
+/* Specific selects that should not be full-width */
+#keySelect,
+#drumBarsSelect,
+#swingBaseSelect {
+    width: auto;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+select option {
+    background-color: var(--panel-color);
     color: var(--text-color);
-    border: 1px solid var(--border-color);
-    padding: 0.4rem;
-    border-radius: 4px;
 }
 
 /* --- Visualizer --- */
