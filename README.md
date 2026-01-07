@@ -66,6 +66,7 @@ Once the server is running, navigate to `http://localhost:8000` (or the port sho
 *   **JavaScript**: Vanilla ES Modules (no bundlers required).
 *   **Audio**: Web Audio API (native, no external libraries).
 *   **Styling**: Pure CSS with Variables.
+*   **Background Processing**: Uses Web Workers (`logic-worker.js`) to offload algorithmic generation (Bass/Soloist) from the main thread, ensuring glitch-free audio performance.
 *   **State Management**: Custom centralized state management.
 
 ## License

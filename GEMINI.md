@@ -84,6 +84,7 @@ Navigate to `http://localhost:8000` (or the port shown by your server) to view t
 
 *   **State Separation**: State is divided into `arranger` (structural data) and performance contexts (`cb` for Chords, `gb` for Grooves, `bb` for Bassist, `sb` for Soloist).
 *   **Audio Scheduling**: The `scheduler()` in `main.js` syncs performance engines with the flattened `arranger.progression`.
+*   **Off-Main-Thread Logic**: Algorithmic generation for the Bassist and Soloist is handled in `logic-worker.js` via `worker-client.js`. This prevents UI or complex rendering tasks from causing audio stutters by moving heavy musical calculations to a background worker.
 *   **Data-Driven UI**: `ui.js` programmatically builds the section list and sequencer grid from state.
 *   **Auto-Persistence**: The `saveCurrentState()` function ensures every arrangement change is captured.
 
