@@ -853,7 +853,8 @@ function setupUIHandlers() {
         [ui.clearDrums, 'click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); }],
         [ui.maximizeChordBtn, 'click', () => {
             const isMax = document.querySelector('.app-main-layout').classList.toggle('chord-maximized');
-            ui.maximizeChordBtn.textContent = isMax ? '❐' : '⛶';
+            ui.maximizeChordBtn.textContent = isMax ? '✕' : '⛶';
+            ui.maximizeChordBtn.title = isMax ? 'Exit Maximize' : 'Maximize';
         }]
     ];
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));
@@ -967,6 +968,17 @@ function setupUIHandlers() {
         if (e.key === ']' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
             const next = (gb.currentMeasure + 1) % gb.measures;
             switchMeasure(next);
+        }
+        if (e.key === 'Escape') {
+            const layout = document.querySelector('.app-main-layout');
+            if (layout.classList.contains('chord-maximized')) {
+                layout.classList.remove('chord-maximized');
+                ui.maximizeChordBtn.textContent = '⛶';
+                ui.maximizeChordBtn.title = 'Maximize';
+            }
+            if (ui.settingsOverlay.classList.contains('active')) {
+                ui.settingsOverlay.classList.remove('active');
+            }
         }
     });
 }
