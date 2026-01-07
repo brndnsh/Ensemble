@@ -969,6 +969,17 @@ function setupUIHandlers() {
             const next = (gb.currentMeasure + 1) % gb.measures;
             switchMeasure(next);
         }
+        if (e.key === 'Escape') {
+            const layout = document.querySelector('.app-main-layout');
+            if (layout.classList.contains('chord-maximized')) {
+                layout.classList.remove('chord-maximized');
+                ui.maximizeChordBtn.textContent = '⛶';
+                ui.maximizeChordBtn.title = 'Maximize';
+            }
+            if (ui.settingsOverlay.classList.contains('active')) {
+                ui.settingsOverlay.classList.remove('active');
+            }
+        }
     });
 }
 
