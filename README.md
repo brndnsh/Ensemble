@@ -8,6 +8,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Modular Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`).
 *   **Section Management**: Organize your song into named sections (Intro, Verse, Chorus). Reorder, duplicate, or delete sections to build complex forms.
 *   **Auto-Save**: Your arrangement is automatically persisted to local storage. Refreshing the page won't lose your work.
+*   **User Library**: Save your custom progressions as named presets for quick access.
 *   **Smart Layout**: Chords are displayed in measures (4 per row on desktop) for clear structural visualization.
 *   **Transposition**: Instantly transpose the entire progression to any key while preserving your custom chord voicings.
 
@@ -22,11 +23,17 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Step Sequencer**: A focused 16-step horizontal grid for programming drum patterns (Kick, Snare, HiHat, Open Hat).
 *   **Multi-level Velocity**: Steps cycle through Off, Normal, and Accented states for more dynamic and musical grooves.
 *   **Swing Control**: Adjustable swing amount and subdivision (8th/16th).
+*   **User Patterns**: Save your custom drum patterns to your local library.
 *   **Genre Presets**: Includes authentic patterns for Rock, Funk, Jazz, Reggae, Bossa Nova, and more, color-coded by genre.
 
 ### 🎸 Bassist
 *   **Walking Bass Generator**: Automatically generates melodic walking bass lines that follow your arranger data. The engine uses sophisticated targeting logic to land on the Root at measure boundaries.
 *   **Rhythmic Styles**: Choose between Whole Note, Half Note, Arpeggio, Walking (Quarter Note), and Bossa Nova patterns.
+
+### 🎸 Soloist
+*   **Algorithmic Improvisation**: Generates melodic lines in real-time, thinking in phrases and rhythmic cells rather than random notes.
+*   **Soloing Styles**: Choose from Scalar, Shreddy, Blues, Minimal, and Neo-Soul.
+*   **Dual-Clock System**: Capable of playing "straight" or "laid back" lines even over swinging drums for a more human feel.
 
 ### 📊 Unified Visualizer
 *   **Dedicated Live View**: A full-width, high-fidelity graph at the bottom of the page that superimposes Bass and Soloist tracks on top of your chord progression.
