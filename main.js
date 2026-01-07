@@ -853,7 +853,8 @@ function setupUIHandlers() {
         [ui.clearDrums, 'click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); }],
         [ui.maximizeChordBtn, 'click', () => {
             const isMax = document.querySelector('.app-main-layout').classList.toggle('chord-maximized');
-            ui.maximizeChordBtn.textContent = isMax ? '❐' : '⛶';
+            ui.maximizeChordBtn.textContent = isMax ? '✕' : '⛶';
+            ui.maximizeChordBtn.title = isMax ? 'Exit Maximize' : 'Maximize';
         }]
     ];
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));

@@ -463,6 +463,27 @@ h2 {
     border-radius: 0;
 }
 
+.chord-maximized #maximizeChordBtn {
+    position: fixed;
+    top: 90px;
+    right: 15px;
+    z-index: 101;
+    background: var(--panel-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    padding: 0.6rem 0.8rem;
+    font-size: 1rem;
+}
+
+@media (max-width: 600px) {
+    .chord-maximized .display-area {
+        top: 64px;
+    }
+    .chord-maximized #maximizeChordBtn {
+        top: 72px;
+        right: 10px;
+    }
+}
+
 .chord-card {
     flex: 1;
     display: flex;
