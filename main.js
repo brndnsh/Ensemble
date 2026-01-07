@@ -13,6 +13,8 @@ let userPresets = storage.get('userPresets');
 let userDrumPresets = storage.get('userDrumPresets');
 let iosAudioUnlocked = false;
 let viz;
+let lastAudioTime = 0;
+let lastPerfTime = 0;
 
 /** @type {HTMLAudioElement} */
 // Use a slightly longer silent wav to ensure OS recognition as media playback
@@ -640,11 +642,21 @@ function draw() {
         return;
     }
 
+    // Interpolate audio time with performance time for sub-sample visual smoothness
+    const audioTime = ctx.audio.currentTime;
+    const perfTime = performance.now();
+    if (audioTime !== lastAudioTime) {
+        lastAudioTime = audioTime;
+        lastPerfTime = perfTime;
+    }
+    const dt = (perfTime - lastPerfTime) / 1000;
+    const smoothAudioTime = audioTime + Math.min(dt, 0.1);
+
     // Attempt to use high-precision latency if available, else fallback
     const outputLatency = ctx.audio.outputLatency || 0;
     const isChromium = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
     const offset = outputLatency > 0 ? outputLatency : (isChromium ? 0.015 : 0.045);
-    const now = ctx.audio.currentTime - offset;
+    const now = smoothAudioTime - offset;
     
     // Efficient queue cleanup: remove only old events from the front
     while (ctx.drawQueue.length > 0 && ctx.drawQueue[0].time < now - 2.0) {
@@ -1111,8 +1123,8 @@ function init() {
         }
 
         viz = new UnifiedVisualizer('unifiedVizContainer');
-        viz.addTrack('bass', 'var(--accent-color)');
-        viz.addTrack('soloist', '#f472b6');
+        viz.addTrack('bass', 'var(--success-color)');
+        viz.addTrack('soloist', 'var(--soloist-color)');
         
         initTabs(); // New Tab Logic
 

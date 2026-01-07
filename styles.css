@@ -328,9 +328,10 @@ h2 {
 }
 
 .power-btn.active {
+    background-color: var(--success-color);
     border-color: var(--success-color);
-    color: var(--success-color);
-    box-shadow: 0 0 10px rgba(133, 153, 0, 0.2);
+    color: var(--panel-color);
+    box-shadow: 0 0 15px rgba(133, 153, 0, 0.4);
 }
 
 .power-btn:hover {
