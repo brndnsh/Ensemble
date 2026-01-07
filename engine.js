@@ -336,6 +336,9 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     } else if (style === 'bird') {
         vibSpeed = 5.2; // Subtle
         depthFactor = 0.003;
+    } else if (style === 'minimal') {
+        vibSpeed = 3.5; // Slow, very expressive
+        depthFactor = 0.008;
     }
     
     vibrato.frequency.setValueAtTime(vibSpeed, time); 
@@ -364,8 +367,9 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     filter.Q.setValueAtTime(style === 'bird' ? 1 : (isLongNote ? 2 : 1), time); 
 
     // Amplitude Envelope
+    const attack = style === 'shred' ? 0.005 : 0.015;
     gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(randomizedVol, time + 0.015); 
+    gain.gain.linearRampToValueAtTime(randomizedVol, time + attack); 
     gain.gain.exponentialRampToValueAtTime(randomizedVol * 0.8, time + duration * 0.5);
     
     const releaseTime = duration * (style === 'minimal' ? 1.5 : 1.1);

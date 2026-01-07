@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ensemble-v1.6';
+const CACHE_NAME = 'ensemble-v1.9';
 const ASSETS = [
     './',
     './index.html',
@@ -15,7 +15,8 @@ const ASSETS = [
     './accompaniment.js',
     './midi-export.js',
     './visualizer.js',
-    './timer.js',
+    './logic-worker.js',
+    './worker-client.js',
     './styles.css',
     './manifest.json',
     './icon.svg',

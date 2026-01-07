@@ -1,5 +1,5 @@
 import { getFrequency, getMidi } from './utils.js';
-import { sb, cb } from './state.js';
+import { sb, cb, ctx, arranger } from './state.js';
 import { KEY_ORDER } from './config.js';
 
 /**
@@ -18,14 +18,23 @@ const RHYTHMIC_CELLS = [
     [1, 0, 0, 1], // Syncopated
     [1, 1, 0, 1], // Bebop-esque 1
     [0, 1, 1, 0], // Offbeat syncopation
+    [1, 0, 1, 1], // Syncopated 2
+    [0, 1, 0, 1], // Pure offbeats
 ];
 
 const CANNED_LICKS = {
     'the_lick': [2, 3, 5, 7, 3, 10, 12], // 2 b3 4 5 b3 b7 1
     'blues_1': [12, 15, 12, 10, 9, 7], // 1 b3 1 b7 6 5
+    'blues_2': [12, 10, 7, 6, 5, 3, 0], // 1 b7 5 b5 4 b3 1
+    'blues_3': [0, 2, 3, 4, 7, 9, 7, 4], // 1 2 b3 3 5 6 5 3 (Major)
+    'blues_4': [12, 10, 7, 10, 12, 15, 17], // 1 b7 5 b7 1 b3 4
     'rock_1': [0, 3, 5, 5, 3, 0],      // 1 b3 4 4 b3 1
     'bebop_1': [7, 6, 5, 4, 3, 2, 1, 0], // 5 b5 4 3 b3 2 b2 1
     'shred_1': [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], // Major Arp Sweep
+    'bb_box': [12, 14, 15, 14, 12, 10, 12], // 1 2 b3 2 1 b7 1
+    'albert_king': [12, 15, 17, 15, 12], // 1 b3 4(bend) b3 1
+    'turnaround_1': [12, 11, 10, 9, 8, 7, 7], // 1 7 b7 6 b6 5 5 (chromatic down)
+    'turnaround_2': [0, 4, 7, 10, 11, 12], // 1 3 5 b7 7 1
 };
 
 const SEQUENCES = {
@@ -91,7 +100,7 @@ function getScaleNote(midi, list, offset) {
 /**
  * Determines the best scale intervals based on chord quality and parent key.
  */
-function getScaleForChord(chord, style) {
+function getScaleForChord(chord, style, nextChord) {
     if (style === 'blues') {
         if (chord.quality === 'minor' || chord.quality === 'halfdim' || chord.quality === 'dim') {
             return [0, 3, 5, 6, 7, 10]; // Minor Blues
@@ -105,6 +114,10 @@ function getScaleForChord(chord, style) {
             return [0, 2, 3, 5, 7, 10]; // Minor Pentatonic + 2
         }
         return [0, 2, 4, 5, 7, 9]; // Major Pentatonic + 11
+    }
+
+    if (style === 'shred' && chord.intervals.includes(10) && chord.intervals.includes(4) && nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim')) {
+        return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant (V7 in Minor)
     }
 
     const keyRoot = KEY_ORDER.indexOf(cb.key);
@@ -135,7 +148,7 @@ function getScaleForChord(chord, style) {
     }
 }
 
-export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = null, centerMidi = 77, style = 'scalar') {
+export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 77, style = 'scalar') {
     if (!currentChord) return null;
 
     let durationMultiplier = 1;
@@ -146,6 +159,7 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         return null;
     }
 
+    const measureStep = step % 16;
     const beatInMeasure = Math.floor(measureStep / 4);
     const stepInBeat = measureStep % 4;
 
@@ -160,9 +174,13 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     }
     
     // Style specific velocity tweaks
-    if (style === 'shred') velocity *= (0.9 + Math.random() * 0.2); // More even but with jitter
-    if (style === 'minimal') velocity *= 1.1; // Stronger individual notes
-    if (style === 'neo') velocity *= (0.8 + Math.random() * 0.25); // Softer, more expressive
+    if (style === 'shred') velocity *= (0.9 + Math.random() * 0.2); 
+    if (style === 'minimal') {
+        // Alternating strong and soft notes for a "Call and Response" feel
+        const isResponse = (sb.phraseSteps % 4 < 2);
+        velocity = isResponse ? 0.7 : 1.2;
+    }
+    if (style === 'neo') velocity *= (0.8 + Math.random() * 0.25);
 
     // --- Pitch Selection Bounds & Tones ---
     const minMidi = centerMidi - (style === 'shred' ? 24 : 18);
@@ -171,13 +189,17 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
     const rootMidi = currentChord.rootMidi;
     
     const chordTones = currentChord.intervals.map(i => rootMidi + i);
-    const scaleIntervals = getScaleForChord(currentChord, style);
+    const scaleIntervals = getScaleForChord(currentChord, style, nextChord);
     const scaleTones = scaleIntervals.map(i => rootMidi + i);
 
     // --- Phrasing Logic ---
     if (measureStep === 0 || sb.phraseSteps <= 0) {
         // Decide if we should start a new phrase or rest
-        const restProb = style === 'shred' ? 0.15 : (style === 'neo' ? 0.5 : 0.4); 
+        let restProb = 0.4;
+        if (style === 'shred') restProb = 0.15;
+        if (style === 'neo') restProb = 0.5;
+        if (style === 'minimal') restProb = 0.65; // Lots of space for minimal
+
         if (!sb.isResting && Math.random() < restProb) {
             sb.isResting = true;
             sb.phraseSteps = 4 + Math.floor(Math.random() * 8); // Rest for 1-2 beats
@@ -187,14 +209,31 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
             sb.isResting = false;
             const phraseBase = style === 'shred' ? 16 : 8;
             sb.phraseSteps = phraseBase + Math.floor(Math.random() * 16); 
-            sb.patternMode = Math.random() < 0.6 ? 'scale' : 'arp';
+            
+            // Minimal style always stays on chord tones or a simple scale
+            sb.patternMode = style === 'minimal' ? 'arp' : (Math.random() < 0.6 ? 'scale' : 'arp');
             sb.sequenceType = null;
             
-            // 25% chance to trigger a canned lick (Higher for Bird style)
-            const lickProb = 0.2;
-            if (style !== 'scalar' && style !== 'shred' && style !== 'neo' && Math.random() < lickProb) {
-                const lickKeys = Object.keys(CANNED_LICKS);
-                let pool = lickKeys;
+            // --- Turnaround Logic ---
+            const loopStep = step % (arranger.totalSteps || 1);
+            const isTurnaround = (arranger.totalSteps > 16) && loopStep >= (arranger.totalSteps - 16);
+            
+            // Style-aware lick selection
+            let lickProb = 0.15;
+            if (style === 'blues') lickProb = isTurnaround ? 0.6 : 0.35;
+            if (style === 'neo') lickProb = 0.25;
+
+            if (style !== 'scalar' && style !== 'shred' && Math.random() < lickProb) {
+                let pool = Object.keys(CANNED_LICKS);
+                if (style === 'blues') {
+                    if (isTurnaround) {
+                        pool = ['turnaround_1', 'turnaround_2'];
+                    } else {
+                        pool = ['the_lick', 'blues_1', 'blues_2', 'blues_3', 'blues_4', 'bb_box', 'albert_king'];
+                    }
+                } else if (style === 'neo') {
+                    pool = ['the_lick', 'blues_1', 'blues_2'];
+                }
                 
                 sb.currentLick = CANNED_LICKS[pool[Math.floor(Math.random() * pool.length)]];
                 sb.lickIndex = 0;
@@ -499,13 +538,22 @@ export function getSoloistNote(currentChord, nextChord, measureStep, prevFreq = 
         if (style === 'neo') {
             // Neo-soul 'Slide from below' or 'Scoop'
             bendStartInterval = Math.random() > 0.4 ? 1 : 2;
+        } else if (style === 'blues') {
+            // Target-specific bends for blues
+            if (intervalFromRoot === 7) bendStartInterval = 2; // Bend into 5th from 4th
+            else if (intervalFromRoot === 4) bendStartInterval = 1; // Bend into 3rd from b3
+            else if (intervalFromRoot === 0) bendStartInterval = 2; // Bend into Root from b7
+            else bendStartInterval = Math.random() > 0.5 ? 2 : 1;
+        } else if (style === 'minimal') {
+            // Very subtle, slow bends for stability
+            bendStartInterval = 0.5; // Microtonal scoop
         } else {
             bendStartInterval = style === 'shred' ? 1 : (Math.random() > 0.6 ? 2 : 1);
         }
     }
 
     if (style === 'minimal') {
-        if (Math.random() < 0.4) durationMultiplier = 3 + Math.floor(Math.random() * 5);
+        if (Math.random() < 0.6) durationMultiplier = 4 + Math.floor(Math.random() * 8); // Very long, deliberate notes
         else durationMultiplier = 2;
     } else if (style === 'shred' && sb.phraseSteps <= 1 && !sb.isResting) {
         if (Math.random() < 0.8) durationMultiplier = 8 + Math.floor(Math.random() * 8);

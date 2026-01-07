@@ -95,6 +95,7 @@ export const CHORD_STYLES = [
     { id: 'skank', name: 'Reggae', category: 'World/Latin' },
     { id: 'double_skank', name: 'Double Skank', category: 'World/Latin' },
     { id: 'funk', name: 'Funk', category: 'Soul/Funk' },
+    { id: 'blues', name: 'Blues Shuffle', category: 'Blues' },
     { id: 'arpeggio', name: 'Arpeggio', category: 'Pop/Rock' },
     { id: 'tresillo', name: 'Tresillo', category: 'World/Latin' },
     { id: 'clave', name: 'Clave', category: 'World/Latin' },
