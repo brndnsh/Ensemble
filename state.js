@@ -10,7 +10,7 @@ export const ctx = {
     bpm: 100,
     nextNoteTime: 0.0,
     unswungNextNoteTime: 0.0,
-    scheduleAheadTime: 0.1,
+    scheduleAheadTime: 0.15,
     step: 0, 
     drawQueue: [],
     isCountingIn: false,
@@ -106,6 +106,12 @@ export const vizState = {
 
 // Persistence Helpers
 export const storage = {
-    get: (key) => JSON.parse(localStorage.getItem(`ensemble_${key}`) || '[]'),
-    save: (key, val) => localStorage.setItem(`ensemble_${key}`, JSON.stringify(val))
+    get: (key) => {
+        if (typeof localStorage === 'undefined') return [];
+        return JSON.parse(localStorage.getItem(`ensemble_${key}`) || '[]');
+    },
+    save: (key, val) => {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(`ensemble_${key}`, JSON.stringify(val));
+    }
 };

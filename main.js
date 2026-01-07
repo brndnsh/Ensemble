@@ -4,22 +4,15 @@ import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playCho
 import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
 import { validateProgression, generateRandomProgression } from './chords.js';
-import { getBassNote } from './bass.js';
-import { getSoloistNote } from './soloist.js';
 import { chordPatterns } from './accompaniment.js';
 import { exportToMidi } from './midi-export.js';
 import { UnifiedVisualizer } from './visualizer.js';
+import { initWorker, startWorker, stopWorker, flushWorker, requestBuffer, syncWorker } from './worker-client.js';
 
 let userPresets = storage.get('userPresets');
 let userDrumPresets = storage.get('userDrumPresets');
 let iosAudioUnlocked = false;
 let viz;
-
-// Web Worker for robust background timing
-const timerWorker = new Worker('./timer.js');
-timerWorker.onmessage = (e) => {
-    if (e.data === 'tick') scheduler();
-};
 
 /** @type {HTMLAudioElement} */
 // Use a slightly longer silent wav to ensure OS recognition as media playback
@@ -64,6 +57,7 @@ function updateStyle(type, styleId) {
         chip.classList.toggle('active', chip.dataset.id === styleId);
     });
     flushBuffers();
+    syncWorker();
 }
 
 /**
@@ -91,13 +85,14 @@ function togglePlay() {
         ctx.isPlaying = false;
         ui.playBtn.textContent = 'START';
         ui.playBtn.classList.remove('playing');
-        timerWorker.postMessage('stop');
+        stopWorker();
         silentAudio.pause();
         silentAudio.currentTime = 0;
         releaseWakeLock();
 
         // Immediate Visual Reset
         ctx.drawQueue = [];
+        ctx.lastActiveDrumElements = null;
         cb.lastActiveChordIndex = null;
         clearActiveVisuals(viz);
         flushBuffers();
@@ -119,6 +114,7 @@ function togglePlay() {
         initAudio();
         ctx.step = 0;
         flushBuffers();
+        syncWorker();
         if (!iosAudioUnlocked) {
             silentAudio.play().catch(e => console.log("Audio unlock failed", e));
             iosAudioUnlocked = true;
@@ -145,7 +141,7 @@ function togglePlay() {
             requestAnimationFrame(draw);
         }
         
-        timerWorker.postMessage('start');
+        startWorker();
         scheduler();
     }
 }
@@ -182,25 +178,18 @@ function togglePower(type) {
     } else if (c.state.enabled && ['chord', 'bass', 'soloist'].includes(type)) {
         flushBuffers();
     }
+    syncWorker();
+    if (ctx.isPlaying && c.state.enabled) scheduler();
 }
-
-const BUFFER_LOOKAHEAD = 64;
 
 export function flushBuffers() {
     if (bb.lastPlayedFreq !== null) bb.lastFreq = bb.lastPlayedFreq;
     bb.buffer.clear();
-    bb.bufferHead = ctx.step;
 
     if (sb.lastPlayedFreq !== null) sb.lastFreq = sb.lastPlayedFreq;
     sb.buffer.clear();
-    sb.bufferHead = ctx.step;
     
-    // Reset soloist stateful counters to ensure immediate response to changes
-    sb.phraseSteps = 0;
-    sb.isResting = false;
-    sb.busySteps = 0;
-    sb.currentLick = null;
-    sb.sequenceType = null;
+    flushWorker(ctx.step);
 }
 
 function saveCurrentState() {
@@ -276,92 +265,11 @@ function addSection() {
     saveCurrentState();
 }
 
-function fillBuffers() {
-    // Initialize buffer heads if needed
-    if (bb.bufferHead === undefined) bb.bufferHead = ctx.step;
-    if (sb.bufferHead === undefined) sb.bufferHead = ctx.step;
-
-    // Ensure we don't fill too far ahead or fall behind
-    if (bb.bufferHead < ctx.step) bb.bufferHead = ctx.step;
-    if (sb.bufferHead < ctx.step) sb.bufferHead = ctx.step;
-
-    const targetStep = ctx.step + BUFFER_LOOKAHEAD;
-
-    // --- Bass Buffering ---
-    if (bb.enabled) {
-        while (bb.bufferHead < targetStep) {
-            const step = bb.bufferHead;
-            const chordData = getChordAtStep(step);
-            let result = null;
-
-                if (chordData) {
-                    const { chord, stepInChord } = chordData;
-                    let shouldPlay = false;
-                    if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
-                    else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
-                    else if (bb.style === 'arp' && stepInChord % 4 === 0) shouldPlay = true;
-                    else if (bb.style === 'bossa') {
-                        // Bossa rhythm: 1, 2&, 3, 4& (Steps: 0, 6, 8, 14)
-                        if ([0, 6, 8, 14].includes(step % 16)) shouldPlay = true;
-                    }
-                    else if (bb.style === 'quarter') {
-                        if (stepInChord % 4 === 0) shouldPlay = true;
-                        // 15% chance of an eighth-note skip on the "and" of the beat
-                        else if (stepInChord % 2 === 0 && Math.random() < 0.15) shouldPlay = true;
-                    }
-
-                    if (shouldPlay) {
-                        const nextChordData = getChordAtStep(step + 4);
-                        const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step);
-                        
-                        if (bassResult) {
-                            const freq = typeof bassResult === 'object' ? bassResult.freq : bassResult;
-                            const durationMultiplier = typeof bassResult === 'object' ? bassResult.durationMultiplier : null;
-                            const velocity = typeof bassResult === 'object' ? bassResult.velocity : 1.0;
-                            const muted = typeof bassResult === 'object' ? bassResult.muted : false;
-                            
-                            if (freq) {
-                                bb.lastFreq = freq;
-                                result = { freq, durationMultiplier, velocity, muted, chordData };
-                            }
-                        }
-                    }
-                }
-            bb.buffer.set(step, result);
-            bb.bufferHead++;
-        }
-    }
-
-    // --- Soloist Buffering ---
-    if (sb.enabled) {
-        while (sb.bufferHead < targetStep) {
-            const step = sb.bufferHead;
-            const chordData = getChordAtStep(step);
-            let result = null;
-
-            if (chordData) {
-                const { chord } = chordData;
-                const nextChordData = getChordAtStep(step + 4);
-                // Note: getSoloistNote is stateful (sb state) and updates it.
-                // We rely on this linear execution order.
-                const soloResult = getSoloistNote(chord, nextChordData?.chord, step % 16, sb.lastFreq, sb.octave, sb.style);
-                
-                if (soloResult?.freq) {
-                    sb.lastFreq = soloResult.freq;
-                    result = { ...soloResult, chordData };
-                }
-            }
-            sb.buffer.set(step, result);
-            sb.bufferHead++;
-        }
-    }
-}
-
 /**
  * The main audio scheduler loop.
  */
 function scheduler() {
-    fillBuffers();
+    requestBuffer(ctx.step);
     while (ctx.nextNoteTime < ctx.audio.currentTime + ctx.scheduleAheadTime) {
         if (ctx.isCountingIn) {
             scheduleCountIn(ctx.countInBeat, ctx.nextNoteTime);
@@ -534,8 +442,8 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
         const duration = 0.25 * spb * (durationMultiplier || 1);
         const vel = velocity || 1.0;
         
-        // Neo-soul "Lazy" Lag: Additional fixed delay for neo style
-        const styleLag = style === 'neo' ? 0.025 : 0;
+        // Neo-soul "Lazy" Lag: Additional variable delay for neo style
+        const styleLag = style === 'neo' ? (0.01 + Math.random() * 0.035) : 0;
         const playTime = unswungTime + styleLag;
 
         playSoloNote(freq, playTime, duration, vel, bendStartInterval || 0, style);
@@ -621,7 +529,10 @@ function scheduleGlobalEvent(step, swungTime) {
     }
 
     // Dynamic straightness based on soloist style
-    const straightness = sb.style === 'neo' ? 0.35 : 0.65;
+    let straightness = 0.65;
+    if (sb.style === 'neo') straightness = 0.35;
+    else if (sb.style === 'blues') straightness = 0.45;
+    
     const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + jitter;
 
     if (gb.enabled) {
@@ -657,8 +568,8 @@ function cloneMeasure() {
 }
 
 function updateDrumVis(ev) {
-    if (ctx.lastPlayingStep !== undefined) {
-        document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
+    if (ctx.lastActiveDrumElements) {
+        ctx.lastActiveDrumElements.forEach(s => s.classList.remove('playing'));
     }
     
     // Auto-follow logic: switch measure page if needed
@@ -673,7 +584,12 @@ function updateDrumVis(ev) {
         const activeSteps = gb.cachedSteps[localStep];
         if (activeSteps) {
             activeSteps.forEach(s => s.classList.add('playing'));
+            ctx.lastActiveDrumElements = activeSteps;
+        } else {
+            ctx.lastActiveDrumElements = null;
         }
+    } else {
+        ctx.lastActiveDrumElements = null;
     }
     ctx.lastPlayingStep = ev.step;
 }
@@ -1201,6 +1117,18 @@ function init() {
         updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
         updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
         
+        // Logic Worker handles timing AND generative musical logic
+        initWorker(
+            () => scheduler(), 
+            (notes) => {
+                notes.forEach(n => {
+                    if (n.module === 'bb') bb.buffer.set(n.step, n);
+                    else if (n.module === 'sb') sb.buffer.set(n.step, n);
+                });
+            }
+        );
+
+        syncWorker();
         // Show the app after everything is ready
         document.querySelector('.app-main-layout').classList.add('loaded');
     } catch (e) { console.error("Error during init:", e); }
@@ -1219,6 +1147,7 @@ function setBpm(val) {
         if (unswungNoteTimeRemaining > 0) ctx.unswungNextNoteTime = now + (unswungNoteTimeRemaining * ratio);
     }
     ctx.bpm = newBpm; ui.bpmInput.value = newBpm;
+    syncWorker();
 
     if (viz && ctx.isPlaying && ctx.audio) {
         const secondsPerBeat = 60.0 / ctx.bpm;
@@ -1258,6 +1187,7 @@ function transposeKey(delta) {
     renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(renderChordVisualizer);
     flushBuffers();
+    syncWorker();
     saveCurrentState();
 }
 

@@ -3,6 +3,7 @@ import { normalizeKey, getFrequency } from './utils.js';
 import { cb, arranger } from './state.js';
 import { ui } from './ui.js';
 import { updateProgressionCache } from './main.js';
+import { syncWorker } from './worker-client.js';
 
 const ROMAN_REGEX = /^([#b])?(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v)/;
 const NNS_REGEX = /^([#b])?([1-7])/;
@@ -356,5 +357,6 @@ export function validateProgression(renderCallback) {
 
     arranger.progression = allChords;
     updateProgressionCache();
+    syncWorker();
     if (renderCallback) renderCallback();
 }
