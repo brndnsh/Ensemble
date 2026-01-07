@@ -48,23 +48,30 @@ export function generateId() {
 }
 
 /**
- * Compresses the sections array into a Base64 string.
+ * Compresses the sections array into a Base64 string, handling Unicode.
  * @param {Array} sections 
  * @returns {string}
  */
 export function compressSections(sections) {
     const minified = sections.map(s => ({ l: s.label, v: s.value }));
-    return btoa(JSON.stringify(minified));
+    const json = JSON.stringify(minified);
+    // Handle Unicode for btoa
+    const bytes = new TextEncoder().encode(json);
+    const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
+    return btoa(binString);
 }
 
 /**
- * Decompresses the Base64 string back into sections.
+ * Decompresses the Base64 string back into sections, handling Unicode.
  * @param {string} str 
  * @returns {Array}
  */
 export function decompressSections(str) {
     try {
-        const minified = JSON.parse(atob(str));
+        const binString = atob(str);
+        const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
+        const json = new TextDecoder().decode(bytes);
+        const minified = JSON.parse(json);
         return minified.map((s, i) => ({ 
             id: generateId(), 
             label: s.l || `Section ${i+1}`, 
@@ -72,6 +79,6 @@ export function decompressSections(str) {
         }));
     } catch (e) {
         console.error("Failed to decompress sections", e);
-        return [{ id: 1, label: 'Intro', value: 'I | IV' }];
+        return [{ id: generateId(), label: 'Intro', value: 'I | IV' }];
     }
 }

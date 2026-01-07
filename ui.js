@@ -96,17 +96,20 @@ export function initTabs() {
     });
 }
 
+let toastTimeout = null;
 export function showToast(msg) {
     const toast = document.getElementById('toast');
+    if (!toast) return;
+    
     toast.textContent = msg;
     toast.classList.add('show');
-    toast.style.opacity = "1";
-    toast.style.bottom = "50px";
-    setTimeout(() => {
-        toast.style.opacity = "0";
-        toast.style.bottom = "30px";
+    
+    if (toastTimeout) clearTimeout(toastTimeout);
+    
+    toastTimeout = setTimeout(() => {
         toast.classList.remove('show');
-    }, 2000);
+        toastTimeout = null;
+    }, 2500);
 }
 
 let flashTimeout = null;
