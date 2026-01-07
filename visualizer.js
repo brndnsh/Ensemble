@@ -97,6 +97,17 @@ export class UnifiedVisualizer {
         const minTime = currentTime - this.windowSize;
         const yScale = h / this.visualRange;
 
+        // Resolve theme-aware colors
+        const style = getComputedStyle(document.documentElement);
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                      (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        
+        const bgColor = isDark ? '#0f172a' : '#f8fafc';
+        const gridColorMeasure = isDark ? 'rgba(56, 189, 248, 0.4)' : 'rgba(2, 132, 199, 0.3)';
+        const gridColorBeat = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+        const playheadColor = isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)';
+        const outlineColor = isDark ? '#000' : '#fff';
+
         const getY = (midi, register) => {
             return (h / 2) - (midi - register) * yScale;
         };
@@ -106,7 +117,7 @@ export class UnifiedVisualizer {
         };
 
         // 0. Background
-        ctx.fillStyle = '#0f172a'; // Deep slate background
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, w, h);
 
         // 1. Rhythmic Grid
@@ -123,7 +134,7 @@ export class UnifiedVisualizer {
                 if (x < 0) continue;
                 
                 const isMeasure = i % 4 === 0;
-                ctx.strokeStyle = isMeasure ? 'rgba(56, 189, 248, 0.4)' : 'rgba(255, 255, 255, 0.1)';
+                ctx.strokeStyle = isMeasure ? gridColorMeasure : gridColorBeat;
                 ctx.beginPath();
                 ctx.moveTo(x, 0);
                 ctx.lineTo(x, h);
@@ -167,7 +178,7 @@ export class UnifiedVisualizer {
                     const baseOctave = Math.floor(chordReg / 12);
                     for (let oct = -1; oct <= 1; oct++) {
                         const m = pc + (baseOctave + oct) * 12;
-                        const y = getY(m, chordReg);
+                        const y = Math.round(getY(m, chordReg));
                         if (y >= -10 && y <= h + 10) {
                             ctx.fillRect(x, y - 1, cw, 2);
                         }
@@ -178,10 +189,10 @@ export class UnifiedVisualizer {
             // Render specifically played notes (highlighted)
             if (ev.notes) {
                 for (const midi of ev.notes) {
-                    const y = getY(midi, chordReg);
+                    const y = Math.round(getY(midi, chordReg));
                     const interval = (midi % 12 - rootPC + 12) % 12;
                     const cat = getCategory(interval);
-                    ctx.fillStyle = `rgba(${colors[cat]}, 0.8)`;
+                    ctx.fillStyle = `rgba(${colors[cat]}, 0.5)`;
                     if (y >= -10 && y <= h + 10) {
                         ctx.fillRect(x, y - 1.5, cw, 3);
                     }
@@ -193,14 +204,23 @@ export class UnifiedVisualizer {
         for (const name in this.tracks) {
             const track = this.tracks[name];
             const reg = this.registers[name] || 60;
+            const baseWidth = name === 'soloist' ? 4 : 5;
             
-            ctx.strokeStyle = track.color;
-            ctx.lineWidth = name === 'soloist' ? 3 : 4;
+            // Resolve track color if it's a CSS variable
+            let color = track.color;
+            if (color.startsWith('var(')) {
+                const varName = color.slice(4, -1);
+                color = style.getPropertyValue(varName).trim() || '#3b82f6';
+            }
+
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             
             let activeX = -10, activeY = -10, isActive = false;
 
+            // First pass: Glow/outline for distinctness
+            ctx.strokeStyle = outlineColor;
+            ctx.lineWidth = baseWidth + 2;
             ctx.beginPath();
             for (const ev of track.history) {
                 const noteEnd = ev.time + (ev.duration || 0.25);
@@ -211,7 +231,29 @@ export class UnifiedVisualizer {
                 const endT = Math.min(currentTime, noteEnd);
                 const x1 = getX(startT);
                 const x2 = getX(endT);
-                const y = getY(ev.midi, reg);
+                const y = Math.round(getY(ev.midi, reg));
+
+                if (y >= -10 && y <= h + 10) {
+                    ctx.moveTo(x1, y);
+                    ctx.lineTo(x2, y);
+                }
+            }
+            ctx.stroke();
+
+            // Second pass: Colored line
+            ctx.strokeStyle = color;
+            ctx.lineWidth = baseWidth;
+            ctx.beginPath();
+            for (const ev of track.history) {
+                const noteEnd = ev.time + (ev.duration || 0.25);
+                if (noteEnd < minTime) continue;
+                if (ev.time > currentTime) break;
+
+                const startT = Math.max(minTime, ev.time);
+                const endT = Math.min(currentTime, noteEnd);
+                const x1 = getX(startT);
+                const x2 = getX(endT);
+                const y = Math.round(getY(ev.midi, reg));
 
                 if (y >= -10 && y <= h + 10) {
                     ctx.moveTo(x1, y);
@@ -226,17 +268,17 @@ export class UnifiedVisualizer {
 
             if (isActive) {
                 ctx.fillStyle = '#fff';
-                ctx.strokeStyle = track.color;
+                ctx.strokeStyle = outlineColor;
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(activeX, activeY, 5, 0, Math.PI * 2);
+                ctx.arc(activeX, activeY, 6, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
             }
         }
 
         // 4. Playhead
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.strokeStyle = playheadColor;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(w - 1, 0);
