@@ -90,13 +90,6 @@ export class UnifiedVisualizer {
         }
     }
 
-    render(currentTime, bpm) {
-        const ctx = this.ctx;
-        const w = this.width;
-        const h = this.height;
-        const minTime = currentTime - this.windowSize;
-        const yScale = h / this.visualRange;
-
         // Resolve theme-aware colors
         const style = getComputedStyle(document.documentElement);
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
@@ -107,6 +100,13 @@ export class UnifiedVisualizer {
         const gridColorBeat = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
         const playheadColor = isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)';
         const outlineColor = isDark ? '#000' : '#fff';
+
+        const chordColors = {
+            root: style.getPropertyValue('--blue').trim() || '#2563eb',
+            third: style.getPropertyValue('--green').trim() || '#10b981',
+            fifth: style.getPropertyValue('--orange').trim() || '#f59e0b',
+            seventh: style.getPropertyValue('--violet').trim() || '#d946ef'
+        };
 
         const getY = (midi, register) => {
             return (h / 2) - (midi - register) * yScale;
@@ -144,18 +144,12 @@ export class UnifiedVisualizer {
 
         // 2. Chords
         const chordReg = this.registers['chords'] || 60;
-        const colors = {
-            root: "37, 99, 235",
-            third: "16, 185, 129",
-            fifth: "245, 158, 11",
-            ext: "217, 70, 239"
-        };
 
         const getCategory = (interval) => {
             if (interval === 0) return "root";
             if (interval === 3 || interval === 4) return "third";
             if (interval === 7) return "fifth";
-            return "ext";
+            return "seventh";
         };
 
         for (const ev of this.chordEvents) {
@@ -174,7 +168,8 @@ export class UnifiedVisualizer {
                 for (const interval of ev.intervals) {
                     const pc = (rootPC + interval) % 12;
                     const cat = getCategory(interval);
-                    ctx.fillStyle = `rgba(${colors[cat]}, 0.1)`;
+                    ctx.fillStyle = chordColors[cat];
+                    ctx.globalAlpha = 0.1;
                     const baseOctave = Math.floor(chordReg / 12);
                     for (let oct = -1; oct <= 1; oct++) {
                         const m = pc + (baseOctave + oct) * 12;
@@ -183,6 +178,7 @@ export class UnifiedVisualizer {
                             ctx.fillRect(x, y - 1, cw, 2);
                         }
                     }
+                    ctx.globalAlpha = 1.0;
                 }
             }
 
@@ -192,10 +188,12 @@ export class UnifiedVisualizer {
                     const y = Math.round(getY(midi, chordReg));
                     const interval = (midi % 12 - rootPC + 12) % 12;
                     const cat = getCategory(interval);
-                    ctx.fillStyle = `rgba(${colors[cat]}, 0.5)`;
+                    ctx.fillStyle = chordColors[cat];
+                    ctx.globalAlpha = 0.5;
                     if (y >= -10 && y <= h + 10) {
                         ctx.fillRect(x, y - 1.5, cw, 3);
                     }
+                    ctx.globalAlpha = 1.0;
                 }
             }
         }

@@ -1123,8 +1123,8 @@ function init() {
         }
 
         viz = new UnifiedVisualizer('unifiedVizContainer');
-        viz.addTrack('bass', 'var(--accent-color)');
-        viz.addTrack('soloist', '#f472b6');
+        viz.addTrack('bass', 'var(--success-color)');
+        viz.addTrack('soloist', 'var(--soloist-color)');
         
         initTabs(); // New Tab Logic
 
