@@ -45,7 +45,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ### Bassist & Soloist
 *   **Algorithmic Performance**: Generative lines that react to Arranger data.
-*   **Diverse Styles**: Scalar, Shreddy, Bebop, Blues, Minimal, and Neo-Soul.
+*   **Diverse Styles**: Scalar, Shreddy, Blues, Minimal, and Neo-Soul.
 
 ### Unified Visualizer
 *   **Dedicated Live Monitor**: Full-width harmonic graph superimposing all tracks.
