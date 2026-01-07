@@ -4,7 +4,6 @@ import { arranger, cb, bb, sb, ctx } from './state.js';
 
 let timerID = null;
 let interval = 25;
-let interval = 25;
 
 // Internal buffer heads to track generation progress
 let bbBufferHead = 0;
@@ -102,10 +101,6 @@ function fillBuffers(currentStep) {
     }
 }
 
-function log(msg) {
-    postMessage({ type: 'log', data: msg });
-}
-
 let lastMainStep = 0;
 
 self.onmessage = (e) => {
@@ -137,31 +132,32 @@ self.onmessage = (e) => {
                     }, interval);
                 }
                 break;
-                    case 'syncState':
-                        // Update local state objects for generation
-                        if (data.arranger) {
-                            Object.assign(arranger, data.arranger);
-                            arranger.totalSteps = data.arranger.totalSteps;
-                            arranger.stepMap = data.arranger.stepMap;
-                        }
-                        if (data.cb) Object.assign(cb, data.cb);
-                        if (data.bb) Object.assign(bb, data.bb);
-                        if (data.sb) Object.assign(sb, data.sb);
-                        if (data.ctx) Object.assign(ctx, data.ctx);
-                        fillBuffers(lastMainStep);
-                        break;
-                    case 'flush':
-                        bbBufferHead = data.step;
-                        sbBufferHead = data.step;
-                        lastMainStep = data.step;
-                        // Reset soloist stateful tracking in the worker
-                        sb.phraseSteps = 0;
-                        sb.isResting = false; // Start with a phrase, not a rest
-                        sb.busySteps = 0;
-                        sb.currentLick = null;
-                        sb.sequenceType = null;
-                        fillBuffers(data.step);
-                        break;            case 'requestBuffer':
+            case 'syncState':
+                // Update local state objects for generation
+                if (data.arranger) {
+                    Object.assign(arranger, data.arranger);
+                    arranger.totalSteps = data.arranger.totalSteps;
+                    arranger.stepMap = data.arranger.stepMap;
+                }
+                if (data.cb) Object.assign(cb, data.cb);
+                if (data.bb) Object.assign(bb, data.bb);
+                if (data.sb) Object.assign(sb, data.sb);
+                if (data.ctx) Object.assign(ctx, data.ctx);
+                fillBuffers(lastMainStep);
+                break;
+            case 'flush':
+                bbBufferHead = data.step;
+                sbBufferHead = data.step;
+                lastMainStep = data.step;
+                // Reset soloist stateful tracking in the worker
+                sb.phraseSteps = 0;
+                sb.isResting = false; 
+                sb.busySteps = 0;
+                sb.currentLick = null;
+                sb.sequenceType = null;
+                fillBuffers(data.step);
+                break;
+            case 'requestBuffer':
                 lastMainStep = data.step;
                 fillBuffers(data.step);
                 break;
