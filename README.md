@@ -36,11 +36,12 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Dual-Clock System**: Capable of playing "straight" or "laid back" lines even over swinging drums for a more human feel.
 
 ### 📊 Unified Visualizer
-*   **Dedicated Live View**: A full-width, high-fidelity graph at the bottom of the page that superimposes Bass and Soloist tracks on top of your chord progression.
+*   **Integrated Live Monitor**: A dedicated harmonic graph integrated into the main dashboard that superimposes Bass and Soloist tracks on top of your chord progression.
 *   **Harmonic Analysis**: Real-time interval mapping using a vivid color scheme (Blue: Root, Green: 3rd, Orange: 5th, Purple: 7th+) helps you visualize melodic choices.
 *   **Active Chord Pulse**: A subtle pulse effect on Arranger cards helps you track the song's position during playback.
 
 ### General
+*   **Responsive Dashboard**: Adapts to your device, offering a two-column layout on desktop and a streamlined single-column flow on mobile.
 *   **MIDI Export**: Export your progression, bass line, and drum groove as a multi-track MIDI file (Format 1) with appropriate instrument assignments, chord name markers, and soloist pitch bends.
 *   **Solarized Themes**: Native support for **Solarized Dark** and **Solarized Light** themes, with an "Auto" mode that syncs with your system preferences.
 *   **Color-Coded Library**: Presets and styles are organized by genre using a compact, color-coded chip system (e.g., Purple for Jazz, Blue for Pop/Rock).
