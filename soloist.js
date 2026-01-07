@@ -23,18 +23,18 @@ const RHYTHMIC_CELLS = [
 ];
 
 const CANNED_LICKS = {
-    'the_lick': [2, 3, 5, 7, 3, 10, 12], // 2 b3 4 5 b3 b7 1
-    'blues_1': [12, 15, 12, 10, 9, 7], // 1 b3 1 b7 6 5
-    'blues_2': [12, 10, 7, 6, 5, 3, 0], // 1 b7 5 b5 4 b3 1
-    'blues_3': [0, 2, 3, 4, 7, 9, 7, 4], // 1 2 b3 3 5 6 5 3 (Major)
-    'blues_4': [12, 10, 7, 10, 12, 15, 17], // 1 b7 5 b7 1 b3 4
-    'rock_1': [0, 3, 5, 5, 3, 0],      // 1 b3 4 4 b3 1
-    'bebop_1': [7, 6, 5, 4, 3, 2, 1, 0], // 5 b5 4 3 b3 2 b2 1
-    'shred_1': [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], // Major Arp Sweep
-    'bb_box': [12, 14, 15, 14, 12, 10, 12], // 1 2 b3 2 1 b7 1
-    'albert_king': [12, 15, 17, 15, 12], // 1 b3 4(bend) b3 1
-    'turnaround_1': [12, 11, 10, 9, 8, 7, 7], // 1 7 b7 6 b6 5 5 (chromatic down)
-    'turnaround_2': [0, 4, 7, 10, 11, 12], // 1 3 5 b7 7 1
+    'the_lick': { notes: [2, 3, 5, 7, 3, 10, 12], quality: ['minor', 'halfdim'] },
+    'blues_1': { notes: [12, 15, 12, 10, 9, 7], quality: ['minor', 'major'] },
+    'blues_2': { notes: [12, 10, 7, 6, 5, 3, 0], quality: ['minor', 'major'] },
+    'blues_3': { notes: [0, 2, 3, 4, 7, 9, 7, 4], quality: ['major'] },
+    'blues_4': { notes: [12, 10, 7, 10, 12, 15, 17], quality: ['minor', 'major'] },
+    'rock_1': { notes: [0, 3, 5, 5, 3, 0], quality: ['minor', 'major'] },
+    'bebop_1': { notes: [7, 6, 5, 4, 3, 2, 1, 0], quality: ['major'] },
+    'shred_1': { notes: [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], quality: ['major'] },
+    'bb_box': { notes: [12, 14, 15, 14, 12, 10, 12], quality: ['minor', 'major'] },
+    'albert_king': { notes: [12, 15, 17, 15, 12], quality: ['minor', 'major'] },
+    'turnaround_1': { notes: [12, 11, 10, 9, 8, 7, 7], quality: ['major'] },
+    'turnaround_2': { notes: [0, 4, 7, 10, 11, 12], quality: ['major'] },
 };
 
 const SEQUENCES = {
@@ -163,14 +163,43 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const beatInMeasure = Math.floor(measureStep / 4);
     const stepInBeat = measureStep % 4;
 
+    // --- Structural Energy Mapping ---
+    const loopStep = step % (arranger.totalSteps || 1);
+    let sectionStart = 0;
+    let sectionEnd = arranger.totalSteps;
+    const currentSectionId = currentChord.sectionId;
+    
+    // Find boundaries of the current section in the flattened progression
+    for (let i = 0; i < arranger.stepMap.length; i++) {
+        if (arranger.stepMap[i].chord.sectionId === currentSectionId) {
+            sectionStart = arranger.stepMap[i].start;
+            break;
+        }
+    }
+    for (let i = arranger.stepMap.length - 1; i >= 0; i--) {
+        if (arranger.stepMap[i].chord.sectionId === currentSectionId) {
+            sectionEnd = arranger.stepMap[i].end;
+            break;
+        }
+    }
+    
+    const sectionLength = Math.max(1, sectionEnd - sectionStart);
+    const progressInSection = Math.max(0, Math.min(1, (loopStep - sectionStart) / sectionLength));
+    
+    // Intensity factor: 0.0 at start, 1.0 at end of section
+    const intensity = progressInSection;
+    
+    // Shift register up slightly as intensity builds (up to 7 semitones)
+    const dynamicCenterMidi = centerMidi + Math.floor(intensity * 7);
+
     // --- Dynamic Velocity (Accents) ---
-    let velocity = 1.0;
+    let velocity = 1.0 + (intensity * 0.2); // Build base volume with intensity
     if (stepInBeat === 0) {
-        velocity = (measureStep === 0) ? 1.2 : 1.1; // Accent downbeats
+        velocity *= (measureStep === 0) ? 1.2 : 1.1; // Accent downbeats
     } else if (stepInBeat === 2) {
-        velocity = 1.05; // Slight accent on mid-beat
+        velocity *= 1.05; // Slight accent on mid-beat
     } else {
-        velocity = 0.85 + Math.random() * 0.1; // "Ghost" or softer off-beats
+        velocity *= 0.85 + Math.random() * 0.1; // "Ghost" or softer off-beats
     }
     
     // Style specific velocity tweaks
@@ -183,9 +212,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (style === 'neo') velocity *= (0.8 + Math.random() * 0.25);
 
     // --- Pitch Selection Bounds & Tones ---
-    const minMidi = centerMidi - (style === 'shred' ? 24 : 18);
-    const maxMidi = Math.min(centerMidi + (style === 'shred' ? 30 : 24), 91); // Ceiling at G6 (91)
-    const prevMidi = prevFreq ? getMidi(prevFreq) : centerMidi;
+    const minMidi = dynamicCenterMidi - (style === 'shred' ? 24 : 18);
+    const maxMidi = Math.min(dynamicCenterMidi + (style === 'shred' ? 30 : 24), 91); // Ceiling at G6 (91)
+    const prevMidi = prevFreq ? getMidi(prevFreq) : dynamicCenterMidi;
     const rootMidi = currentChord.rootMidi;
     
     const chordTones = currentChord.intervals.map(i => rootMidi + i);
@@ -195,9 +224,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // --- Phrasing Logic ---
     if (measureStep === 0 || sb.phraseSteps <= 0) {
         // Decide if we should start a new phrase or rest
-        let restProb = 0.4;
+        // Intensity reduces resting probability
+        let restProb = 0.4 - (intensity * 0.3); 
         if (style === 'shred') restProb = 0.15;
-        if (style === 'neo') restProb = 0.5;
+        if (style === 'neo') restProb = 0.5 - (intensity * 0.2);
         if (style === 'minimal') restProb = 0.65; // Lots of space for minimal
 
         if (!sb.isResting && Math.random() < restProb) {
@@ -207,7 +237,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             sb.sequenceType = null;
         } else {
             sb.isResting = false;
-            const phraseBase = style === 'shred' ? 16 : 8;
+            // Higher intensity leads to longer phrases
+            const phraseBase = (style === 'shred' ? 16 : 8) + Math.floor(intensity * 12);
             sb.phraseSteps = phraseBase + Math.floor(Math.random() * 16); 
             
             // Minimal style always stays on chord tones or a simple scale
@@ -219,25 +250,42 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             const isTurnaround = (arranger.totalSteps > 16) && loopStep >= (arranger.totalSteps - 16);
             
             // Style-aware lick selection
-            let lickProb = 0.15;
+            let lickProb = 0.15 + (intensity * 0.2); // More licks as energy builds
             if (style === 'blues') lickProb = isTurnaround ? 0.6 : 0.35;
             if (style === 'neo') lickProb = 0.25;
 
             if (style !== 'scalar' && style !== 'shred' && Math.random() < lickProb) {
-                let pool = Object.keys(CANNED_LICKS);
-                if (style === 'blues') {
-                    if (isTurnaround) {
-                        pool = ['turnaround_1', 'turnaround_2'];
-                    } else {
-                        pool = ['the_lick', 'blues_1', 'blues_2', 'blues_3', 'blues_4', 'bb_box', 'albert_king'];
+                let pool = Object.keys(CANNED_LICKS).filter(name => {
+                    const lick = CANNED_LICKS[name];
+                    const q = currentChord.quality;
+                    const isMajor = q === 'major' || q.startsWith('maj') || q === 'add9' || q === '6' || q === '5';
+                    const isMinor = q === 'minor' || q.startsWith('m') || q.includes('dim') || q === 'halfdim';
+                    const isDom = currentChord.intervals.includes(10) || ['7', '9', '7b9', '7#9'].includes(q);
+
+                    let qualityMatch = false;
+                    if (isMajor && lick.quality.includes('major')) qualityMatch = true;
+                    if (isMinor && lick.quality.includes('minor')) qualityMatch = true;
+                    if (q === 'halfdim' && lick.quality.includes('halfdim')) qualityMatch = true;
+                    if (isDom && (lick.quality.includes('major') || lick.quality.includes('minor'))) qualityMatch = true;
+
+                    if (style === 'blues') {
+                        if (isTurnaround) return ['turnaround_1', 'turnaround_2'].includes(name) && qualityMatch;
+                        return ['the_lick', 'blues_1', 'blues_2', 'blues_3', 'blues_4', 'bb_box', 'albert_king'].includes(name) && qualityMatch;
                     }
-                } else if (style === 'neo') {
-                    pool = ['the_lick', 'blues_1', 'blues_2'];
+                    if (style === 'neo') {
+                        return ['the_lick', 'blues_1', 'blues_2'].includes(name) && qualityMatch;
+                    }
+                    return qualityMatch;
+                });
+
+                if (pool.length > 0) {
+                    const lickData = CANNED_LICKS[pool[Math.floor(Math.random() * pool.length)]];
+                    sb.currentLick = lickData.notes;
+                    sb.lickIndex = 0;
+                    sb.lickBaseMidi = rootMidi;
+                } else {
+                    sb.currentLick = null;
                 }
-                
-                sb.currentLick = CANNED_LICKS[pool[Math.floor(Math.random() * pool.length)]];
-                sb.lickIndex = 0;
-                sb.lickBaseMidi = rootMidi;
             } else {
                 sb.currentLick = null;
             }
@@ -250,10 +298,61 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // --- Rhythmic Cell Selection ---
     if (stepInBeat === 0) {
         let cellPool = RHYTHMIC_CELLS;
+
+        // Tempo-based density: reduce busy patterns at high BPM to avoid "rushing" feel
+        if (ctx.bpm >= 150) {
+            cellPool = RHYTHMIC_CELLS.filter((_, idx) => ![1, 3, 4, 5, 7, 9].includes(idx));
+        } else if (ctx.bpm >= 120) {
+            cellPool = RHYTHMIC_CELLS.filter((_, idx) => ![1].includes(idx));
+        }
+        
+        // Intensity-based density: favor busier cells as we approach the end of a section
+        if (intensity > 0.7 && ctx.bpm < 150) {
+             // Favor 16ths and syncopation
+             const busyIndices = [0, 1, 3, 4, 7];
+             cellPool = cellPool.filter((_, idx) => busyIndices.includes(idx % cellPool.length));
+        }
+
         if (style === 'minimal') cellPool = [[1, 0, 0, 0], [1, 0, 1, 0]];
-        if (style === 'shred') cellPool = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 0, 1, 1]]; // Favor constant 16ths
-        if (style === 'neo') cellPool = [[1, 0, 0, 1], [0, 1, 0, 1], [1, 0, 1, 0]]; // Laid back
-        sb.currentCell = cellPool[Math.floor(Math.random() * cellPool.length)];
+        if (style === 'shred') cellPool = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 0, 1, 1]]; 
+        if (style === 'neo') cellPool = [[1, 0, 0, 1], [0, 1, 0, 1], [1, 0, 1, 0]];
+
+
+        // Motivic Development Logic
+        const isNewPhrase = measureStep === 0 || sb.phraseSteps >= 20; // Heuristic for phrase start
+        
+        if (isNewPhrase && !sb.motifCell) {
+            // Start of a new idea: Establish a motif
+            sb.motifCell = cellPool[Math.floor(Math.random() * cellPool.length)];
+            sb.motifCounter = 2 + Math.floor(Math.random() * 3); // Repeat/vary for 2-4 beats
+            sb.currentCell = sb.motifCell;
+        } else if (sb.motifCounter > 0) {
+            // Call and Response: Repeat or vary the motif
+            sb.motifCounter--;
+            
+            if (Math.random() < 0.7) {
+                // Exact repetition (The "Call")
+                sb.currentCell = sb.motifCell;
+            } else {
+                // Slight variation (The "Response")
+                const variation = [...sb.motifCell];
+                const flipIdx = Math.floor(Math.random() * 4);
+                variation[flipIdx] = variation[flipIdx] === 1 ? 0 : 1;
+                sb.currentCell = variation;
+            }
+            
+            // If counter hits 0, we might clear the motif to allow a new idea next beat
+            if (sb.motifCounter === 0 && Math.random() < 0.5) {
+                sb.motifCell = null;
+            }
+        } else {
+            // Free development: pick a random cell and occasionally start a new motif
+            sb.currentCell = cellPool[Math.floor(Math.random() * cellPool.length)];
+            if (Math.random() < 0.2) {
+                sb.motifCell = sb.currentCell;
+                sb.motifCounter = 2;
+            }
+        }
     }
 
     // Check rhythmic cell for current step
