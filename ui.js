@@ -13,11 +13,11 @@ export const ui = {
     groovePowerBtn: document.getElementById('groovePowerBtn'),
     bassPowerBtn: document.getElementById('bassPowerBtn'),
     soloistPowerBtn: document.getElementById('soloistPowerBtn'),
+    chordPowerBtnDesktop: document.getElementById('chordPowerBtnDesktop'),
+    groovePowerBtnDesktop: document.getElementById('groovePowerBtnDesktop'),
+    bassPowerBtnDesktop: document.getElementById('bassPowerBtnDesktop'),
+    soloistPowerBtnDesktop: document.getElementById('soloistPowerBtnDesktop'),
     vizPowerBtn: document.getElementById('vizPowerBtn'),
-    arrangerPanel: document.getElementById('arrangerPanel'),
-    accompanistPanel: document.getElementById('accompanistPanel'),
-    tabBtns: document.querySelectorAll('.tab-btn'),
-    tabContents: document.querySelectorAll('.tab-content'),
     sectionList: document.getElementById('sectionList'),
     addSectionBtn: document.getElementById('addSectionBtn'),
     activeSectionLabel: document.getElementById('activeSectionLabel'),
@@ -76,8 +76,40 @@ export const ui = {
     resetSettingsBtn: document.getElementById('resetSettingsBtn')
 };
 
+export function setupPanelMenus() {
+    document.querySelectorAll('.panel-menu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const panel = btn.closest('.dashboard-panel');
+            const menu = panel.querySelector('.panel-settings-menu');
+            
+            // Close other open menus first
+            document.querySelectorAll('.panel-settings-menu.open').forEach(m => {
+                if (m !== menu) {
+                    m.classList.remove('open');
+                    const otherBtn = m.closest('.dashboard-panel').querySelector('.panel-menu-btn');
+                    if (otherBtn) otherBtn.classList.remove('active');
+                }
+            });
+
+            menu.classList.toggle('open');
+            btn.classList.toggle('active');
+        });
+    });
+
+    window.addEventListener('click', (e) => {
+        if (!e.target.closest('.panel-settings-menu') && !e.target.closest('.panel-menu-btn')) {
+            document.querySelectorAll('.panel-settings-menu.open').forEach(menu => {
+                menu.classList.remove('open');
+                const btn = menu.closest('.dashboard-panel').querySelector('.panel-menu-btn');
+                if (btn) btn.classList.remove('active');
+            });
+        }
+    });
+}
+
 export function initTabs() {
-    const tabItems = document.querySelectorAll('.tab-item');
+    const tabItems = document.querySelectorAll('.mobile-tabs-nav .tab-item');
     tabItems.forEach(item => {
         item.addEventListener('click', (e) => {
             // Don't switch tabs if the power button was clicked
@@ -86,12 +118,18 @@ export function initTabs() {
             const btn = item.querySelector('.tab-btn');
             if (!btn) return;
 
-            ui.tabBtns.forEach(b => b.classList.remove('active'));
-            ui.tabContents.forEach(c => c.classList.remove('active'));
+            // Remove active state from all buttons in mobile nav
+            document.querySelectorAll('.mobile-tabs-nav .tab-btn').forEach(b => b.classList.remove('active'));
+            // Hide all instrument panels on mobile
+            document.querySelectorAll('.instrument-panel').forEach(c => c.classList.remove('active-mobile'));
             
+            // Activate clicked button
             btn.classList.add('active');
-            const target = document.getElementById(`tab-${btn.dataset.tab}`);
-            if (target) target.classList.add('active');
+            
+            // Show target panel
+            const targetId = btn.dataset.target;
+            const target = document.getElementById(targetId);
+            if (target) target.classList.add('active-mobile');
         });
     });
 }
@@ -130,6 +168,47 @@ export function triggerFlash(intensity = 0.2) {
 }
 
 /**
+ * Smoothly animates an element's height when its content changes.
+ * @param {HTMLElement} el - The element to animate.
+ * @param {Function} updateCallback - The function that updates the element's content.
+ */
+function animateHeight(el, updateCallback) {
+    const beforeHeight = el.offsetHeight;
+    // Temporarily disable any transitions to get an accurate "after" height
+    const originalTransition = el.style.transition;
+    el.style.transition = 'none';
+    
+    updateCallback();
+    
+    const afterHeight = el.offsetHeight;
+    if (beforeHeight === afterHeight) {
+        el.style.transition = originalTransition;
+        return;
+    }
+
+    // Reset to start height
+    el.style.height = beforeHeight + 'px';
+    el.style.overflow = 'hidden';
+    
+    // Force reflow
+    el.offsetHeight; 
+    
+    // Animate to end height
+    el.style.transition = 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
+    el.style.height = afterHeight + 'px';
+    
+    const onEnd = (e) => {
+        if (e.propertyName === 'height') {
+            el.style.height = '';
+            el.style.overflow = '';
+            el.style.transition = originalTransition;
+            el.removeEventListener('transitionend', onEnd);
+        }
+    };
+    el.addEventListener('transitionend', onEnd);
+}
+
+/**
  * Renders the list of section inputs.
  * @param {Array} sections - The sections data.
  * @param {Function} onUpdate - Callback when a section is updated (id, field, value).
@@ -137,88 +216,98 @@ export function triggerFlash(intensity = 0.2) {
  * @param {Function} onDuplicate - Callback when a section is duplicated (id).
  */
 export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
-    ui.sectionList.innerHTML = '';
-    sections.forEach(section => {
-        const card = document.createElement('div');
-        card.className = 'section-card';
-        card.dataset.id = section.id;
-        if (section.color) card.style.borderLeft = `4px solid ${section.color}`;
-        
-        const header = document.createElement('div');
-        header.className = 'section-header';
-        
-        const labelGroup = document.createElement('div');
-        labelGroup.style.display = 'flex';
-        labelGroup.style.alignItems = 'center';
-        labelGroup.style.gap = '0.5rem';
-        labelGroup.style.flexGrow = '1';
+    const panel = document.getElementById('panel-arranger');
+    
+    const updateLogic = () => {
+        ui.sectionList.innerHTML = '';
+        sections.forEach(section => {
+            const card = document.createElement('div');
+            card.className = 'section-card';
+            card.dataset.id = section.id;
+            if (section.color) card.style.borderLeft = `4px solid ${section.color}`;
+            
+            const header = document.createElement('div');
+            header.className = 'section-header';
+            
+            const labelGroup = document.createElement('div');
+            labelGroup.style.display = 'flex';
+            labelGroup.style.alignItems = 'center';
+            labelGroup.style.gap = '0.5rem';
+            labelGroup.style.flexGrow = '1';
 
-        const colorInput = document.createElement('input');
-        colorInput.type = 'color';
-        colorInput.value = section.color || '#3b82f6';
-        colorInput.style.width = '24px';
-        colorInput.style.height = '24px';
-        colorInput.style.padding = '0';
-        colorInput.style.border = 'none';
-        colorInput.style.background = 'transparent';
-        colorInput.style.cursor = 'pointer';
-        colorInput.oninput = (e) => onUpdate(section.id, 'color', e.target.value);
+            const colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.value = section.color || '#3b82f6';
+            colorInput.style.width = '24px';
+            colorInput.style.height = '24px';
+            colorInput.style.padding = '0';
+            colorInput.style.border = 'none';
+            colorInput.style.background = 'transparent';
+            colorInput.style.cursor = 'pointer';
+            colorInput.oninput = (e) => onUpdate(section.id, 'color', e.target.value);
 
-        const labelInput = document.createElement('input');
-        labelInput.className = 'section-label-input';
-        labelInput.value = section.label;
-        labelInput.placeholder = 'Section Name';
-        labelInput.oninput = (e) => onUpdate(section.id, 'label', e.target.value);
-        
-        labelGroup.appendChild(colorInput);
-        labelGroup.appendChild(labelInput);
+            const labelInput = document.createElement('input');
+            labelInput.className = 'section-label-input';
+            labelInput.value = section.label;
+            labelInput.placeholder = 'Section Name';
+            labelInput.oninput = (e) => onUpdate(section.id, 'label', e.target.value);
+            
+            labelGroup.appendChild(colorInput);
+            labelGroup.appendChild(labelInput);
 
-        const actions = document.createElement('div');
-        actions.style.display = 'flex';
-        actions.style.gap = '0.5rem';
+            const actions = document.createElement('div');
+            actions.style.display = 'flex';
+            actions.style.gap = '0.5rem';
 
-        const moveUpBtn = document.createElement('button');
-        moveUpBtn.className = 'section-move-btn';
-        moveUpBtn.innerHTML = '↑';
-        moveUpBtn.title = 'Move Up';
-        moveUpBtn.onclick = () => onUpdate(section.id, 'move', -1);
+            const moveUpBtn = document.createElement('button');
+            moveUpBtn.className = 'section-move-btn';
+            moveUpBtn.innerHTML = '↑';
+            moveUpBtn.title = 'Move Up';
+            moveUpBtn.onclick = () => onUpdate(section.id, 'move', -1);
 
-        const moveDownBtn = document.createElement('button');
-        moveDownBtn.className = 'section-move-btn';
-        moveDownBtn.innerHTML = '↓';
-        moveDownBtn.title = 'Move Down';
-        moveDownBtn.onclick = () => onUpdate(section.id, 'move', 1);
+            const moveDownBtn = document.createElement('button');
+            moveDownBtn.className = 'section-move-btn';
+            moveDownBtn.innerHTML = '↓';
+            moveDownBtn.title = 'Move Down';
+            moveDownBtn.onclick = () => onUpdate(section.id, 'move', 1);
 
-        const duplicateBtn = document.createElement('button');
-        duplicateBtn.className = 'section-duplicate-btn';
-        duplicateBtn.innerHTML = '⧉';
-        duplicateBtn.title = 'Duplicate Section';
-        duplicateBtn.onclick = () => onDuplicate(section.id);
+            const duplicateBtn = document.createElement('button');
+            duplicateBtn.className = 'section-duplicate-btn';
+            duplicateBtn.innerHTML = '⧉';
+            duplicateBtn.title = 'Duplicate Section';
+            duplicateBtn.onclick = () => onDuplicate(section.id);
 
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'section-delete-btn';
-        deleteBtn.innerHTML = '&times;';
-        deleteBtn.title = 'Delete Section';
-        deleteBtn.onclick = () => onDelete(section.id);
-        
-        header.appendChild(labelGroup);
-        actions.appendChild(moveUpBtn);
-        actions.appendChild(moveDownBtn);
-        actions.appendChild(duplicateBtn);
-        if (sections.length > 1) actions.appendChild(deleteBtn);
-        header.appendChild(actions);
-        
-        const progInput = document.createElement('textarea');
-        progInput.className = 'section-prog-input';
-        progInput.value = section.value;
-        progInput.placeholder = 'I | IV | V...';
-        progInput.spellcheck = false;
-        progInput.oninput = (e) => onUpdate(section.id, 'value', e.target.value);
-        
-        card.appendChild(header);
-        card.appendChild(progInput);
-        ui.sectionList.appendChild(card);
-    });
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'section-delete-btn';
+            deleteBtn.innerHTML = '&times;';
+            deleteBtn.title = 'Delete Section';
+            deleteBtn.onclick = () => onDelete(section.id);
+            
+            header.appendChild(labelGroup);
+            actions.appendChild(moveUpBtn);
+            actions.appendChild(moveDownBtn);
+            actions.appendChild(duplicateBtn);
+            if (sections.length > 1) actions.appendChild(deleteBtn);
+            header.appendChild(actions);
+            
+            const progInput = document.createElement('textarea');
+            progInput.className = 'section-prog-input';
+            progInput.value = section.value;
+            progInput.placeholder = 'I | IV | V...';
+            progInput.spellcheck = false;
+            progInput.oninput = (e) => onUpdate(section.id, 'value', e.target.value);
+            
+            card.appendChild(header);
+            card.appendChild(progInput);
+            ui.sectionList.appendChild(card);
+        });
+    };
+
+    if (panel) {
+        animateHeight(panel, updateLogic);
+    } else {
+        updateLogic();
+    }
 }
 
 /**
@@ -253,55 +342,65 @@ function createChordLabel(data) {
  * Renders the visual chord progression cards in the DOM.
  */
 export function renderChordVisualizer() {
-    ui.chordVisualizer.innerHTML = '';
-    arranger.cachedCards = [];
-    if (arranger.progression.length === 0) return;
-
-    let measureBox = document.createElement('div');
-    measureBox.className = 'measure-box';
-    ui.chordVisualizer.appendChild(measureBox);
+    const panel = document.getElementById('panel-arranger');
     
-    let currentBeatsInBar = 0;
+    const updateLogic = () => {
+        ui.chordVisualizer.innerHTML = '';
+        arranger.cachedCards = [];
+        if (arranger.progression.length === 0) return;
 
-    arranger.progression.forEach((chord, i) => {
-        if (currentBeatsInBar >= 4) {
-            measureBox = document.createElement('div');
-            measureBox.className = 'measure-box';
-            ui.chordVisualizer.appendChild(measureBox);
-            currentBeatsInBar = 0;
-        }
+        let measureBox = document.createElement('div');
+        measureBox.className = 'measure-box';
+        ui.chordVisualizer.appendChild(measureBox);
+        
+        let currentBeatsInBar = 0;
 
-        const div = document.createElement('div');
-        div.className = 'chord-card';
-        if (chord.beats < 4) div.classList.add('small');
-        if (chord.isMinor) div.classList.add('minor');
-        
-        // Apply section color
-        const section = arranger.sections.find(s => s.id === chord.sectionId);
-        if (section && section.color) {
-            div.style.borderTop = `3px solid ${section.color}`;
-            div.style.background = `linear-gradient(to bottom, ${section.color}15, var(--card-bg))`;
-        }
-        
-        let displayData;
-        if (arranger.notation === 'name') displayData = chord.display.abs;
-        else if (arranger.notation === 'nns') displayData = chord.display.nns;
-        else displayData = chord.display.rom;
+        arranger.progression.forEach((chord, i) => {
+            if (currentBeatsInBar >= 4) {
+                measureBox = document.createElement('div');
+                measureBox.className = 'measure-box';
+                ui.chordVisualizer.appendChild(measureBox);
+                currentBeatsInBar = 0;
+            }
 
-        div.appendChild(createChordLabel(displayData));
-        
-        div.onclick = () => window.previewChord(i);
-        
-        measureBox.appendChild(div);
-        arranger.cachedCards.push(div);
-        currentBeatsInBar += chord.beats;
-    });
+            const div = document.createElement('div');
+            div.className = 'chord-card';
+            if (chord.beats < 4) div.classList.add('small');
+            if (chord.isMinor) div.classList.add('minor');
+            
+            // Apply section color
+            const section = arranger.sections.find(s => s.id === chord.sectionId);
+            if (section && section.color) {
+                div.style.borderTop = `3px solid ${section.color}`;
+                div.style.background = `linear-gradient(to bottom, ${section.color}15, var(--card-bg))`;
+            }
+            
+            let displayData;
+            if (arranger.notation === 'name') displayData = chord.display.abs;
+            else if (arranger.notation === 'nns') displayData = chord.display.nns;
+            else displayData = chord.display.rom;
 
-    // Cache dimensions for efficient scrolling without reflows
-    setTimeout(() => {
-        arranger.cardOffsets = arranger.cachedCards.map(card => card.offsetTop - ui.chordVisualizer.offsetTop);
-        arranger.cardHeights = arranger.cachedCards.map(card => card.clientHeight);
-    }, 100);
+            div.appendChild(createChordLabel(displayData));
+            
+            div.onclick = () => window.previewChord(i);
+            
+            measureBox.appendChild(div);
+            arranger.cachedCards.push(div);
+            currentBeatsInBar += chord.beats;
+        });
+
+        // Cache dimensions for efficient scrolling without reflows
+        setTimeout(() => {
+            arranger.cardOffsets = arranger.cachedCards.map(card => card.offsetTop - ui.chordVisualizer.offsetTop);
+            arranger.cardHeights = arranger.cachedCards.map(card => card.clientHeight);
+        }, 100);
+    };
+
+    if (panel) {
+        animateHeight(panel, updateLogic);
+    } else {
+        updateLogic();
+    }
 }
 
 /**
@@ -326,7 +425,8 @@ function createTrackRow(inst, cachedSteps) {
     
     const header = document.createElement('div');
     header.className = 'track-header';
-    header.innerHTML = `<span>${inst.symbol} <span>${inst.name}</span></span>`;
+    header.title = inst.name;
+    header.innerHTML = `<span>${inst.symbol}</span>`;
     header.style.cursor = "pointer"; 
     if (inst.muted) header.style.opacity = 0.5;
     header.onclick = () => { inst.muted = !inst.muted; header.style.opacity = inst.muted ? 0.5 : 1; };
