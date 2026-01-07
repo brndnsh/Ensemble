@@ -22,6 +22,11 @@ export function initWorker(onTick, onNotes) {
     };
 }
 
+    timerWorker.onerror = (e) => {
+        console.error("Worker error:", e);
+    };
+}
+
 export function startWorker() {
     if (timerWorker) timerWorker.postMessage({ type: 'start' });
 }
