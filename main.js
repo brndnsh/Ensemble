@@ -1,5 +1,5 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
 import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
@@ -149,11 +149,11 @@ function togglePlay() {
 }
 
 const POWER_CONFIG = {
-    chord: { state: cb, el: () => ui.chordPowerBtn, cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
-    groove: { state: gb, el: () => ui.groovePowerBtn, cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
-    bass: { state: bb, el: () => ui.bassPowerBtn },
-    soloist: { state: sb, el: () => ui.soloistPowerBtn },
-    viz: { state: vizState, el: () => ui.vizPowerBtn, cleanup: () => { if (viz) viz.clear(); } }
+    chord: { state: cb, els: [ui.chordPowerBtn, ui.chordPowerBtnDesktop], cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
+    groove: { state: gb, els: [ui.groovePowerBtn, ui.groovePowerBtnDesktop], cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
+    bass: { state: bb, els: [ui.bassPowerBtn, ui.bassPowerBtnDesktop] },
+    soloist: { state: sb, els: [ui.soloistPowerBtn, ui.soloistPowerBtnDesktop] },
+    viz: { state: vizState, els: [ui.vizPowerBtn], cleanup: () => { if (viz) viz.clear(); } }
 };
 
 /**
@@ -164,16 +164,11 @@ function togglePower(type) {
     const c = POWER_CONFIG[type];
     if (!c) return;
     
-    const el = typeof c.el === 'function' ? c.el() : c.el;
-
     c.state.enabled = !c.state.enabled;
-    el.classList.toggle('active', c.state.enabled);
     
-    // In tab view, we don't disable the whole panel usually, maybe just dim controls?
-    // For now, let's keep the logic simple: button state toggle.
-    // The panel ID logic was used to gray out the whole panel. 
-    // In tabs, let's skip the panel dimming for now as it's complex with tabs.
-    // Or we can dim the controls container inside the tab.
+    c.els.forEach(el => {
+        if (el) el.classList.toggle('active', c.state.enabled);
+    });
     
     if (!c.state.enabled && c.cleanup) {
         c.cleanup();
@@ -948,9 +943,11 @@ function setupUIHandlers() {
     ui.drumBarsSelect.addEventListener('change', e => updateMeasures(e.target.value));
     ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
 
-    ['chord', 'groove', 'bass', 'soloist', 'viz'].forEach(type => {
-        const btn = ui[`${type}PowerBtn`];
-        if (btn) btn.addEventListener('click', () => togglePower(type));
+    Object.keys(POWER_CONFIG).forEach(type => {
+        const c = POWER_CONFIG[type];
+        c.els.forEach(el => {
+            if (el) el.addEventListener('click', () => togglePower(type));
+        });
     });
 
     document.addEventListener('visibilitychange', () => {
@@ -1050,7 +1047,6 @@ function setupPresets() {
     });
 }
 
-// --- INITIALIZATION ---
 function init() {
     try {
         const savedState = storage.get('currentState');
@@ -1126,7 +1122,8 @@ function init() {
         viz.addTrack('bass', 'var(--success-color)');
         viz.addTrack('soloist', 'var(--soloist-color)');
         
-        initTabs(); // New Tab Logic
+        initTabs(); 
+        setupPanelMenus();
 
         renderGrid();
         renderMeasurePagination(switchMeasure);
