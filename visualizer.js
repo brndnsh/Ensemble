@@ -90,6 +90,13 @@ export class UnifiedVisualizer {
         }
     }
 
+    render(currentTime, bpm) {
+        const ctx = this.ctx;
+        const w = this.width;
+        const h = this.height;
+        const minTime = currentTime - this.windowSize;
+        const yScale = h / this.visualRange;
+
         // Resolve theme-aware colors
         const style = getComputedStyle(document.documentElement);
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
