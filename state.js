@@ -94,6 +94,8 @@ export const sb = {
     phraseSteps: 0,
     isResting: false,
     currentCell: [1, 0, 1, 0],
+    motifCell: null,
+    motifCounter: 0,
     currentLick: null,
     lickIndex: 0,
     lickBaseMidi: null,

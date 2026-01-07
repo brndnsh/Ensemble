@@ -155,6 +155,8 @@ self.onmessage = (e) => {
                 sb.busySteps = 0;
                 sb.currentLick = null;
                 sb.sequenceType = null;
+                sb.motifCell = null;
+                sb.motifCounter = 0;
                 fillBuffers(data.step);
                 break;
             case 'requestBuffer':
