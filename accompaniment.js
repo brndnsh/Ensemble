@@ -71,20 +71,6 @@ export const chordPatterns = {
             playChordScratch(time, 0.04);
         }
     },
-    blues: (chord, time, spb, measureStep) => {
-        // Root-5 to Root-6 shuffle pattern
-        if (measureStep % 4 === 0) {
-            const isUp = (measureStep % 8 === 4);
-            const root = chord.freqs[0];
-            // Calculate 5th and 6th intervals from the root
-            const fifth = root * Math.pow(2, 7/12);
-            const sixth = root * Math.pow(2, 9/12);
-            const target = isUp ? sixth : fifth;
-            
-            playNote(root, time, spb * 0.8, 0.2, 0.01);
-            playNote(target, time, spb * 0.8, 0.16, 0.01);
-        }
-    },
     green: (chord, time, spb, measureStep) => {
         if (measureStep % 4 === 0) {
             chord.freqs.forEach(f => playNote(f, time, spb * 0.4, (measureStep % 8 === 4 ? 0.22 : 0.18), 0.01));
