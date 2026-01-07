@@ -40,7 +40,7 @@
             </div>
             <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <button id="maximizeChordBtn" title="Maximize" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Maximize Chords">⛶</button>
-                <select id="keySelect" style="width: auto;" aria-label="Select Key">
+                <select id="keySelect" aria-label="Select Key">
                     <option value="C">Key: C</option>
                     <option value="Db">Key: Db</option>
                     <option value="D">Key: D</option>
@@ -120,7 +120,7 @@
                         <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Voicing</h4>
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Density</label>
-                            <select id="densitySelect" style="width: 100%;" aria-label="Voicing Density">
+                            <select id="densitySelect" aria-label="Voicing Density">
                                 <option value="thin">Thin (3 notes)</option>
                                 <option value="standard" selected>Standard (4 notes)</option>
                                 <option value="rich">Rich (5+ notes)</option>
@@ -243,7 +243,7 @@
                             <h4 style="margin: 0; font-size: 0.9rem; color: var(--accent-color);">Step Sequencer</h4>
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
                                 <label style="font-size: 0.75rem; color: #94a3b8;">Measures:</label>
-                                <select id="drumBarsSelect" style="width: auto; font-size: 0.8rem; padding: 0.2rem;" aria-label="Number of Drum Measures">
+                                <select id="drumBarsSelect" aria-label="Number of Drum Measures">
                                     <option value="1">1</option>
                                     <option value="2">2</option>
                                     <option value="4">4</option>
@@ -276,7 +276,7 @@
                                 <label class="control-label" style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Swing</label>
                                 <div style="display: flex; gap: 0.4rem; align-items: center;">
                                     <input type="range" id="swingSlider" min="0" max="100" value="0" style="flex-grow: 1; height: 4px;" aria-label="Swing Amount">
-                                    <select id="swingBaseSelect" style="width: 65px; font-size: 0.75rem; padding: 0.2rem; height: 28px;" aria-label="Swing Base Note">
+                                    <select id="swingBaseSelect" aria-label="Swing Base Note">
                                         <option value="16th">1/16</option>
                                         <option value="8th" selected>1/8</option>
                                     </select>
@@ -399,7 +399,7 @@
 
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; margin-bottom: 0.5rem;">Theme</label>
-                    <select id="themeSelect" style="width: 100%;" aria-label="Select Theme">
+                    <select id="themeSelect" aria-label="Select Theme">
                         <option value="auto">Auto (System Default)</option>
                         <option value="dark">Dark</option>
                         <option value="light">Light</option>
@@ -408,7 +408,7 @@
 
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; margin-bottom: 0.5rem;">Notation</label>
-                    <select id="notationSelect" style="width: 100%;" aria-label="Chord Notation">
+                    <select id="notationSelect" aria-label="Chord Notation">
                         <option value="roman">Roman Numerals (I, vi, IV)</option>
                         <option value="name">Chord Names (C, Am, F)</option>
                         <option value="nns">Nashville Numbers (1, 6-, 4)</option>
