@@ -322,7 +322,7 @@ function parseProgressionPart(input, key, initialMidis) {
                     display: formatted,
                     isMinor: isMinor, beats: beatsPerChord, 
                     freqs: currentMidis.map(getFrequency),
-                    rootMidi: rootMidi, intervals: intervals, quality: quality,
+                    rootMidi: rootMidi, bassMidi: bassMidi, intervals: intervals, quality: quality,
                     charStart: charOffset + barInternalOffset,
                     charEnd: charOffset + barInternalOffset + token.length
                 });

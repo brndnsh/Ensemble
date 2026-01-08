@@ -1,19 +1,53 @@
 import { getFrequency, getMidi } from './utils.js';
+import { arranger, cb, bb, sb, ctx } from './state.js';
+import { KEY_ORDER } from './config.js';
+
+/**
+ * Determines the best scale for the bass based on chord and context.
+ */
+function getScaleForBass(chord, nextChord) {
+    const isV7toMinor = chord.intervals.includes(10) && chord.intervals.includes(4) && 
+                        nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
+
+    if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
+
+    // Fallback to standard chord-scale
+    switch (chord.quality) {
+        case 'minor': return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+        case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
+        case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
+        case 'maj7': return [0, 2, 4, 5, 7, 9, 11];
+        default: 
+            if (chord.intervals.includes(10)) return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
+            return [0, 2, 4, 5, 7, 9, 11]; // Major
+    }
+}
 
 /**
  * Generates a frequency for a bass line.
- * @param {Object} currentChord - The current chord object.
- * @param {Object} nextChord - The next chord object (for approach notes).
- * @param {number} beatIndex - The current beat within the chord (0, 0.5, 1, 1.5...).
- * @param {number|null} prevFreq - The frequency of the previously played note.
- * @param {number} centerMidi - The desired center pitch for the bass line.
- * @param {string} style - The rhythm style ('whole', 'half', 'quarter', 'arp', 'bossa').
- * @param {number} chordIndex - The index of the chord in the progression.
- * @param {number} step - The global step in sixteenth notes.
- * @returns {Object|number} The frequency and duration info of the bass note.
  */
-export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 41, style = 'quarter', chordIndex = 0, step = 0) {
+export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 41, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0) {
     if (!currentChord) return null;
+
+    // --- Structural Energy Mapping (Intensity) ---
+    const loopStep = step % (arranger.totalSteps || 1);
+    let sectionStart = 0;
+    let sectionEnd = arranger.totalSteps;
+    const currentSectionId = currentChord.sectionId;
+    
+    for (let i = 0; i < arranger.stepMap.length; i++) {
+        if (arranger.stepMap[i].chord.sectionId === currentSectionId) {
+            sectionStart = arranger.stepMap[i].start;
+            let j = i;
+            while (j < arranger.stepMap.length && arranger.stepMap[j].chord.sectionId === currentSectionId) {
+                sectionEnd = arranger.stepMap[j].end;
+                j++;
+            }
+            break;
+        }
+    }
+    const sectionLength = sectionEnd - sectionStart;
+    const intensity = sectionLength > 0 ? (step - sectionStart) / sectionLength : 0;
     
     const safeCenterMidi = (typeof centerMidi === 'number' && !isNaN(centerMidi)) ? centerMidi : 41;
     const prevMidi = getMidi(prevFreq);
@@ -43,7 +77,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     const normalizeToRange = (midi) => {
         if (!Number.isFinite(midi)) return safeCenterMidi;
-        const useCommitment = style === 'quarter' && prevMidi !== null;
+        const useCommitment = (style === 'quarter' || style === 'funk') && prevMidi !== null;
         const targetRef = useCommitment ? (prevMidi * 0.7 + safeCenterMidi * 0.3) : safeCenterMidi;
         
         let bestCandidate = 0;
@@ -60,7 +94,13 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return clampAndNormalize(bestCandidate);
     };
 
-    let baseRoot = normalizeToRange(currentChord.rootMidi);
+    // Use slash chord bass note if it exists, otherwise use chord root
+    let baseRoot = normalizeToRange(currentChord.bassMidi !== null && currentChord.bassMidi !== undefined ? currentChord.bassMidi : currentChord.rootMidi);
+
+    // Dynamic Register Shift: Move up slightly as intensity builds
+    if (intensity > 0.6 && (style === 'funk' || style === 'quarter')) {
+        baseRoot = clampAndNormalize(baseRoot + (Math.random() < 0.2 ? 12 : 0));
+    }
 
     const isSameAsPrev = (midi) => {
         if (!prevMidi) return false;
@@ -68,7 +108,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     };
 
     const withOctaveJump = (note) => {
-        if (Math.random() < 0.15) {
+        if (Math.random() < 0.15 + (intensity * 0.15)) { // More jumps at high intensity
             const direction = Math.random() < 0.5 ? 1 : -1;
             const shifted = note + (12 * direction);
             if (shifted >= absMin && shifted <= absMax) return shifted;
@@ -76,10 +116,17 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return note;
     };
 
-    // Helper to return consistent result format
     const result = (freq, durationMultiplier = null, velocity = 1.0, muted = false) => {
-        return { freq, durationMultiplier, velocity, muted };
+        let timingOffset = 0;
+        if (style === 'neo') timingOffset = 0.015; // 15ms laid-back feel
+        return { freq, durationMultiplier, velocity, muted, timingOffset };
     };
+
+    // --- HARMONIC RESET ---
+    // Beat 1 of a chord: Always land on Root or 5th
+    if (stepInChord === 0) {
+        return result(getFrequency(baseRoot), null, 1.15);
+    }
 
     // --- WHOLE NOTE STYLE ---
     if (style === 'whole') return result(getFrequency(baseRoot));
@@ -111,9 +158,6 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         const stepInMeasure = step % 16;
         const root = baseRoot;
         const fifth = clampAndNormalize(root + (currentChord.quality.includes('dim') ? 6 : 7));
-        
-        // Bossa rhythm: 1, 2&, 3, 4&
-        // Steps: 0, 6, 8, 14
         if (stepInMeasure === 0) return result(getFrequency(root));
         if (stepInMeasure === 6) return result(getFrequency(fifth), 2);
         if (stepInMeasure === 8) return result(getFrequency(fifth));
@@ -121,14 +165,55 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return null;
     }
 
+    // --- FUNK STYLE ---
+    if (style === 'funk') {
+        const stepInBeat = stepInChord % 4;
+        const intBeat = Math.floor(stepInChord / 4);
+        const intervals = currentChord.intervals;
+        
+        // Syncopated ghost notes
+        if (stepInBeat === 2 || stepInBeat === 3) {
+            return result(getFrequency(prevMidi || baseRoot), 2, 0.6, true);
+        }
+
+        // Bass 1st and 3rd beats are usually strong
+        if (intBeat === 0 || intBeat === 2) {
+            return result(getFrequency(baseRoot), null, 1.1);
+        }
+
+        // Octave jumps or 7ths/4ths
+        const funkIntervals = [0, 12, intervals[intervals.length - 1], 5];
+        const choice = funkIntervals[Math.floor(Math.random() * funkIntervals.length)];
+        return result(getFrequency(clampAndNormalize(baseRoot + choice)), null, 0.9 + Math.random() * 0.2);
+    }
+
+    // --- NEO-SOUL STYLE ---
+    if (style === 'neo') {
+        const stepInMeasure = step % 16;
+        // Deep register
+        const deepRoot = clampAndNormalize(baseRoot - 12);
+        
+        if (stepInMeasure === 0) return result(getFrequency(deepRoot), null, 1.1);
+        
+        // Characteristic 10th or 7th
+        if (stepInMeasure === 8) {
+            const intervals = currentChord.intervals;
+            const highNote = clampAndNormalize(baseRoot + (intervals[1] || 4) + 12);
+            return result(getFrequency(highNote), null, 0.8);
+        }
+        
+        // Dead notes on syncopated 16ths
+        if (step % 4 === 3) return result(getFrequency(deepRoot), 1, 0.5, true);
+        
+        return result(getFrequency(deepRoot), null, 0.9);
+    }
+
     // --- QUARTER NOTE (WALKING) STYLE ---
     
     // Check for eighth-note skip ("and" of a beat)
     if (beatIndex % 1 !== 0) {
         const skipVel = 0.6 + Math.random() * 0.3;
-        // 20% chance of a "Dead Note" (muted thump) on a skip
         const isMuted = Math.random() < 0.2;
-        
         if (Math.random() < 0.7 && prevMidi) {
             const ghostNote = Math.random() < 0.3 ? withOctaveJump(prevMidi) : prevMidi;
             return result(getFrequency(ghostNote), 2, skipVel, isMuted);
@@ -140,97 +225,44 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     const intBeat = Math.floor(beatIndex);
     const beatsInChord = Math.round(currentChord.beats);
-    
-    const isBackbeat = (intBeat % 2 === 1);
-    const velocity = isBackbeat ? 1.15 : 1.0;
+    const velocity = (intBeat % 2 === 1) ? 1.15 : 1.0;
 
-    const patterns = ['scalar', 'arpeggio', 'chromatic', 'dominant'];
-    const patternIdx = (chordIndex * 7 + (currentChord.quality === 'minor' ? 3 : 0)) % patterns.length;
-    const strategy = patterns[patternIdx];
+    // Use smarter scale logic
+    const scale = getScaleForBass(currentChord, nextChord);
 
-    // Beat 1: Root (at start of chord OR start of measure)
-    if (intBeat === 0 || (style === 'quarter' && step % 16 === 0)) {
-        return result(getFrequency(baseRoot), null, 1.1);
-    }
-
-    let targetRoot = nextChord ? normalizeToRange(nextChord.rootMidi) : baseRoot;
-
-    // Final Beat of Chord: Approach Note
+    // Final Beat of Chord: Smart Approach Note
     if (intBeat === beatsInChord - 1 && nextChord) {
-        // Enclosure Logic: If we played an enclosure note on Beat 3, we finish it here.
-        // For simplicity, we'll just check if we want a chromatic, scalar, or dominant approach.
-        let candidates = [
-            targetRoot - 1, targetRoot + 1, // Chromatic
-            targetRoot - 5, targetRoot + 7  // Dominant/Subdominant
-        ];
-        
-        // If coming from below, try to approach from below or chromatic above
-        let validCandidates = candidates.filter(n => n >= absMin && n <= absMax && !isSameAsPrev(n));
-        
-        const finalApproach = validCandidates.length > 0 
-            ? validCandidates[Math.floor(Math.random() * validCandidates.length)]
-            : targetRoot - 5;
-        return result(getFrequency(finalApproach), null, velocity);
+        const nextTarget = nextChord.bassMidi !== null && nextChord.bassMidi !== undefined ? nextChord.bassMidi : nextChord.rootMidi;
+        const targetRoot = normalizeToRange(nextTarget);
+        let candidates = [targetRoot - 1, targetRoot + 1, targetRoot - 5, targetRoot + 7];
+        let valid = candidates.filter(n => n >= absMin && n <= absMax && !isSameAsPrev(n));
+        const approach = valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : targetRoot - 5;
+        return result(getFrequency(approach), null, velocity);
     }
 
-    // Intermediate beats (Beat 2 & 3 for 4-beat chords)
-    if (beatsInChord === 4) {
-        const intervals = currentChord.intervals;
-        const isMinor = currentChord.quality === 'minor' || currentChord.quality === 'dim' || currentChord.quality === 'halfdim';
-        
-        if (intBeat === 1) { // Beat 2
-            // 10% chance of a dead note on beat 2
-            if (Math.random() < 0.1) return result(getFrequency(prevMidi || baseRoot), null, 0.8, true);
+    // Intermediate beats: Scale-aware walking
+    if (intBeat > 0) {
+        // Landing on 5th on beat 3 is very common in walking bass
+        if (intBeat === 2 && Math.random() < 0.6) {
+            const hasFlat5 = currentChord.quality.includes('dim');
+            return result(getFrequency(clampAndNormalize(baseRoot + (hasFlat5 ? 6 : 7))), null, velocity);
+        }
 
-            if (strategy === 'arpeggio') {
-                return result(getFrequency(withOctaveJump(clampAndNormalize(baseRoot + (intervals[1] || (isMinor ? 3 : 4))))), null, velocity);
-            } else if (strategy === 'scalar') {
-                return result(getFrequency(withOctaveJump(clampAndNormalize(baseRoot + (isMinor ? 2 : 2)))), null, velocity);
-            } else if (strategy === 'chromatic') {
-                const dir = targetRoot > baseRoot ? 1 : -1;
-                return result(getFrequency(clampAndNormalize(baseRoot + dir)), null, velocity);
-            } else {
-                return result(getFrequency(withOctaveJump(clampAndNormalize(baseRoot + 7))), null, velocity);
-            }
+        // Otherwise, move stepwise using the scale
+        const dir = (prevMidi && prevMidi > baseRoot + 12) ? -1 : (prevMidi < baseRoot - 5 ? 1 : (Math.random() > 0.5 ? 1 : -1));
+        const currentPC = (prevMidi - baseRoot + 120) % 12;
+        const scaleIdx = scale.indexOf(currentPC);
+        
+        let nextPC;
+        if (scaleIdx !== -1) {
+            const nextIdx = (scaleIdx + dir + scale.length) % scale.length;
+            nextPC = scale[nextIdx];
+        } else {
+            nextPC = scale[0];
         }
         
-        if (intBeat === 2) { // Beat 3
-            // Check for Enclosure Setup (targeting next chord)
-            if (nextChord && Math.random() < 0.4) {
-                // Play a note 1 scale step away from the target to set up chromatic approach on beat 4
-                const enclosureNote = targetRoot + (Math.random() < 0.5 ? 2 : -2);
-                return result(getFrequency(clampAndNormalize(enclosureNote)), null, velocity);
-            }
-
-            if (strategy === 'arpeggio') {
-                return result(getFrequency(withOctaveJump(clampAndNormalize(baseRoot + (intervals[2] || 7)))), null, velocity);
-            } else if (strategy === 'scalar') {
-                return result(getFrequency(withOctaveJump(clampAndNormalize(baseRoot + (isMinor ? 3 : 4)))), null, velocity);
-            } else if (strategy === 'chromatic') {
-                const dir = targetRoot > baseRoot ? 1 : -1;
-                return result(getFrequency(clampAndNormalize(baseRoot + dir * 2)), null, velocity);
-            } else {
-                const sixth = isMinor ? 8 : 9;
-                return result(getFrequency(withOctaveJump(clampAndNormalize(baseRoot + sixth))), null, velocity);
-            }
-        }
+        return result(getFrequency(clampAndNormalize(baseRoot + nextPC)), null, velocity);
     }
 
-    // Fallback
-    let chordTones = [];
-    let ints = [...currentChord.intervals];
-    if (!ints.includes(12)) ints.push(12);
-    ints.forEach(i => {
-        const n = baseRoot + i;
-        if (n >= absMin && n <= absMax) chordTones.push(n);
-        const nl = baseRoot + i - 12;
-        if (nl >= absMin && nl <= absMax) chordTones.push(nl);
-    });
-    let available = chordTones.filter(n => !isSameAsPrev(n));
-    if (available.length === 0) available = chordTones;
-    if (prevMidi) {
-        available.sort((a, b) => Math.abs(a - prevMidi) - Math.abs(b - prevMidi));
-        return result(getFrequency(available[0]), null, velocity);
-    }
-    return result(getFrequency(available[Math.floor(Math.random() * available.length)]), null, velocity);
+    return result(getFrequency(baseRoot), null, 1.1);
 }

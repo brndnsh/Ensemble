@@ -58,10 +58,22 @@ function fillBuffers(currentStep) {
                     if (stepInChord % 4 === 0) shouldPlay = true;
                     else if (stepInChord % 2 === 0 && Math.random() < 0.15) shouldPlay = true;
                 }
+                else if (bb.style === 'funk') {
+                    const stepInBeat = stepInChord % 4;
+                    if (stepInChord === 0) shouldPlay = true;
+                    else if (stepInChord % 4 === 0 && Math.random() < 0.7) shouldPlay = true;
+                    else if (stepInBeat === 2 && Math.random() < 0.4) shouldPlay = true;
+                    else if (stepInBeat === 3 && Math.random() < 0.2) shouldPlay = true;
+                }
+                else if (bb.style === 'neo') {
+                    if (stepInChord === 0) shouldPlay = true;
+                    else if (stepInChord % 8 === 0 && Math.random() < 0.5) shouldPlay = true;
+                    else if (step % 4 === 3 && Math.random() < 0.2) shouldPlay = true;
+                }
 
                 if (shouldPlay) {
                     const nextChordData = getChordAtStep(step + 4);
-                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step);
+                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord);
                     if (bassResult) {
                         const freq = typeof bassResult === 'object' ? bassResult.freq : bassResult;
                         if (freq) {

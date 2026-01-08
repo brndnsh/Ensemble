@@ -34,6 +34,9 @@ const CANNED_LICKS = {
     'parker_2': { notes: [12, 10, 9, 7, 6, 5, 3, 2, 0], quality: ['minor', 'dom'] },
     'bird_enclosure': { notes: [5, 4, 2, 3], quality: ['major', 'minor', 'dom'] },
     'blues_5': { notes: [12, 15, 17, 18, 17, 15, 12], quality: ['minor', 'major'] },
+    'neo_1': { notes: [12, 14, 12, 9, 7, 5, 7], quality: ['major', 'minor'] },
+    'neo_2': { notes: [17, 14, 12, 14, 17, 19, 17], quality: ['major', 'minor'] },
+    'neo_quartal': { notes: [17, 12, 10, 5, 7], quality: ['major', 'minor'] },
     'shred_1': { notes: [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], quality: ['major'] },
     'bb_box': { notes: [12, 14, 15, 14, 12, 10, 12], quality: ['minor', 'major'] },
     'albert_king': { notes: [12, 15, 17, 15, 12], quality: ['minor', 'major'] },
@@ -306,7 +309,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                         return ['the_lick', 'blues_1', 'blues_2', 'blues_3', 'blues_4', 'blues_5', 'bb_box', 'albert_king'].includes(name) && qualityMatch;
                     }
                     if (style === 'neo') {
-                        return ['the_lick', 'blues_1', 'blues_2'].includes(name) && qualityMatch;
+                        return ['neo_1', 'neo_2', 'neo_quartal', 'the_lick'].includes(name) && qualityMatch;
                     }
                     if (style === 'bird') {
                         return ['the_lick', 'bebop_1', 'parker_1', 'parker_2', 'bird_enclosure'].includes(name) && qualityMatch;
@@ -412,26 +415,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // --- Lick Logic ---
     if (sb.currentLick) {
         const lickNote = sb.currentLick[sb.lickIndex];
-        let targetMidi = (sb.lickBaseMidi || rootMidi) + lickNote;
-        
-        // Ensure it's in a reasonable range
-        while (targetMidi < minMidi) targetMidi += 12;
-        while (targetMidi > maxMidi) targetMidi -= 12;
-        
-        finalMidi = targetMidi;
+        finalMidi = sb.lickBaseMidi + lickNote;
         sb.lickIndex++;
-        
-        // Licks usually play on 8th notes or triplets, let's assume 8ths (2 steps) for now
-        durationMultiplier = 2;
-        
         if (sb.lickIndex >= sb.currentLick.length) {
-            sb.currentLick = null; // Lick finished
-            // Give it a longer sustain at the end of a lick
-            durationMultiplier = 4;
+            sb.currentLick = null;
         }
+        
+        // Neo-soul licks often have a very soft, "ghosted" touch
+        if (style === 'neo') velocity *= (0.7 + Math.random() * 0.4);
 
-        sb.busySteps = durationMultiplier - 1;
-        return { freq: getFrequency(finalMidi), durationMultiplier, style };
+        return { freq: getFrequency(finalMidi), durationMultiplier, velocity, style };
     } else if (sb.sequenceType) {
         const seq = SEQUENCES[sb.sequenceType];
         const offset = seq.offsets[sb.sequenceIndex];
