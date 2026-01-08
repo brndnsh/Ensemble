@@ -99,6 +99,8 @@ export const sb = {
     currentLick: null,
     lickIndex: 0,
     lickBaseMidi: null,
+    enclosureNotes: null,
+    enclosureIndex: 0,
     busySteps: 0
 };
 

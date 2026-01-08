@@ -299,7 +299,7 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
 
     // Primary Osc: Mixed Saw/Tri for a richer tone
     const osc1 = ctx.audio.createOscillator();
-    osc1.type = style === 'bird' ? 'triangle' : 'sawtooth'; // Bird gets a hollower tone
+    osc1.type = 'sawtooth'; 
     
     const osc2 = ctx.audio.createOscillator();
     osc2.type = 'triangle';
@@ -334,19 +334,19 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
         vibSpeed = 6.5 + Math.random() * 1.0; // Faster, tighter
         depthFactor = 0.004;
     } else if (style === 'bird') {
-        vibSpeed = 5.2; // Subtle
-        depthFactor = 0.003;
+        vibSpeed = 5.8; // Medium-fast, characteristic of sax
+        depthFactor = 0.006;
     } else if (style === 'minimal') {
-        vibSpeed = 3.5; // Slow, very expressive
-        depthFactor = 0.008;
+        vibSpeed = 4.2; // Slightly faster but still slow and deliberate
+        depthFactor = 0.012; // Deeper for more emotion
     }
     
     vibrato.frequency.setValueAtTime(vibSpeed, time); 
     const vibGain = ctx.audio.createGain();
     
     const isLongNote = duration > 0.4;
-    const vibDelay = (style === 'shred' ? 0.05 : 0.15) + (Math.random() * 0.1);
-    const vibRamp = 0.3;
+    const vibDelay = (style === 'minimal' ? 0.4 : (style === 'shred' ? 0.05 : 0.15)) + (Math.random() * 0.1);
+    const vibRamp = style === 'minimal' ? 0.5 : 0.3;
     
     const finalVibDepth = freq * (isLongNote ? depthFactor : depthFactor * 0.3);
     
@@ -361,10 +361,10 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     // Resonant Filter
     const filter = ctx.audio.createBiquadFilter();
     filter.type = 'lowpass';
-    const cutoffBase = style === 'bird' ? freq * 2.5 : Math.min(freq * 4, 4000);
+    const cutoffBase = style === 'bird' ? freq * 3.5 : Math.min(freq * 4, 4000);
     filter.frequency.setValueAtTime(cutoffBase, time);
-    filter.frequency.exponentialRampToValueAtTime(cutoffBase * (style === 'bird' ? 0.8 : 0.6), time + duration);
-    filter.Q.setValueAtTime(style === 'bird' ? 1 : (isLongNote ? 2 : 1), time); 
+    filter.frequency.exponentialRampToValueAtTime(cutoffBase * (style === 'bird' ? 0.7 : 0.6), time + duration);
+    filter.Q.setValueAtTime(style === 'bird' ? 1.5 : (isLongNote ? 2 : 1), time); 
 
     // Amplitude Envelope
     const attack = style === 'shred' ? 0.005 : 0.015;

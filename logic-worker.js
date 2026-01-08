@@ -83,9 +83,9 @@ function fillBuffers(currentStep) {
             const chordData = getChordAtStep(step);
             
             if (chordData) {
-                const { chord } = chordData;
+                const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
-                const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style);
+                const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord);
                 
                 if (soloResult?.freq) {
                     sb.lastFreq = soloResult.freq;
@@ -157,6 +157,8 @@ self.onmessage = (e) => {
                 sb.sequenceType = null;
                 sb.motifCell = null;
                 sb.motifCounter = 0;
+                sb.enclosureNotes = null;
+                sb.enclosureIndex = 0;
                 fillBuffers(data.step);
                 break;
             case 'requestBuffer':
