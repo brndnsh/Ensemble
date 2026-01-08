@@ -639,7 +639,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // Final check for phrase endings
     if (sb.phraseSteps <= 0 && !sb.isResting) {
         const midiVal = finalMidi % 12;
-        const targetTones = [0, chord.intervals[1], chord.intervals[2] || 7].map(i => (rootMidi + i) % 12);
+        const targetTones = [0, currentChord.intervals[1], currentChord.intervals[2] || 7].map(i => (rootMidi + i) % 12);
         const isStable = targetTones.includes(midiVal);
         
         if (!isStable) {
@@ -647,7 +647,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             let minDist = 13;
             // Target Root, 3rd, or 5th
             const stableMidis = [];
-            [0, chord.intervals[1], chord.intervals[2] || 7].forEach(i => {
+            [0, currentChord.intervals[1], currentChord.intervals[2] || 7].forEach(i => {
                 let m = rootMidi + i;
                 while (m < finalMidi - 6) m += 12;
                 while (m > finalMidi + 6) m -= 12;
