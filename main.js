@@ -1087,6 +1087,25 @@ function setupUIHandlers() {
     ];
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));
 
+    // Editor Overlay Listeners
+    if (ui.editArrangementBtn) {
+        ui.editArrangementBtn.addEventListener('click', () => {
+            ui.editorOverlay.classList.add('active');
+        });
+    }
+    if (ui.closeEditorBtn) {
+        ui.closeEditorBtn.addEventListener('click', () => {
+            ui.editorOverlay.classList.remove('active');
+        });
+    }
+    if (ui.editorOverlay) {
+        ui.editorOverlay.addEventListener('click', e => {
+            if (e.target === ui.editorOverlay) {
+                ui.editorOverlay.classList.remove('active');
+            }
+        });
+    }
+
     ui.settingsOverlay.addEventListener('click', e => e.target === ui.settingsOverlay && ui.settingsOverlay.classList.remove('active'));
     ui.keySelect.addEventListener('change', e => { 
         arranger.key = e.target.value; 
@@ -1196,11 +1215,37 @@ function setupUIHandlers() {
 
     window.addEventListener('ensemble_state_change', saveCurrentState);
 
+    // Custom Event to Open Editor
+    document.addEventListener('open-editor', (e) => {
+        ui.editorOverlay.classList.add('active');
+        const sectionId = e.detail?.sectionId;
+        if (sectionId) {
+            setTimeout(() => {
+                const card = ui.sectionList.querySelector(`.section-card[data-id="${sectionId}"]`);
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Optional: Highlight effect
+                    card.style.borderColor = 'var(--accent-color)';
+                    setTimeout(() => card.style.borderColor = '', 1000);
+                }
+            }, 100);
+        }
+    });
+
     window.addEventListener('keydown', e => {
         const isTyping = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
         
         if (e.key === ' ' && !isTyping) {
             e.preventDefault(); togglePlay();
+        }
+        // Open Editor with 'e'
+        if (e.key.toLowerCase() === 'e' && !isTyping && !e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            if (ui.editorOverlay.classList.contains('active')) {
+                ui.editorOverlay.classList.remove('active');
+            } else {
+                ui.editorOverlay.classList.add('active');
+            }
         }
         // Numeric hotkeys for Accompanist tabs
         if (['1', '2', '3', '4'].includes(e.key) && !isTyping) {
@@ -1228,6 +1273,9 @@ function setupUIHandlers() {
             }
             if (ui.settingsOverlay.classList.contains('active')) {
                 ui.settingsOverlay.classList.remove('active');
+            }
+            if (ui.editorOverlay.classList.contains('active')) {
+                ui.editorOverlay.classList.remove('active');
             }
         }
     });
