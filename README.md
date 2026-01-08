@@ -5,10 +5,10 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 ## Features
 
 ### 🖋️ Arranger (Song Structure)
+*   **🪄 Actions Hub**: A consolidated menu for structural tools (Add Section, Mutate, Randomize, Save) that keeps the interface clean and focused on mobile.
+*   **📋 Song Templates**: Quickly scaffold common song structures like "Pop", "Jazz", or "12-Bar Blues" with a single click.
 *   **Modular Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`).
 *   **Drag-and-Drop Reordering**: Intuitively reorder sections by dragging them into place.
-*   **Song Templates**: Quickly scaffold common song structures like "Pop", "Jazz", or "12-Bar Blues" with a single click.
-*   **Musical Mutation**: Use the **Mutate (✨)** tool to subtly evolve a section by substituting functionally similar chords or adding harmonic extensions.
 *   **Symbol Palette**: Access a kebab menu (`⋮`) on any section to insert hard-to-type symbols like `ø`, `maj7`, or bar lines (`|`) precisely at your cursor.
 *   **Section Management**: Organize your song into named sections (Intro, Verse, Chorus). Duplicate or delete sections to build complex forms.
 *   **Auto-Save**: Your arrangement is automatically persisted to local storage. Refreshing the page won't lose your work.
@@ -44,6 +44,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Micro-Timing**: Sophisticated "behind the beat" timing for Neo-Soul and sophisticated bebop phrasing for Jazz styles.
 
 ### 📊 Unified Visualizer
+*   **Retractable Design**: The visualizer automatically collapses when turned off, saving significant vertical space for your song structure on mobile devices.
 *   **Integrated Live Monitor**: A dedicated harmonic graph integrated into the main dashboard that superimposes Bass and Soloist tracks on top of your chord progression.
 *   **Harmonic Analysis**: Real-time interval mapping using a vivid color scheme (Blue: Root, Green: 3rd, Orange: 5th, Purple: 7th+) helps you visualize melodic choices.
 *   **Active Chord Pulse**: A subtle pulse effect on Arranger cards helps you track the song's position during playback.

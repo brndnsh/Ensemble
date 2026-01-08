@@ -38,39 +38,41 @@
         <!-- ARRANGER PANEL -->
         <div class="panel dashboard-panel" id="panel-arranger" data-id="arranger">
             <div class="panel-header chord-panel-header">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div class="panel-title-group">
                     <h2>Arranger</h2>
                 </div>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <div class="panel-header-controls">
                     <button id="maximizeChordBtn" title="Maximize" class="header-btn" aria-label="Maximize Chords">⛶</button>
-                    <select id="keySelect" aria-label="Select Key">
-                        <option value="C">Key: C</option>
-                        <option value="Db">Key: Db</option>
-                        <option value="D">Key: D</option>
-                        <option value="Eb">Key: E</option>
-                        <option value="E">Key: E</option>
-                        <option value="F">Key: F</option>
-                        <option value="Gb">Key: Gb</option>
-                        <option value="G">Key: G</option>
-                        <option value="Ab">Key: Ab</option>
-                        <option value="A">Key: A</option>
-                        <option value="Bb">Key: Bb</option>
-                        <option value="B">Key: B</option>
-                    </select>
-                    <button id="relKeyBtn" title="Relative Key (Major/Minor)" class="header-btn" style="background: rgba(148, 163, 184, 0.1); color: var(--accent-color); border: 1px solid rgba(148, 163, 184, 0.2);" aria-label="Relative Key Toggle">rel</button>
-                    <button id="transDownBtn" title="Transpose Down" class="header-btn" aria-label="Transpose Down">♭</button>
-                    <button id="transUpBtn" title="Transpose Up" class="header-btn" aria-label="Transpose Up">♯</button>
+                    <div class="key-controls">
+                        <select id="keySelect" aria-label="Select Key">
+                            <option value="C">Key: C</option>
+                            <option value="Db">Key: Db</option>
+                            <option value="D">Key: D</option>
+                            <option value="Eb">Key: E</option>
+                            <option value="E">Key: E</option>
+                            <option value="F">Key: F</option>
+                            <option value="Gb">Key: Gb</option>
+                            <option value="G">Key: G</option>
+                            <option value="Ab">Key: Ab</option>
+                            <option value="A">Key: A</option>
+                            <option value="Bb">Key: Bb</option>
+                            <option value="B">Key: B</option>
+                        </select>
+                        <button id="relKeyBtn" title="Relative Key (Major/Minor)" class="header-btn rel-key-btn" aria-label="Relative Key Toggle">rel</button>
+                        <button id="transDownBtn" title="Transpose Down" class="header-btn" aria-label="Transpose Down">♭</button>
+                        <button id="transUpBtn" title="Transpose Up" class="header-btn" aria-label="Transpose Up">♯</button>
+                    </div>
                 </div>
             </div>
 
             <div class="display-area" id="chordVisualizer"></div>
-            <div id="activeSectionLabel" class="active-section-label" style="text-align: center; color: var(--accent-color); font-weight: bold; margin-bottom: 0.5rem; height: 1.5rem;"></div>
+            <div id="activeSectionLabel" class="active-section-label"></div>
 
             <div style="margin-bottom: 1.5rem;">
                 <div id="sectionList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;"></div>
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                    <button id="addSectionBtn" style="flex: 2; padding: 0.75rem; border: 1px dashed #475569; background: transparent; color: #94a3b8; cursor: pointer;">+ Add Section</button>
-                    <button id="templatesBtn" style="flex: 1; padding: 0.75rem; border: 1px solid #475569; background: rgba(51, 65, 85, 0.5); color: #94a3b8; cursor: pointer;" title="Song Templates">📋 Templates</button>
+                <div class="arranger-main-controls">
+                    <button id="arrangerActionTrigger" class="action-trigger-btn">🪄 Actions</button>
+                    <button id="templatesBtn" title="Song Templates">📋 Templates</button>
                 </div>
                 
                 <div id="templatesContainer" style="display: none; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border: 1px solid var(--border-color);">
@@ -78,18 +80,21 @@
                     <div id="templateChips" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
                 </div>
                 
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                    <button id="randomizeBtn" title="Randomize Progression" style="flex: 1.5; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Randomize Progression">🎲 <span>Random</span></button>
-                    <button id="mutateBtn" title="Mutate Progression" style="flex: 1.5; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Mutate Progression">✨ <span>Mutate</span></button>
-                    <button id="undoBtn" title="Undo Last Change" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 60px;" aria-label="Undo Last Change">↩️ <span>Undo</span></button>
-                    <button id="clearProgBtn" title="Clear Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Clear Progression">🗑️ <span>Clear</span></button>
-                    <button id="saveBtn" title="Save Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Save Progression">💾 <span>Save</span></button>
-                    <button id="shareBtn" title="Share Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Share Progression">🔗 <span>Share</span></button>
+                <div class="arranger-action-container">
+                    <div id="arrangerActionMenu" class="action-menu-content">
+                        <button id="addSectionBtn" title="Add Section">➕ <span>Add Section</span></button>
+                        <button id="randomizeBtn" title="Randomize Progression" aria-label="Randomize Progression">🎲 <span>Random</span></button>
+                        <button id="mutateBtn" title="Mutate Progression" aria-label="Mutate Progression">✨ <span>Mutate</span></button>
+                        <button id="undoBtn" title="Undo Last Change" aria-label="Undo Last Change">↩️ <span>Undo</span></button>
+                        <button id="clearProgBtn" title="Clear Progression" aria-label="Clear Progression">🗑️ <span>Clear</span></button>
+                        <button id="saveBtn" title="Save Progression" aria-label="Save Progression">💾 <span>Save</span></button>
+                        <button id="shareBtn" title="Share Progression" aria-label="Share Progression">🔗 <span>Share</span></button>
+                    </div>
                 </div>
             </div>
 
             <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 100px;">
-                <label style="font-size: 0.9rem; color: #94a3b8;">Library</label>
+                <label class="library-label">Library</label>
                 <div class="presets-container" id="chordPresets" style="margin-top: 0.5rem;"></div>
                 <div class="presets-container" id="userPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
             </div>

@@ -257,8 +257,10 @@ button {
     transition: all 0.2s;
 }
 
-button:hover {
-    background: var(--card-bg-hover);
+.rel-key-btn {
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--accent-color);
+    border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .header-btn {
@@ -298,13 +300,44 @@ button:hover {
 .mobile-tabs-nav {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+    gap: 0.5rem;
     position: sticky;
-    top: 70px;
+    top: 64px; /* Match mobile header height */
     z-index: 90;
     background: var(--bg-color);
-    padding-bottom: 0.5rem;
-    padding-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    box-shadow: 0 4px 6px -2px rgba(0,0,0,0.1);
+}
+
+@media (min-width: 601px) {
+    .mobile-tabs-nav {
+        top: 80px;
+    }
+}
+
+.arranger-main-controls {
+    display: flex; 
+    gap: 0.5rem; 
+    margin-bottom: 1rem;
+}
+
+#arrangerActionTrigger {
+    flex: 2;
+    justify-content: center;
+}
+
+#templatesBtn {
+    flex: 1;
+}
+
+
+.library-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    display: block;
 }
 
 /* --- Panels --- */
@@ -317,8 +350,23 @@ button:hover {
     flex-direction: column;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     position: relative;
-    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s, height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
+    overflow: hidden;
+}
+
+.dashboard-panel.collapsed {
+    padding-bottom: 0.75rem;
+}
+
+.dashboard-panel.collapsed .panel-header {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.dashboard-panel.collapsed .viz-graph-area,
+.dashboard-panel.collapsed .viz-legend {
+    display: none;
 }
 
 /* Panel Headers */
@@ -329,6 +377,166 @@ button:hover {
     margin-bottom: 1.25rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border-color);
+    gap: 0.5rem;
+}
+
+.panel-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.key-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+@media (max-width: 600px) {
+    #panel-arranger .panel-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+    
+    .panel-title-group {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+
+    /* Move maximize button to the title row on mobile if we stack */
+    .chord-panel-header .panel-title-group {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .panel-header-controls {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .key-controls {
+        flex-grow: 1;
+        display: grid;
+        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+        gap: 0.35rem;
+    }
+
+    #keySelect {
+        width: 100%;
+        max-width: none;
+    }
+
+    .header-btn {
+        width: 40px; /* Fixed width for standalone header buttons like maximize */
+        min-width: 0;
+    }
+
+    .key-controls .header-btn {
+        width: 100%; /* Keep 100% for buttons inside the grid */
+    }
+}
+
+.arranger-action-container {
+    position: relative;
+    /* Removed margin-top/bottom as it's now controlled by parent container flow */
+    display: flex;
+    justify-content: flex-end;
+}
+
+.action-trigger-btn {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px; /* Changed from 50px to match Templates button */
+    padding: 0.75rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+    z-index: 20;
+    font-size: 0.9rem;
+}
+
+.action-trigger-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.action-trigger-btn.active {
+    background: var(--base01);
+}
+
+.action-menu-content {
+    position: absolute;
+    bottom: calc(100% + 5px);
+    right: 0;
+    background: var(--panel-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.75rem;
+    display: none;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    min-width: 280px;
+    animation: menuFadeIn 0.2s ease-out;
+}
+
+.action-menu-content.open {
+    display: grid;
+}
+
+.action-menu-content button {
+    flex-direction: row !important;
+    min-height: auto !important;
+    padding: 0.7rem !important;
+    font-size: 0.85rem !important;
+    justify-content: flex-start !important;
+    width: 100%;
+}
+
+@media (min-width: 900px) {
+    .arranger-main-controls {
+        display: flex;
+    }
+
+    #templatesBtn {
+        flex: 1;
+    }
+
+    #arrangerActionTrigger {
+        display: none;
+    }
+
+    .arranger-action-container {
+        display: block;
+        position: static;
+        margin-top: 1rem;
+    }
+
+    .action-menu-content {
+        position: static;
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr); /* 4 columns for 8 items */
+        width: 100%;
+        background: transparent;
+        border: none;
+        padding: 0;
+        box-shadow: none;
+        animation: none;
+        gap: 0.5rem;
+    }
 }
 
 /* Mobile Visibility Logic */
@@ -669,15 +877,21 @@ h2 {
     font-size: 1rem;
 }
 
+.active-section-label {
+    text-align: center;
+    color: var(--accent-color);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    height: 1.5rem;
+}
+
 @media (max-width: 600px) {
-    .chord-maximized .display-area {
-        top: 64px;
-    }
-    .chord-maximized #maximizeChordBtn {
-        top: 72px;
-        right: 10px;
+    .display-area {
+        max-height: 300px; /* Shorter on mobile to keep controls visible */
     }
 }
+
+
 
 
 
