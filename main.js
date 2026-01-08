@@ -199,7 +199,17 @@ const POWER_CONFIG = {
     groove: { state: gb, els: [ui.groovePowerBtn, ui.groovePowerBtnDesktop], cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
     bass: { state: bb, els: [ui.bassPowerBtn, ui.bassPowerBtnDesktop] },
     soloist: { state: sb, els: [ui.soloistPowerBtn, ui.soloistPowerBtnDesktop] },
-    viz: { state: vizState, els: [ui.vizPowerBtn], cleanup: () => { if (viz) viz.clear(); } }
+    viz: { 
+        state: vizState, 
+        els: [ui.vizPowerBtn], 
+        cleanup: () => { 
+            if (viz) viz.clear(); 
+            if (ui.vizPanel) ui.vizPanel.classList.add('collapsed');
+        },
+        onEnable: () => {
+            if (ui.vizPanel) ui.vizPanel.classList.remove('collapsed');
+        }
+    }
 };
 
 /**
@@ -218,8 +228,11 @@ function togglePower(type) {
     
     if (!c.state.enabled && c.cleanup) {
         c.cleanup();
-    } else if (c.state.enabled && ['chord', 'bass', 'soloist'].includes(type)) {
-        flushBuffers();
+    } else if (c.state.enabled) {
+        if (c.onEnable) c.onEnable();
+        if (['chord', 'bass', 'soloist'].includes(type)) {
+            flushBuffers();
+        }
     }
     syncWorker();
     saveCurrentState();
@@ -973,13 +986,30 @@ function setupUIHandlers() {
         [ui.playBtn, 'click', togglePlay],
         [ui.bpmInput, 'change', e => setBpm(e.target.value)],
         [ui.tapBtn, 'click', handleTap],
-        [ui.addSectionBtn, 'click', addSection],
+        [ui.addSectionBtn, 'click', () => {
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
+            addSection();
+        }],
         [ui.templatesBtn, 'click', () => {
             const isVisible = ui.templatesContainer.style.display === 'flex';
             ui.templatesContainer.style.display = isVisible ? 'none' : 'flex';
         }],
         [ui.undoBtn, 'click', undo],
+        [ui.arrangerActionTrigger, 'click', (e) => {
+            e.stopPropagation();
+            ui.arrangerActionMenu.classList.toggle('open');
+            ui.arrangerActionTrigger.classList.toggle('active');
+        }],
+        [document, 'click', (e) => {
+            if (ui.arrangerActionMenu.classList.contains('open') && !ui.arrangerActionMenu.contains(e.target) && e.target !== ui.arrangerActionTrigger) {
+                ui.arrangerActionMenu.classList.remove('open');
+                ui.arrangerActionTrigger.classList.remove('active');
+            }
+        }],
         [ui.randomizeBtn, 'click', () => {
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
             pushHistory();
             const newProg = generateRandomProgression(cb.style);
             
@@ -999,6 +1029,8 @@ function setupUIHandlers() {
             refreshArrangerUI();
         }],
         [ui.mutateBtn, 'click', () => {
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
             const targetId = arranger.lastInteractedSectionId;
             const section = arranger.sections.find(s => s.id === targetId);
             if (!section) {
@@ -1012,21 +1044,35 @@ function setupUIHandlers() {
             refreshArrangerUI();
         }],
         [ui.clearProgBtn, 'click', () => {
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
             pushHistory();
             arranger.sections = [{ id: generateId(), label: 'Intro', value: '' }];
             clearChordPresetHighlight();
             refreshArrangerUI();
         }],
-        [ui.saveBtn, 'click', saveProgression],
+        [ui.saveBtn, 'click', () => {
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
+            saveProgression();
+        }],
         [ui.saveDrumBtn, 'click', saveDrumPattern],
-        [ui.shareBtn, 'click', shareProgression],
+        [ui.shareBtn, 'click', () => {
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
+            shareProgression();
+        }],
         [ui.transUpBtn, 'click', () => transposeKey(1)],
         [ui.transDownBtn, 'click', () => transposeKey(-1)],
         [ui.relKeyBtn, 'click', switchToRelativeKey],
         [ui.settingsBtn, 'click', () => ui.settingsOverlay.classList.add('active')],
         [ui.closeSettings, 'click', () => ui.settingsOverlay.classList.remove('active')],
         [ui.resetSettingsBtn, 'click', () => confirm("Reset all settings?") && resetToDefaults()],
-        [ui.exportMidiBtn, 'click', exportToMidi],
+        [ui.exportMidiBtn, 'click', () => {
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
+            exportToMidi(arranger, cb, gb, bb, sb);
+        }],
         [ui.clearDrums, 'click', () => { 
             gb.instruments.forEach(i => i.steps.fill(0)); 
             clearDrumPresetHighlight();
@@ -1374,6 +1420,9 @@ function init() {
             c.els.forEach(el => {
                 if (el) el.classList.toggle('active', c.state.enabled);
             });
+            if (type === 'viz' && ui.vizPanel) {
+                ui.vizPanel.classList.toggle('collapsed', !c.state.enabled);
+            }
         });
         
         // Logic Worker handles timing AND generative musical logic
