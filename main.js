@@ -800,22 +800,6 @@ window.deleteUserDrumPreset = (idx) => {
     }
 };
 
-function duplicateBar1Chords() {
-    if (arranger.sections.length === 0) return;
-    const section = arranger.sections[0]; // Apply to first section consistently for now
-    const bars = section.value.split('|').map(b => b.trim()).filter(b => b);
-    if (bars.length === 0) return;
-    
-    const bar1 = bars[0];
-    section.value = `${bar1} | ${bar1} | ${bar1} | ${bar1}`;
-    
-    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-    validateProgression(renderChordVisualizer);
-    flushBuffers();
-    saveCurrentState();
-    showToast(`${section.label}: Bar 1 duplicated`);
-}
-
 function updateMeasures(val) {
     gb.measures = parseInt(val);
     if (gb.currentMeasure >= gb.measures) gb.currentMeasure = 0;
@@ -837,7 +821,6 @@ function setupUIHandlers() {
         [ui.bpmInput, 'change', e => setBpm(e.target.value)],
         [ui.tapBtn, 'click', handleTap],
         [ui.addSectionBtn, 'click', addSection],
-        [ui.dupMeasureChordBtn, 'click', duplicateBar1Chords],
         [ui.randomizeBtn, 'click', () => {
             arranger.sections = [{ id: generateId(), label: 'Random', value: generateRandomProgression() }];
             renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);

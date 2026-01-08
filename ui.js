@@ -21,7 +21,6 @@ export const ui = {
     sectionList: document.getElementById('sectionList'),
     addSectionBtn: document.getElementById('addSectionBtn'),
     activeSectionLabel: document.getElementById('activeSectionLabel'),
-    dupMeasureChordBtn: document.getElementById('dupMeasureChordBtn'),
     randomizeBtn: document.getElementById('randomizeBtn'),
     clearProgBtn: document.getElementById('clearProgBtn'),
     saveBtn: document.getElementById('saveBtn'),
