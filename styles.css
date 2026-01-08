@@ -261,6 +261,17 @@ button:hover {
     background: var(--card-bg-hover);
 }
 
+.header-btn {
+    padding: 0.4rem;
+    font-size: 0.85rem;
+    min-width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
 /* --- Layout --- */
 .app-main-layout {
     display: flex;

@@ -73,7 +73,7 @@ function fillBuffers(currentStep) {
 
                 if (shouldPlay) {
                     const nextChordData = getChordAtStep(step + 4);
-                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord);
+                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord, arranger.isMinor);
                     if (bassResult) {
                         const freq = typeof bassResult === 'object' ? bassResult.freq : bassResult;
                         if (freq) {

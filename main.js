@@ -3,7 +3,7 @@ import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, 
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
 import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
-import { validateProgression, generateRandomProgression, mutateProgression } from './chords.js';
+import { validateProgression, generateRandomProgression, mutateProgression, transformRelativeProgression } from './chords.js';
 import { chordPatterns } from './accompaniment.js';
 import { exportToMidi } from './midi-export.js';
 import { UnifiedVisualizer } from './visualizer.js';
@@ -78,6 +78,51 @@ function applyTheme(theme) {
         document.documentElement.style.colorScheme = theme;
     }
     if (ui.themeSelect) ui.themeSelect.value = theme;
+}
+
+function updateRelKeyButton() {
+    if (ui.relKeyBtn) {
+        ui.relKeyBtn.textContent = arranger.isMinor ? 'min' : 'maj';
+    }
+}
+
+/**
+ * Updates the text content of options in the key selector to reflect major/minor status.
+ */
+function updateKeySelectLabels() {
+    if (!ui.keySelect) return;
+    Array.from(ui.keySelect.options).forEach(opt => {
+        const root = opt.value;
+        opt.textContent = `Key: ${root}${arranger.isMinor ? 'm' : ''}`;
+    });
+}
+
+/**
+ * Toggles the key between Major and its Relative Minor (or vice-versa).
+ */
+function switchToRelativeKey() {
+    let currentIndex = KEY_ORDER.indexOf(normalizeKey(arranger.key));
+    const wasMinor = arranger.isMinor;
+    
+    // Relative shift: Major -> Minor is -3. Minor -> Major is +3.
+    const shift = wasMinor ? 3 : -3;
+    const newKey = KEY_ORDER[(currentIndex + shift + 12) % 12];
+    
+    arranger.key = newKey;
+    arranger.isMinor = !wasMinor;
+    ui.keySelect.value = newKey;
+    
+    // Rewrite all sections
+    pushHistory();
+    arranger.sections.forEach(section => {
+        section.value = transformRelativeProgression(section.value, shift, arranger.isMinor);
+    });
+    
+    updateRelKeyButton();
+    updateKeySelectLabels();
+    refreshArrangerUI();
+    syncWorker();
+    showToast(`Switched to Relative ${arranger.isMinor ? 'Minor' : 'Major'}: ${newKey}${arranger.isMinor ? 'm' : ''}`);
 }
 
 /**
@@ -195,6 +240,7 @@ function saveCurrentState() {
     const data = {
         sections: arranger.sections,
         key: arranger.key,
+        isMinor: arranger.isMinor,
         notation: arranger.notation,
         lastChordPreset: arranger.lastChordPreset,
         theme: ctx.theme,
@@ -325,6 +371,9 @@ function applyTemplate(template) {
             value: s.value,
             color: '#3b82f6'
         }));
+        arranger.isMinor = template.isMinor || false;
+        updateRelKeyButton();
+        updateKeySelectLabels();
         clearChordPresetHighlight();
         refreshArrangerUI();
         ui.templatesContainer.style.display = 'none';
@@ -973,6 +1022,7 @@ function setupUIHandlers() {
         [ui.shareBtn, 'click', shareProgression],
         [ui.transUpBtn, 'click', () => transposeKey(1)],
         [ui.transDownBtn, 'click', () => transposeKey(-1)],
+        [ui.relKeyBtn, 'click', switchToRelativeKey],
         [ui.settingsBtn, 'click', () => ui.settingsOverlay.classList.add('active')],
         [ui.closeSettings, 'click', () => ui.settingsOverlay.classList.remove('active')],
         [ui.resetSettingsBtn, 'click', () => confirm("Reset all settings?") && resetToDefaults()],
@@ -994,6 +1044,9 @@ function setupUIHandlers() {
     ui.settingsOverlay.addEventListener('click', e => e.target === ui.settingsOverlay && ui.settingsOverlay.classList.remove('active'));
     ui.keySelect.addEventListener('change', e => { 
         arranger.key = e.target.value; 
+        arranger.isMinor = false;
+        updateRelKeyButton();
+        updateKeySelectLabels();
         validateProgression(renderChordVisualizer); 
         flushBuffers(); 
         saveCurrentState();
@@ -1183,6 +1236,9 @@ function setupPresets() {
             // Reset to single section for legacy presets
             arranger.sections = [{ id: generateId(), label: 'Main', value: item.prog }];
         }
+        arranger.isMinor = item.isMinor || false;
+        updateRelKeyButton();
+        updateKeySelectLabels();
         arranger.lastChordPreset = item.name;
         renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         validateProgression(renderChordVisualizer);
@@ -1199,6 +1255,7 @@ function init() {
         if (savedState && savedState.sections) {
             arranger.sections = savedState.sections;
             arranger.key = savedState.key || 'C';
+            arranger.isMinor = savedState.isMinor || false;
             arranger.notation = savedState.notation || 'roman';
             arranger.lastChordPreset = savedState.lastChordPreset || 'Pop (Standard)';
             ctx.theme = savedState.theme || 'auto';
@@ -1277,6 +1334,8 @@ function init() {
 
             applyTheme(ctx.theme);
 
+            updateRelKeyButton();
+            updateKeySelectLabels();
             updateOctaveLabel(ui.octaveLabel, cb.octave);
             updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
             updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
@@ -1387,6 +1446,8 @@ function transposeKey(delta) {
     
     clearChordPresetHighlight();
     refreshArrangerUI();
+    updateRelKeyButton();
+    updateKeySelectLabels();
     syncWorker();
 }
 

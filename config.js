@@ -45,7 +45,8 @@ export const SONG_TEMPLATES = [
         sections: [
             { label: 'Build', value: 'vi | V | IV | III7' },
             { label: 'Drop', value: 'vi | IV | I | V' }
-        ]
+        ],
+        isMinor: false
     }
 ];
 
@@ -165,13 +166,13 @@ export const CHORD_PRESETS = [
     { name: "50s Rock", prog: "I | vi | IV | V", category: "Pop/Rock" },
     { name: "Royal Road", prog: "IVmaj7 | V7 | iii7 | vi7", category: "Pop/Rock" },
     { name: "Canon", prog: "I | V | vi | iii | IV | I | IV | V", category: "Classical/Trad" },
-    { name: "Andalusian", prog: "vi | V | IV | III", category: "Classical/Trad" },
+    { name: "Andalusian", prog: "i | bVII | bVI | V", category: "Classical/Trad", isMinor: true },
     { name: "12-Bar Blues", prog: "I7 | I7 | I7 | I7 | IV7 | IV7 | I7 | I7 | V7 | IV7 | I7 | V7", category: "Blues" },
-    { name: "Minor Blues", prog: "i7 | i7 | i7 | i7 | iv7 | iv7 | i7 | i7 | bVI7 | V7 | i7 | V7", category: "Blues" },
+    { name: "Minor Blues", prog: "i7 | i7 | i7 | i7 | iv7 | iv7 | i7 | i7 | bVI7 | V7 | i7 | V7", category: "Blues", isMinor: true },
     { name: "8-Bar Blues", prog: "I | V7 | IV | IV | I | V7 | I | V7", category: "Blues" },
     { name: "Jazz Blues", prog: "I7 | IV7 | I7 | v7 I7 | IV7 | IV7 | I7 | iii7 VI7 | ii7 | V7 | I7 VI7 | ii7 V7", category: "Blues" },
     { name: "Jazz II-V-I", prog: "ii7 | V7 | Imaj7 | Imaj7", category: "Jazz" },
-    { name: "Minor II-V-I", prog: "iiø7 | V7 | i7 | i7", category: "Jazz" },
+    { name: "Minor II-V-I", prog: "iiø7 | V7 | i7 | i7", category: "Jazz", isMinor: true },
     { 
         name: "Rhythm Changes", 
         sections: [
@@ -190,14 +191,15 @@ export const CHORD_PRESETS = [
             { label: "B", value: "viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7" },
             { label: "C", value: "viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7" }
         ],
-        category: "Jazz" 
+        category: "Jazz",
+        isMinor: false
     },
     { name: "Jazz Turnaround", prog: "Imaj7 VI7 | ii7 V7 | Imaj7 VI7 | ii7 V7", category: "Jazz" },
     { name: "Jazz Cycle", prog: "iii7 | VI7#9 | ii9 | V9 | Imaj9", category: "Jazz" },
     { name: "Neo-Soul", prog: "IVmaj7 | iii7 | ii7 | Imaj7", category: "Soul/R&B" },
     { name: "Neo-Soul (Slash)", prog: "IVmaj7/5 | iii7 | ii7/5 | Imaj7", category: "Soul/R&B" },
-    { name: "Acid Jazz Vamp", prog: "i9 | IV9 | i9 | V7#9", category: "Soul/Funk" },
-    { name: "Funk (i-IV)", prog: "i7 | IV7 | i7 | IV7", category: "Soul/R&B" },
+    { name: "Acid Jazz Vamp", prog: "i9 | IV9 | i9 | V7#9", category: "Soul/Funk", isMinor: true },
+    { name: "Funk (i-IV)", prog: "i7 | IV7 | i7 | IV7", category: "Soul/R&B", isMinor: true },
     { name: "Circle of 4ths", prog: "I7 | IV7 | bVII7 | bIII7 | bVI7 | bII7 | V7 | I7", category: "Theory" },
     { name: "Plagal Flow", prog: "I | IV | I | IV", category: "Theory" }
 ];

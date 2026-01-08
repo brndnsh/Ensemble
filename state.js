@@ -24,6 +24,7 @@ export const arranger = {
     sections: [{ id: 's1', label: 'Intro', value: 'I | V | vi | IV', color: '#3b82f6' }],
     progression: [],
     key: 'C',
+    isMinor: false,
     notation: 'roman',
     valid: false,
     totalSteps: 0,

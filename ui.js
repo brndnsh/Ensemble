@@ -7,6 +7,7 @@ export const ui = {
     bpmInput: document.getElementById('bpmInput'),
     tapBtn: document.getElementById('tapBtn'),
     keySelect: document.getElementById('keySelect'),
+    relKeyBtn: document.getElementById('relKeyBtn'),
     transUpBtn: document.getElementById('transUpBtn'),
     transDownBtn: document.getElementById('transDownBtn'),
     maximizeChordBtn: document.getElementById('maximizeChordBtn'),
