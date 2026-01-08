@@ -60,6 +60,7 @@ function updateStyle(type, styleId) {
     });
     flushBuffers();
     syncWorker();
+    saveCurrentState();
 }
 
 /**
@@ -176,6 +177,7 @@ function togglePower(type) {
         flushBuffers();
     }
     syncWorker();
+    saveCurrentState();
     if (ctx.isPlaying && c.state.enabled) scheduler();
 }
 
@@ -194,16 +196,54 @@ function saveCurrentState() {
         sections: arranger.sections,
         key: arranger.key,
         notation: arranger.notation,
+        lastChordPreset: arranger.lastChordPreset,
         theme: ctx.theme,
         bpm: ctx.bpm,
         metronome: ui.metronome.checked,
-        style: cb.style,
-        cb: { octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
-        bb: { octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
-        sb: { octave: sb.octave, volume: sb.volume, reverb: sb.reverb },
-        gb: { volume: gb.volume, reverb: gb.reverb, swing: gb.swing, swingSub: gb.swingSub, measures: gb.measures, humanize: gb.humanize, autoFollow: gb.autoFollow }
+        vizEnabled: vizState.enabled,
+        cb: { enabled: cb.enabled, style: cb.style, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
+        bb: { enabled: bb.enabled, style: bb.style, octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
+        sb: { enabled: sb.enabled, style: sb.style, octave: sb.octave, volume: sb.volume, reverb: sb.reverb },
+        gb: { 
+            enabled: gb.enabled,
+            volume: gb.volume, 
+            reverb: gb.reverb, 
+            swing: gb.swing, 
+            swingSub: gb.swingSub, 
+            measures: gb.measures, 
+            humanize: gb.humanize, 
+            autoFollow: gb.autoFollow, 
+            lastDrumPreset: gb.lastDrumPreset,
+            pattern: gb.instruments.map(inst => ({ name: inst.name, steps: [...inst.steps] }))
+        }
     };
     storage.save('currentState', data);
+}
+
+/**
+ * Clears the active chord preset state and highlights.
+ */
+function clearChordPresetHighlight() {
+    arranger.lastChordPreset = null;
+    document.querySelectorAll('.chord-preset-chip').forEach(c => c.classList.remove('active'));
+}
+
+/**
+ * Clears the active drum preset state and highlights.
+ */
+export function clearDrumPresetHighlight() {
+    gb.lastDrumPreset = null;
+    document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
+}
+
+/**
+ * Triggers a full refresh of the arranger UI, validation, and persistence.
+ */
+function refreshArrangerUI() {
+    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    validateProgression(renderChordVisualizer);
+    flushBuffers();
+    saveCurrentState();
 }
 
 function onSectionUpdate(id, field, value) {
@@ -243,6 +283,10 @@ function onSectionUpdate(id, field, value) {
         renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     }
 
+    if (field === 'reorder' || field === 'move' || field === 'value') {
+        clearChordPresetHighlight();
+    }
+
     validateProgression(renderChordVisualizer);
     flushBuffers();
     saveCurrentState();
@@ -251,10 +295,8 @@ function onSectionUpdate(id, field, value) {
 function onSectionDelete(id) {
     if (arranger.sections.length <= 1) return;
     arranger.sections = arranger.sections.filter(s => s.id !== id);
-    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-    validateProgression(renderChordVisualizer);
-    flushBuffers();
-    saveCurrentState();
+    clearChordPresetHighlight();
+    refreshArrangerUI();
 }
 
 function onSectionDuplicate(id) {
@@ -264,18 +306,14 @@ function onSectionDuplicate(id) {
     const newSection = { ...section, id: generateId(), label: `${section.label} (Copy)` };
     const index = arranger.sections.findIndex(s => s.id === id);
     arranger.sections.splice(index + 1, 0, newSection);
-    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-    validateProgression(renderChordVisualizer);
-    flushBuffers();
-    saveCurrentState();
+    clearChordPresetHighlight();
+    refreshArrangerUI();
 }
 
 function addSection() {
     arranger.sections.push({ id: generateId(), label: `Section ${arranger.sections.length + 1}`, value: 'I' });
-    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-    validateProgression(renderChordVisualizer);
-    flushBuffers();
-    saveCurrentState();
+    clearChordPresetHighlight();
+    refreshArrangerUI();
 }
 
 function applyTemplate(template) {
@@ -287,10 +325,8 @@ function applyTemplate(template) {
             value: s.value,
             color: '#3b82f6'
         }));
-        renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-        validateProgression(renderChordVisualizer);
-        flushBuffers();
-        saveCurrentState();
+        clearChordPresetHighlight();
+        refreshArrangerUI();
         ui.templatesContainer.style.display = 'none';
         showToast(`Template "${template.name}" applied`);
     }
@@ -365,26 +401,6 @@ function advanceGlobalStep() {
     ctx.nextNoteTime += duration;
     ctx.unswungNextNoteTime += sixteenth;
     ctx.step++;
-}
-
-/**
- * Caches progression metadata to avoid redundant calculations in the scheduler.
- */
-export function updateProgressionCache() {
-    if (!arranger.progression.length) {
-        arranger.totalSteps = 0;
-        arranger.stepMap = [];
-        return;
-    }
-
-    let current = 0;
-    arranger.stepMap = arranger.progression.map(chord => {
-        const steps = Math.round(chord.beats * 4);
-        const entry = { start: current, end: current + steps, chord };
-        current += steps;
-        return entry;
-    });
-    arranger.totalSteps = current;
 }
 
 /**
@@ -797,12 +813,15 @@ function renderUserPresets() {
                 // Legacy support
                 arranger.sections = [{ id: generateId(), label: 'Main', value: p.prog }];
             }
+            arranger.lastChordPreset = p.name;
             renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
             validateProgression(renderChordVisualizer);
             flushBuffers();
             document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
+            saveCurrentState();
         });
+        if (p.name === arranger.lastChordPreset) chip.classList.add('active');
         ui.userPresetsContainer.appendChild(chip);
     });
 }
@@ -848,10 +867,13 @@ function renderUserDrumPresets() {
             });
             if (p.swing !== undefined) { gb.swing = p.swing; ui.swingSlider.value = p.swing; }
             if (p.swingSub) { gb.swingSub = p.swingSub; ui.swingBase.value = p.swingSub; }
+            gb.lastDrumPreset = p.name;
             renderGridState();
             document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
+            saveCurrentState();
         }, 'drum-preset-chip');
+        if (p.name === gb.lastDrumPreset) chip.classList.add('active');
         ui.userDrumPresetsContainer.appendChild(chip);
     });
 }
@@ -866,6 +888,7 @@ window.deleteUserDrumPreset = (idx) => {
 
 function updateMeasures(val) {
     gb.measures = parseInt(val);
+    clearDrumPresetHighlight();
     if (gb.currentMeasure >= gb.measures) gb.currentMeasure = 0;
     renderMeasurePagination(switchMeasure);
     renderGrid();
@@ -891,10 +914,8 @@ function undo() {
     if (arranger.history.length === 0) return;
     const last = arranger.history.pop();
     arranger.sections = JSON.parse(last);
-    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-    validateProgression(renderChordVisualizer);
-    flushBuffers();
-    saveCurrentState();
+    clearChordPresetHighlight();
+    refreshArrangerUI();
     showToast("Undo successful");
 }
 
@@ -925,10 +946,8 @@ function setupUIHandlers() {
                 arranger.sections = [{ id: generateId(), label: 'Random', value: newProg }];
             }
             
-            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-            validateProgression(renderChordVisualizer);
-            flushBuffers();
-            saveCurrentState();
+            clearChordPresetHighlight();
+            refreshArrangerUI();
         }],
         [ui.mutateBtn, 'click', () => {
             const targetId = arranger.lastInteractedSectionId;
@@ -940,18 +959,14 @@ function setupUIHandlers() {
             pushHistory();
             section.value = mutateProgression(section.value, cb.style);
             showToast(`Mutated ${section.label}`);
-            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-            validateProgression(renderChordVisualizer);
-            flushBuffers();
-            saveCurrentState();
+            clearChordPresetHighlight();
+            refreshArrangerUI();
         }],
         [ui.clearProgBtn, 'click', () => {
             pushHistory();
             arranger.sections = [{ id: generateId(), label: 'Intro', value: '' }];
-            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-            validateProgression(renderChordVisualizer);
-            flushBuffers();
-            saveCurrentState();
+            clearChordPresetHighlight();
+            refreshArrangerUI();
         }],
         [ui.saveBtn, 'click', saveProgression],
         [ui.saveDrumBtn, 'click', saveDrumPattern],
@@ -962,7 +977,12 @@ function setupUIHandlers() {
         [ui.closeSettings, 'click', () => ui.settingsOverlay.classList.remove('active')],
         [ui.resetSettingsBtn, 'click', () => confirm("Reset all settings?") && resetToDefaults()],
         [ui.exportMidiBtn, 'click', exportToMidi],
-        [ui.clearDrums, 'click', () => { gb.instruments.forEach(i => i.steps.fill(0)); renderGridState(); }],
+        [ui.clearDrums, 'click', () => { 
+            gb.instruments.forEach(i => i.steps.fill(0)); 
+            clearDrumPresetHighlight();
+            renderGridState(); 
+            saveCurrentState();
+        }],
         [ui.maximizeChordBtn, 'click', () => {
             const isMax = document.querySelector('.app-main-layout').classList.toggle('chord-maximized');
             ui.maximizeChordBtn.textContent = isMax ? '✕' : '⛶';
@@ -997,7 +1017,12 @@ function setupUIHandlers() {
         }
     });
 
-    ui.densitySelect.addEventListener('change', e => { cb.density = e.target.value; validateProgression(renderChordVisualizer); flushBuffers(); });
+    ui.densitySelect.addEventListener('change', e => { 
+        cb.density = e.target.value; 
+        validateProgression(renderChordVisualizer); 
+        flushBuffers(); 
+        saveCurrentState();
+    });
 
     const volumeNodes = [
         { el: ui.chordVol, state: cb, gain: 'chordsGain', mult: MIXER_GAIN_MULTIPLIERS.chords },
@@ -1012,6 +1037,7 @@ function setupUIHandlers() {
             if (state !== ctx) state.volume = val;
             if (ctx[gain]) ctx[gain].gain.setTargetAtTime(val * mult, ctx.audio.currentTime, 0.02);
         });
+        el.addEventListener('change', () => saveCurrentState());
     });
 
     const reverbNodes = [
@@ -1025,6 +1051,7 @@ function setupUIHandlers() {
             state.reverb = parseFloat(e.target.value);
             if (ctx[gain]) ctx[gain].gain.setTargetAtTime(state.reverb, ctx.audio.currentTime, 0.02);
         });
+        el.addEventListener('change', () => saveCurrentState());
     });
 
     const octaveSliders = [
@@ -1039,14 +1066,20 @@ function setupUIHandlers() {
             if (callback) callback();
             flushBuffers();
         });
+        el.addEventListener('change', () => saveCurrentState());
     });
 
-    ui.swingSlider.addEventListener('input', e => gb.swing = parseInt(e.target.value));
-    ui.swingBase.addEventListener('change', e => gb.swingSub = e.target.value);
-    ui.humanizeSlider.addEventListener('input', e => gb.humanize = parseInt(e.target.value));
-    ui.autoFollowCheck.addEventListener('change', e => gb.autoFollow = e.target.checked);
+    ui.swingSlider.addEventListener('input', e => { gb.swing = parseInt(e.target.value); saveCurrentState(); });
+    ui.swingBase.addEventListener('change', e => { gb.swingSub = e.target.value; saveCurrentState(); });
+    ui.humanizeSlider.addEventListener('input', e => { gb.humanize = parseInt(e.target.value); saveCurrentState(); });
+    ui.autoFollowCheck.addEventListener('change', e => { gb.autoFollow = e.target.checked; saveCurrentState(); });
     ui.drumBarsSelect.addEventListener('change', e => updateMeasures(e.target.value));
     ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
+
+    // Global Option Checkboxes
+    [ui.metronome, ui.countIn, ui.visualFlash, ui.haptic].forEach(el => {
+        el.addEventListener('change', () => saveCurrentState());
+    });
 
     Object.keys(POWER_CONFIG).forEach(type => {
         const c = POWER_CONFIG[type];
@@ -1061,6 +1094,8 @@ function setupUIHandlers() {
             if (ctx.isPlaying && iosAudioUnlocked) silentAudio.play().catch(() => {});
         }
     });
+
+    window.addEventListener('ensemble_state_change', saveCurrentState);
 
     window.addEventListener('keydown', e => {
         const isTyping = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
@@ -1128,14 +1163,16 @@ function setupPresets() {
         name,
         ...DRUM_PRESETS[name]
     }));
-    renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', 'Standard', (item, chip) => {
+    renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item, chip) => {
         loadDrumPreset(item.name);
         document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
+        gb.lastDrumPreset = item.name;
+        saveCurrentState();
     });
 
     // Chord Progression Presets
-    renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', 'Pop (Standard)', (item, chip) => {
+    renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', arranger.lastChordPreset, (item, chip) => {
         if (item.sections) {
             arranger.sections = item.sections.map(s => ({
                 id: generateId(),
@@ -1146,11 +1183,13 @@ function setupPresets() {
             // Reset to single section for legacy presets
             arranger.sections = [{ id: generateId(), label: 'Main', value: item.prog }];
         }
+        arranger.lastChordPreset = item.name;
         renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         validateProgression(renderChordVisualizer);
         flushBuffers();
         document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
+        saveCurrentState();
     });
 }
 
@@ -1161,28 +1200,36 @@ function init() {
             arranger.sections = savedState.sections;
             arranger.key = savedState.key || 'C';
             arranger.notation = savedState.notation || 'roman';
+            arranger.lastChordPreset = savedState.lastChordPreset || 'Pop (Standard)';
             ctx.theme = savedState.theme || 'auto';
             ctx.bpm = savedState.bpm || 100;
-            cb.style = savedState.style || 'pad';
+            vizState.enabled = savedState.vizEnabled !== undefined ? savedState.vizEnabled : false;
             
             // Restore Accompanist Settings
             if (savedState.cb) {
+                cb.enabled = savedState.cb.enabled !== undefined ? savedState.cb.enabled : true;
+                cb.style = savedState.cb.style || 'pad';
                 cb.octave = savedState.cb.octave;
                 cb.density = savedState.cb.density;
                 cb.volume = savedState.cb.volume;
                 cb.reverb = savedState.cb.reverb;
             }
             if (savedState.bb) {
+                bb.enabled = savedState.bb.enabled !== undefined ? savedState.bb.enabled : false;
+                bb.style = savedState.bb.style || 'arp';
                 bb.octave = savedState.bb.octave;
                 bb.volume = savedState.bb.volume;
                 bb.reverb = savedState.bb.reverb;
             }
             if (savedState.sb) {
+                sb.enabled = savedState.sb.enabled !== undefined ? savedState.sb.enabled : false;
+                sb.style = savedState.sb.style || 'scalar';
                 sb.octave = savedState.sb.octave;
                 sb.volume = savedState.sb.volume;
                 sb.reverb = savedState.sb.reverb;
             }
             if (savedState.gb) {
+                gb.enabled = savedState.gb.enabled !== undefined ? savedState.gb.enabled : true;
                 gb.volume = savedState.gb.volume;
                 gb.reverb = savedState.gb.reverb;
                 gb.swing = savedState.gb.swing;
@@ -1190,6 +1237,18 @@ function init() {
                 gb.measures = savedState.gb.measures || 1;
                 gb.humanize = savedState.gb.humanize !== undefined ? savedState.gb.humanize : 20;
                 gb.autoFollow = savedState.gb.autoFollow !== undefined ? savedState.gb.autoFollow : true;
+                gb.lastDrumPreset = savedState.gb.lastDrumPreset || 'Standard';
+                
+                if (savedState.gb.pattern) {
+                    savedState.gb.pattern.forEach(savedInst => {
+                        const inst = gb.instruments.find(i => i.name === savedInst.name);
+                        if (inst) {
+                            inst.steps.fill(0);
+                            savedInst.steps.forEach((v, i) => { if (i < 128) inst.steps[i] = v; });
+                        }
+                    });
+                }
+
                 gb.currentMeasure = 0;
             }
 
@@ -1234,7 +1293,11 @@ function init() {
 
         renderGrid();
         renderMeasurePagination(switchMeasure);
-        loadDrumPreset('Standard');
+        
+        if (!savedState || !savedState.gb || !savedState.gb.pattern) {
+            loadDrumPreset('Standard');
+        }
+
         setupPresets();
         renderTemplates(SONG_TEMPLATES, applyTemplate);
         setupUIHandlers();
@@ -1245,6 +1308,14 @@ function init() {
         validateProgression(renderChordVisualizer);
         updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
         updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
+
+        // Sync Power Buttons UI
+        Object.keys(POWER_CONFIG).forEach(type => {
+            const c = POWER_CONFIG[type];
+            c.els.forEach(el => {
+                if (el) el.classList.toggle('active', c.state.enabled);
+            });
+        });
         
         // Logic Worker handles timing AND generative musical logic
         initWorker(
@@ -1277,6 +1348,7 @@ function setBpm(val) {
     }
     ctx.bpm = newBpm; ui.bpmInput.value = newBpm;
     syncWorker();
+    saveCurrentState();
 
     if (viz && ctx.isPlaying && ctx.audio) {
         const secondsPerBeat = 60.0 / ctx.bpm;
@@ -1313,15 +1385,14 @@ function transposeKey(delta) {
         section.value = transposed.join('');
     });
     
-    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-    validateProgression(renderChordVisualizer);
-    flushBuffers();
+    clearChordPresetHighlight();
+    refreshArrangerUI();
     syncWorker();
-    saveCurrentState();
 }
 
 function loadDrumPreset(name) {
     const p = DRUM_PRESETS[name];
+    gb.lastDrumPreset = name;
     gb.measures = p.measures || 1; 
     gb.currentMeasure = 0;
     ui.drumBarsSelect.value = String(gb.measures);
@@ -1471,10 +1542,17 @@ window.previewChord = (index) => {
 
 function loadFromUrl() {
     const params = new URLSearchParams(window.location.search);
+    let hasParams = false;
     if (params.get('s')) {
         arranger.sections = decompressSections(params.get('s'));
+        hasParams = true;
     } else if (params.get('prog')) {
         arranger.sections = [{ id: generateId(), label: 'Main', value: params.get('prog') }];
+        hasParams = true;
+    }
+    
+    if (hasParams) {
+        clearChordPresetHighlight();
     }
     
     if (params.get('key')) { ui.keySelect.value = normalizeKey(params.get('key')); arranger.key = ui.keySelect.value; }

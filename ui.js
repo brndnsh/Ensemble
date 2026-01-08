@@ -1,5 +1,6 @@
 import { midiToNote } from './utils.js';
 import { cb, gb, arranger } from './state.js';
+import { clearDrumPresetHighlight } from './main.js';
 
 export const ui = {
     playBtn: document.getElementById('playBtn'),
@@ -590,7 +591,12 @@ function createTrackRow(inst, cachedSteps) {
         if (b % 4 === 0) step.classList.add('beat-marker');
         step.onclick = () => { 
             inst.steps[globalIdx] = (inst.steps[globalIdx] + 1) % 3; 
+            clearDrumPresetHighlight();
             renderGridState(); 
+            // Trigger persistence
+            if (window.dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('ensemble_state_change'));
+            }
         };
         stepsContainer.appendChild(step);
         
