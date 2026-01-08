@@ -30,6 +30,10 @@ const CANNED_LICKS = {
     'blues_4': { notes: [12, 10, 7, 10, 12, 15, 17], quality: ['minor', 'major'] },
     'rock_1': { notes: [0, 3, 5, 5, 3, 0], quality: ['minor', 'major'] },
     'bebop_1': { notes: [7, 6, 5, 4, 3, 2, 1, 0], quality: ['major'] },
+    'parker_1': { notes: [0, 4, 7, 11, 10, 8, 7, 5, 4], quality: ['major', 'dom'] },
+    'parker_2': { notes: [12, 10, 9, 7, 6, 5, 3, 2, 0], quality: ['minor', 'dom'] },
+    'bird_enclosure': { notes: [5, 4, 2, 3], quality: ['major', 'minor', 'dom'] },
+    'blues_5': { notes: [12, 15, 17, 18, 17, 15, 12], quality: ['minor', 'major'] },
     'shred_1': { notes: [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], quality: ['major'] },
     'bb_box': { notes: [12, 14, 15, 14, 12, 10, 12], quality: ['minor', 'major'] },
     'albert_king': { notes: [12, 15, 17, 15, 12], quality: ['minor', 'major'] },
@@ -101,6 +105,10 @@ function getScaleNote(midi, list, offset) {
  * Determines the best scale intervals based on chord quality and parent key.
  */
 function getScaleForChord(chord, style, nextChord) {
+    // 1. Shared Harmonic Context (V7 resolving to Minor)
+    const isV7toMinor = chord.intervals.includes(10) && chord.intervals.includes(4) && 
+                        nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
+
     if (style === 'blues') {
         if (chord.quality === 'minor' || chord.quality === 'halfdim' || chord.quality === 'dim') {
             return [0, 3, 5, 6, 7, 10]; // Minor Blues
@@ -116,8 +124,19 @@ function getScaleForChord(chord, style, nextChord) {
         return [0, 2, 4, 5, 7, 9]; // Major Pentatonic + 11
     }
 
-    if (style === 'shred' && chord.intervals.includes(10) && chord.intervals.includes(4) && nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim')) {
-        return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant (V7 in Minor)
+    if (style === 'bird') {
+        // Bebop Scales: Adding chromatic passing tones
+        if (chord.intervals.includes(10)) {
+            if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
+            return [0, 2, 4, 5, 7, 9, 10, 11]; // Dominant Bebop
+        }
+        if (chord.quality === 'halfdim') return [0, 1, 2, 3, 5, 6, 8, 10];
+        if (chord.quality === 'minor') return [0, 2, 3, 4, 5, 7, 9, 10];
+        return [0, 2, 4, 5, 7, 8, 9, 11]; // Major Bebop
+    }
+
+    if (isV7toMinor && (style === 'scalar' || style === 'shred')) {
+        return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
     }
 
     const keyRoot = KEY_ORDER.indexOf(cb.key);
@@ -148,10 +167,17 @@ function getScaleForChord(chord, style, nextChord) {
     }
 }
 
-export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 77, style = 'scalar') {
+export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 77, style = 'scalar', stepInChord = 0) {
     if (!currentChord) return null;
 
     let durationMultiplier = 1;
+
+    // Harmonic Reset: If we just switched chords, clear any stale melodic state
+    if (stepInChord === 0) {
+        sb.currentLick = null;
+        sb.enclosureNotes = null;
+        sb.busySteps = 0;
+    }
 
     // Skip steps if we are currently playing a sustained note
     if (sb.busySteps > 0) {
@@ -189,8 +215,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // Intensity factor: 0.0 at start, 1.0 at end of section
     const intensity = progressInSection;
     
-    // Shift register up slightly as intensity builds (up to 7 semitones)
-    const dynamicCenterMidi = centerMidi + Math.floor(intensity * 7);
+    // Shift register up as intensity builds
+    let registerSoar = 7;
+    if (style === 'minimal') registerSoar = 10;
+    if (style === 'shred') registerSoar = 14; // Shreddy climbs more than an octave
+    if (style === 'bird') registerSoar = 5;  // Bebop stays more contained
+    
+    const dynamicCenterMidi = centerMidi + Math.floor(intensity * registerSoar);
 
     // --- Dynamic Velocity (Accents) ---
     let velocity = 1.0 + (intensity * 0.2); // Build base volume with intensity
@@ -205,9 +236,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // Style specific velocity tweaks
     if (style === 'shred') velocity *= (0.9 + Math.random() * 0.2); 
     if (style === 'minimal') {
-        // Alternating strong and soft notes for a "Call and Response" feel
-        const isResponse = (sb.phraseSteps % 4 < 2);
-        velocity = isResponse ? 0.7 : 1.2;
+        // Wider dynamic range for more soulful touch
+        velocity = (Math.random() < 0.3 ? 0.6 : 1.1) + (Math.random() * 0.3 - 0.15);
     }
     if (style === 'neo') velocity *= (0.8 + Math.random() * 0.25);
 
@@ -228,21 +258,23 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         let restProb = 0.4 - (intensity * 0.3); 
         if (style === 'shred') restProb = 0.15;
         if (style === 'neo') restProb = 0.5 - (intensity * 0.2);
-        if (style === 'minimal') restProb = 0.65; // Lots of space for minimal
+        if (style === 'minimal') restProb = 0.65 - (intensity * 0.4); 
+        if (style === 'bird') restProb = (ctx.bpm > 150 ? 0.45 : 0.25) - (intensity * 0.2);
 
         if (!sb.isResting && Math.random() < restProb) {
             sb.isResting = true;
-            sb.phraseSteps = 4 + Math.floor(Math.random() * 8); // Rest for 1-2 beats
+            sb.phraseSteps = (style === 'bird' ? (ctx.bpm > 150 ? 4 : 2) : (style === 'minimal' ? 6 : 4)) + Math.floor(Math.random() * 8); 
             sb.currentLick = null;
             sb.sequenceType = null;
         } else {
             sb.isResting = false;
             // Higher intensity leads to longer phrases
-            const phraseBase = (style === 'shred' ? 16 : 8) + Math.floor(intensity * 12);
+            let phraseBase = (style === 'bird' ? 24 : (style === 'shred' ? 16 : 8)) + Math.floor(intensity * 12);
+            if (style === 'bird' && ctx.bpm > 150) phraseBase = 12 + Math.floor(intensity * 8);
             sb.phraseSteps = phraseBase + Math.floor(Math.random() * 16); 
             
-            // Minimal style always stays on chord tones or a simple scale
-            sb.patternMode = style === 'minimal' ? 'arp' : (Math.random() < 0.6 ? 'scale' : 'arp');
+            // Bird/Bebop uses a mix of scalar runs and arpeggio extensions
+            sb.patternMode = (style === 'bird') ? (Math.random() < 0.4 ? 'arp' : 'scale') : (style === 'minimal' ? 'arp' : (Math.random() < 0.6 ? 'scale' : 'arp'));
             sb.sequenceType = null;
             
             // --- Turnaround Logic ---
@@ -253,8 +285,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             let lickProb = 0.15 + (intensity * 0.2); // More licks as energy builds
             if (style === 'blues') lickProb = isTurnaround ? 0.6 : 0.35;
             if (style === 'neo') lickProb = 0.25;
+            if (style === 'minimal') lickProb = 0; // David Gilmour style: no canned licks, just melody
 
-            if (style !== 'scalar' && style !== 'shred' && Math.random() < lickProb) {
+            if (style !== 'scalar' && style !== 'shred' && style !== 'minimal' && Math.random() < lickProb) {
                 let pool = Object.keys(CANNED_LICKS).filter(name => {
                     const lick = CANNED_LICKS[name];
                     const q = currentChord.quality;
@@ -270,10 +303,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
                     if (style === 'blues') {
                         if (isTurnaround) return ['turnaround_1', 'turnaround_2'].includes(name) && qualityMatch;
-                        return ['the_lick', 'blues_1', 'blues_2', 'blues_3', 'blues_4', 'bb_box', 'albert_king'].includes(name) && qualityMatch;
+                        return ['the_lick', 'blues_1', 'blues_2', 'blues_3', 'blues_4', 'blues_5', 'bb_box', 'albert_king'].includes(name) && qualityMatch;
                     }
                     if (style === 'neo') {
                         return ['the_lick', 'blues_1', 'blues_2'].includes(name) && qualityMatch;
+                    }
+                    if (style === 'bird') {
+                        return ['the_lick', 'bebop_1', 'parker_1', 'parker_2', 'bird_enclosure'].includes(name) && qualityMatch;
                     }
                     return qualityMatch;
                 });
@@ -299,7 +335,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (stepInBeat === 0) {
         let cellPool = RHYTHMIC_CELLS;
 
-        // Tempo-based density: reduce busy patterns at high BPM to avoid "rushing" feel
+        // Tempo-based density: reduce busy patterns at high BPM
         if (ctx.bpm >= 150) {
             cellPool = RHYTHMIC_CELLS.filter((_, idx) => ![1, 3, 4, 5, 7, 9].includes(idx));
         } else if (ctx.bpm >= 120) {
@@ -313,7 +349,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
              cellPool = cellPool.filter((_, idx) => busyIndices.includes(idx % cellPool.length));
         }
 
-        if (style === 'minimal') cellPool = [[1, 0, 0, 0], [1, 0, 1, 0]];
+        if (style === 'scalar' && ctx.bpm > 150) {
+            // Further reduce scalar density at very high tempos
+            cellPool = [[1, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 1]];
+        }
+        
+        if (style === 'minimal') cellPool = [[1, 0, 0, 0], [1, 0, 1, 0], [0, 0, 1, 0], [0, 1, 0, 0]];
+        if (style === 'bird') {
+            cellPool = [[1, 1, 1, 0], [0, 1, 1, 1], [1, 0, 1, 1], [1, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1]];
+            if (ctx.bpm < 150) cellPool.push([1, 1, 1, 1]); // Only 16th streams at lower tempos
+        }
         if (style === 'shred') cellPool = [[1, 1, 1, 1], [1, 1, 1, 1], [1, 0, 1, 1]]; 
         if (style === 'neo') cellPool = [[1, 0, 0, 1], [0, 1, 0, 1], [1, 0, 1, 0]];
 
@@ -459,6 +504,37 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                 else if (prevMidi < minMidi + 12) sb.direction = 1;
                 else sb.direction = Math.random() > 0.5 ? 1 : -1;
             }
+        } else if (style === 'bird') {
+             // Bebop specific behavior: Chromatic enclosures
+             if (Math.random() < 0.25 && !sb.enclosureNotes) {
+                 // Pick a target chord tone
+                 const target = chordTones[Math.floor(Math.random() * chordTones.length)];
+                 let m = target;
+                 while (m < minMidi) m += 12;
+                 while (m > maxMidi) m -= 12;
+                 
+                 // Classic enclosure: Above -> Below -> Target
+                 sb.enclosureNotes = [m + 1, m - 1, m];
+                 sb.enclosureIndex = 0;
+             }
+             
+             if (sb.enclosureNotes) {
+                 finalMidi = sb.enclosureNotes[sb.enclosureIndex];
+                 sb.enclosureIndex++;
+                 if (sb.enclosureIndex >= sb.enclosureNotes.length) {
+                     sb.enclosureNotes = null;
+                 }
+                 durationMultiplier = 1;
+                 sb.busySteps = 0;
+                 return { freq: getFrequency(finalMidi), durationMultiplier, style };
+             }
+
+             if (sb.patternSteps <= 0) {
+                sb.patternSteps = 4 + Math.floor(Math.random() * 12);
+                if (prevMidi > maxMidi - 10) sb.direction = -1;
+                else if (prevMidi < minMidi + 10) sb.direction = 1;
+                else sb.direction = Math.random() > 0.5 ? 1 : -1;
+            }
         } else {
             // --- Blues Specific Phrasing ---
             if (style === 'blues' && Math.random() < 0.25 && stepInBeat !== 0) {
@@ -500,62 +576,28 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
         if (style !== 'shred' || sb.patternSteps >= 0) {
             const findNext = (current, list, dir) => {
-                // Optimized local search: check list shifted by -1, 0, +1 octaves
-                let best = null;
-                
-                // Since 'list' contains absolute MIDI numbers (e.g., 60, 62, 64), 
-                // we simply create virtual candidates by adding/subtracting 12.
-                // We check the octave below, current octave, and octave above relative to the list's definition.
-                // But specifically, we need to find neighbors to 'current'. 
-                // A standard scale list spans ~1 octave. So checking -1, 0, 1 shifts of the list covers the range.
-                
-                // Center the search around the 'current' note to ensure we cover enough range
-                // Determine approximate octave difference between list definition and current note
+                // Optimized local search
+                let candidates = [];
                 const baseShift = Math.floor((current - list[0]) / 12) * 12;
 
                 for (let o = -1; o <= 1; o++) {
                     const octaveOffset = baseShift + (o * 12);
-                    
                     for (let i = 0; i < list.length; i++) {
                          const candidate = list[i] + octaveOffset;
-                         
-                         if (dir > 0) {
-                             if (candidate > current && candidate <= maxMidi) {
-                                 if (best === null || candidate < best) best = candidate;
-                             }
-                         } else {
-                             if (candidate < current && candidate >= minMidi) {
-                                 if (best === null || candidate > best) best = candidate;
-                             }
-                         }
+                         if (dir > 0 && candidate > current && candidate <= maxMidi) candidates.push(candidate);
+                         else if (dir < 0 && candidate < current && candidate >= minMidi) candidates.push(candidate);
                     }
                 }
                 
-                if (best !== undefined && best !== null) return best;
+                if (candidates.length > 0) {
+                    candidates.sort((a, b) => dir > 0 ? a - b : b - a);
+                    // 30% chance to skip a note in the scale for melodic variety
+                    const idx = (Math.random() < 0.3 && candidates.length > 1) ? 1 : 0;
+                    return candidates[idx];
+                }
                 
                 // Change direction if we hit a boundary
                 sb.direction *= -1;
-                // Simple recursive fallback (inline)
-                if (Math.abs(sb.direction) === 1) { 
-                     let retryBest = null;
-                     const newDir = sb.direction;
-                     for (let o = -1; o <= 1; o++) {
-                        const octaveOffset = baseShift + (o * 12);
-                        for (let i = 0; i < list.length; i++) {
-                             const candidate = list[i] + octaveOffset;
-                             if (newDir > 0) {
-                                 if (candidate > current && candidate <= maxMidi) {
-                                     if (retryBest === null || candidate < retryBest) retryBest = candidate;
-                                 }
-                             } else {
-                                 if (candidate < current && candidate >= minMidi) {
-                                     if (retryBest === null || candidate > retryBest) retryBest = candidate;
-                                 }
-                             }
-                        }
-                    }
-                    if (retryBest !== null) return retryBest;
-                }
                 return current;
             };
 
@@ -571,9 +613,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         finalMidi -= 1;
     }
 
-    // Avoid dissonant "avoid notes" on downbeats
+    // Avoid dissonant "avoid notes" on strong beats
+    const isStrongBeat = (stepInBeat === 0 || stepInBeat === 2);
     const intervalFromRoot = (finalMidi - rootMidi + 120) % 12;
-    if (stepInBeat === 0 && !chordTones.some(t => (t % 12) === (finalMidi % 12))) {
+    if (isStrongBeat && !chordTones.some(t => (t % 12) === (finalMidi % 12))) {
         const currentDir = sb.direction || 1;
         
         // Avoid 4th (11) on Major chords
@@ -597,17 +640,24 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     }
 
     // Final check for phrase endings
-    if (sb.phraseSteps === 0 && !sb.isResting) {
+    if (sb.phraseSteps <= 0 && !sb.isResting) {
         const midiVal = finalMidi % 12;
-        const isScaleTone = scaleIntervals.some(i => (rootMidi + i) % 12 === midiVal);
+        const targetTones = [0, chord.intervals[1], chord.intervals[2] || 7].map(i => (rootMidi + i) % 12);
+        const isStable = targetTones.includes(midiVal);
         
-        if (!isScaleTone && !chordTones.some(t => (t % 12) === midiVal)) {
+        if (!isStable) {
             let bestMidi = finalMidi;
             let minDist = 13;
-            chordTones.forEach(t => {
-                let m = t;
+            // Target Root, 3rd, or 5th
+            const stableMidis = [];
+            [0, chord.intervals[1], chord.intervals[2] || 7].forEach(i => {
+                let m = rootMidi + i;
                 while (m < finalMidi - 6) m += 12;
                 while (m > finalMidi + 6) m -= 12;
+                stableMidis.push(m);
+            });
+
+            stableMidis.forEach(m => {
                 const d = Math.abs(m - finalMidi);
                 if (d < minDist && m <= maxMidi && m >= minMidi) {
                     minDist = d;
@@ -644,8 +694,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             else if (intervalFromRoot === 0) bendStartInterval = 2; // Bend into Root from b7
             else bendStartInterval = Math.random() > 0.5 ? 2 : 1;
         } else if (style === 'minimal') {
-            // Very subtle, slow bends for stability
-            bendStartInterval = 0.5; // Microtonal scoop
+            // Gilmour-style expressive bends
+            const r = Math.random();
+            if (r < 0.3) bendStartInterval = 2; // Full step bend
+            else if (r < 0.6) bendStartInterval = 1; // Half step bend
+            else bendStartInterval = 0.5; // Subtle scoop
         } else {
             bendStartInterval = style === 'shred' ? 1 : (Math.random() > 0.6 ? 2 : 1);
         }
@@ -668,12 +721,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     let extraFreq2 = null;
     let extraMidi2 = null;
     
-    const dsProb = style === 'neo' ? 0.35 : 0.25;
-    if ((style === 'blues' || style === 'neo') && !isGraceNote && !sb.currentLick && !sb.sequenceType && Math.random() < dsProb) {
+    const dsProb = (style === 'neo' || style === 'minimal') ? 0.35 : 0.25;
+    if ((style === 'blues' || style === 'neo' || style === 'minimal') && !isGraceNote && !sb.currentLick && !sb.sequenceType && Math.random() < dsProb) {
         let offset;
         if (style === 'blues') {
             const possibleOffsets = [-2, -3, -4]; 
             offset = possibleOffsets[Math.floor(Math.random() * possibleOffsets.length)];
+            extraMidi = getScaleNote(finalMidi, scaleTones, offset);
+        } else if (style === 'minimal') {
+            // Gilmour-style perfect intervals (4th or 5th)
+            offset = Math.random() > 0.5 ? -3 : -4; 
             extraMidi = getScaleNote(finalMidi, scaleTones, offset);
         } else {
             // Neo-soul: Quartal (Perfect 4th is usually ~3 steps in pentatonic)

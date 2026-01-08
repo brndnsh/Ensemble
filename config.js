@@ -117,7 +117,8 @@ export const SOLOIST_STYLES = [
     { id: 'shred', name: 'Shreddy', category: 'Rock/Metal' },
     { id: 'blues', name: 'Blues', category: 'Blues' },
     { id: 'neo', name: 'Neo-Soul', category: 'Soul/R&B' },
-    { id: 'minimal', name: 'Minimal', category: 'Basic' }
+    { id: 'minimal', name: 'Minimal', category: 'Basic' },
+    { id: 'bird', name: 'Bird', category: 'Jazz' }
 ];
 
 export const CHORD_PRESETS = [
