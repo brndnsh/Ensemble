@@ -397,8 +397,9 @@ function scheduleBass(chordData, step, time) {
     bb.buffer.delete(step); // Cleanup
 
     if (noteEntry && noteEntry.freq) {
-        const { freq, chordData: cData, durationMultiplier, velocity } = noteEntry; // Use buffered chordData to match generation context
+        const { freq, chordData: cData, durationMultiplier, velocity, timingOffset } = noteEntry; 
         const { chord } = cData || chordData;
+        const adjustedTime = time + (timingOffset || 0);
         
         bb.lastPlayedFreq = freq;
         const midi = getMidi(freq);
@@ -414,12 +415,12 @@ function scheduleBass(chordData, step, time) {
         
         if (vizState.enabled) {
             ctx.drawQueue.push({ 
-                type: 'bass_vis', name, octave, midi, time,
+                type: 'bass_vis', name, octave, midi, time: adjustedTime,
                 chordNotes: chord.freqs.map(f => getMidi(f)),
                 duration
             });
         }
-        playBassNote(freq, time, duration, velocity || 1.0, noteEntry.muted);
+        playBassNote(freq, adjustedTime, duration, velocity || 1.0, noteEntry.muted);
     }
 }
 
@@ -428,8 +429,9 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
     sb.buffer.delete(step); // Cleanup
 
     if (noteEntry && noteEntry.freq) {
-        const { freq, extraFreq, extraMidi, extraFreq2, extraMidi2, durationMultiplier, velocity, bendStartInterval, style, chordData: cData } = noteEntry;
+        const { freq, extraFreq, extraMidi, extraFreq2, extraMidi2, durationMultiplier, velocity, bendStartInterval, style, chordData: cData, timingOffset } = noteEntry;
         const { chord } = cData || chordData;
+        const adjustedTime = time + (timingOffset || 0);
         
         sb.lastPlayedFreq = freq;
         const midi = noteEntry.midi || getMidi(freq);

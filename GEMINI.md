@@ -45,7 +45,11 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ### Bassist & Soloist
 *   **Algorithmic Performance**: Generative lines that react to Arranger data.
-*   **Diverse Styles**: Scalar, Shreddy, Blues, Minimal, and Neo-Soul.
+*   **Soloist Styles**: Scalar, Shreddy, Blues, Minimal (Gilmour), Bird (Bebop), and Neo-Soul.
+*   **Bassist Styles**: Whole, Half, Arp, Walking, Funk, Neo-Soul, and Bossa Nova.
+*   **Slash Chord Support**: Bassist prioritizes specified bass notes (e.g., C/G).
+*   **Intensity Mapping**: Energy builds dynamically toward the end of musical sections.
+*   **Micro-Timing**: Authentic "behind the beat" feel for Neo-Soul and sophisticated bebop phrasing.
 
 ### Unified Visualizer
 *   **Dedicated Live Monitor**: Full-width harmonic graph superimposing all tracks.
