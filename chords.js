@@ -63,33 +63,66 @@ export function getBestInversion(rootMidi, intervals, previousMidis) {
 }
 
 /**
- * Generates a musically coherent random progression.
+ * Generates a musically coherent random progression based on style.
+ * @param {string} [style='pop'] - The musical style (pop, jazz, blues, neo)
  * @returns {string} The generated progression string.
  */
-export function generateRandomProgression() {
-    const tonics = ['I', 'I', 'Imaj7', 'vi', 'vi7'];
-    const subdominants = ['IV', 'ii', 'ii7', 'IVmaj7'];
-    const dominants = ['V', 'V7', 'viiø7'];
-    const flavor = ['bVII', 'bVI', 'III7', 'VI7'];
+export function generateRandomProgression(style = 'pop') {
+    const pools = {
+        pop: {
+            tonics: ['I', 'vi', 'Imaj7', 'vi7'],
+            subdominants: ['IV', 'ii', 'ii7', 'IVmaj7'],
+            dominants: ['V', 'V7', 'Vsus4'],
+            flavor: ['bVII', 'bVI', 'IVm']
+        },
+        jazz: {
+            tonics: ['Imaj7', 'vi7', 'I6', 'iiim7'],
+            subdominants: ['iim7', 'IVmaj7', 'iiø7'],
+            dominants: ['V7', 'V7alt', 'V7b9', 'bII7'], // Including tritone sub
+            flavor: ['VI7', 'II7', 'IVm7', 'bVII7']
+        },
+        blues: {
+            tonics: ['I7', 'I7', 'I7', 'I7'],
+            subdominants: ['IV7', 'IV7', '#IVdim7'],
+            dominants: ['V7', 'V7', 'V7alt'],
+            flavor: ['bVI7', 'bVII7']
+        },
+        neo: {
+            tonics: ['Imaj9', 'vim9', 'Imaj13', 'III7#9'],
+            subdominants: ['IVmaj9', 'iim11', 'IVmaj7#11'],
+            dominants: ['V13', 'V7alt', 'V9sus4'],
+            flavor: ['bIImaj7', 'bVImaj7', 'v7']
+        }
+    };
 
+    const s = pools[style] || pools.pop;
     const getRand = (arr) => arr[Math.floor(Math.random() * arr.length)];
     
     const generate4Bars = (isFinal = true) => {
         let p = [];
-        p.push(getRand(tonics)); // Tonic start
-        
-        // Slot 2: Any diatonic or flavor
-        p.push(getRand([...tonics, ...subdominants, flavor[0], flavor[1]]));
-        
-        // Slot 3: Subdominant or Dominant
-        p.push(getRand([...subdominants, ...dominants, flavor[2]]));
-        
-        // Slot 4: Cadence
-        if (isFinal) {
-            p.push(Math.random() > 0.3 ? getRand(dominants) : getRand(['IV', 'iv', 'bVII']));
+        if (style === 'blues') {
+            // Standard 12-bar blues chunks
+            if (!isFinal) { // First 4 bars
+                p = ['I7', 'IV7', 'I7', 'I7'];
+            } else { // Last 4 bars (actually middle/last depends on context, but let's simplify)
+                p = ['V7', 'IV7', 'I7', 'V7'];
+            }
+        } else if (style === 'jazz') {
+            // Jazz often uses ii-V-I
+            const type = Math.random();
+            if (type < 0.4) p = ['iim7', 'V7', 'Imaj7', 'VI7'];
+            else if (type < 0.7) p = ['Imaj7', 'IVmaj7', 'iiø7', 'V7alt'];
+            else p = ['iiim7', 'VI7', 'iim7', 'V7'];
         } else {
-            // Half cadence or deceptive
-            p.push(Math.random() > 0.5 ? getRand(dominants) : getRand(['vi', 'vi7', 'IV']));
+            p.push(getRand(s.tonics)); // Tonic start
+            p.push(getRand([...s.tonics, ...s.subdominants, ...s.flavor]));
+            p.push(getRand([...s.subdominants, ...s.dominants]));
+            
+            if (isFinal) {
+                p.push(getRand(s.dominants));
+            } else {
+                p.push(Math.random() > 0.5 ? getRand(s.dominants) : getRand(s.tonics));
+            }
         }
         return p;
     };
@@ -100,20 +133,64 @@ export function generateRandomProgression() {
     if (length === 4) {
         progression = generate4Bars(true);
     } else {
-        // 8 bars: usually two 4-bar phrases
-        const phrase1 = generate4Bars(false);
-        const phrase2 = generate4Bars(true);
-        
-        // 40% chance to make them related (AA' form)
-        if (Math.random() < 0.4) {
-            phrase2[0] = phrase1[0];
-            phrase2[1] = phrase1[1];
+        if (style === 'blues') {
+            progression = ['I7', 'IV7', 'I7', 'I7', 'IV7', 'IV7', 'I7', 'I7', 'V7', 'IV7', 'I7', 'V7'];
+        } else {
+            const phrase1 = generate4Bars(false);
+            const phrase2 = generate4Bars(true);
+            
+            if (Math.random() < 0.5) {
+                phrase2[0] = phrase1[0];
+                phrase2[1] = phrase1[1];
+            }
+            progression = [...phrase1, ...phrase2];
         }
-        
-        progression = [...phrase1, ...phrase2];
     }
 
     return progression.join(' | ');
+}
+
+/**
+ * Mutates an existing progression string by subtly changing one or more chords.
+ */
+export function mutateProgression(progressionStr, style = 'Pop') {
+    const parts = progressionStr.split('|').map(p => p.trim());
+    if (parts.length === 0) return progressionStr;
+
+    // Pick 1 random index to mutate
+    const mutatedParts = [...parts];
+    const idx = Math.floor(Math.random() * parts.length);
+    const original = parts[idx];
+    
+    // Simple substitutions based on common harmonic functions
+    const substitutions = {
+        'I': ['vi', 'IV', 'Imaj7'],
+        'IV': ['ii', 'IVmaj7', 'iv'],
+        'V': ['V7', 'viio', 'bVII'],
+        'vi': ['I', 'iii', 'IV'],
+        'ii': ['IV', 'ii7', 'bIImaj7'],
+        '1': ['6-', '4', '1maj7'],
+        '4': ['2-', '4maj7', '4m'],
+        '5': ['57', '7o', 'b7'],
+        '6-': ['1', '3-', '4']
+    };
+
+    // If we have a known substitution, use it
+    const choices = substitutions[original] || [];
+    if (choices.length > 0) {
+        mutatedParts[idx] = choices[Math.floor(Math.random() * choices.length)];
+    } else {
+        // Just change the extension if it's a simple chord
+        if (!original.includes('7') && !original.includes('maj')) {
+            mutatedParts[idx] = original + (Math.random() > 0.5 ? 'maj7' : '7');
+        } else {
+            // Re-randomize just this one spot from a general pool
+            const pool = ['I', 'ii', 'iii', 'IV', 'V', 'vi'];
+            mutatedParts[idx] = pool[Math.floor(Math.random() * pool.length)];
+        }
+    }
+
+    return mutatedParts.join(' | ');
 }
 
 export function resolveChordRoot(part, keyRootMidi, baseOctave) {

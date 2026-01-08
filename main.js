@@ -1,9 +1,9 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
-import { KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
+import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
-import { validateProgression, generateRandomProgression } from './chords.js';
+import { validateProgression, generateRandomProgression, mutateProgression } from './chords.js';
 import { chordPatterns } from './accompaniment.js';
 import { exportToMidi } from './midi-export.js';
 import { UnifiedVisualizer } from './visualizer.js';
@@ -207,23 +207,42 @@ function saveCurrentState() {
 }
 
 function onSectionUpdate(id, field, value) {
-    const index = arranger.sections.findIndex(s => s.id === id);
-    if (index === -1) return;
-    const section = arranger.sections[index];
-
-    if (field === 'move') {
-        const newIndex = index + value;
-        if (newIndex >= 0 && newIndex < arranger.sections.length) {
-            // Swap sections
-            const temp = arranger.sections[index];
-            arranger.sections[index] = arranger.sections[newIndex];
-            arranger.sections[newIndex] = temp;
-            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    if (field === 'reorder') {
+        const newSections = value.map(sid => arranger.sections.find(s => s.id === sid));
+        // Check if order actually changed before pushing history
+        if (JSON.stringify(newSections.map(s => s.id)) !== JSON.stringify(arranger.sections.map(s => s.id))) {
+            pushHistory();
+            arranger.sections = newSections;
+        } else {
+            return; // No change
         }
     } else {
-        section[field] = value;
+        const index = arranger.sections.findIndex(s => s.id === id);
+        if (index === -1) return;
+        const section = arranger.sections[index];
+
+        if (field === 'move') {
+            const newIndex = index + value;
+            if (newIndex >= 0 && newIndex < arranger.sections.length) {
+                pushHistory();
+                // Swap sections
+                const temp = arranger.sections[index];
+                arranger.sections[index] = arranger.sections[newIndex];
+                arranger.sections[newIndex] = temp;
+            } else {
+                return;
+            }
+        } else {
+            section[field] = value;
+        }
     }
     
+    // Structural changes (reorder, move, add/delete) require full re-render
+    // Value/label/color changes shouldn't re-render everything to preserve focus
+    if (field === 'reorder' || field === 'move') {
+        renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    }
+
     validateProgression(renderChordVisualizer);
     flushBuffers();
     saveCurrentState();
@@ -239,14 +258,11 @@ function onSectionDelete(id) {
 }
 
 function onSectionDuplicate(id) {
+    const section = arranger.sections.find(s => s.id === id);
+    if (!section) return;
+    pushHistory();
+    const newSection = { ...section, id: generateId(), label: `${section.label} (Copy)` };
     const index = arranger.sections.findIndex(s => s.id === id);
-    if (index === -1) return;
-    const section = arranger.sections[index];
-    const newSection = {
-        id: generateId(),
-        label: `${section.label} (Copy)`,
-        value: section.value
-    };
     arranger.sections.splice(index + 1, 0, newSection);
     renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(renderChordVisualizer);
@@ -260,6 +276,24 @@ function addSection() {
     validateProgression(renderChordVisualizer);
     flushBuffers();
     saveCurrentState();
+}
+
+function applyTemplate(template) {
+    if (confirm(`Replace current arrangement with "${template.name}"?`)) {
+        pushHistory();
+        arranger.sections = template.sections.map(s => ({
+            id: generateId(),
+            label: s.label,
+            value: s.value,
+            color: '#3b82f6'
+        }));
+        renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+        validateProgression(renderChordVisualizer);
+        flushBuffers();
+        saveCurrentState();
+        ui.templatesContainer.style.display = 'none';
+        showToast(`Template "${template.name}" applied`);
+    }
 }
 
 /**
@@ -608,9 +642,41 @@ function updateChordVis(ev) {
         if (chordData) {
             ui.activeSectionLabel.textContent = chordData.sectionLabel || "";
             
-            // Highlight active section card in list
-            document.querySelectorAll('.section-card').forEach(card => {
-                card.classList.toggle('active', card.dataset.id == chordData.sectionId);
+            // Highlight active section card in list and update progress bar
+            document.querySelectorAll('.section-card').forEach(sCard => {
+                const isActive = sCard.dataset.id == chordData.sectionId;
+                sCard.classList.toggle('active', isActive);
+                
+                if (isActive) {
+                    const progressFill = sCard.querySelector('.section-progress-fill');
+                    if (progressFill) {
+                        // Calculate progress within this section
+                        // Find total beats in this section
+                        const sectionChords = arranger.progression.filter(c => c.sectionId === chordData.sectionId);
+                        const totalBeats = sectionChords.reduce((sum, c) => sum + c.beats, 0);
+                        
+                        // Find beats elapsed before this chord in this section
+                        const chordIndexInSection = sectionChords.findIndex(c => c === chordData);
+                        const elapsedBeats = sectionChords.slice(0, chordIndexInSection).reduce((sum, c) => sum + c.beats, 0);
+                        
+                        // We can't easily get the "sub-chord" step here from ev, but we can do a rough "per chord" or use ctx.step
+                        // For a smoother bar, we could use the global step relative to section start step
+                        const sectionEntry = arranger.stepMap.find(e => e.chord.sectionId === chordData.sectionId);
+                        if (sectionEntry) {
+                            const sectionStartStep = sectionEntry.start;
+                            // Find section end
+                            let sectionEndStep = sectionStartStep;
+                            arranger.stepMap.forEach(e => {
+                                if (e.chord.sectionId === chordData.sectionId) sectionEndStep = e.end;
+                            });
+                            
+                            const sectionTotalSteps = sectionEndStep - sectionStartStep;
+                            const currentStepInSection = (ctx.step % arranger.totalSteps) - sectionStartStep;
+                            const progress = Math.max(0, Math.min(100, (currentStepInSection / sectionTotalSteps) * 100));
+                            progressFill.style.width = `${progress}%`;
+                        }
+                    }
+                }
             });
         }
 
@@ -621,8 +687,6 @@ function updateChordVis(ev) {
         
         if (offsetTop !== undefined && cardHeight !== undefined) {
             const scrollPos = offsetTop - (container.clientHeight / 2) + (cardHeight / 2);
-            // We still use clientHeight for the container, which is usually cheap, 
-            // but we avoid getBoundingClientRect on every card.
             container.scrollTo({ top: scrollPos, behavior: 'smooth' });
         }
     }
@@ -800,22 +864,6 @@ window.deleteUserDrumPreset = (idx) => {
     }
 };
 
-function duplicateBar1Chords() {
-    if (arranger.sections.length === 0) return;
-    const section = arranger.sections[0]; // Apply to first section consistently for now
-    const bars = section.value.split('|').map(b => b.trim()).filter(b => b);
-    if (bars.length === 0) return;
-    
-    const bar1 = bars[0];
-    section.value = `${bar1} | ${bar1} | ${bar1} | ${bar1}`;
-    
-    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-    validateProgression(renderChordVisualizer);
-    flushBuffers();
-    saveCurrentState();
-    showToast(`${section.label}: Bar 1 duplicated`);
-}
-
 function updateMeasures(val) {
     gb.measures = parseInt(val);
     if (gb.currentMeasure >= gb.measures) gb.currentMeasure = 0;
@@ -831,24 +879,79 @@ function switchMeasure(idx) {
     renderGrid();
 }
 
+/**
+ * Pushes the current arranger state to the history stack.
+ */
+function pushHistory() {
+    arranger.history.push(JSON.stringify(arranger.sections));
+    if (arranger.history.length > 20) arranger.history.shift(); // Limit history
+}
+
+function undo() {
+    if (arranger.history.length === 0) return;
+    const last = arranger.history.pop();
+    arranger.sections = JSON.parse(last);
+    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    validateProgression(renderChordVisualizer);
+    flushBuffers();
+    saveCurrentState();
+    showToast("Undo successful");
+}
+
 function setupUIHandlers() {
     const listeners = [
         [ui.playBtn, 'click', togglePlay],
         [ui.bpmInput, 'change', e => setBpm(e.target.value)],
         [ui.tapBtn, 'click', handleTap],
         [ui.addSectionBtn, 'click', addSection],
-        [ui.dupMeasureChordBtn, 'click', duplicateBar1Chords],
+        [ui.templatesBtn, 'click', () => {
+            const isVisible = ui.templatesContainer.style.display === 'flex';
+            ui.templatesContainer.style.display = isVisible ? 'none' : 'flex';
+        }],
+        [ui.undoBtn, 'click', undo],
         [ui.randomizeBtn, 'click', () => {
-            arranger.sections = [{ id: generateId(), label: 'Random', value: generateRandomProgression() }];
+            pushHistory();
+            const newProg = generateRandomProgression(cb.style);
+            
+            // If we have a last interacted section, replace its value
+            const targetId = arranger.lastInteractedSectionId;
+            const section = arranger.sections.find(s => s.id === targetId);
+            
+            if (section) {
+                section.value = newProg;
+                showToast(`Randomized ${section.label}`);
+            } else {
+                // Fallback to replacing everything if no section found
+                arranger.sections = [{ id: generateId(), label: 'Random', value: newProg }];
+            }
+            
             renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
             validateProgression(renderChordVisualizer);
             flushBuffers();
+            saveCurrentState();
+        }],
+        [ui.mutateBtn, 'click', () => {
+            const targetId = arranger.lastInteractedSectionId;
+            const section = arranger.sections.find(s => s.id === targetId);
+            if (!section) {
+                showToast("Select a section to mutate");
+                return;
+            }
+            pushHistory();
+            section.value = mutateProgression(section.value, cb.style);
+            showToast(`Mutated ${section.label}`);
+            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+            validateProgression(renderChordVisualizer);
+            flushBuffers();
+            saveCurrentState();
         }],
         [ui.clearProgBtn, 'click', () => {
+            pushHistory();
             arranger.sections = [{ id: generateId(), label: 'Intro', value: '' }];
             renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
             validateProgression(renderChordVisualizer);
             flushBuffers();
+            saveCurrentState();
         }],
         [ui.saveBtn, 'click', saveProgression],
         [ui.saveDrumBtn, 'click', saveDrumPattern],
@@ -960,11 +1063,13 @@ function setupUIHandlers() {
     });
 
     window.addEventListener('keydown', e => {
-        if (e.key === ' ' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
+        const isTyping = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
+        
+        if (e.key === ' ' && !isTyping) {
             e.preventDefault(); togglePlay();
         }
         // Numeric hotkeys for Accompanist tabs
-        if (['1', '2', '3', '4'].includes(e.key) && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) {
+        if (['1', '2', '3', '4'].includes(e.key) && !isTyping) {
             const index = parseInt(e.key) - 1;
             const tabItem = document.querySelectorAll('.tab-item')[index];
             if (tabItem) {
@@ -1131,6 +1236,7 @@ function init() {
         renderMeasurePagination(switchMeasure);
         loadDrumPreset('Standard');
         setupPresets();
+        renderTemplates(SONG_TEMPLATES, applyTemplate);
         setupUIHandlers();
         renderUserPresets();
         renderUserDrumPresets();

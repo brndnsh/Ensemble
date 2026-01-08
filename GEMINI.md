@@ -28,6 +28,10 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ### Arranger (Song Structure)
 *   **Modular Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`).
+*   **Drag-and-Drop Reordering**: Native drag-and-drop support for intuitively rearranging song sections.
+*   **Song Templates**: One-click scaffolding for common song structures (Pop, Jazz, Blues).
+*   **Musical Mutation**: Algorithmic evolution of progressions via functional chord substitutions and extension injection.
+*   **Symbol Palette**: Integrated kebab menu (`⋮`) for cursor-accurate insertion of musical symbols (`ø`, `maj7`, `|`).
 *   **Section Management**: Named sections (Intro, Verse, Chorus) with duplication and deletion tools.
 *   **Auto-Save**: Automatic persistence of the arrangement state to `localStorage`.
 *   **Smart Layout**: Measure-based grid (4 per row) for structural clarity.

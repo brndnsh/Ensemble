@@ -6,12 +6,48 @@ export const INTERVAL_TO_NNS = { 0: '1', 1: 'b2', 2: '2', 3: 'b3', 4: '3', 5: '4
 export const INTERVAL_TO_ROMAN = { 0: 'I', 1: 'bII', 2: 'II', 3: 'bIII', 4: 'III', 5: 'IV', 6: 'bV', 7: 'V', 8: 'bVI', 9: 'VI', 10: 'bVII', 11: 'VII' };
 
 export const MIXER_GAIN_MULTIPLIERS = {
-    chords: 1.25,
-    bass: 1.1,
-    soloist: 0.8,
-    drums: 1.15,
-    master: 1.0
+    master: 1.0,
+    chords: 0.8,
+    bass: 1.2,
+    soloist: 0.9,
+    drums: 1.0
 };
+
+export const SONG_TEMPLATES = [
+    {
+        name: 'Standard Pop',
+        sections: [
+            { label: 'Intro', value: 'I | IV | V | I' },
+            { label: 'Verse', value: 'I | vi | IV | V' },
+            { label: 'Chorus', value: 'IV | V | I | vi' },
+            { label: 'Verse', value: 'I | vi | IV | V' },
+            { label: 'Chorus', value: 'IV | V | I | vi' },
+            { label: 'Outro', value: 'I | IV | I | I' }
+        ]
+    },
+    {
+        name: 'Jazz AABA',
+        sections: [
+            { label: 'A', value: 'iim7 | V7 | Imaj7 | VI7' },
+            { label: 'A', value: 'iim7 | V7 | Imaj7 | VI7' },
+            { label: 'B', value: 'IVmaj7 | IVm7 | iiim7 | VI7' },
+            { label: 'A', value: 'iim7 | V7 | Imaj7 | Imaj7' }
+        ]
+    },
+    {
+        name: 'Blues (12 Bar)',
+        sections: [
+            { label: 'Blues', value: 'I7 | IV7 | I7 | I7 | IV7 | IV7 | I7 | I7 | V7 | IV7 | I7 | V7' }
+        ]
+    },
+    {
+        name: 'EDM / Loop',
+        sections: [
+            { label: 'Build', value: 'vi | V | IV | III7' },
+            { label: 'Drop', value: 'vi | IV | I | V' }
+        ]
+    }
+];
 
 export const DRUM_PRESETS = {
     'Standard': { category: 'Basic', swing: 0, sub: '8th', 'Kick': [2,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], 'Snare': [0,0,0,0, 2,0,0,0, 0,0,0,0, 2,0,0,0], 'HiHat': [2,0,1,0, 2,0,1,0, 2,0,1,0, 2,0,1,0], 'Open': [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] },

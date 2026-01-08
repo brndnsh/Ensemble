@@ -20,9 +20,13 @@ export const ui = {
     vizPowerBtn: document.getElementById('vizPowerBtn'),
     sectionList: document.getElementById('sectionList'),
     addSectionBtn: document.getElementById('addSectionBtn'),
+    templatesBtn: document.getElementById('templatesBtn'),
+    templatesContainer: document.getElementById('templatesContainer'),
+    templateChips: document.getElementById('templateChips'),
     activeSectionLabel: document.getElementById('activeSectionLabel'),
-    dupMeasureChordBtn: document.getElementById('dupMeasureChordBtn'),
     randomizeBtn: document.getElementById('randomizeBtn'),
+    mutateBtn: document.getElementById('mutateBtn'),
+    undoBtn: document.getElementById('undoBtn'),
     clearProgBtn: document.getElementById('clearProgBtn'),
     saveBtn: document.getElementById('saveBtn'),
     shareBtn: document.getElementById('shareBtn'),
@@ -209,6 +213,23 @@ function animateHeight(el, updateCallback) {
 }
 
 /**
+ * Renders the song structure templates as clickable chips.
+ * @param {Array} templates 
+ * @param {Function} onSelect 
+ */
+export function renderTemplates(templates, onSelect) {
+    ui.templateChips.innerHTML = '';
+    templates.forEach(t => {
+        const chip = document.createElement('div');
+        chip.className = 'preset-chip';
+        chip.style.borderColor = 'var(--accent-color)';
+        chip.textContent = t.name;
+        chip.onclick = () => onSelect(t);
+        ui.templateChips.appendChild(chip);
+    });
+}
+
+/**
  * Renders the list of section inputs.
  * @param {Array} sections - The sections data.
  * @param {Function} onUpdate - Callback when a section is updated (id, field, value).
@@ -220,11 +241,39 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
     
     const updateLogic = () => {
         ui.sectionList.innerHTML = '';
-        sections.forEach(section => {
+        sections.forEach((section, index) => {
             const card = document.createElement('div');
             card.className = 'section-card';
             card.dataset.id = section.id;
+            card.dataset.index = index;
+            card.draggable = true;
             if (section.color) card.style.borderLeft = `4px solid ${section.color}`;
+            
+            // Drag and Drop Listeners
+            card.addEventListener('dragstart', (e) => {
+                card.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', index);
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                const draggingEl = document.querySelector('.dragging');
+                if (draggingEl && draggingEl !== card) {
+                    const rect = card.getBoundingClientRect();
+                    const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+                    ui.sectionList.insertBefore(draggingEl, next ? card.nextSibling : card);
+                }
+            });
+
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                // Calculate new order and notify main.js
+                const newOrder = Array.from(ui.sectionList.querySelectorAll('.section-card'))
+                    .map(el => el.dataset.id);
+                onUpdate(null, 'reorder', newOrder);
+            });
             
             const header = document.createElement('div');
             header.className = 'section-header';
@@ -250,7 +299,11 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             labelInput.className = 'section-label-input';
             labelInput.value = section.label;
             labelInput.placeholder = 'Section Name';
-            labelInput.oninput = (e) => onUpdate(section.id, 'label', e.target.value);
+            labelInput.oninput = (e) => {
+                arranger.lastInteractedSectionId = section.id;
+                onUpdate(section.id, 'label', e.target.value);
+            };
+            labelInput.onfocus = () => arranger.lastInteractedSectionId = section.id;
             
             labelGroup.appendChild(colorInput);
             labelGroup.appendChild(labelInput);
@@ -275,19 +328,73 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             duplicateBtn.className = 'section-duplicate-btn';
             duplicateBtn.innerHTML = '⧉';
             duplicateBtn.title = 'Duplicate Section';
-            duplicateBtn.onclick = () => onDuplicate(section.id);
-
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'section-delete-btn';
             deleteBtn.innerHTML = '&times;';
             deleteBtn.title = 'Delete Section';
             deleteBtn.onclick = () => onDelete(section.id);
+
+            const kebabBtn = document.createElement('button');
+            kebabBtn.className = 'section-kebab-btn';
+            kebabBtn.innerHTML = '&#8942;'; // Vertical ellipsis
+            kebabBtn.title = 'Insert Symbols';
+
+            const dropdown = document.createElement('div');
+            dropdown.className = 'symbol-dropdown';
+            dropdown.style.display = 'none';
+            
+            const symbols = [
+                { s: '|', t: 'Bar' }, { s: 'maj7', t: 'maj7' }, { s: 'm7', t: 'm7' }, { s: '7', t: '7' },
+                { s: 'ø', t: 'Half-Dim' }, { s: 'o', t: 'Dim' }, { s: 'sus4', t: 'sus4' }, { s: 'add9', t: 'add9' },
+                { s: 'b', t: 'Flat' }, { s: '#', t: 'Sharp' }, { s: 'maj9', t: 'maj9' }, { s: 'm9', t: 'm9' }
+            ];
+
+            symbols.forEach(sym => {
+                const btn = document.createElement('button');
+                btn.className = 'symbol-btn';
+                btn.textContent = sym.s;
+                btn.title = sym.t;
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const input = card.querySelector('.section-prog-input');
+                    const start = input.selectionStart;
+                    const end = input.selectionEnd;
+                    const scrollTop = input.scrollTop; // Save scroll
+                    const text = input.value;
+                    const before = text.substring(0, start);
+                    const after = text.substring(end, text.length);
+                    // Add space for bar lines
+                    const insert = sym.s === '|' ? ' | ' : sym.s;
+                    input.value = before + insert + after;
+                    
+                    const newPos = start + insert.length;
+                    input.focus();
+                    input.setSelectionRange(newPos, newPos);
+                    input.scrollTop = scrollTop; // Restore scroll
+                    
+                    onUpdate(section.id, 'value', input.value);
+                };
+                dropdown.appendChild(btn);
+            });
+
+            kebabBtn.onclick = (e) => {
+                e.stopPropagation();
+                const isVisible = dropdown.style.display === 'grid';
+                // Close all other dropdowns
+                document.querySelectorAll('.symbol-dropdown').forEach(d => d.style.display = 'none');
+                dropdown.style.display = isVisible ? 'none' : 'grid';
+            };
+
+            // Close on outside click
+            window.addEventListener('click', () => dropdown.style.display = 'none', { once: true });
             
             header.appendChild(labelGroup);
             actions.appendChild(moveUpBtn);
             actions.appendChild(moveDownBtn);
             actions.appendChild(duplicateBtn);
+            actions.appendChild(kebabBtn);
             if (sections.length > 1) actions.appendChild(deleteBtn);
+            actions.appendChild(dropdown); // Move dropdown inside relative container
             header.appendChild(actions);
             
             const progInput = document.createElement('textarea');
@@ -295,10 +402,22 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             progInput.value = section.value;
             progInput.placeholder = 'I | IV | V...';
             progInput.spellcheck = false;
-            progInput.oninput = (e) => onUpdate(section.id, 'value', e.target.value);
+            progInput.oninput = (e) => {
+                arranger.lastInteractedSectionId = section.id;
+                onUpdate(section.id, 'value', e.target.value);
+            };
+            progInput.onfocus = () => arranger.lastInteractedSectionId = section.id;
             
             card.appendChild(header);
             card.appendChild(progInput);
+
+            const progressContainer = document.createElement('div');
+            progressContainer.className = 'section-progress-container';
+            const progressFill = document.createElement('div');
+            progressFill.className = 'section-progress-fill';
+            progressContainer.appendChild(progressFill);
+            card.appendChild(progressContainer);
+
             ui.sectionList.appendChild(card);
         });
     };
@@ -349,17 +468,51 @@ export function renderChordVisualizer() {
         arranger.cachedCards = [];
         if (arranger.progression.length === 0) return;
 
-        let measureBox = document.createElement('div');
-        measureBox.className = 'measure-box';
-        ui.chordVisualizer.appendChild(measureBox);
-        
+        let currentSectionId = null;
+        let sectionBlock = null;
+        let sectionContent = null;
+        let measureBox = null;
         let currentBeatsInBar = 0;
 
         arranger.progression.forEach((chord, i) => {
+            // New Section Handling
+            if (chord.sectionId !== currentSectionId) {
+                currentSectionId = chord.sectionId;
+                
+                sectionBlock = document.createElement('div');
+                sectionBlock.className = 'section-block';
+                
+                // Use section color for subtle background
+                const section = arranger.sections.find(s => s.id === chord.sectionId);
+                if (section && section.color) {
+                    sectionBlock.style.background = `${section.color}10`; // Very low opacity
+                    sectionBlock.style.borderColor = `${section.color}20`;
+                }
+
+                const header = document.createElement('div');
+                header.className = 'section-block-header';
+                if (section && section.color) header.style.color = section.color;
+                header.textContent = chord.sectionLabel || "Untitled Section";
+                sectionBlock.appendChild(header);
+
+                sectionContent = document.createElement('div');
+                sectionContent.className = 'section-block-content';
+                sectionBlock.appendChild(sectionContent);
+
+                ui.chordVisualizer.appendChild(sectionBlock);
+                
+                // Force new measure box at start of section
+                measureBox = document.createElement('div');
+                measureBox.className = 'measure-box';
+                sectionContent.appendChild(measureBox);
+                currentBeatsInBar = 0;
+            }
+
+            // Standard Measure Handling
             if (currentBeatsInBar >= 4) {
                 measureBox = document.createElement('div');
                 measureBox.className = 'measure-box';
-                ui.chordVisualizer.appendChild(measureBox);
+                sectionContent.appendChild(measureBox);
                 currentBeatsInBar = 0;
             }
 
@@ -368,20 +521,12 @@ export function renderChordVisualizer() {
             if (chord.beats < 4) div.classList.add('small');
             if (chord.isMinor) div.classList.add('minor');
             
-            // Apply section color
-            const section = arranger.sections.find(s => s.id === chord.sectionId);
-            if (section && section.color) {
-                div.style.borderTop = `3px solid ${section.color}`;
-                div.style.background = `linear-gradient(to bottom, ${section.color}15, var(--card-bg))`;
-            }
-            
             let displayData;
             if (arranger.notation === 'name') displayData = chord.display.abs;
             else if (arranger.notation === 'nns') displayData = chord.display.nns;
             else displayData = chord.display.rom;
 
             div.appendChild(createChordLabel(displayData));
-            
             div.onclick = () => window.previewChord(i);
             
             measureBox.appendChild(div);
@@ -389,9 +534,10 @@ export function renderChordVisualizer() {
             currentBeatsInBar += chord.beats;
         });
 
-        // Cache dimensions for efficient scrolling without reflows
+        // Cache dimensions
         setTimeout(() => {
-            arranger.cardOffsets = arranger.cachedCards.map(card => card.offsetTop - ui.chordVisualizer.offsetTop);
+            const container = ui.chordVisualizer;
+            arranger.cardOffsets = arranger.cachedCards.map(card => card.offsetTop - container.offsetTop);
             arranger.cardHeights = arranger.cachedCards.map(card => card.clientHeight);
         }, 100);
     };
