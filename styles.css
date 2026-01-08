@@ -315,22 +315,6 @@ button {
     }
 }
 
-.arranger-main-controls {
-    display: flex; 
-    gap: 0.5rem; 
-    margin-bottom: 1rem;
-}
-
-#arrangerActionTrigger {
-    flex: 2;
-    justify-content: center;
-}
-
-#templatesBtn {
-    flex: 1;
-}
-
-
 .library-label {
     font-size: 0.9rem;
     color: var(--text-muted);
@@ -507,14 +491,6 @@ button {
 }
 
 @media (min-width: 900px) {
-    .arranger-main-controls {
-        display: flex;
-    }
-
-    #templatesBtn {
-        flex: 1;
-    }
-
     #arrangerActionTrigger {
         display: none;
     }
@@ -760,12 +736,36 @@ h2 {
     flex-direction: column;
     padding: 0.75rem 1rem;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--step-bg);
+    border: 1px solid var(--border-color);
     width: 100%;
     box-sizing: border-box;
     flex-shrink: 0;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
 }
+
+.section-block:hover {
+    border-color: var(--accent-color);
+    background: var(--step-bg-hover);
+}
+
+/* --- Editor Modal --- */
+.drag-handle {
+    cursor: grab;
+    padding: 0 0.5rem 0 0;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+    color: var(--accent-color);
+}
+
 
 .section-block-content {
     display: grid;
@@ -1113,7 +1113,7 @@ h2 {
 }
 
 /* --- Settings Overlay --- */
-#settingsOverlay {
+#settingsOverlay, #editorOverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -1130,7 +1130,7 @@ h2 {
     backdrop-filter: blur(4px);
 }
 
-#settingsOverlay.active {
+#settingsOverlay.active, #editorOverlay.active {
     opacity: 1;
     pointer-events: auto;
 }
@@ -1299,14 +1299,25 @@ select option {
     opacity: 1;
 }
 
+/* --- Templates Container --- */
+.templates-container {
+    display: none;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--input-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
 /* Section Editor Styles */
 .section-card {
-    background: var(--input-bg);
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 1rem;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-    cursor: grab;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .section-card:active {

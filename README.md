@@ -5,7 +5,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 ## Features
 
 ### 🖋️ Arranger (Song Structure)
-*   **🪄 Actions Hub**: A consolidated menu for structural tools (Add Section, Mutate, Randomize, Save) that keeps the interface clean and focused on mobile.
+*   **✏️ Editor Modal**: A dedicated workspace for managing song structure, editing sections, and accessing structural tools (Add, Mutate, Randomize).
 *   **📋 Song Templates**: Quickly scaffold common song structures like "Pop", "Jazz", or "12-Bar Blues" with a single click.
 *   **Modular Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`).
 *   **Drag-and-Drop Reordering**: Intuitively reorder sections by dragging them into place.

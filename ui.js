@@ -82,7 +82,10 @@ export const ui = {
     haptic: document.getElementById('hapticCheck'),
     exportMidiBtn: document.getElementById('exportMidiBtn'),
     flashOverlay: document.getElementById('flashOverlay'),
-    resetSettingsBtn: document.getElementById('resetSettingsBtn')
+    resetSettingsBtn: document.getElementById('resetSettingsBtn'),
+    editorOverlay: document.getElementById('editorOverlay'),
+    editArrangementBtn: document.getElementById('editArrangementBtn'),
+    closeEditorBtn: document.getElementById('closeEditorBtn')
 };
 
 export function setupPanelMenus() {
@@ -251,16 +254,27 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             card.className = 'section-card';
             card.dataset.id = section.id;
             card.dataset.index = index;
-            card.draggable = true;
+            // Removed card.draggable = true;
             if (section.color) card.style.borderLeft = `4px solid ${section.color}`;
+
+            const header = document.createElement('div');
+            header.className = 'section-header';
             
-            // Drag and Drop Listeners
-            card.addEventListener('dragstart', (e) => {
+            // Drag Handle
+            const dragHandle = document.createElement('div');
+            dragHandle.className = 'drag-handle';
+            dragHandle.innerHTML = '⠿';
+            dragHandle.draggable = true;
+            dragHandle.title = 'Drag to reorder';
+            
+            // Drag and Drop Listeners on Handle
+            dragHandle.addEventListener('dragstart', (e) => {
                 card.classList.add('dragging');
                 e.dataTransfer.setData('text/plain', index);
                 e.dataTransfer.effectAllowed = 'move';
             });
 
+            // Allow dropping on the card itself (the drop target is usually the container/card)
             card.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
@@ -272,17 +286,14 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
                 }
             });
 
-            card.addEventListener('dragend', () => {
+            dragHandle.addEventListener('dragend', () => {
                 card.classList.remove('dragging');
                 // Calculate new order and notify main.js
                 const newOrder = Array.from(ui.sectionList.querySelectorAll('.section-card'))
                     .map(el => el.dataset.id);
                 onUpdate(null, 'reorder', newOrder);
             });
-            
-            const header = document.createElement('div');
-            header.className = 'section-header';
-            
+
             const labelGroup = document.createElement('div');
             labelGroup.style.display = 'flex';
             labelGroup.style.alignItems = 'center';
@@ -393,6 +404,7 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             // Close on outside click
             window.addEventListener('click', () => dropdown.style.display = 'none', { once: true });
             
+            header.appendChild(dragHandle); // Add drag handle first
             header.appendChild(labelGroup);
             actions.appendChild(moveUpBtn);
             actions.appendChild(moveDownBtn);
@@ -426,12 +438,9 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             ui.sectionList.appendChild(card);
         });
     };
-
-    if (panel) {
-        animateHeight(panel, updateLogic);
-    } else {
-        updateLogic();
-    }
+    
+    // updateLogic handles the actual rendering of the section list
+    updateLogic();
 }
 
 /**
@@ -486,6 +495,9 @@ export function renderChordVisualizer() {
                 
                 sectionBlock = document.createElement('div');
                 sectionBlock.className = 'section-block';
+                sectionBlock.onclick = () => {
+                    document.dispatchEvent(new CustomEvent('open-editor', { detail: { sectionId: currentSectionId } }));
+                };
                 
                 // Use section color for subtle background
                 const section = arranger.sections.find(s => s.id === chord.sectionId);
@@ -532,7 +544,10 @@ export function renderChordVisualizer() {
             else displayData = chord.display.rom;
 
             div.appendChild(createChordLabel(displayData));
-            div.onclick = () => window.previewChord(i);
+            div.onclick = (e) => {
+                e.stopPropagation();
+                window.previewChord(i);
+            };
             
             measureBox.appendChild(div);
             arranger.cachedCards.push(div);
