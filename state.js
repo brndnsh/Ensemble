@@ -31,7 +31,9 @@ export const arranger = {
     // UI Cache for Visualizer
     cachedCards: [],
     cardOffsets: [],
-    cardHeights: []
+    // History for Undo
+    history: [],
+    lastInteractedSectionId: 's1'
 };
 
 export const cb = {

@@ -67,10 +67,20 @@
 
             <div style="margin-bottom: 1.5rem;">
                 <div id="sectionList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;"></div>
-                <button id="addSectionBtn" style="width: 100%; padding: 0.75rem; border: 1px dashed #475569; background: transparent; color: #94a3b8; cursor: pointer;">+ Add Section</button>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                    <button id="addSectionBtn" style="flex: 2; padding: 0.75rem; border: 1px dashed #475569; background: transparent; color: #94a3b8; cursor: pointer;">+ Add Section</button>
+                    <button id="templatesBtn" style="flex: 1; padding: 0.75rem; border: 1px solid #475569; background: rgba(51, 65, 85, 0.5); color: #94a3b8; cursor: pointer;" title="Song Templates">📋 Templates</button>
+                </div>
+                
+                <div id="templatesContainer" style="display: none; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; padding: 0.75rem; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="width: 100%; font-size: 0.8rem; color: #64748b; margin-bottom: 0.4rem;">Select a structure template (replaces current):</div>
+                    <div id="templateChips" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
+                </div>
                 
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                    <button id="randomizeBtn" title="Randomize Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Randomize Progression">🎲 <span>Random</span></button>
+                    <button id="randomizeBtn" title="Randomize Progression" style="flex: 1.5; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Randomize Progression">🎲 <span>Random</span></button>
+                    <button id="mutateBtn" title="Mutate Progression" style="flex: 1.5; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Mutate Progression">✨ <span>Mutate</span></button>
+                    <button id="undoBtn" title="Undo Last Change" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 60px;" aria-label="Undo Last Change">↩️ <span>Undo</span></button>
                     <button id="clearProgBtn" title="Clear Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Clear Progression">🗑️ <span>Clear</span></button>
                     <button id="saveBtn" title="Save Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Save Progression">💾 <span>Save</span></button>
                     <button id="shareBtn" title="Share Progression" style="flex: 1; padding: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-width: 80px;" aria-label="Share Progression">🔗 <span>Share</span></button>

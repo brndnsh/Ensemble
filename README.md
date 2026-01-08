@@ -6,7 +6,11 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ### 🖋️ Arranger (Song Structure)
 *   **Modular Progression Builder**: Input progressions using Roman Numerals (`I V vi IV`), Nashville Numbers (`1 5 6- 4`), or Chord Names (`C G Am F`).
-*   **Section Management**: Organize your song into named sections (Intro, Verse, Chorus). Reorder, duplicate, or delete sections to build complex forms.
+*   **Drag-and-Drop Reordering**: Intuitively reorder sections by dragging them into place.
+*   **Song Templates**: Quickly scaffold common song structures like "Pop", "Jazz", or "12-Bar Blues" with a single click.
+*   **Musical Mutation**: Use the **Mutate (✨)** tool to subtly evolve a section by substituting functionally similar chords or adding harmonic extensions.
+*   **Symbol Palette**: Access a kebab menu (`⋮`) on any section to insert hard-to-type symbols like `ø`, `maj7`, or bar lines (`|`) precisely at your cursor.
+*   **Section Management**: Organize your song into named sections (Intro, Verse, Chorus). Duplicate or delete sections to build complex forms.
 *   **Auto-Save**: Your arrangement is automatically persisted to local storage. Refreshing the page won't lose your work.
 *   **User Library**: Save your custom progressions as named presets for quick access.
 *   **Smart Layout**: Chords are displayed in measures (4 per row on desktop) for clear structural visualization.
