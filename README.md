@@ -15,6 +15,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **User Library**: Save your custom progressions as named presets for quick access.
 *   **Smart Layout**: Chords are displayed in measures (4 per row on desktop) for clear structural visualization.
 *   **Transposition**: Instantly transpose the entire progression to any key while preserving your custom chord voicings.
+*   **Relative Key Toggle**: Switch between Major and Relative Minor modes (e.g., C Major to A Minor) with one click. This intelligently rewrites Roman Numerals and Nashville Numbers while keeping the sound identical, and informs the generative algorithms (Bass/Soloist) to use appropriate modal scales.
 
 ### 🎸 Accompanist (Performance)
 *   **Virtual Band**: Manage your ensemble through a tabbed interface for **Chords**, **Bass**, **Soloist**, and **Grooves**.
