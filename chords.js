@@ -212,6 +212,63 @@ export function mutateProgression(progressionStr, style = 'Pop') {
     return mutatedParts.join(' | ');
 }
 
+/**
+ * Intelligent transposition for relative major/minor toggles.
+ * Rewrites the progression string while maintaining original pitches.
+ * @param {string} input - The progression string.
+ * @param {number} semitoneShift - How many semitones the key is moving (e.g., -3 for Maj->Min).
+ * @param {boolean} targetIsMinor - Whether the new key is minor.
+ * @returns {string} The transformed progression string.
+ */
+export function transformRelativeProgression(input, semitoneShift, targetIsMinor) {
+    const parts = input.split(/([\s,|,-]+|\/)/);
+    const transformed = parts.map(part => {
+        if (!part.trim() || part === '|' || part === '/' || part === ',' || part === '-') return part;
+        
+        const romanMatch = part.match(ROMAN_REGEX);
+        const nnsMatch = part.match(NNS_REGEX);
+        
+        if (romanMatch) {
+            const accidental = romanMatch[1] || "";
+            const numeral = romanMatch[2];
+            const suffix = part.slice(romanMatch[0].length);
+            
+            let originalOffset = ROMAN_VALS[numeral.toUpperCase()];
+            if (accidental === 'b') originalOffset -= 1;
+            if (accidental === '#') originalOffset += 1;
+            
+            // Calculate new offset relative to the new key
+            const newOffset = (originalOffset - semitoneShift + 12) % 12;
+            let newRoman = INTERVAL_TO_ROMAN[newOffset];
+            
+            // Preserve the original casing/quality of the chord
+            const isSourceMinorChord = numeral === numeral.toLowerCase();
+            if (isSourceMinorChord) {
+                newRoman = newRoman.toLowerCase();
+            }
+            
+            return newRoman + suffix;
+        } else if (nnsMatch) {
+            const accidental = nnsMatch[1] || "";
+            const number = parseInt(nnsMatch[2]);
+            const suffix = part.slice(nnsMatch[0].length);
+            
+            let originalOffset = NNS_OFFSETS[number - 1];
+            if (accidental === 'b') originalOffset -= 1;
+            if (accidental === '#') originalOffset += 1;
+            
+            const newOffset = (originalOffset - semitoneShift + 12) % 12;
+            const newNNS = INTERVAL_TO_NNS[newOffset];
+            
+            return newNNS + suffix;
+        }
+        
+        return part;
+    });
+    
+    return transformed.join('');
+}
+
 export function resolveChordRoot(part, keyRootMidi, baseOctave) {
     const romanMatch = part.match(ROMAN_REGEX);
     const nnsMatch = part.match(NNS_REGEX);
@@ -358,9 +415,11 @@ function parseProgressionPart(input, key, initialMidis) {
                 let { quality, is7th } = getChordDetails(suffixPart);
                 
                 if (romanMatch) {
+                    const accidental = romanMatch[1] || "";
                     const numeral = romanMatch[2];
                     if (numeral === numeral.toLowerCase() && quality === 'major') quality = 'minor';
-                    if (numeral.toLowerCase() === 'vii' && !suffixPart.match(/(maj|min|m|dim|o|aug|\+)/)) quality = 'dim';
+                    // Only auto-diminished if it's a natural vii (no b or # prefix)
+                    if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|aug|\+)/)) quality = 'dim';
                 }
 
                 let intervals = getIntervals(quality, is7th, cb.density);

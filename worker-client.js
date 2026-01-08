@@ -43,7 +43,13 @@ export function syncWorker() {
     timerWorker.postMessage({
         type: 'syncState',
         data: {
-            arranger: { progression: arranger.progression, stepMap: arranger.stepMap, totalSteps: arranger.totalSteps },
+            arranger: { 
+                progression: arranger.progression, 
+                stepMap: arranger.stepMap, 
+                totalSteps: arranger.totalSteps,
+                key: arranger.key,
+                isMinor: arranger.isMinor
+            },
             cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled },
             bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq },
             sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq },

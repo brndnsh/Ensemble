@@ -42,7 +42,7 @@
                     <h2>Arranger</h2>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <button id="maximizeChordBtn" title="Maximize" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Maximize Chords">⛶</button>
+                    <button id="maximizeChordBtn" title="Maximize" class="header-btn" aria-label="Maximize Chords">⛶</button>
                     <select id="keySelect" aria-label="Select Key">
                         <option value="C">Key: C</option>
                         <option value="Db">Key: Db</option>
@@ -57,8 +57,9 @@
                         <option value="Bb">Key: Bb</option>
                         <option value="B">Key: B</option>
                     </select>
-                    <button id="transDownBtn" title="Transpose Down" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Transpose Down">♭</button>
-                    <button id="transUpBtn" title="Transpose Up" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" aria-label="Transpose Up">♯</button>
+                    <button id="relKeyBtn" title="Relative Key (Major/Minor)" class="header-btn" style="background: rgba(148, 163, 184, 0.1); color: var(--accent-color); border: 1px solid rgba(148, 163, 184, 0.2);" aria-label="Relative Key Toggle">rel</button>
+                    <button id="transDownBtn" title="Transpose Down" class="header-btn" aria-label="Transpose Down">♭</button>
+                    <button id="transUpBtn" title="Transpose Up" class="header-btn" aria-label="Transpose Up">♯</button>
                 </div>
             </div>
 

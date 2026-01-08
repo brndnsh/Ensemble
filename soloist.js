@@ -142,8 +142,9 @@ function getScaleForChord(chord, style, nextChord) {
         return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
     }
 
-    const keyRoot = KEY_ORDER.indexOf(cb.key);
-    const keyIntervals = [0, 2, 4, 5, 7, 9, 11]; // Major Scale
+    const keyRoot = KEY_ORDER.indexOf(arranger.key);
+    // Use Natural Minor intervals if the arranger is in a minor mode
+    const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
     const keyNotes = keyIntervals.map(i => (keyRoot + i) % 12);
     
     const chordRoot = chord.rootMidi % 12;
@@ -303,6 +304,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                     if (isMinor && lick.quality.includes('minor')) qualityMatch = true;
                     if (q === 'halfdim' && lick.quality.includes('halfdim')) qualityMatch = true;
                     if (isDom && (lick.quality.includes('major') || lick.quality.includes('minor'))) qualityMatch = true;
+
+                    // Mode-aware lick filtering
+                    if (arranger.isMinor && isMajor && !lick.quality.includes('minor')) qualityMatch = false;
 
                     if (style === 'blues') {
                         if (isTurnaround) return ['turnaround_1', 'turnaround_2'].includes(name) && qualityMatch;

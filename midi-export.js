@@ -78,6 +78,30 @@ class MidiTrack {
         this.addEvent(deltaTime, [0xFF, 0x06, ...writeVarInt(bytes.length), ...bytes]);
     }
 
+    setKeySignature(deltaTime, root, isMinor) {
+        // sf: number of sharps (pos) or flats (neg)
+        // mi: 0 for major, 1 for minor
+        const keyMap = {
+            'C': 0, 'G': 1, 'D': 2, 'A': 3, 'E': 4, 'B': 5, 'Gb': -6, 
+            'Db': -5, 'Ab': -4, 'Eb': -3, 'Bb': -2, 'F': -1
+        };
+        
+        // Normalize enharmonics if needed
+        const rootLookup = (root === 'F#' ? 'Gb' : (root === 'C#' ? 'Db' : root));
+        let sf = keyMap[rootLookup] || 0;
+        
+        // If minor, sf is same as the relative major (3 semitones up)
+        if (isMinor) {
+            const KEY_ORDER = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+            const idx = (KEY_ORDER.indexOf(rootLookup) + 3) % 12;
+            const relMajor = KEY_ORDER[idx];
+            sf = keyMap[relMajor] || 0;
+        }
+
+        const sfByte = sf < 0 ? (256 + sf) : sf;
+        this.addEvent(deltaTime, [0xFF, 0x59, 0x02, sfByte, isMinor ? 0x01 : 0x00]);
+    }
+
     endOfTrack(deltaTime = 0) {
         this.addEvent(deltaTime, [0xFF, 0x2F, 0x00]);
     }
@@ -153,6 +177,7 @@ export function exportToMidi() {
         // Init Meta
         metaTrack.setName(0, 'Ensemble Export');
         metaTrack.setTempo(0, ctx.bpm);
+        metaTrack.setKeySignature(0, arranger.key, arranger.isMinor);
 
         // Init Instruments
         chordTrack.setName(0, 'Chords');

@@ -5,11 +5,17 @@ import { KEY_ORDER } from './config.js';
 /**
  * Determines the best scale for the bass based on chord and context.
  */
-function getScaleForBass(chord, nextChord) {
+function getScaleForBass(chord, nextChord, isMinor = false) {
     const isV7toMinor = chord.intervals.includes(10) && chord.intervals.includes(4) && 
                         nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
 
     if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
+
+    // Mode-aware diatonic scaling
+    if (isMinor) {
+        if (chord.quality === 'major') return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian (b7 common in minor)
+        if (chord.quality === 'minor') return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
+    }
 
     // Fallback to standard chord-scale
     switch (chord.quality) {
@@ -26,7 +32,7 @@ function getScaleForBass(chord, nextChord) {
 /**
  * Generates a frequency for a bass line.
  */
-export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 41, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0) {
+export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 41, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0, isMinor = false) {
     if (!currentChord) return null;
 
     // --- Structural Energy Mapping (Intensity) ---
@@ -228,7 +234,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     const velocity = (intBeat % 2 === 1) ? 1.15 : 1.0;
 
     // Use smarter scale logic
-    const scale = getScaleForBass(currentChord, nextChord);
+    const scale = getScaleForBass(currentChord, nextChord, isMinor);
 
     // Final Beat of Chord: Smart Approach Note
     if (intBeat === beatsInChord - 1 && nextChord) {
