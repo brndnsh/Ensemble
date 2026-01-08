@@ -27,13 +27,16 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Genre Presets**: Includes authentic patterns for Rock, Funk, Jazz, Reggae, Bossa Nova, and more, color-coded by genre.
 
 ### 🎸 Bassist
-*   **Walking Bass Generator**: Automatically generates melodic walking bass lines that follow your arranger data. The engine uses sophisticated targeting logic to land on the Root at measure boundaries.
-*   **Rhythmic Styles**: Choose between Whole Note, Half Note, Arpeggio, Walking (Quarter Note), and Bossa Nova patterns.
+*   **Algorithmic Bass Lines**: Automatically generates melodic lines that follow your arranger data. The engine uses sophisticated targeting logic to land on the Root at measure boundaries.
+*   **Slash Chord Support**: Fully respects slash notation (e.g., `C/G`), prioritizing specified bass notes for a professional harmonic foundation.
+*   **Intensity-Aware**: Dynamically builds energy alongside the soloist, adding more fills and register jumps as sections progress.
+*   **Rhythmic Styles**: Choose between Whole Note, Half Note, Arpeggio, Walking (Quarter Note), Funk (16th syncopation), Neo-Soul (Deep register with micro-lag), and Bossa Nova patterns.
 
 ### 🎸 Soloist
 *   **Algorithmic Improvisation**: Generates melodic lines in real-time, thinking in phrases and rhythmic cells rather than random notes.
-*   **Soloing Styles**: Choose from Scalar, Shreddy, Blues, Minimal, and Neo-Soul.
+*   **Soloing Styles**: Choose from Scalar, Shreddy, Blues, Minimal (Gilmour-inspired), Bird (Bebop), and Neo-Soul.
 *   **Dual-Clock System**: Capable of playing "straight" or "laid back" lines even over swinging drums for a more human feel.
+*   **Micro-Timing**: Sophisticated "behind the beat" timing for Neo-Soul and sophisticated bebop phrasing for Jazz styles.
 
 ### 📊 Unified Visualizer
 *   **Integrated Live Monitor**: A dedicated harmonic graph integrated into the main dashboard that superimposes Bass and Soloist tracks on top of your chord progression.
