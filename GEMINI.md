@@ -31,6 +31,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **Drag-and-Drop Reordering**: Native drag-and-drop support for intuitively rearranging song sections.
 *   **Song Templates**: One-click scaffolding for common song structures (Pop, Jazz, Blues).
 *   **Musical Mutation**: Algorithmic evolution of progressions via functional chord substitutions and extension injection.
+*   **Relative Key Toggle**: Intelligent `maj/min` toggle that rewrites Roman/NNS notation while preserving pitches and informing generative modes.
 *   **Symbol Palette**: Integrated kebab menu (`⋮`) for cursor-accurate insertion of musical symbols (`ø`, `maj7`, `|`).
 *   **Section Management**: Named sections (Intro, Verse, Chorus) with duplication and deletion tools.
 *   **Auto-Save**: Automatic persistence of the arrangement state to `localStorage`.
@@ -49,6 +50,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ### Bassist & Soloist
 *   **Algorithmic Performance**: Generative lines that react to Arranger data.
+*   **Mode-Aware Logic**: Algorithms adapt scale selection and phrasing based on the `isMinor` state (e.g., using Aeolian vs Ionian).
 *   **Soloist Styles**: Scalar, Shreddy, Blues, Minimal (Gilmour), Bird (Bebop), and Neo-Soul.
 *   **Bassist Styles**: Whole, Half, Arp, Walking, Funk, Neo-Soul, and Bossa Nova.
 *   **Slash Chord Support**: Bassist prioritizes specified bass notes (e.g., C/G).
@@ -62,7 +64,7 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 
 ### General
 *   **Mixer**: Adjust individual levels for Master, Chords, Bass, and Drums.
-*   **MIDI Export**: High-quality SMF export with GM program changes, chord markers, and pitch bends.
+*   **MIDI Export**: High-quality SMF export with GM program changes, chord markers, pitch bends, and mode-aware Key Signature metadata.
 *   **PWA**: Fully installable and works offline.
 *   **Sharing**: Share progressions via URL.
 
