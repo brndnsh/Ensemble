@@ -2,8 +2,27 @@ import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN 
 import { normalizeKey, getFrequency } from './utils.js';
 import { cb, arranger } from './state.js';
 import { ui } from './ui.js';
-import { updateProgressionCache } from './main.js';
 import { syncWorker } from './worker-client.js';
+
+/**
+ * Caches progression metadata to avoid redundant calculations in the scheduler.
+ */
+export function updateProgressionCache() {
+    if (!arranger.progression.length) {
+        arranger.totalSteps = 0;
+        arranger.stepMap = [];
+        return;
+    }
+
+    let current = 0;
+    arranger.stepMap = arranger.progression.map(chord => {
+        const steps = Math.round(chord.beats * 4);
+        const entry = { start: current, end: current + steps, chord };
+        current += steps;
+        return entry;
+    });
+    arranger.totalSteps = current;
+}
 
 const ROMAN_REGEX = /^([#b])?(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v)/;
 const NNS_REGEX = /^([#b])?([1-7])/;

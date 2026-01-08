@@ -33,7 +33,8 @@ export const arranger = {
     cardOffsets: [],
     // History for Undo
     history: [],
-    lastInteractedSectionId: 's1'
+    lastInteractedSectionId: 's1',
+    lastChordPreset: 'Pop (Standard)'
 };
 
 export const cb = {
@@ -62,6 +63,7 @@ export const gb = {
     humanize: 20,
     swing: 0,
     swingSub: '8th',
+    lastDrumPreset: 'Standard',
     audioBuffers: {},
     cachedSteps: [] 
 };
