@@ -1358,7 +1358,7 @@ h2 {
 }
 
 /* --- Settings Overlay --- */
-#settingsOverlay, #editorOverlay {
+#settingsOverlay, #editorOverlay, #exportOverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -1375,7 +1375,7 @@ h2 {
     backdrop-filter: blur(4px);
 }
 
-#settingsOverlay.active, #editorOverlay.active {
+#settingsOverlay.active, #editorOverlay.active, #exportOverlay.active {
     opacity: 1;
     pointer-events: auto;
 }
