@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ensemble-v1.22';
+const CACHE_NAME = 'ensemble-v1.24';
 const ASSETS = [
     './',
     './index.html',
@@ -25,10 +25,15 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-    self.skipWaiting();
     e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
     );
+});
+
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 
 self.addEventListener('activate', (e) => {
