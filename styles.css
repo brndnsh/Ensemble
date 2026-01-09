@@ -337,6 +337,7 @@ button {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
     overflow: visible;
+    min-width: 0;
 }
 
 .dashboard-panel.collapsed {
@@ -362,6 +363,24 @@ button {
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border-color);
     gap: 0.5rem;
+}
+
+/* Measure numbers in maximized view */
+.measure-number {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 0.5rem;
+    font-weight: bold;
+    color: var(--text-muted);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.chord-maximized .measure-number {
+    font-size: 0.7rem;
+    opacity: 0.8;
 }
 
 .panel-header-controls {
@@ -408,7 +427,7 @@ button {
     .key-controls {
         flex-grow: 1;
         display: grid;
-        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1.2fr 0.8fr 0.8fr 0.8fr;
         gap: 0.35rem;
     }
 
@@ -1209,10 +1228,12 @@ h2 {
     flex-direction: column;
     gap: 4px;
     background: var(--input-bg);
-    padding: 1rem;
+    padding: 1rem 1rem 1rem 0; /* Remove left padding for flush sticky headers */
     border-radius: 8px;
     overflow-x: auto;
     border: 1px solid var(--border-color);
+    width: 100%;
+    min-width: 0;
 }
 
 @media (max-width: 600px) {
@@ -1225,6 +1246,7 @@ h2 {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: min-content;
 }
 
 .track-header {
@@ -1235,11 +1257,21 @@ h2 {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: sticky;
+    left: 0;
+    background: var(--panel-color); /* Match or contrast with grid bg */
+    z-index: 10;
+    box-shadow: 4px 0 8px -2px rgba(0,0,0,0.3); /* Subtle shadow to indicate depth when scrolling */
+    margin-right: 0.25rem;
+}
+
+.label-header {
+    background: var(--panel-color);
 }
 
 .steps {
     display: grid;
-    grid-template-columns: repeat(16, 1fr);
+    /* Removed hardcoded 16 columns - now set dynamically in JS */
     gap: 2px;
     flex-grow: 1;
 }
@@ -1250,8 +1282,9 @@ h2 {
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.1s;
-    min-width: 14px;
+    min-width: 18px; /* Slightly larger for easier tapping */
     border: 1px solid transparent;
+    box-sizing: border-box;
 }
 
 .step:hover {
@@ -1260,7 +1293,7 @@ h2 {
 
 .step.beat-marker {
     background: var(--step-bg-marker);
-    border-left: 2px solid var(--step-border-marker);
+    box-shadow: inset 2px 0 0 var(--step-border-marker); /* Use shadow instead of border to avoid drift */
 }
 
 .step-label.beat-start {
@@ -1287,7 +1320,9 @@ h2 {
     font-size: 0.7rem;
     font-weight: bold;
     color: var(--text-muted);
-    border-left: 2px solid transparent; /* Match beat marker border width for alignment */
+    min-width: 18px;
+    border: 1px solid transparent; /* Match step border for alignment */
+    box-sizing: border-box;
 }
 
 .step-label.beat-start {
@@ -1450,12 +1485,18 @@ select:focus {
 }
 
 /* Specific selects that should not be full-width */
+#timeSigSelect,
 #keySelect,
 #drumBarsSelect,
 #swingBaseSelect {
     width: auto;
     padding: 0.3rem 0.5rem;
     font-size: 0.85rem;
+    height: 32px;
+}
+
+#timeSigSelect {
+    min-width: 60px;
 }
 
 select option {

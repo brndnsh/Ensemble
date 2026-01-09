@@ -1,6 +1,6 @@
 import { getFrequency, getMidi } from './utils.js';
 import { sb, cb, ctx, arranger } from './state.js';
-import { KEY_ORDER } from './config.js';
+import { KEY_ORDER, TIME_SIGNATURES } from './config.js';
 
 /**
  * Advanced Soloist Logic
@@ -172,9 +172,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         return null;
     }
 
-    const measureStep = step % 16;
-    const beatInMeasure = Math.floor(measureStep / 4);
-    const stepInBeat = measureStep % 4;
+    const tsConfig = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const stepsPerMeasure = tsConfig.beats * tsConfig.stepsPerBeat;
+    const measureStep = step % stepsPerMeasure;
+    const beatInMeasure = Math.floor(measureStep / tsConfig.stepsPerBeat);
+    const stepInBeat = measureStep % tsConfig.stepsPerBeat;
 
     // --- Structural Energy Mapping ---
     const loopStep = step % (arranger.totalSteps || 1);
@@ -467,7 +469,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             }
 
             // Harmonic Targeting
-            const isApproachingChange = measureStep >= 12 && nextChord && nextChord !== currentChord;
+            // Approach change in the last beat of the measure
+            const isApproachingChange = measureStep >= (stepsPerMeasure - tsConfig.stepsPerBeat) && nextChord && nextChord !== currentChord;
             
             if (isApproachingChange && Math.random() < 0.7) {
                 const nextRoot = nextChord.rootMidi;

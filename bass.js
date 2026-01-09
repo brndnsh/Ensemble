@@ -1,6 +1,6 @@
 import { getFrequency, getMidi } from './utils.js';
 import { arranger, cb, bb, sb, ctx } from './state.js';
-import { KEY_ORDER } from './config.js';
+import { KEY_ORDER, TIME_SIGNATURES } from './config.js';
 
 /**
  * Determines the best scale for the bass based on chord and context.
@@ -161,29 +161,35 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- ROCK STYLE (8th Note Pedal) ---
     if (style === 'rock') {
-        const stepInMeasure = step % 16;
-        const beat = Math.floor(stepInMeasure / 4);
-        const isDownbeat = stepInMeasure % 4 === 0;
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+        const stepInMeasure = step % stepsPerMeasure;
+        const beat = Math.floor(stepInMeasure / ts.stepsPerBeat);
+        const isDownbeat = stepInMeasure % ts.stepsPerBeat === 0;
 
         // Palm-muted feel (Cliff Williams / Nate Mendel tightness)
         const dur = 0.7; 
 
         // Driving 8ths, mostly Root
         // Heavy accents on 1 and 3 (Michael Anthony thunder)
-        const velocity = (beat === 0 || beat === 2) && isDownbeat ? 1.25 : 1.1;
+        // 3rd beat index is 2
+        // Pulse accent based on meter config
+        const isPulse = ts.pulse.includes(stepInMeasure);
+        const velocity = isPulse && isDownbeat ? 1.25 : 1.1;
 
         // Fills/Transitions (Nate Mendel melodic punch)
-        // Occurs on the last beat of the measure (Beat 4)
-        if (beat === 3) {
+        // Occurs on the last beat of the measure (Beat 4 in 4/4)
+        const lastBeatIndex = ts.beats - 1;
+        if (beat === lastBeatIndex) {
             // High energy fill probability
             if (Math.random() < 0.4) {
                  // Mendel often uses higher register fills or drops 
                  // Pattern: 8th notes on (Root -> 5th) or (Octave -> 5th)
-                 if (stepInMeasure === 12) { // 4
+                 if (stepInMeasure === (lastBeatIndex * ts.stepsPerBeat)) { // 4
                      const fillNote = Math.random() < 0.5 ? baseRoot + 12 : baseRoot + 7;
                      return result(getFrequency(clampAndNormalize(fillNote)), dur, 1.15);
                  }
-                 if (stepInMeasure === 14) { // 4-and
+                 if (stepInMeasure === (lastBeatIndex * ts.stepsPerBeat) + (ts.stepsPerBeat / 2)) { // 4-and
                      // Return to 5th or chromatic approach to next root
                      const fillNote = Math.random() < 0.5 ? baseRoot + 7 : baseRoot + 5; 
                      return result(getFrequency(clampAndNormalize(fillNote)), dur, 1.1);
@@ -192,7 +198,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         }
         
         // Grit/Ghost notes (rarely, on the 'and' of weak beats)
-        if (!isDownbeat && (beat === 1 || beat === 3) && Math.random() < 0.05) {
+        if (!isDownbeat && !isPulse && Math.random() < 0.05) {
              return result(getFrequency(baseRoot), dur, 0.8, true);
         }
         
@@ -201,9 +207,15 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- BOSSA NOVA STYLE ---
     if (style === 'bossa') {
-        const stepInMeasure = step % 16;
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+        const stepInMeasure = step % stepsPerMeasure;
         const root = baseRoot;
         const fifth = clampAndNormalize(root + (currentChord.quality.includes('dim') ? 6 : 7));
+        
+        // Bossa clave is tricky in odd meters. We'll stick to the core pattern for 4/4 and truncate/adapt.
+        // Core: 1, (2)and, 3, (4)and -> Steps 0, 6, 8, 14
+        
         if (stepInMeasure === 0) return result(getFrequency(root));
         if (stepInMeasure === 6) return result(getFrequency(fifth), 2);
         if (stepInMeasure === 8) return result(getFrequency(fifth));
@@ -246,7 +258,9 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- ROCCO STYLE (Tower of Power - Finger Funk) ---
     if (style === 'rocco') {
-        const stepInMeasure = step % 16;
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+        const stepInMeasure = step % stepsPerMeasure;
         
         // Staccato feel (Left-hand muting)
         const dur = 0.6; 
@@ -256,7 +270,8 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         
         // Syncopation Accents: 1(a), 2(&), 3, 4, 4(&)
         // The 'a' of 1 (step 3) and '&' of 2 (step 6) are classic syncopations
-        const accents = [3, 6, 8, 12, 14]; 
+        // Filter accents that are out of bounds for the current meter
+        const accents = [3, 6, 8, 12, 14].filter(s => s < stepsPerMeasure); 
         const isAccent = accents.includes(stepInMeasure);
 
         // 1. Tonal Hits (Accents)
@@ -291,14 +306,16 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- NEO-SOUL STYLE ---
     if (style === 'neo') {
-        const stepInMeasure = step % 16;
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+        const stepInMeasure = step % stepsPerMeasure;
         // Deep register
         const deepRoot = clampAndNormalize(baseRoot - 12);
         
         if (stepInMeasure === 0) return result(getFrequency(deepRoot), null, 1.1);
         
         // Characteristic 10th or 7th
-        if (stepInMeasure === 8) {
+        if (stepInMeasure === 8 && stepsPerMeasure > 8) {
             const intervals = currentChord.intervals;
             const highNote = clampAndNormalize(baseRoot + (intervals[1] || 4) + 12);
             return result(getFrequency(highNote), null, 0.8);
@@ -379,8 +396,15 @@ export function isBassActive(style, step, stepInChord) {
     if (style === 'whole') return stepInChord === 0;
     if (style === 'half') return stepInChord % 8 === 0;
     if (style === 'arp') return stepInChord % 4 === 0;
-    if (style === 'rock') return stepInChord % 2 === 0;
-    if (style === 'bossa') return [0, 6, 8, 14].includes(step % 16);
+    if (style === 'rock') {
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        return stepInChord % (ts.stepsPerBeat / 2) === 0; // 8th notes
+    }
+    if (style === 'bossa') {
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+        return [0, 6, 8, 14].filter(s => s < stepsPerMeasure).includes(step % stepsPerMeasure);
+    }
     
     // For these styles, we largely rely on getBassNote to decide (return null for silence),
     // but we can provide a broad filter to save cycles, or just return true to delegate.

@@ -55,6 +55,7 @@ export const ctx = {
  * @property {Array<Section>} sections - List of song sections.
  * @property {Array<Object>} progression - Flattened list of parsed chord objects.
  * @property {string} key - The musical key (e.g., "C", "F#").
+ * @property {string} timeSignature - The time signature (e.g., "4/4", "3/4").
  * @property {boolean} isMinor - Whether the key is minor.
  * @property {string} notation - Notation style ('roman', 'nns', 'name').
  * @property {boolean} valid - Whether the current progression is valid.
@@ -70,6 +71,7 @@ export const arranger = {
     sections: [{ id: 's1', label: 'Intro', value: 'I | V | vi | IV', color: '#3b82f6' }],
     progression: [],
     key: 'C',
+    timeSignature: '4/4',
     isMinor: false,
     notation: 'roman',
     valid: false,

@@ -1,4 +1,4 @@
-import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN } from './config.js';
+import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN, TIME_SIGNATURES } from './config.js';
 import { normalizeKey, getFrequency } from './utils.js';
 import { cb, arranger } from './state.js';
 import { ui } from './ui.js';
@@ -14,9 +14,10 @@ export function updateProgressionCache() {
         return;
     }
 
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     let current = 0;
     arranger.stepMap = arranger.progression.map(chord => {
-        const steps = Math.round(chord.beats * 4);
+        const steps = Math.round(chord.beats * ts.stepsPerBeat);
         const entry = { start: current, end: current + steps, chord };
         current += steps;
         return entry;
@@ -401,7 +402,9 @@ function parseProgressionPart(input, key, initialMidis) {
         const barText = barOrPipe;
         const chordTokens = barText.split(/(\s+)/);
         const actualChordParts = chordTokens.filter(t => t.trim() && t !== '|');
-        const beatsPerChord = actualChordParts.length > 0 ? 4 / actualChordParts.length : 0;
+        
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const beatsPerChord = actualChordParts.length > 0 ? ts.beats / actualChordParts.length : 0;
         
         let barInternalOffset = 0;
         chordTokens.forEach(token => {
