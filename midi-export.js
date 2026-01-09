@@ -3,6 +3,7 @@ import { ui, showToast } from './ui.js';
 import { getMidi } from './utils.js';
 import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
+import { TIME_SIGNATURES } from './config.js';
 
 /**
  * Minimal MIDI file generator (Standard MIDI File Format 1)
@@ -102,6 +103,14 @@ class MidiTrack {
         this.addEvent(deltaTime, [0xFF, 0x59, 0x02, sfByte, isMinor ? 0x01 : 0x00]);
     }
 
+    setTimeSignature(deltaTime, numerator, denominator) {
+        // denominator is power of 2: 2=4, 3=8
+        let denomPower = 2;
+        if (denominator === 8) denomPower = 3;
+        
+        this.addEvent(deltaTime, [0xFF, 0x58, 0x04, numerator, denomPower, 24, 8]);
+    }
+
     endOfTrack(deltaTime = 0) {
         this.addEvent(deltaTime, [0xFF, 0x2F, 0x00]);
     }
@@ -137,7 +146,9 @@ const midiChordPatterns = {
     jazz: (chord, stepInChord, measureStep) => [0, 6, 14].includes(measureStep) ? [{ midi: chord.freqs.map(getMidi), dur: 1 }] : [],
     green: (chord, stepInChord, measureStep) => measureStep % 4 === 0 ? [{ midi: chord.freqs.map(getMidi), dur: 1 }] : [],
     bossa: (chord, stepInChord, measureStep, step) => {
-        const pattern = (Math.floor(step / 16) % 2 === 1) ? [0, 3, 6, 8, 11, 14] : [0, 3, 6, 10, 13];
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+        const pattern = (Math.floor(step / stepsPerMeasure) % 2 === 1) ? [0, 3, 6, 8, 11, 14] : [0, 3, 6, 10, 13];
         return pattern.includes(measureStep) ? [{ midi: chord.freqs.map(getMidi), dur: 1 }] : [];
     }
 };
@@ -168,7 +179,9 @@ export function exportToMidi(options = {}) {
 
         const totalStepsExport = totalStepsOneLoop * loopCount;
 
-        const drumLoopSteps = gb.measures * 16;
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+        const drumLoopSteps = gb.measures * stepsPerMeasure;
         let soloistTimeInPulses = 0;
 
         // Save and Reset Soloist state for deterministic export and to avoid affecting live playback
@@ -190,6 +203,9 @@ export function exportToMidi(options = {}) {
         metaTrack.setName(0, 'Ensemble Export');
         metaTrack.setTempo(0, ctx.bpm);
         metaTrack.setKeySignature(0, arranger.key, arranger.isMinor);
+        
+        const [tsNum, tsDenom] = (arranger.timeSignature || '4/4').split('/').map(Number);
+        metaTrack.setTimeSignature(0, tsNum, tsDenom);
 
         // Init Instruments
         if (includedTracks.includes('chords')) {
@@ -254,7 +270,9 @@ export function exportToMidi(options = {}) {
                 const straightness = 0.65;
                 soloistTimeInPulses = Math.round((straightTimeInPulses * straightness) + (currentTimeInPulses * (1.0 - straightness)));
 
-                const measureStep = globalStep % 16;
+                const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+                const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+                const measureStep = globalStep % stepsPerMeasure;
                 const drumStep = globalStep % drumLoopSteps;
 
                 // Find current chord

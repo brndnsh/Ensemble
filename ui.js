@@ -1,10 +1,12 @@
 import { midiToNote } from './utils.js';
 import { ctx, cb, gb, arranger } from './state.js';
 import { clearDrumPresetHighlight } from './main.js';
+import { TIME_SIGNATURES } from './config.js';
 
 export const ui = {
     playBtn: document.getElementById('playBtn'),
     bpmInput: document.getElementById('bpmInput'),
+    timeSigSelect: document.getElementById('timeSigSelect'),
     tapBtn: document.getElementById('tapBtn'),
     keySelect: document.getElementById('keySelect'),
     relKeyBtn: document.getElementById('relKeyBtn'),
@@ -529,8 +531,9 @@ export function renderChordVisualizer() {
         if (arranger.progression.length === 0) return;
 
         // Calculate total measures for conditional layout logic (e.g. multi-column for long forms)
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         let totalBeats = arranger.progression.reduce((sum, c) => sum + c.beats, 0);
-        let totalMeasures = Math.ceil(totalBeats / 4);
+        let totalMeasures = Math.ceil(totalBeats / ts.beats);
         ui.chordVisualizer.dataset.totalMeasures = totalMeasures;
 
         if (isMaximized) {
@@ -591,7 +594,7 @@ export function renderChordVisualizer() {
                 // Count measures in this section for layout optimization
                 const sectionChords = arranger.progression.filter(c => c.sectionId === currentSectionId);
                 const sectionBeats = sectionChords.reduce((sum, c) => sum + c.beats, 0);
-                sectionBlock.dataset.measures = Math.ceil(sectionBeats / 4);
+                sectionBlock.dataset.measures = Math.ceil(sectionBeats / ts.beats);
 
                 ui.chordVisualizer.appendChild(sectionBlock);
                 
@@ -609,7 +612,7 @@ export function renderChordVisualizer() {
             }
 
             // Standard Measure Handling
-            if (currentBeatsInBar >= 4) {
+            if (currentBeatsInBar >= ts.beats) {
                 measureBox = document.createElement('div');
                 measureBox.className = 'measure-box';
                 if (isMaximized) {
@@ -690,13 +693,25 @@ function createTrackRow(inst, cachedSteps) {
     const stepsContainer = document.createElement('div');
     stepsContainer.className = 'steps';
     
-    const offset = gb.currentMeasure * 16;
-    for (let b = 0; b < 16; b++) {
+    // Dynamic Steps Calculation
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+
+    // Use explicit column template for grid to ensure alignment
+    stepsContainer.style.gridTemplateColumns = `repeat(${stepsPerMeasure}, 1fr)`;
+    stepsContainer.style.gap = '2px';
+    
+    const offset = gb.currentMeasure * stepsPerMeasure;
+    for (let b = 0; b < stepsPerMeasure; b++) {
         const globalIdx = offset + b;
         const step = document.createElement('div');
-        const val = inst.steps[globalIdx];
+        // Handle potentially out-of-bounds access if patterns are fixed length (though we allocated 128)
+        const val = inst.steps[globalIdx] || 0; 
         step.className = `step ${val === 2 ? 'accented' : (val === 1 ? 'active' : '')}`; 
-        if (b % 4 === 0) step.classList.add('beat-marker');
+        
+        // Dynamic Beat Marking
+        if (ts.pulse.includes(b)) step.classList.add('beat-marker');
+
         step.onclick = () => { 
             inst.steps[globalIdx] = (inst.steps[globalIdx] + 1) % 3; 
             clearDrumPresetHighlight();
@@ -727,13 +742,29 @@ function createLabelRow(cachedSteps) {
     const stepsContainer = document.createElement('div');
     stepsContainer.className = 'steps label-steps';
     
-    const beatLabels = ['1', 'e', '&', 'a', '2', 'e', '&', 'a', '3', 'e', '&', 'a', '4', 'e', '&', 'a'];
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+    
+    stepsContainer.style.gridTemplateColumns = `repeat(${stepsPerMeasure}, 1fr)`;
+    stepsContainer.style.gap = '2px';
+    
+    // Generate labels dynamically
+    const beatLabels = [];
+    for (let i = 0; i < ts.beats; i++) {
+        beatLabels.push(String(i + 1));
+        if (ts.subdivision === '16th') {
+            beatLabels.push('e', '&', 'a');
+        } else if (ts.subdivision === '8th') {
+            beatLabels.push('&');
+        }
+    }
     
     beatLabels.forEach((text, i) => {
         const label = document.createElement('div');
         label.className = 'step-label';
         label.textContent = text;
-        if (i % 4 === 0) label.classList.add('beat-start');
+        // Use pulse config for bolding
+        if (ts.pulse.includes(i)) label.classList.add('beat-start');
         stepsContainer.appendChild(label);
         
         if (!cachedSteps[i]) cachedSteps[i] = [];
@@ -777,8 +808,11 @@ export function renderGrid() {
  * Updates only the 'active' and 'accented' classes in the drum grid without re-rendering the full DOM.
  */
 export function renderGridState() {
-    const offset = gb.currentMeasure * 16;
-    for (let i = 0; i < 16; i++) {
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+    const offset = gb.currentMeasure * stepsPerMeasure;
+    
+    for (let i = 0; i < stepsPerMeasure; i++) {
         const globalIdx = offset + i;
         const elements = gb.cachedSteps[i];
         if (elements) {

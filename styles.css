@@ -337,6 +337,7 @@ button {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
     overflow: visible;
+    min-width: 0;
 }
 
 .dashboard-panel.collapsed {
@@ -362,6 +363,24 @@ button {
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border-color);
     gap: 0.5rem;
+}
+
+/* Measure numbers in maximized view */
+.measure-number {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 0.5rem;
+    font-weight: bold;
+    color: var(--text-muted);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.chord-maximized .measure-number {
+    font-size: 0.7rem;
+    opacity: 0.8;
 }
 
 .panel-header-controls {
@@ -1213,6 +1232,8 @@ h2 {
     border-radius: 8px;
     overflow-x: auto;
     border: 1px solid var(--border-color);
+    width: 100%;
+    min-width: 0;
 }
 
 @media (max-width: 600px) {
@@ -1225,6 +1246,7 @@ h2 {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: min-content;
 }
 
 .track-header {
@@ -1239,7 +1261,7 @@ h2 {
 
 .steps {
     display: grid;
-    grid-template-columns: repeat(16, 1fr);
+    /* Removed hardcoded 16 columns - now set dynamically in JS */
     gap: 2px;
     flex-grow: 1;
 }
@@ -1250,7 +1272,7 @@ h2 {
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.1s;
-    min-width: 14px;
+    min-width: 18px; /* Slightly larger for easier tapping */
     border: 1px solid transparent;
 }
 
@@ -1287,7 +1309,6 @@ h2 {
     font-size: 0.7rem;
     font-weight: bold;
     color: var(--text-muted);
-    border-left: 2px solid transparent; /* Match beat marker border width for alignment */
 }
 
 .step-label.beat-start {

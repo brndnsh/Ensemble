@@ -1,7 +1,7 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
 import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates, updateActiveChordUI } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime } from './engine.js';
-import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS, APP_VERSION } from './config.js';
+import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
 import { validateProgression, generateRandomProgression, mutateProgression, transformRelativeProgression } from './chords.js';
 import { chordPatterns } from './accompaniment.js';
@@ -252,6 +252,7 @@ function saveCurrentState() {
     const data = {
         sections: arranger.sections,
         key: arranger.key,
+        timeSignature: arranger.timeSignature,
         isMinor: arranger.isMinor,
         notation: arranger.notation,
         lastChordPreset: arranger.lastChordPreset,
@@ -411,12 +412,18 @@ function scheduler() {
     }
 }
 
+function getStepsPerMeasure() {
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    return ts.beats * ts.stepsPerBeat;
+}
+
 function advanceCountIn() {
     const beatDuration = 60.0 / ctx.bpm;
     ctx.nextNoteTime += beatDuration;
     ctx.unswungNextNoteTime += beatDuration;
     ctx.countInBeat++;
-    if (ctx.countInBeat >= 4) {
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    if (ctx.countInBeat >= ts.beats) {
         ctx.isCountingIn = false;
         ctx.step = 0; 
     }
@@ -435,7 +442,42 @@ function scheduleCountIn(beat, time) {
      const gain = ctx.audio.createGain();
      osc.connect(gain);
      gain.connect(ctx.masterGain);
-     osc.frequency.setValueAtTime(beat === 0 ? 880 : 440, time);
+     
+     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+     // Use the pulse definition to determine accents. 
+     // We map the 'beat' index (0, 1, 2...) to steps. 
+     // For simple meters, beat * stepsPerBeat usually aligns with pulse[0], pulse[1]...
+     // But for 5/4 or 7/8, the pulse array is [0, 4, 8...] or [0, 4, 8].
+     // Let's just check if the current beat index corresponds to a primary accent.
+     // Beat 0 is always the downbeat (880Hz).
+     // Secondary strong beats (like beat 3 in 4/4) could be 660Hz.
+     // Weak beats 440Hz.
+     
+     let freq = 440;
+     if (beat === 0) {
+         freq = 1000; // Downbeat
+     } else if (ts.grouping) {
+         // Odd meter logic
+         // Grouping "3+2" -> Accent on beat 0 and beat 3
+         // Grouping "2+2+3" -> Accent on beat 0, 2, 4
+         const groups = ts.grouping.split('+').map(Number);
+         let accumulated = 0;
+         for (let g of groups) {
+             if (beat === accumulated && beat !== 0) {
+                 freq = 800; // Secondary accent
+                 break;
+             }
+             accumulated += g;
+         }
+     } else {
+         // Standard meter logic (4/4, 3/4)
+         if (beat === 0) freq = 1000;
+         else if (arranger.timeSignature === '4/4' && beat === 2) freq = 800; // Beat 3 accent
+         else if (arranger.timeSignature === '6/8' && beat === 3) freq = 800; // Beat 4 accent (dotted quarter)
+         else if (arranger.timeSignature === '12/8' && (beat === 3 || beat === 6 || beat === 9)) freq = 800;
+     }
+
+     osc.frequency.setValueAtTime(freq, time);
      gain.gain.setValueAtTime(0.3, time);
      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
      osc.onended = () => { gain.disconnect(); osc.disconnect(); };
@@ -613,7 +655,8 @@ function scheduleChordVisuals(chordData, time) {
 function scheduleChords(chordData, step, time) {
     const { chord, stepInChord, chordIndex } = chordData;
     const spb = 60.0 / ctx.bpm;
-    const measureStep = step % 16;
+    const stepsPerMeasure = getStepsPerMeasure();
+    const measureStep = step % stepsPerMeasure;
     
     const pattern = chordPatterns[cb.style];
     if (pattern) {
@@ -622,20 +665,45 @@ function scheduleChords(chordData, step, time) {
 }
 
 function scheduleGlobalEvent(step, swungTime) {
-    const drumStep = step % (gb.measures * 16);
+    const stepsPerMeasure = getStepsPerMeasure();
+    const drumStep = step % (gb.measures * stepsPerMeasure);
     // Dynamic jitter based on humanize setting (0ms to ~25ms)
     const jitterAmount = (gb.humanize / 100) * 0.025;
     const jitter = (Math.random() - 0.5) * jitterAmount;
     const t = swungTime + jitter;
     
     // Metronome Click
-    if (ui.metronome.checked && step % 4 === 0) {
-        const isDownbeat = step % 16 === 0;
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    if (ui.metronome.checked && ts.pulse.includes(step % stepsPerMeasure)) {
+        const beatIndex = (step % stepsPerMeasure) / ts.stepsPerBeat;
+        let freq = 600;
+        
+        // Downbeat (Beat 1)
+        if (step % stepsPerMeasure === 0) {
+            freq = 1000;
+        } else if (ts.grouping) {
+            // Odd meter logic (same as count-in)
+            const groups = ts.grouping.split('+').map(Number);
+            let accumulated = 0;
+            for (let g of groups) {
+                if (Math.abs(beatIndex - accumulated) < 0.01 && beatIndex !== 0) {
+                    freq = 800; // Secondary accent
+                    break;
+                }
+                accumulated += g;
+            }
+        } else {
+            // Standard meter accents (same as count-in)
+            if (arranger.timeSignature === '4/4' && Math.abs(beatIndex - 2) < 0.01) freq = 800;
+            else if (arranger.timeSignature === '6/8' && Math.abs(beatIndex - 3) < 0.01) freq = 800;
+            else if (arranger.timeSignature === '12/8' && (Math.abs(beatIndex - 3) < 0.01 || Math.abs(beatIndex - 6) < 0.01 || Math.abs(beatIndex - 9) < 0.01)) freq = 800;
+        }
+
         const osc = ctx.audio.createOscillator();
         const gain = ctx.audio.createGain();
         osc.connect(gain);
         gain.connect(ctx.masterGain);
-        osc.frequency.setValueAtTime(isDownbeat ? 1000 : 600, swungTime);
+        osc.frequency.setValueAtTime(freq, swungTime);
         gain.gain.setValueAtTime(0.15, swungTime);
         gain.gain.exponentialRampToValueAtTime(0.001, swungTime + 0.05);
         osc.start(swungTime);
@@ -651,11 +719,15 @@ function scheduleGlobalEvent(step, swungTime) {
     const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + jitter;
 
     if (gb.enabled) {
-        if (drumStep % 4 === 0 && ui.visualFlash.checked) {
-            ctx.drawQueue.push({ type: 'flash', time: swungTime, intensity: (drumStep % 16 === 0 ? 0.2 : 0.1), beat: (drumStep % 16 === 0 ? 1 : 0) });
+        if (ts.pulse.includes(drumStep % stepsPerMeasure) && ui.visualFlash.checked) {
+            ctx.drawQueue.push({ type: 'flash', time: swungTime, intensity: (drumStep % stepsPerMeasure === 0 ? 0.2 : 0.1), beat: (drumStep % stepsPerMeasure === 0 ? 1 : 0) });
         }
         ctx.drawQueue.push({ type: 'drum_vis', step: drumStep, time: swungTime });
-        scheduleDrums(drumStep, t, drumStep % 16 === 0, drumStep % 4 === 0, [4, 12].includes(drumStep % 16));
+        // Map current step to a 4/4 equivalent for simple styles or pass the context
+        // We pass the raw drumStep and rely on the fact that drum patterns are 128 long.
+        // But for odd meters, we might want to truncate the pattern read.
+        // For now, let's just pass the step.
+        scheduleDrums(drumStep, t, drumStep % stepsPerMeasure === 0, ts.pulse.includes(drumStep % stepsPerMeasure), false);
     }
 
     const chordData = getChordAtStep(step);
@@ -669,13 +741,14 @@ function scheduleGlobalEvent(step, swungTime) {
 }
 
 function cloneMeasure() {
-    const sourceOffset = gb.currentMeasure * 16;
+    const stepsPerMeasure = getStepsPerMeasure();
+    const sourceOffset = gb.currentMeasure * stepsPerMeasure;
     gb.instruments.forEach(inst => {
-        const pattern = inst.steps.slice(sourceOffset, sourceOffset + 16);
+        const pattern = inst.steps.slice(sourceOffset, sourceOffset + stepsPerMeasure);
         for (let m = 0; m < gb.measures; m++) {
             if (m === gb.currentMeasure) continue;
-            const targetOffset = m * 16;
-            for (let i = 0; i < 16; i++) {
+            const targetOffset = m * stepsPerMeasure;
+            for (let i = 0; i < stepsPerMeasure; i++) {
                 inst.steps[targetOffset + i] = pattern[i];
             }
         }
@@ -689,14 +762,15 @@ function updateDrumVis(ev) {
         ctx.lastActiveDrumElements.forEach(s => s.classList.remove('playing'));
     }
     
+    const stepsPerMeasure = getStepsPerMeasure();
     // Auto-follow logic: switch measure page if needed
-    const stepMeasure = Math.floor(ev.step / 16);
+    const stepMeasure = Math.floor(ev.step / stepsPerMeasure);
     if (gb.autoFollow && stepMeasure !== gb.currentMeasure && ctx.isPlaying) {
         switchMeasure(stepMeasure);
     }
 
-    const offset = gb.currentMeasure * 16;
-    if (ev.step >= offset && ev.step < offset + 16) {
+    const offset = gb.currentMeasure * stepsPerMeasure;
+    if (ev.step >= offset && ev.step < offset + stepsPerMeasure) {
         const localStep = ev.step - offset;
         const activeSteps = gb.cachedSteps[localStep];
         if (activeSteps) {
@@ -1121,6 +1195,14 @@ function setupUIHandlers() {
         flushBuffers(); 
         saveCurrentState();
     });
+
+    ui.timeSigSelect.addEventListener('change', e => {
+        arranger.timeSignature = e.target.value;
+        loadDrumPreset(gb.lastDrumPreset);
+        validateProgression(renderChordVisualizer);
+        flushBuffers();
+        saveCurrentState();
+    });
     
     ui.notationSelect.addEventListener('change', e => { 
         arranger.notation = e.target.value; 
@@ -1375,6 +1457,7 @@ function init() {
         if (savedState && savedState.sections) {
             arranger.sections = savedState.sections;
             arranger.key = savedState.key || 'C';
+            arranger.timeSignature = savedState.timeSignature || '4/4';
             arranger.isMinor = savedState.isMinor || false;
             arranger.notation = savedState.notation || 'roman';
             arranger.lastChordPreset = savedState.lastChordPreset || 'Pop (Standard)';
@@ -1431,6 +1514,7 @@ function init() {
 
             // Sync UI
             ui.keySelect.value = arranger.key;
+            ui.timeSigSelect.value = arranger.timeSignature;
             ui.bpmInput.value = ctx.bpm;
             ui.notationSelect.value = arranger.notation;
             ui.densitySelect.value = cb.density;
@@ -1538,8 +1622,9 @@ function setBpm(val) {
     if (viz && ctx.isPlaying && ctx.audio) {
         const secondsPerBeat = 60.0 / ctx.bpm;
         const sixteenth = 0.25 * secondsPerBeat;
-        // Use unswung time and measure alignment (16 steps) for stable grid
-        const measureTime = ctx.unswungNextNoteTime - (ctx.step % 16) * sixteenth;
+        // Use unswung time and measure alignment for stable grid
+        const stepsPerMeasure = getStepsPerMeasure();
+        const measureTime = ctx.unswungNextNoteTime - (ctx.step % stepsPerMeasure) * sixteenth;
         viz.setBeatReference(measureTime);
     }
 }
@@ -1578,7 +1663,10 @@ function transposeKey(delta) {
 }
 
 function loadDrumPreset(name) {
-    const p = DRUM_PRESETS[name];
+    let p = DRUM_PRESETS[name];
+    if (p[arranger.timeSignature]) {
+        p = { ...p, ...p[arranger.timeSignature] };
+    }
     gb.lastDrumPreset = name;
     gb.measures = p.measures || 1; 
     gb.currentMeasure = 0;
@@ -1587,7 +1675,8 @@ function loadDrumPreset(name) {
     if (p.swing !== undefined) { gb.swing = p.swing; ui.swingSlider.value = p.swing; }
     if (p.sub) { gb.swingSub = p.sub; ui.swingBase.value = p.sub; }
     gb.instruments.forEach(inst => {
-        const pattern = p[inst.name] || new Array(16).fill(0);
+        const stepsPerMeasure = getStepsPerMeasure();
+        const pattern = p[inst.name] || new Array(stepsPerMeasure).fill(0);
         inst.steps.fill(0);
         pattern.forEach((v, i) => { if (i < 128) inst.steps[i] = v; });
     });
@@ -1612,6 +1701,7 @@ function resetToDefaults() {
     ctx.bpm = 100;
     arranger.notation = 'roman';
     arranger.key = 'C';
+    arranger.timeSignature = '4/4';
     applyTheme('auto');
     arranger.sections.forEach(s => s.color = '#3b82f6');
     
@@ -1635,6 +1725,7 @@ function resetToDefaults() {
 
     ui.bpmInput.value = 100;
     ui.keySelect.value = 'C';
+    ui.timeSigSelect.value = '4/4';
     ui.notationSelect.value = 'roman';
     ui.densitySelect.value = 'standard';
     ui.octave.value = 65;
@@ -1670,7 +1761,7 @@ function resetToDefaults() {
     flushBuffers();
     
     gb.instruments.forEach(inst => {
-        inst.steps = new Array(16).fill(0);
+        inst.steps = new Array(128).fill(0);
         inst.muted = false;
     });
     loadDrumPreset('Standard');
@@ -1685,6 +1776,7 @@ function shareProgression() {
         const params = new URLSearchParams();
         params.set('s', compressSections(arranger.sections));
         params.set('key', ui.keySelect.value);
+        params.set('ts', arranger.timeSignature);
         params.set('bpm', ui.bpmInput.value);
         params.set('style', cb.style);
         params.set('notation', arranger.notation);
@@ -1743,6 +1835,7 @@ function loadFromUrl() {
     }
     
     if (params.get('key')) { ui.keySelect.value = normalizeKey(params.get('key')); arranger.key = ui.keySelect.value; }
+    if (params.get('ts')) { arranger.timeSignature = params.get('ts'); ui.timeSigSelect.value = arranger.timeSignature; }
     if (params.get('bpm')) { ctx.bpm = parseInt(params.get('bpm')); ui.bpmInput.value = ctx.bpm; }
     if (params.get('style')) updateStyle('chord', params.get('style'));
     if (params.get('notation')) { arranger.notation = params.get('notation'); ui.notationSelect.value = arranger.notation; }
