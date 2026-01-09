@@ -739,17 +739,15 @@ h2 {
     padding: 0.5rem;
     margin-bottom: 0.5rem;
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center horizontally */
-    justify-content: center; /* Center vertically when there is extra space */
-    gap: 0.4rem;
-    overflow: hidden; /* No scrolling */
-    min-height: 450px; /* Increased slightly */
-    height: 60vh; /* Increased slightly */
-    max-height: 750px; /* Increased from 600px */
+    overflow-x: hidden;
+    overflow-y: auto; /* Allow scrolling for long forms */
+    min-height: 450px;
+    height: 60vh;
+    max-height: 750px;
     border: 1px solid var(--border-color);
     box-sizing: border-box;
+    display: block; /* Allows natural scroll behavior */
+    scroll-behavior: smooth;
 }
 
 .section-block {
@@ -761,11 +759,20 @@ h2 {
     border: 1px solid var(--border-color);
     width: 100%;
     max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
     box-sizing: border-box;
-    flex: 0 1 auto; /* Don't grow, but shrink if needed to fit */
+    margin-bottom: 1rem;
     min-height: 0;
     cursor: pointer;
-    transition: border-color 0.2s, background-color 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Active Section Highlighting */
+.section-block.active-section {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 20px rgba(38, 139, 210, 0.15);
+    background: var(--step-bg-hover);
 }
 
 .section-block:hover {
@@ -837,7 +844,7 @@ h2 {
     padding: 0.2rem;
     border-radius: 0; /* Squared for measure block look */
     border: none;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, transform 0.1s;
     cursor: pointer;
     min-width: 0; 
     min-height: 40px; /* Reduced from 70px to allow long songs to shrink */
@@ -858,6 +865,14 @@ h2 {
     background: var(--accent-color);
     color: white;
     z-index: 10;
+    box-shadow: 0 0 15px var(--accent-color);
+    animation: activePulse 2s infinite ease-in-out;
+}
+
+@keyframes activePulse {
+    0% { filter: brightness(1); }
+    50% { filter: brightness(1.2); }
+    100% { filter: brightness(1); }
 }
 
 .chord-maximized header {
@@ -969,25 +984,22 @@ h2 {
     display: grid;
     grid-template-columns: repeat(4, 1fr); /* Back to 4 columns */
     grid-auto-rows: auto; /* Rows only as tall as their content */
-    gap: 0;
-    border-top: 1px solid var(--border-color);
-    border-left: 1px solid var(--border-color);
+    gap: 4px; /* Increased gap for better distinction between measures */
     min-height: 0;
 }
 
 .chord-maximized .measure-box {
     background: var(--panel-color);
-    border-right: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-    border-radius: 0;
-    padding: 0;
+    border: 1px solid var(--border-color); /* Individual borders for 'island' look */
+    border-radius: 4px; /* Rounded corners for each measure */
+    padding: 0 4px; /* Internal padding to create the 'island' chord effect */
     position: relative;
     height: 100%;
     display: flex; /* Ensure chords fill bar height */
 }
 
 .chord-maximized .measure-box .chord-card:not(:last-child) {
-    border-right: 1px solid var(--border-color);
+    border-right: 1px solid rgba(255, 255, 255, 0.05); /* Very subtle internal divider */
 }
 
 .chord-maximized .chord-card {
@@ -1115,16 +1127,21 @@ h2 {
     .chord-maximized .display-area {
         max-height: 100vh;
         height: 100vh;
+        padding: 0.5rem; /* Tighten padding */
     }
     .chord-maximized .section-block-content {
-        grid-template-columns: repeat(2, 1fr); /* Switch to 2 on very small mobile */
+        grid-template-columns: repeat(4, 1fr); /* 4 columns even on mobile for maximized density */
+        gap: 2px; /* Slightly tighter gaps on mobile */
+    }
+    .chord-maximized .measure-box {
+        padding: 0 2px; /* Tighter internal padding for mobile */
     }
     .chord-maximized .chord-card {
-        min-height: 50px;
-        font-size: 1.1rem;
+        min-height: 40px; /* Reduced from 50px */
+        font-size: clamp(0.9rem, 4vh, 1.5rem); /* Slightly smaller but scaled */
     }
     .chord-maximized .section-block {
-        margin-bottom: 1rem;
+        margin-bottom: 0.4rem; /* Reduced from 1rem */
     }
 }
 

@@ -717,10 +717,21 @@ function updateChordVis(ev) {
         card.classList.add('active');
         cb.lastActiveChordIndex = ev.index;
 
+        // Subtle haptic for chord changes
+        if (ui.haptic.checked && navigator.vibrate) {
+            navigator.vibrate(8); 
+        }
+
         const chordData = arranger.progression[ev.index];
         if (chordData) {
             ui.activeSectionLabel.textContent = chordData.sectionLabel || "";
             
+            // Highlight active section block in Arranger view
+            ui.chordVisualizer.querySelectorAll('.section-block').forEach(block => {
+                const isActive = block.contains(card);
+                block.classList.toggle('active-section', isActive);
+            });
+
             // Highlight active section card in list and update progress bar
             document.querySelectorAll('.section-card').forEach(sCard => {
                 const isActive = sCard.dataset.id == chordData.sectionId;

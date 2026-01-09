@@ -490,6 +490,11 @@ export function renderChordVisualizer() {
         arranger.cachedCards = [];
         if (arranger.progression.length === 0) return;
 
+        // Calculate total measures for conditional layout logic (e.g. multi-column for long forms)
+        let totalBeats = arranger.progression.reduce((sum, c) => sum + c.beats, 0);
+        let totalMeasures = Math.ceil(totalBeats / 4);
+        ui.chordVisualizer.dataset.totalMeasures = totalMeasures;
+
         if (isMaximized) {
             const header = document.createElement('div');
             header.style.textAlign = 'center';
@@ -544,6 +549,11 @@ export function renderChordVisualizer() {
                 sectionContent = document.createElement('div');
                 sectionContent.className = 'section-block-content';
                 sectionBlock.appendChild(sectionContent);
+
+                // Count measures in this section for layout optimization
+                const sectionChords = arranger.progression.filter(c => c.sectionId === currentSectionId);
+                const sectionBeats = sectionChords.reduce((sum, c) => sum + c.beats, 0);
+                sectionBlock.dataset.measures = Math.ceil(sectionBeats / 4);
 
                 ui.chordVisualizer.appendChild(sectionBlock);
                 
