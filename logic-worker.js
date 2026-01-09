@@ -36,19 +36,23 @@ function fillBuffers(currentStep) {
     const targetStep = currentStep + LOOKAHEAD;
     const notesToMain = [];
 
-    // Sync buffer heads to main step if they fall behind
+    // Sync buffer heads if they fall behind the playback head
     if (bbBufferHead < currentStep) bbBufferHead = currentStep;
     if (sbBufferHead < currentStep) sbBufferHead = currentStep;
 
-    // Bass Generation
-    if (bb.enabled) {
-        while (bbBufferHead < targetStep) {
-            const step = bbBufferHead;
-            const chordData = getChordAtStep(step);
-            let result = null;
+    // Use a single loop to synchronize generation across instruments
+    let head = Math.min(bbBufferHead, sbBufferHead);
 
-            if (chordData) {
-                const { chord, stepInChord } = chordData;
+    while (head < targetStep) {
+        const step = head;
+        const chordData = getChordAtStep(step);
+        
+        if (chordData) {
+            const { chord, stepInChord } = chordData;
+            const nextChordData = getChordAtStep(step + 4);
+
+            // 1. Bass Generation (if this step hasn't been processed for bass yet)
+            if (bb.enabled && step >= bbBufferHead) {
                 let shouldPlay = false;
                 if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
                 else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
@@ -72,40 +76,28 @@ function fillBuffers(currentStep) {
                 }
 
                 if (shouldPlay) {
-                    const nextChordData = getChordAtStep(step + 4);
                     const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord, arranger.isMinor);
                     if (bassResult) {
-                        const freq = typeof bassResult === 'object' ? bassResult.freq : bassResult;
-                        if (freq) {
-                            bb.lastFreq = freq;
-                            result = { ...bassResult, step, module: 'bb' };
-                            notesToMain.push(result);
-                        }
+                        bb.lastFreq = typeof bassResult === 'object' ? bassResult.freq : bassResult;
+                        notesToMain.push({ ...bassResult, step, module: 'bb' });
                     }
                 }
+                bbBufferHead++;
             }
-            bbBufferHead++;
-        }
-    }
 
-    // Soloist Generation
-    if (sb.enabled) {
-        while (sbBufferHead < targetStep) {
-            const step = sbBufferHead;
-            const chordData = getChordAtStep(step);
-            
-            if (chordData) {
-                const { chord, stepInChord } = chordData;
-                const nextChordData = getChordAtStep(step + 4);
-                const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord);
+            // 2. Soloist Generation (if this step hasn't been processed for soloist yet)
+            if (sb.enabled && step >= sbBufferHead) {
+                // Pass the current bass note for interval safety checks
+                const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
                 
                 if (soloResult?.freq) {
                     sb.lastFreq = soloResult.freq;
                     notesToMain.push({ ...soloResult, step, module: 'sb' });
                 }
+                sbBufferHead++;
             }
-            sbBufferHead++;
         }
+        head++;
     }
 
     if (notesToMain.length > 0) {

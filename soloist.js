@@ -22,28 +22,6 @@ const RHYTHMIC_CELLS = [
     [0, 1, 0, 1], // Pure offbeats
 ];
 
-const CANNED_LICKS = {
-    'the_lick': { notes: [2, 3, 5, 7, 3, 10, 12], quality: ['minor', 'halfdim'] },
-    'blues_1': { notes: [12, 15, 12, 10, 9, 7], quality: ['minor', 'major'] },
-    'blues_2': { notes: [12, 10, 7, 6, 5, 3, 0], quality: ['minor', 'major'] },
-    'blues_3': { notes: [0, 2, 3, 4, 7, 9, 7, 4], quality: ['major'] },
-    'blues_4': { notes: [12, 10, 7, 10, 12, 15, 17], quality: ['minor', 'major'] },
-    'rock_1': { notes: [0, 3, 5, 5, 3, 0], quality: ['minor', 'major'] },
-    'bebop_1': { notes: [7, 6, 5, 4, 3, 2, 1, 0], quality: ['major'] },
-    'parker_1': { notes: [0, 4, 7, 11, 10, 8, 7, 5, 4], quality: ['major', 'dom'] },
-    'parker_2': { notes: [12, 10, 9, 7, 6, 5, 3, 2, 0], quality: ['minor', 'dom'] },
-    'bird_enclosure': { notes: [5, 4, 2, 3], quality: ['major', 'minor', 'dom'] },
-    'blues_5': { notes: [12, 15, 17, 18, 17, 15, 12], quality: ['minor', 'major'] },
-    'neo_1': { notes: [12, 14, 12, 9, 7, 5, 7], quality: ['major', 'minor'] },
-    'neo_2': { notes: [17, 14, 12, 14, 17, 19, 17], quality: ['major', 'minor'] },
-    'neo_quartal': { notes: [17, 12, 10, 5, 7], quality: ['major', 'minor'] },
-    'shred_1': { notes: [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4], quality: ['major'] },
-    'bb_box': { notes: [12, 14, 15, 14, 12, 10, 12], quality: ['minor', 'major'] },
-    'albert_king': { notes: [12, 15, 17, 15, 12], quality: ['minor', 'major'] },
-    'turnaround_1': { notes: [12, 11, 10, 9, 8, 7, 7], quality: ['major'] },
-    'turnaround_2': { notes: [0, 4, 7, 10, 11, 12], quality: ['major'] },
-};
-
 const SEQUENCES = {
     'up3': { offsets: [0, 1, 2], nextBase: 1 },
     'down3': { offsets: [0, -1, -2], nextBase: -1 },
@@ -116,7 +94,11 @@ function getScaleForChord(chord, style, nextChord) {
         if (chord.quality === 'minor' || chord.quality === 'halfdim' || chord.quality === 'dim') {
             return [0, 3, 5, 6, 7, 10]; // Minor Blues
         }
-        return [0, 2, 3, 4, 7, 9]; // Major Blues
+        // Major Blues
+        const scale = [0, 2, 3, 4, 7, 9];
+        // If it's a Dominant chord, adding the b7 helps bridge the gap
+        if (chord.intervals.includes(10)) scale.push(10);
+        return scale;
     }
 
     if (style === 'neo') {
@@ -124,7 +106,8 @@ function getScaleForChord(chord, style, nextChord) {
         if (chord.quality === 'minor' || chord.quality === 'halfdim') {
             return [0, 2, 3, 5, 7, 10]; // Minor Pentatonic + 2
         }
-        return [0, 2, 4, 5, 7, 9]; // Major Pentatonic + 11
+        // Lydian (Major + #4) - Characteristic Neo-Soul color
+        return [0, 2, 4, 6, 7, 9, 11]; 
     }
 
     if (style === 'bird') {
@@ -171,7 +154,7 @@ function getScaleForChord(chord, style, nextChord) {
     }
 }
 
-export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 77, style = 'scalar', stepInChord = 0) {
+export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 77, style = 'scalar', stepInChord = 0, bassFreq = null) {
     if (!currentChord) return null;
 
     let durationMultiplier = 1;
@@ -264,6 +247,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (style === 'neo') restProb = 0.5 - (intensity * 0.2);
         if (style === 'minimal') restProb = 0.65 - (intensity * 0.4); 
         if (style === 'bird') restProb = (ctx.bpm > 150 ? 0.45 : 0.25) - (intensity * 0.2);
+        
+        // High Tempo Breath Control: Humans need to breathe more when playing fast
+        if (ctx.bpm > 160) restProb += 0.15;
 
         if (!sb.isResting && Math.random() < restProb) {
             sb.isResting = true;
@@ -275,63 +261,17 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             // Higher intensity leads to longer phrases
             let phraseBase = (style === 'bird' ? 24 : (style === 'shred' ? 16 : 8)) + Math.floor(intensity * 12);
             if (style === 'bird' && ctx.bpm > 150) phraseBase = 12 + Math.floor(intensity * 8);
+            
+            // Cap phrase length at high tempos to avoid machine-gun effect
+            if (ctx.bpm > 160) phraseBase = Math.min(phraseBase, 8);
+            
             sb.phraseSteps = phraseBase + Math.floor(Math.random() * 16); 
+            if (ctx.bpm > 160) sb.phraseSteps = Math.min(sb.phraseSteps, 12);
             
             // Bird/Bebop uses a mix of scalar runs and arpeggio extensions
             sb.patternMode = (style === 'bird') ? (Math.random() < 0.4 ? 'arp' : 'scale') : (style === 'minimal' ? 'arp' : (Math.random() < 0.6 ? 'scale' : 'arp'));
             sb.sequenceType = null;
-            
-            // --- Turnaround Logic ---
-            const loopStep = step % (arranger.totalSteps || 1);
-            const isTurnaround = (arranger.totalSteps > 16) && loopStep >= (arranger.totalSteps - 16);
-            
-            // Style-aware lick selection
-            let lickProb = 0.15 + (intensity * 0.2); // More licks as energy builds
-            if (style === 'blues') lickProb = isTurnaround ? 0.6 : 0.35;
-            if (style === 'neo') lickProb = 0.25;
-            if (style === 'minimal') lickProb = 0; // David Gilmour style: no canned licks, just melody
-
-            if (style !== 'scalar' && style !== 'shred' && style !== 'minimal' && Math.random() < lickProb) {
-                let pool = Object.keys(CANNED_LICKS).filter(name => {
-                    const lick = CANNED_LICKS[name];
-                    const q = currentChord.quality;
-                    const isMajor = q === 'major' || q.startsWith('maj') || q === 'add9' || q === '6' || q === '5';
-                    const isMinor = q === 'minor' || q.startsWith('m') || q.includes('dim') || q === 'halfdim';
-                    const isDom = currentChord.intervals.includes(10) || ['7', '9', '7b9', '7#9'].includes(q);
-
-                    let qualityMatch = false;
-                    if (isMajor && lick.quality.includes('major')) qualityMatch = true;
-                    if (isMinor && lick.quality.includes('minor')) qualityMatch = true;
-                    if (q === 'halfdim' && lick.quality.includes('halfdim')) qualityMatch = true;
-                    if (isDom && (lick.quality.includes('major') || lick.quality.includes('minor'))) qualityMatch = true;
-
-                    // Mode-aware lick filtering
-                    if (arranger.isMinor && isMajor && !lick.quality.includes('minor')) qualityMatch = false;
-
-                    if (style === 'blues') {
-                        if (isTurnaround) return ['turnaround_1', 'turnaround_2'].includes(name) && qualityMatch;
-                        return ['the_lick', 'blues_1', 'blues_2', 'blues_3', 'blues_4', 'blues_5', 'bb_box', 'albert_king'].includes(name) && qualityMatch;
-                    }
-                    if (style === 'neo') {
-                        return ['neo_1', 'neo_2', 'neo_quartal', 'the_lick'].includes(name) && qualityMatch;
-                    }
-                    if (style === 'bird') {
-                        return ['the_lick', 'bebop_1', 'parker_1', 'parker_2', 'bird_enclosure'].includes(name) && qualityMatch;
-                    }
-                    return qualityMatch;
-                });
-
-                if (pool.length > 0) {
-                    const lickData = CANNED_LICKS[pool[Math.floor(Math.random() * pool.length)]];
-                    sb.currentLick = lickData.notes;
-                    sb.lickIndex = 0;
-                    sb.lickBaseMidi = rootMidi;
-                } else {
-                    sb.currentLick = null;
-                }
-            } else {
-                sb.currentLick = null;
-            }
+            sb.currentLick = null; // Ensure lick is cleared
         }
     }
     sb.phraseSteps--;
@@ -376,7 +316,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (isNewPhrase && !sb.motifCell) {
             // Start of a new idea: Establish a motif
             sb.motifCell = cellPool[Math.floor(Math.random() * cellPool.length)];
-            sb.motifCounter = 2 + Math.floor(Math.random() * 3); // Repeat/vary for 2-4 beats
+            sb.motifCounter = (style === 'blues' ? 4 : 2) + Math.floor(Math.random() * 3); // Repeat/vary for 2-4 beats (Blues repeats more)
             sb.currentCell = sb.motifCell;
         } else if (sb.motifCounter > 0) {
             // Call and Response: Repeat or vary the motif
@@ -408,28 +348,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     }
 
     // Check rhythmic cell for current step
-    // If a lick is playing, it overrides the rhythmic cell to ensure the whole lick plays
-    if (sb.currentCell[stepInBeat] === 0 && !sb.currentLick) return null;
+    if (sb.currentCell[stepInBeat] === 0) return null;
 
     // --- Pitch Selection ---
     let finalMidi = prevMidi;
     let isGraceNote = false;
     let bendStartInterval = 0;
 
-    // --- Lick Logic ---
-    if (sb.currentLick) {
-        const lickNote = sb.currentLick[sb.lickIndex];
-        finalMidi = sb.lickBaseMidi + lickNote;
-        sb.lickIndex++;
-        if (sb.lickIndex >= sb.currentLick.length) {
-            sb.currentLick = null;
-        }
-        
-        // Neo-soul licks often have a very soft, "ghosted" touch
-        if (style === 'neo') velocity *= (0.7 + Math.random() * 0.4);
-
-        return { freq: getFrequency(finalMidi), durationMultiplier, velocity, style };
-    } else if (sb.sequenceType) {
+    // --- Lick/Sequence Logic ---
+    if (sb.sequenceType) {
         const seq = SEQUENCES[sb.sequenceType];
         const offset = seq.offsets[sb.sequenceIndex];
         const list = (sb.patternMode === 'arp' || (style === 'shred' && Math.random() < 0.7)) ? chordTones : scaleTones;
@@ -617,16 +544,24 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         const currentDir = sb.direction || 1;
         
         // Avoid 4th (11) on Major chords
-        const isAvoid11 = (currentChord.quality === 'maj7' || currentChord.quality === 'dom') && intervalFromRoot === 5;
-        // Avoid Major 7th on Dominant chords
+        const hasMaj3 = currentChord.intervals.includes(4);
+        const hasP5 = currentChord.intervals.includes(7);
+        
+        const isAvoid11 = hasMaj3 && intervalFromRoot === 5;
         const isAvoidMaj7 = (currentChord.quality === 'dom' && intervalFromRoot === 11);
+        // NEW: Avoid Minor 3rd on Major chords (unless it's a #9 chord)
+        const isAvoidMin3 = hasMaj3 && intervalFromRoot === 3 && currentChord.quality !== '7#9'; 
+        // NEW: Avoid b5 on Perfect 5th chords (unless blues passing)
+        const isAvoidb5 = hasP5 && intervalFromRoot === 6 && style !== 'blues';
 
-        if (isAvoid11 || isAvoidMaj7) {
+        if (isAvoid11 || isAvoidMaj7 || isAvoidMin3 || isAvoidb5) {
             let safeMidi = finalMidi + currentDir;
             let attempts = 0;
             while (attempts < 12) {
                  const d = (safeMidi - rootMidi + 120) % 12;
-                 if (scaleIntervals.includes(d) && d !== 5 && d !== 11 && safeMidi <= maxMidi && safeMidi >= minMidi) {
+                 const isStillMin3 = hasMaj3 && d === 3;
+                 // Ensure the new note isn't also an avoid note
+                 if (scaleIntervals.includes(d) && d !== 5 && d !== 11 && !isStillMin3 && safeMidi <= maxMidi && safeMidi >= minMidi) {
                      finalMidi = safeMidi;
                      break;
                  }
@@ -665,6 +600,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         }
     }
 
+    // Bass-Relative Safety Check: Avoid minor 9ths on strong beats
+    if (bassFreq && (step % 4 === 0)) {
+        const bassMidi = getMidi(bassFreq);
+        const intervalAgainstBass = (finalMidi - bassMidi + 120) % 12;
+        if (intervalAgainstBass === 1) {
+            // Shift away from the dissonance
+            finalMidi += (sb.direction || 1);
+        }
+    }
+
     // STRICT MIDI CONSTRAINTS - Final pass
     while (finalMidi > maxMidi) { 
         finalMidi -= 12; 
@@ -679,7 +624,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const isTarget = chordTones.some(t => (t % 12) === (finalMidi % 12));
     const isLongNote = (style === 'shred' && durationMultiplier > 4) || style === 'minimal' || sb.phraseSteps <= 0;
     
-    const bendProb = style === 'blues' ? 0.35 : (style === 'shred' ? 0.05 : (style === 'neo' ? 0.45 : 0.2));
+    // Reduced bend probability to prevent "oversplaying" feel
+    const bendProb = style === 'blues' ? 0.25 : (style === 'shred' ? 0.04 : (style === 'neo' ? 0.3 : 0.12));
     if (Math.random() < bendProb && (isTarget || isLongNote)) {
         if (style === 'neo') {
             // Neo-soul 'Slide from below' or 'Scoop'
@@ -693,9 +639,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         } else if (style === 'minimal') {
             // Gilmour-style expressive bends
             const r = Math.random();
-            if (r < 0.3) bendStartInterval = 2; // Full step bend
-            else if (r < 0.6) bendStartInterval = 1; // Half step bend
-            else bendStartInterval = 0.5; // Subtle scoop
+            if (r < 0.4) bendStartInterval = 2; // Full step bend
+            else if (r < 0.7) bendStartInterval = 1; // Half step bend
+            else bendStartInterval = 0.5; // Subtle scoop (characteristic of slow soloing)
         } else {
             bendStartInterval = style === 'shred' ? 1 : (Math.random() > 0.6 ? 2 : 1);
         }
@@ -708,6 +654,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (Math.random() < 0.8) durationMultiplier = 8 + Math.floor(Math.random() * 8);
     } else if (style === 'neo' && isLongNote && Math.random() < 0.3) {
         durationMultiplier = 4 + Math.floor(Math.random() * 4);
+    }
+
+    // Blues Staccato Articulation
+    if (style === 'blues' && durationMultiplier > 1 && Math.random() < 0.6) {
+        durationMultiplier = 1; // Force staccato/punchy feel
     }
 
     sb.busySteps = durationMultiplier - 1;
