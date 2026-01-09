@@ -81,8 +81,10 @@ export const ui = {
     visualFlash: document.getElementById('visualFlashCheck'),
     haptic: document.getElementById('hapticCheck'),
     exportMidiBtn: document.getElementById('exportMidiBtn'),
+    installAppBtn: document.getElementById('installAppBtn'),
     flashOverlay: document.getElementById('flashOverlay'),
     resetSettingsBtn: document.getElementById('resetSettingsBtn'),
+    refreshAppBtn: document.getElementById('refreshAppBtn'),
     editorOverlay: document.getElementById('editorOverlay'),
     editArrangementBtn: document.getElementById('editArrangementBtn'),
     closeEditorBtn: document.getElementById('closeEditorBtn')
@@ -99,13 +101,16 @@ export function setupPanelMenus() {
             document.querySelectorAll('.panel-settings-menu.open').forEach(m => {
                 if (m !== menu) {
                     m.classList.remove('open');
-                    const otherBtn = m.closest('.dashboard-panel').querySelector('.panel-menu-btn');
+                    const otherPanel = m.closest('.dashboard-panel');
+                    const otherBtn = otherPanel.querySelector('.panel-menu-btn');
                     if (otherBtn) otherBtn.classList.remove('active');
+                    otherPanel.style.zIndex = '';
                 }
             });
 
-            menu.classList.toggle('open');
-            btn.classList.toggle('active');
+            const isOpen = menu.classList.toggle('open');
+            btn.classList.toggle('active', isOpen);
+            panel.style.zIndex = isOpen ? '100' : '';
         });
     });
 
@@ -113,8 +118,10 @@ export function setupPanelMenus() {
         if (!e.target.closest('.panel-settings-menu') && !e.target.closest('.panel-menu-btn')) {
             document.querySelectorAll('.panel-settings-menu.open').forEach(menu => {
                 menu.classList.remove('open');
-                const btn = menu.closest('.dashboard-panel').querySelector('.panel-menu-btn');
+                const panel = menu.closest('.dashboard-panel');
+                const btn = panel.querySelector('.panel-menu-btn');
                 if (btn) btn.classList.remove('active');
+                panel.style.zIndex = '';
             });
         }
     });

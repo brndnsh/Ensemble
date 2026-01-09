@@ -12,6 +12,7 @@ import { initWorker, startWorker, stopWorker, flushWorker, requestBuffer, syncWo
 let userPresets = storage.get('userPresets');
 let userDrumPresets = storage.get('userDrumPresets');
 let iosAudioUnlocked = false;
+let deferredPrompt;
 let viz;
 let lastAudioTime = 0;
 let lastPerfTime = 0;
@@ -1065,9 +1066,27 @@ function setupUIHandlers() {
         [ui.transUpBtn, 'click', () => transposeKey(1)],
         [ui.transDownBtn, 'click', () => transposeKey(-1)],
         [ui.relKeyBtn, 'click', switchToRelativeKey],
+        [ui.installAppBtn, 'click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    ui.installAppBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        }],
         [ui.settingsBtn, 'click', () => ui.settingsOverlay.classList.add('active')],
         [ui.closeSettings, 'click', () => ui.settingsOverlay.classList.remove('active')],
         [ui.resetSettingsBtn, 'click', () => confirm("Reset all settings?") && resetToDefaults()],
+        [ui.refreshAppBtn, 'click', () => {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistration().then(reg => {
+                    if (reg) reg.update();
+                });
+            }
+            window.location.reload();
+        }],
         [ui.exportMidiBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
@@ -1214,6 +1233,27 @@ function setupUIHandlers() {
     });
 
     window.addEventListener('ensemble_state_change', saveCurrentState);
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        // Update UI notify the user they can add to home screen
+        if (ui.installAppBtn) {
+            ui.installAppBtn.style.display = 'flex';
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        // Clear the deferredPrompt so it can be garbage collected
+        deferredPrompt = null;
+        // Hide the install button
+        if (ui.installAppBtn) {
+            ui.installAppBtn.style.display = 'none';
+        }
+        showToast('App installed successfully!');
+    });
 
     // Custom Event to Open Editor
     document.addEventListener('open-editor', (e) => {

@@ -244,8 +244,8 @@
                 <div style="font-size: 0.8rem; color: #64748b; font-style: italic; margin-top: 0.75rem;">Tap steps to create your own beat...</div>
             </div>
 
-            <div class="panel-settings-menu">
-                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: flex-start;">
+            <div class="panel-settings-menu grooves-settings-menu">
+                 <div style="display: grid; gap: 2rem; align-items: flex-start;" class="grooves-menu-grid">
                     <div>
                         <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Feel & Actions</h4>
                         <div style="margin-bottom: 1rem;">
@@ -444,13 +444,17 @@
                 </div>
             </div>
             
-            <div class="setting-item" style="margin-top: 1rem;">
-                <button id="exportMidiBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--panel-color); border: 1px solid #475569;">
-                    <span>🎹</span> Export Progression as MIDI
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem;">
+                <button id="exportMidiBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--panel-color); border: 1px solid #475569; padding: 0.8rem 0.5rem;">
+                    <span>🎹</span> MIDI
                 </button>
-            </div>
-            <div class="setting-item" style="margin-top: 0.5rem;">
-                <button id="resetSettingsBtn" style="width: 100%; color: var(--error-color); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);">Reset All Settings</button>
+                <button id="installAppBtn" style="display: none; width: 100%; align-items: center; justify-content: center; gap: 0.5rem; background: var(--accent-color); color: white; border: none; font-weight: bold; padding: 0.8rem 0.5rem;">
+                    <span>📲</span> Install
+                </button>
+                <button id="resetSettingsBtn" style="width: 100%; color: var(--error-color); background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.8rem 0.5rem;">Reset</button>
+                <button id="refreshAppBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--panel-color); border: 1px solid #475569; padding: 0.8rem 0.5rem;">
+                    <span>🔄</span> Refresh
+                </button>
             </div>
         </div>
 
