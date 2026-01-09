@@ -336,7 +336,7 @@ button {
     position: relative;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .dashboard-panel.collapsed {
@@ -596,6 +596,24 @@ h2 {
 
 .panel-settings-menu.open {
     display: block;
+}
+
+.grooves-settings-menu {
+    width: 450px;
+}
+
+.grooves-menu-grid {
+    grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 500px) {
+    .grooves-settings-menu {
+        width: 320px;
+    }
+    
+    .grooves-menu-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @keyframes menuFadeIn {
