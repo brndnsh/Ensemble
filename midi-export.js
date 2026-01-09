@@ -1,7 +1,7 @@
 import { ctx, gb, cb, bb, sb, arranger } from './state.js';
 import { ui, showToast } from './ui.js';
 import { getMidi } from './utils.js';
-import { getBassNote } from './bass.js';
+import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 
 /**
@@ -279,29 +279,7 @@ export function exportToMidi() {
 
                 // Bass
                 if (activeChord) {
-                    let shouldPlay = false;
-                    if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
-                    else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
-                    else if (bb.style === 'arp' && stepInChord % 4 === 0) shouldPlay = true;
-                    else if (bb.style === 'bossa' && [0, 6, 8, 14].includes(globalStep % 16)) shouldPlay = true;
-                    else if (bb.style === 'quarter') {
-                        if (stepInChord % 4 === 0) shouldPlay = true;
-                        else if (stepInChord % 2 === 0 && Math.random() < 0.15) shouldPlay = true;
-                    }
-                    else if (bb.style === 'funk') {
-                        const stepInBeat = stepInChord % 4;
-                        if (stepInChord === 0) shouldPlay = true;
-                        else if (stepInChord % 4 === 0 && Math.random() < 0.7) shouldPlay = true;
-                        else if (stepInBeat === 2 && Math.random() < 0.4) shouldPlay = true;
-                        else if (stepInBeat === 3 && Math.random() < 0.2) shouldPlay = true;
-                    }
-                    else if (bb.style === 'neo') {
-                        if (stepInChord === 0) shouldPlay = true;
-                        else if (stepInChord % 8 === 0 && Math.random() < 0.5) shouldPlay = true;
-                        else if (globalStep % 4 === 3 && Math.random() < 0.2) shouldPlay = true;
-                    }
-
-                    if (shouldPlay) {
+                    if (isBassActive(bb.style, globalStep, stepInChord)) {
                         let nextChord = null, nextCurrent = 0;
                         for (const c of arranger.progression) {
                             const cSteps = Math.round(c.beats * 4);
@@ -310,6 +288,17 @@ export function exportToMidi() {
                         }
                         const bassResult = getBassNote(activeChord, nextChord, Math.floor(stepInChord / 4), lastBassFreq, bb.octave, bb.style, activeChordIndex, step, stepInChord, arranger.isMinor);
                         if (bassResult && bassResult.freq) {
+                            // Enforce Monophony: Cut off previous bass note
+                            for (let i = bassNotesOff.length - 1; i >= 0; i--) {
+                                if (bassNotesOff[i].time > currentTimeInPulses) {
+                                    const pending = bassNotesOff[i];
+                                    const offDelta = Math.max(0, currentTimeInPulses - bassTrack.currentTime);
+                                    pending.notes.forEach(n => bassTrack.noteOff(offDelta, 1, n));
+                                    bassTrack.currentTime = currentTimeInPulses;
+                                    bassNotesOff.splice(i, 1);
+                                }
+                            }
+
                             lastBassFreq = bassResult.freq;
                             const midi = getMidi(bassResult.freq);
                             const delta = Math.max(0, currentTimeInPulses - bassTrack.currentTime);

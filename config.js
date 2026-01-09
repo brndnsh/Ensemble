@@ -145,8 +145,10 @@ export const BASS_STYLES = [
     { id: 'whole', name: 'Whole', category: 'Basic' },
     { id: 'half', name: 'Half', category: 'Basic' },
     { id: 'arp', name: 'Arp (1-3-5-3)', category: 'Basic' },
+    { id: 'rock', name: 'Rock (8th)', category: 'Pop/Rock' },
     { id: 'quarter', name: 'Walking', category: 'Jazz' },
     { id: 'funk', name: 'Funk', category: 'Soul/Funk' },
+    { id: 'rocco', name: 'Rocco (16ths)', category: 'Soul/Funk' },
     { id: 'neo', name: 'Neo-Soul', category: 'Soul/R&B' },
     { id: 'bossa', name: 'Bossa Nova', category: 'World/Latin' }
 ];

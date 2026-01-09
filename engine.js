@@ -198,11 +198,12 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
     if (!Number.isFinite(freq) || !Number.isFinite(time) || !Number.isFinite(duration)) return;
     if (freq < 10 || freq > 24000) return;
     try {
-        // Boosted volume multiplier for better mix presence, mixed with input velocity
-        const vol = 1.1 * velocity * (0.95 + Math.random() * 0.1);
-        const tonalVol = muted ? 0 : vol;
-    
-    // Body (Fundamental + warmth)
+            // Boosted volume multiplier for better mix presence, mixed with input velocity
+            const vol = 1.1 * velocity * (0.95 + Math.random() * 0.1);
+            // Allow slight tonal bleed for muted notes for realism
+            const tonalVol = muted ? vol * 0.2 : vol;
+        
+            // Body (Fundamental + warmth)
     const oscBody = ctx.audio.createOscillator();
     oscBody.type = 'triangle';
     oscBody.frequency.setValueAtTime(freq, time);
@@ -261,7 +262,8 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
     const gain = ctx.audio.createGain();
     gain.gain.setValueAtTime(0, time);
     gain.gain.linearRampToValueAtTime(tonalVol, time + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + duration * 1.5);
+    const tonalDecay = muted ? 0.08 : (duration * 1.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + tonalDecay);
 
     oscBody.connect(mainFilter);
     oscGrowl.connect(growlFilter);
@@ -274,6 +276,25 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
     scoop.connect(definition);
     definition.connect(gain);
     gain.connect(ctx.bassGain);
+
+    // Monophonic Cutoff: Stop previous bass note if it's still ringing
+    if (bb.lastBassGain) {
+        try {
+            const t = time;
+            const g = bb.lastBassGain.gain;
+            // Use cancelAndHoldAtTime to avoid volume jumps (clicks) by starting fade from current computed value
+            if (g.cancelAndHoldAtTime) {
+                g.cancelAndHoldAtTime(t);
+            } else {
+                g.cancelScheduledValues(t);
+            }
+            // Fade out over ~15ms (3x time constant) to avoid clicking on low frequency bass waves
+            g.setTargetAtTime(0, t, 0.015);
+        } catch (e) {
+            // Ignore errors if previous node is already gone/disconnected
+        }
+    }
+    bb.lastBassGain = gain;
 
     oscBody.start(time);
     oscGrowl.start(time);

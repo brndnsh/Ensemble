@@ -52,7 +52,8 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **Algorithmic Performance**: Generative lines that react to Arranger data.
 *   **Mode-Aware Logic**: Algorithms adapt scale selection and phrasing based on the `isMinor` state (e.g., using Aeolian vs Ionian).
 *   **Soloist Styles**: Scalar, Shreddy, Blues, Minimal (Gilmour), Bird (Bebop), and Neo-Soul.
-*   **Bassist Styles**: Whole, Half, Arp, Walking, Funk, Neo-Soul, and Bossa Nova.
+*   **Bassist Styles**: Whole, Half, Arp, Walking, Rock (8th note), Funk (syncopated), Rocco (16th finger funk), Neo-Soul, and Bossa Nova.
+*   **Monophonic Engine**: The bass engine enforces strict monophony with realistic "ghost note" handling, including tonal bleed and short decay for muted notes.
 *   **Slash Chord Support**: Bassist prioritizes specified bass notes (e.g., C/G).
 *   **Intensity Mapping**: Energy builds dynamically toward the end of musical sections.
 *   **Micro-Timing**: Authentic "behind the beat" feel for Neo-Soul and sophisticated bebop phrasing.
