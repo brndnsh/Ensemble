@@ -314,15 +314,18 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     
     // Check for eighth-note skip ("and" of a beat)
     if (beatIndex % 1 !== 0) {
-        const skipVel = 0.6 + Math.random() * 0.3;
-        const isMuted = Math.random() < 0.2;
-        if (Math.random() < 0.7 && prevMidi) {
-            const ghostNote = Math.random() < 0.3 ? withOctaveJump(prevMidi) : prevMidi;
-            return result(getFrequency(ghostNote), 2, skipVel, isMuted);
-        } else {
-            const offset = Math.random() < 0.5 ? 1 : -1;
-            return result(getFrequency(clampAndNormalize(prevMidi + offset)), 2, skipVel, isMuted);
+        if (Math.random() < 0.3) {
+            const skipVel = 0.6 + Math.random() * 0.3;
+            const isMuted = Math.random() < 0.2;
+            if (Math.random() < 0.7 && prevMidi) {
+                const ghostNote = Math.random() < 0.3 ? withOctaveJump(prevMidi) : prevMidi;
+                return result(getFrequency(ghostNote), 2, skipVel, isMuted);
+            } else {
+                const offset = Math.random() < 0.5 ? 1 : -1;
+                return result(getFrequency(clampAndNormalize(prevMidi + offset)), 2, skipVel, isMuted);
+            }
         }
+        return null;
     }
 
     const intBeat = Math.floor(beatIndex);
