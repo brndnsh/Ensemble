@@ -851,9 +851,42 @@ h2 {
     max-height: 120px; 
     text-align: center;
     color: var(--text-color);
-    font-weight: 700;
-    font-size: clamp(0.75rem, 2vh, 1.1rem);
+    font-weight: 600;
 }
+
+/* Dynamic sizing for short progressions */
+#chordVisualizer[data-total-measures="1"] .chord-card,
+#chordVisualizer[data-total-measures="2"] .chord-card,
+#chordVisualizer[data-total-measures="3"] .chord-card,
+#chordVisualizer[data-total-measures="4"] .chord-card {
+    min-height: 120px;
+    font-size: 2rem;
+}
+
+#chordVisualizer[data-total-measures="5"] .chord-card,
+#chordVisualizer[data-total-measures="6"] .chord-card,
+#chordVisualizer[data-total-measures="7"] .chord-card,
+#chordVisualizer[data-total-measures="8"] .chord-card {
+    min-height: 100px;
+    font-size: 1.8rem;
+}
+
+#chordVisualizer[data-total-measures="9"] .chord-card,
+#chordVisualizer[data-total-measures="10"] .chord-card,
+#chordVisualizer[data-total-measures="11"] .chord-card,
+#chordVisualizer[data-total-measures="12"] .chord-card {
+    min-height: 80px;
+    font-size: 1.5rem;
+}
+
+#chordVisualizer[data-total-measures="13"] .chord-card,
+#chordVisualizer[data-total-measures="14"] .chord-card,
+#chordVisualizer[data-total-measures="15"] .chord-card,
+#chordVisualizer[data-total-measures="16"] .chord-card {
+    min-height: 60px;
+    font-size: 1.3rem;
+}
+
 
 @media (min-width: 900px) {
     .chord-card {
