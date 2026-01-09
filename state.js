@@ -1,3 +1,25 @@
+/**
+ * @typedef {Object} GlobalContext
+ * @property {AudioContext|null} audio - The Web Audio API context.
+ * @property {GainNode|null} masterGain - The master volume gain node.
+ * @property {ConvolverNode|null} reverbNode - The global reverb node.
+ * @property {GainNode|null} chordsReverb - Reverb send for chords.
+ * @property {GainNode|null} drumsReverb - Reverb send for drums.
+ * @property {GainNode|null} bassReverb - Reverb send for bass.
+ * @property {GainNode|null} soloistReverb - Reverb send for soloist.
+ * @property {boolean} isPlaying - Whether the sequencer is currently playing.
+ * @property {number} bpm - Beats per minute (40-240).
+ * @property {number} nextNoteTime - The scheduler time for the next note (swung).
+ * @property {number} unswungNextNoteTime - The scheduler time for the next note (straight/quantized).
+ * @property {number} scheduleAheadTime - Lookahead time for scheduling (in seconds).
+ * @property {number} step - The global step counter.
+ * @property {Array<Object>} drawQueue - Queue of visual events to be rendered.
+ * @property {boolean} isCountingIn - Whether the metronome count-in is active.
+ * @property {number} countInBeat - Current beat of the count-in (0-3).
+ * @property {boolean} isDrawing - Whether the visualizer loop is active.
+ * @property {string} theme - The current UI theme ('auto', 'light', 'dark').
+ * @property {WakeLockSentinel|null} wakeLock - The screen wake lock object.
+ */
 export const ctx = {
     audio: null,
     masterGain: null,
@@ -20,6 +42,30 @@ export const ctx = {
     wakeLock: null
 };
 
+/**
+ * @typedef {Object} Section
+ * @property {string} id - Unique identifier for the section.
+ * @property {string} label - Display name (e.g., "Verse", "Chorus").
+ * @property {string} value - The chord progression string (e.g., "I | IV").
+ * @property {string} [color] - Optional color hex code for UI accent.
+ */
+
+/**
+ * @typedef {Object} ArrangerState
+ * @property {Array<Section>} sections - List of song sections.
+ * @property {Array<Object>} progression - Flattened list of parsed chord objects.
+ * @property {string} key - The musical key (e.g., "C", "F#").
+ * @property {boolean} isMinor - Whether the key is minor.
+ * @property {string} notation - Notation style ('roman', 'nns', 'name').
+ * @property {boolean} valid - Whether the current progression is valid.
+ * @property {number} totalSteps - Total number of 16th note steps in the song.
+ * @property {Array<{start: number, end: number, chord: Object}>} stepMap - Map of steps to chord objects.
+ * @property {Array<HTMLElement>} cachedCards - Cache of chord DOM elements.
+ * @property {Array<number>} cardOffsets - Cache of chord card scroll positions.
+ * @property {Array<string>} history - Undo history stack (JSON strings).
+ * @property {string} lastInteractedSectionId - ID of the last edited section.
+ * @property {string} lastChordPreset - Name of the last loaded chord preset.
+ */
 export const arranger = {
     sections: [{ id: 's1', label: 'Intro', value: 'I | V | vi | IV', color: '#3b82f6' }],
     progression: [],
@@ -38,6 +84,16 @@ export const arranger = {
     lastChordPreset: 'Pop (Standard)'
 };
 
+/**
+ * @typedef {Object} ChordState
+ * @property {boolean} enabled - Whether the chord engine is active.
+ * @property {string} style - The accompaniment style ID (e.g., 'pad', 'strum8').
+ * @property {number} volume - Volume level (0.0 - 1.0).
+ * @property {number} reverb - Reverb send level (0.0 - 1.0).
+ * @property {number} octave - Base MIDI octave for voicing.
+ * @property {string} density - Voicing density ('thin', 'standard', 'rich').
+ * @property {number|null} lastActiveChordIndex - Index of the currently playing chord.
+ */
 export const cb = {
     enabled: true,
     style: 'pad',
@@ -48,6 +104,30 @@ export const cb = {
     lastActiveChordIndex: null
 };
 
+/**
+ * @typedef {Object} Instrument
+ * @property {string} name - Instrument name (e.g., 'Kick').
+ * @property {string} symbol - Display emoji/symbol.
+ * @property {Array<number>} steps - Sequencer steps (0=off, 1=on, 2=accent).
+ * @property {boolean} muted - Whether the instrument is muted.
+ */
+
+/**
+ * @typedef {Object} GrooveState
+ * @property {boolean} enabled - Whether the drum engine is active.
+ * @property {Array<Instrument>} instruments - List of drum instruments.
+ * @property {number} volume - Volume level.
+ * @property {number} reverb - Reverb level.
+ * @property {number} measures - Number of measures in the loop (1-4).
+ * @property {number} currentMeasure - Currently visible measure for editing.
+ * @property {boolean} autoFollow - Whether to scroll grid during playback.
+ * @property {number} humanize - Humanization percentage (0-100).
+ * @property {number} swing - Swing percentage (0-100).
+ * @property {string} swingSub - Swing subdivision ('8th' or '16th').
+ * @property {string} lastDrumPreset - Name of the last loaded drum preset.
+ * @property {Object} audioBuffers - Cache for decoded drum samples.
+ * @property {Array<Array<HTMLElement>>} cachedSteps - DOM cache for sequencer grid.
+ */
 export const gb = {
     enabled: true,
     instruments: [
@@ -69,6 +149,17 @@ export const gb = {
     cachedSteps: [] 
 };
 
+/**
+ * @typedef {Object} BassState
+ * @property {boolean} enabled - Whether the bass engine is active.
+ * @property {number} volume - Volume level.
+ * @property {number} reverb - Reverb level.
+ * @property {number|null} lastFreq - Frequency of the last played note.
+ * @property {number|null} lastPlayedFreq - Frequency of the note currently ringing.
+ * @property {Map<number, Object>} buffer - Map of scheduled notes from the worker.
+ * @property {number} octave - Base MIDI octave.
+ * @property {string} style - Playing style ID (e.g., 'walking', 'funk').
+ */
 export const bb = {
     enabled: false,
     volume: 0.45,
@@ -80,6 +171,35 @@ export const bb = {
     style: 'arp'
 };
 
+/**
+ * @typedef {Object} SoloistState
+ * @property {boolean} enabled - Whether the soloist engine is active.
+ * @property {number} volume - Volume level.
+ * @property {number} reverb - Reverb level.
+ * @property {number|null} lastFreq - Last generated frequency.
+ * @property {number|null} lastPlayedFreq - Last played frequency.
+ * @property {Map<number, Object>} buffer - Map of scheduled notes from the worker.
+ * @property {number} lastNoteEnd - Time when the last note ends.
+ * @property {number} octave - Base MIDI octave.
+ * @property {string} style - Soloing style ID (e.g., 'blues', 'shred').
+ * @property {number} direction - Current melodic direction (1 or -1).
+ * @property {string} patternMode - Current generation mode ('scale', 'arp', 'stay').
+ * @property {number} patternSteps - Steps remaining in current mode.
+ * @property {string|null} sequenceType - Current sequence type.
+ * @property {number} sequenceIndex - Current position in sequence.
+ * @property {number|null} sequenceBaseMidi - Base pitch for sequence.
+ * @property {number} phraseSteps - Steps remaining in current phrase.
+ * @property {boolean} isResting - Whether the soloist is taking a breath.
+ * @property {Array<number>} currentCell - Current rhythmic cell.
+ * @property {Array<number>|null} motifCell - Stored motif for repetition.
+ * @property {number} motifCounter - Counter for motif repetition.
+ * @property {Array<Object>|null} currentLick - Currently playing pre-defined lick.
+ * @property {number} lickIndex - Position in current lick.
+ * @property {number|null} lickBaseMidi - Base pitch for lick transposition.
+ * @property {Array<number>|null} enclosureNotes - Pending enclosure notes.
+ * @property {number} enclosureIndex - Position in enclosure.
+ * @property {number} busySteps - Counter for "busy" playing periods.
+ */
 export const sb = {
     enabled: false,
     volume: 0.5,
@@ -109,6 +229,10 @@ export const sb = {
     busySteps: 0
 };
 
+/**
+ * @typedef {Object} VisualizerState
+ * @property {boolean} enabled - Whether the advanced visualizer is active.
+ */
 export const vizState = {
     enabled: false
 };

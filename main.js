@@ -1,6 +1,6 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates } from './ui.js';
-import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates, updateActiveChordUI } from './ui.js';
+import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime } from './engine.js';
 import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS, APP_VERSION } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
 import { validateProgression, generateRandomProgression, mutateProgression, transformRelativeProgression } from './chords.js';
@@ -14,8 +14,6 @@ let userDrumPresets = storage.get('userDrumPresets');
 let iosAudioUnlocked = false;
 let deferredPrompt;
 let viz;
-let lastAudioTime = 0;
-let lastPerfTime = 0;
 
 /** @type {HTMLAudioElement} */
 // Use a slightly longer silent wav to ensure OS recognition as media playback
@@ -707,79 +705,7 @@ function updateDrumVis(ev) {
 }
 
 function updateChordVis(ev) {
-    if (cb.lastActiveChordIndex !== undefined && cb.lastActiveChordIndex !== null) {
-        if (arranger.cachedCards[cb.lastActiveChordIndex]) {
-            arranger.cachedCards[cb.lastActiveChordIndex].classList.remove('active');
-        }
-    }
-    if (arranger.cachedCards[ev.index]) {
-        const card = arranger.cachedCards[ev.index];
-        card.classList.add('active');
-        cb.lastActiveChordIndex = ev.index;
-
-        // Subtle haptic for chord changes
-        if (ui.haptic.checked && navigator.vibrate) {
-            navigator.vibrate(8); 
-        }
-
-        const chordData = arranger.progression[ev.index];
-        if (chordData) {
-            ui.activeSectionLabel.textContent = chordData.sectionLabel || "";
-            
-            // Highlight active section block in Arranger view
-            ui.chordVisualizer.querySelectorAll('.section-block').forEach(block => {
-                const isActive = block.contains(card);
-                block.classList.toggle('active-section', isActive);
-            });
-
-            // Highlight active section card in list and update progress bar
-            document.querySelectorAll('.section-card').forEach(sCard => {
-                const isActive = sCard.dataset.id == chordData.sectionId;
-                sCard.classList.toggle('active', isActive);
-                
-                if (isActive) {
-                    const progressFill = sCard.querySelector('.section-progress-fill');
-                    if (progressFill) {
-                        // Calculate progress within this section
-                        // Find total beats in this section
-                        const sectionChords = arranger.progression.filter(c => c.sectionId === chordData.sectionId);
-                        const totalBeats = sectionChords.reduce((sum, c) => sum + c.beats, 0);
-                        
-                        // Find beats elapsed before this chord in this section
-                        const chordIndexInSection = sectionChords.findIndex(c => c === chordData);
-                        const elapsedBeats = sectionChords.slice(0, chordIndexInSection).reduce((sum, c) => sum + c.beats, 0);
-                        
-                        // We can't easily get the "sub-chord" step here from ev, but we can do a rough "per chord" or use ctx.step
-                        // For a smoother bar, we could use the global step relative to section start step
-                        const sectionEntry = arranger.stepMap.find(e => e.chord.sectionId === chordData.sectionId);
-                        if (sectionEntry) {
-                            const sectionStartStep = sectionEntry.start;
-                            // Find section end
-                            let sectionEndStep = sectionStartStep;
-                            arranger.stepMap.forEach(e => {
-                                if (e.chord.sectionId === chordData.sectionId) sectionEndStep = e.end;
-                            });
-                            
-                            const sectionTotalSteps = sectionEndStep - sectionStartStep;
-                            const currentStepInSection = (ctx.step % arranger.totalSteps) - sectionStartStep;
-                            const progress = Math.max(0, Math.min(100, (currentStepInSection / sectionTotalSteps) * 100));
-                            progressFill.style.width = `${progress}%`;
-                        }
-                    }
-                }
-            });
-        }
-
-        // Auto-scroll logic using cached dimensions (no reflow)
-        const container = ui.chordVisualizer;
-        const offsetTop = arranger.cardOffsets[ev.index];
-        const cardHeight = arranger.cardHeights[ev.index];
-        
-        if (offsetTop !== undefined && cardHeight !== undefined) {
-            const scrollPos = offsetTop - (container.clientHeight / 2) + (cardHeight / 2);
-            container.scrollTo({ top: scrollPos, behavior: 'smooth' });
-        }
-    }
+    updateActiveChordUI(ev.index);
 }
 
 /**
@@ -793,21 +719,7 @@ function draw() {
         return;
     }
 
-    // Interpolate audio time with performance time for sub-sample visual smoothness
-    const audioTime = ctx.audio.currentTime;
-    const perfTime = performance.now();
-    if (audioTime !== lastAudioTime) {
-        lastAudioTime = audioTime;
-        lastPerfTime = perfTime;
-    }
-    const dt = (perfTime - lastPerfTime) / 1000;
-    const smoothAudioTime = audioTime + Math.min(dt, 0.1);
-
-    // Attempt to use high-precision latency if available, else fallback
-    const outputLatency = ctx.audio.outputLatency || 0;
-    const isChromium = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    const offset = outputLatency > 0 ? outputLatency : (isChromium ? 0.015 : 0.045);
-    const now = smoothAudioTime - offset;
+    const now = getVisualTime();
     
     // Efficient queue cleanup: remove only old events from the front
     while (ctx.drawQueue.length > 0 && ctx.drawQueue[0].time < now - 2.0) {
@@ -1796,7 +1708,7 @@ window.previewChord = (index) => {
     
     // Play the full chord once
     const now = ctx.audio.currentTime;
-    chord.freqs.forEach(f => playNote(f, now, 1.0, 0.15, 0.02));
+    chord.freqs.forEach(f => playNote(f, now, 1.0, { vol: 0.15, att: 0.02 }));
 
     // Visual feedback
     const cards = document.querySelectorAll('.chord-card');

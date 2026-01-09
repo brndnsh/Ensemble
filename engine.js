@@ -96,7 +96,7 @@ function safeDisconnect(nodes) {
     });
 }
 
-export function playNote(freq, time, duration, vol = 0.1, att = 0.05, soft = false, resonance = 1, lfoHz = 0) {
+export function playNote(freq, time, duration, { vol = 0.1, att = 0.05, soft = false, resonance = 1, lfoHz = 0 } = {}) {
     try {
         // Add subtle volume randomization
         const randomizedVol = vol * (0.92 + Math.random() * 0.16);
@@ -519,4 +519,28 @@ export function playDrumSound(name, time, velocity = 1.0) {
         noise.start(time);
         noise.stop(time + duration);
     }
+}
+
+let lastAudioTime = 0;
+let lastPerfTime = 0;
+
+export function getVisualTime() {
+    if (!ctx.audio) return 0;
+    
+    const audioTime = ctx.audio.currentTime;
+    const perfTime = performance.now();
+    
+    if (audioTime !== lastAudioTime) {
+        lastAudioTime = audioTime;
+        lastPerfTime = perfTime;
+    }
+    
+    const dt = (perfTime - lastPerfTime) / 1000;
+    const smoothAudioTime = audioTime + Math.min(dt, 0.1);
+
+    const outputLatency = ctx.audio.outputLatency || 0;
+    const isChromium = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    const offset = outputLatency > 0 ? outputLatency : (isChromium ? 0.015 : 0.045);
+    
+    return smoothAudioTime - offset;
 }
