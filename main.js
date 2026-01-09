@@ -994,6 +994,20 @@ function undo() {
 }
 
 function setupUIHandlers() {
+    const openExportModal = () => {
+        ui.arrangerActionMenu.classList.remove('open');
+        ui.arrangerActionTrigger.classList.remove('active');
+        ui.settingsOverlay.classList.remove('active');
+        
+        // Pre-populate Filename
+        let defaultName = arranger.lastChordPreset || "Ensemble Export";
+        // Clean up name
+        defaultName = defaultName.replace(/[^a-zA-Z0-9\s-_]/g, '').trim();
+        ui.exportFilenameInput.value = `${defaultName} - ${arranger.key} - ${ctx.bpm}bpm`;
+        
+        ui.exportOverlay.classList.add('active');
+    };
+
     const listeners = [
         [ui.playBtn, 'click', togglePlay],
         [ui.bpmInput, 'change', e => setBpm(e.target.value)],
@@ -1098,10 +1112,25 @@ function setupUIHandlers() {
             }
             window.location.reload();
         }],
-        [ui.exportMidiBtn, 'click', () => {
-            ui.arrangerActionMenu.classList.remove('open');
-            ui.arrangerActionTrigger.classList.remove('active');
-            exportToMidi(arranger, cb, gb, bb, sb);
+        [ui.exportMidiBtn, 'click', openExportModal],
+        [ui.settingsExportMidiBtn, 'click', openExportModal],
+        [ui.closeExportBtn, 'click', () => ui.exportOverlay.classList.remove('active')],
+        [ui.exportOverlay, 'click', (e) => {
+            if (e.target === ui.exportOverlay) ui.exportOverlay.classList.remove('active');
+        }],
+        [ui.confirmExportBtn, 'click', () => {
+            const includedTracks = [];
+            if (ui.exportChordsCheck.checked) includedTracks.push('chords');
+            if (ui.exportBassCheck.checked) includedTracks.push('bass');
+            if (ui.exportSoloistCheck.checked) includedTracks.push('soloist');
+            if (ui.exportDrumsCheck.checked) includedTracks.push('drums');
+            
+            const loopMode = document.querySelector('input[name="exportMode"]:checked').value;
+            const targetDuration = parseFloat(ui.exportDurationInput.value);
+            const filename = ui.exportFilenameInput.value.trim();
+
+            ui.exportOverlay.classList.remove('active');
+            exportToMidi({ includedTracks, loopMode, targetDuration, filename });
         }],
         [ui.clearDrums, 'click', () => { 
             gb.instruments.forEach(i => i.steps.fill(0)); 
@@ -1117,6 +1146,20 @@ function setupUIHandlers() {
         }]
     ];
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));
+
+    // Radio Button Handlers for Export
+    document.querySelectorAll('input[name="exportMode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+             if (e.target.value === 'time') {
+                 ui.exportDurationContainer.style.opacity = '1';
+                 ui.exportDurationContainer.style.pointerEvents = 'auto';
+                 ui.exportDurationInput.focus();
+             } else {
+                 ui.exportDurationContainer.style.opacity = '0.5';
+                 ui.exportDurationContainer.style.pointerEvents = 'none';
+             }
+        });
+    });
 
     // Global keyboard shortcuts
     window.addEventListener('keydown', (e) => {

@@ -222,12 +222,12 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         // Beat 3 (Backbeat/Snare) - often Root or 5th
         if (intBeat === 2 && stepInBeat === 0) {
              const target = Math.random() < 0.7 ? baseRoot : baseRoot + 7;
-             return result(getFrequency(clampAndNormalize(target)), null, 1.15);
+             return result(getFrequency(clampAndNormalize(target)), null, 1.1);
         }
 
         // Octave Pops on the 'and' (upbeats)
         if (stepInBeat === 2 && Math.random() < 0.35) {
-             return result(getFrequency(clampAndNormalize(baseRoot + 12)), 1, 1.1);
+             return result(getFrequency(clampAndNormalize(baseRoot + 12)), 1, 1.0);
         }
 
         // Chromatic/Scale Approach on the 'a' (last 16th) into the next beat
@@ -238,7 +238,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
         // Ghost notes (dead notes) for percolation
         if ((stepInBeat === 1 || stepInBeat === 2) && Math.random() < 0.15) {
-             return result(getFrequency(prevMidi || baseRoot), 1, 0.55, true);
+             return result(getFrequency(prevMidi || baseRoot), 0.5, 0.55, true);
         }
 
         return null;

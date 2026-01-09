@@ -142,9 +142,11 @@ const midiChordPatterns = {
     }
 };
 
-export function exportToMidi() {
+export function exportToMidi(options = {}) {
     let sbBackup;
     try {
+        const { includedTracks = ['chords', 'bass', 'soloist', 'drums'], loopMode = 'time', targetDuration = 3, filename } = options;
+
         if (arranger.progression.length === 0) {
             showToast("No progression to export");
             return;
@@ -152,8 +154,18 @@ export function exportToMidi() {
 
         const totalStepsOneLoop = arranger.progression.reduce((sum, c) => sum + Math.round(c.beats * 4), 0);
         const loopSeconds = (totalStepsOneLoop / 4) * (60 / ctx.bpm);
-        // Export enough loops to reach approximately 3 minutes (180 seconds), capped at 16 loops
-        const loopCount = Math.min(16, Math.max(1, Math.ceil(180 / loopSeconds)));
+        
+        let loopCount;
+        if (loopMode === 'once') {
+            loopCount = 1;
+        } else {
+            // targetDuration is in minutes
+            const targetSeconds = (targetDuration || 3) * 60;
+            loopCount = Math.max(1, Math.ceil(targetSeconds / loopSeconds));
+            // Safety cap: don't let it generate > 100 loops (approx 15-20 mins of fast tempo) to prevent freezing
+            if (loopCount > 100) loopCount = 100;
+        }
+
         const totalStepsExport = totalStepsOneLoop * loopCount;
 
         const drumLoopSteps = gb.measures * 16;
@@ -180,16 +192,24 @@ export function exportToMidi() {
         metaTrack.setKeySignature(0, arranger.key, arranger.isMinor);
 
         // Init Instruments
-        chordTrack.setName(0, 'Chords');
-        chordTrack.programChange(0, 0, 4); 
+        if (includedTracks.includes('chords')) {
+            chordTrack.setName(0, 'Chords');
+            chordTrack.programChange(0, 0, 4); 
+        }
 
-        bassTrack.setName(0, 'Bass');
-        bassTrack.programChange(0, 1, 34);
+        if (includedTracks.includes('bass')) {
+            bassTrack.setName(0, 'Bass');
+            bassTrack.programChange(0, 1, 34);
+        }
 
-        soloistTrack.setName(0, 'Soloist');
-        soloistTrack.programChange(0, 2, 80);
+        if (includedTracks.includes('soloist')) {
+            soloistTrack.setName(0, 'Soloist');
+            soloistTrack.programChange(0, 2, 80);
+        }
 
-        drumTrack.setName(0, 'Drums');
+        if (includedTracks.includes('drums')) {
+            drumTrack.setName(0, 'Drums');
+        }
 
         const chordNotesOff = [], bassNotesOff = [], soloistNotesOff = [], drumNotesOff = [];
         const drumMap = { 'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46 };
@@ -198,13 +218,14 @@ export function exportToMidi() {
         let lastBassFreq = null, lastSoloFreq = null;
 
         const getSwungPulse = (step) => {
+            const floorStep = Math.floor(step);
             let pulse = step * pulsesPerStep;
             if (gb.swing > 0) {
                 const shift = (pulsesPerStep / 3) * (gb.swing / 100);
                 if (gb.swingSub === '16th') {
-                    if (step % 2 === 1) pulse += shift;
+                    if (floorStep % 2 === 1) pulse += shift;
                 } else {
-                    const mod = step % 4;
+                    const mod = floorStep % 4;
                     if (mod === 1) pulse += shift;
                     else if (mod === 2) pulse += shift * 2;
                     else if (mod === 3) pulse += shift;
@@ -258,13 +279,13 @@ export function exportToMidi() {
                 }
 
                 // Process Offs
-                processOffs(chordTrack, chordNotesOff, 0, currentTimeInPulses);
-                processOffs(bassTrack, bassNotesOff, 1, currentTimeInPulses);
-                processOffs(soloistTrack, soloistNotesOff, 2, soloistTimeInPulses);
-                processOffs(drumTrack, drumNotesOff, 9, currentTimeInPulses);
+                if (includedTracks.includes('chords')) processOffs(chordTrack, chordNotesOff, 0, currentTimeInPulses);
+                if (includedTracks.includes('bass')) processOffs(bassTrack, bassNotesOff, 1, currentTimeInPulses);
+                if (includedTracks.includes('soloist')) processOffs(soloistTrack, soloistNotesOff, 2, soloistTimeInPulses);
+                if (includedTracks.includes('drums')) processOffs(drumTrack, drumNotesOff, 9, currentTimeInPulses);
 
                 // Chords
-                if (activeChord) {
+                if (activeChord && includedTracks.includes('chords')) {
                     const patternFunc = midiChordPatterns[cb.style] || midiChordPatterns.pad;
                     const events = patternFunc(activeChord, stepInChord, measureStep, globalStep);
                     events.forEach(ev => {
@@ -278,7 +299,7 @@ export function exportToMidi() {
                 }
 
                 // Bass
-                if (activeChord) {
+                if (activeChord && includedTracks.includes('bass')) {
                     if (isBassActive(bb.style, globalStep, stepInChord)) {
                         let nextChord = null, nextCurrent = 0;
                         for (const c of arranger.progression) {
@@ -314,13 +335,14 @@ export function exportToMidi() {
                                 durSteps = (bb.style === 'whole' ? activeChord.beats : (bb.style === 'half' ? 2 : 1)) * 4;
                             }
                             
-                            bassNotesOff.push({ time: Math.round(getSwungPulse(globalStep + durSteps) - (pulsesPerStep * 0.1)), notes: [midi] });
+                            // Use smaller gap for bass (5%) to keep it tighter/fuller, vs 10% for others
+                            bassNotesOff.push({ time: Math.round(getSwungPulse(globalStep + durSteps) - (pulsesPerStep * 0.05)), notes: [midi] });
                         }
                     }
                 }
 
                 // Soloist
-                if (activeChord) {
+                if (activeChord && includedTracks.includes('soloist')) {
                     let nextChord = null, nextCurrent = 0;
                     for (const c of arranger.progression) {
                         const cSteps = Math.round(c.beats * 4);
@@ -372,18 +394,20 @@ export function exportToMidi() {
                 }
 
                 // Drums
-                gb.instruments.forEach(inst => {
-                    const val = inst.steps[drumStep];
-                    if (val > 0 && !inst.muted) {
-                        const midi = drumMap[inst.name];
-                        const baseVel = val === 2 ? 110 : 80;
-                        const humanVel = Math.min(127, Math.max(40, Math.round(baseVel + (Math.random() * 12 - 6))));
-                        const delta = Math.max(0, currentTimeInPulses - drumTrack.currentTime);
-                        drumTrack.noteOn(delta, 9, midi, humanVel);
-                        drumTrack.currentTime = currentTimeInPulses;
-                        drumNotesOff.push({ time: currentTimeInPulses + Math.round(pulsesPerStep * 0.5), notes: [midi] });
-                    }
-                });
+                if (includedTracks.includes('drums')) {
+                    gb.instruments.forEach(inst => {
+                        const val = inst.steps[drumStep];
+                        if (val > 0 && !inst.muted) {
+                            const midi = drumMap[inst.name];
+                            const baseVel = val === 2 ? 110 : 80;
+                            const humanVel = Math.min(127, Math.max(40, Math.round(baseVel + (Math.random() * 12 - 6))));
+                            const delta = Math.max(0, currentTimeInPulses - drumTrack.currentTime);
+                            drumTrack.noteOn(delta, 9, midi, humanVel);
+                            drumTrack.currentTime = currentTimeInPulses;
+                            drumNotesOff.push({ time: currentTimeInPulses + Math.round(pulsesPerStep * 0.5), notes: [midi] });
+                        }
+                    });
+                }
             }
         }
 
@@ -398,14 +422,19 @@ export function exportToMidi() {
             track.endOfTrack(Math.max(0, time - track.currentTime));
         };
 
-        finalizeTrack(chordTrack, chordNotesOff, 0, finalTime);
-        finalizeTrack(bassTrack, bassNotesOff, 1, finalTime);
-        finalizeTrack(soloistTrack, soloistNotesOff, 2, finalTime);
-        finalizeTrack(drumTrack, drumNotesOff, 9, finalTime);
+        if (includedTracks.includes('chords')) finalizeTrack(chordTrack, chordNotesOff, 0, finalTime);
+        if (includedTracks.includes('bass')) finalizeTrack(bassTrack, bassNotesOff, 1, finalTime);
+        if (includedTracks.includes('soloist')) finalizeTrack(soloistTrack, soloistNotesOff, 2, finalTime);
+        if (includedTracks.includes('drums')) finalizeTrack(drumTrack, drumNotesOff, 9, finalTime);
         metaTrack.endOfTrack(Math.max(0, finalTime - metaTrack.currentTime));
 
         // Assemble
-        const tracks = [metaTrack, chordTrack, bassTrack, soloistTrack, drumTrack];
+        const tracks = [metaTrack];
+        if (includedTracks.includes('chords')) tracks.push(chordTrack);
+        if (includedTracks.includes('bass')) tracks.push(bassTrack);
+        if (includedTracks.includes('soloist')) tracks.push(soloistTrack);
+        if (includedTracks.includes('drums')) tracks.push(drumTrack);
+
         const header = new Uint8Array([
             ...writeString('MThd'),
             ...writeInt32(6),
@@ -433,7 +462,17 @@ export function exportToMidi() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `ensemble-${arranger.key}-${ctx.bpm}bpm.mid`;
+        
+        let downloadName = filename;
+        if (!downloadName) {
+            downloadName = `ensemble-${arranger.key}-${ctx.bpm}bpm`;
+        }
+        // Ensure extension
+        if (!downloadName.toLowerCase().endsWith('.mid')) {
+            downloadName += '.mid';
+        }
+        
+        a.download = downloadName;
         a.click();
         URL.revokeObjectURL(url);
     } catch (e) {
