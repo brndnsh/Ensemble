@@ -427,7 +427,7 @@ button {
     .key-controls {
         flex-grow: 1;
         display: grid;
-        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1.2fr 0.8fr 0.8fr 0.8fr;
         gap: 0.35rem;
     }
 
@@ -1485,12 +1485,18 @@ select:focus {
 }
 
 /* Specific selects that should not be full-width */
+#timeSigSelect,
 #keySelect,
 #drumBarsSelect,
 #swingBaseSelect {
     width: auto;
     padding: 0.3rem 0.5rem;
     font-size: 0.85rem;
+    height: 32px;
+}
+
+#timeSigSelect {
+    min-width: 60px;
 }
 
 select option {
