@@ -255,6 +255,70 @@ export function renderTemplates(templates, onSelect) {
     });
 }
 
+let symbolMenu = null;
+let activeSymbolContext = null;
+
+function getSymbolMenu() {
+    if (symbolMenu) return symbolMenu;
+    
+    symbolMenu = document.createElement('div');
+    symbolMenu.className = 'symbol-dropdown';
+    symbolMenu.style.position = 'fixed';
+    symbolMenu.style.zIndex = '9999';
+    
+    const symbols = [
+        { s: '|', t: 'Bar' }, { s: 'maj7', t: 'maj7' }, { s: 'm7', t: 'm7' }, { s: '7', t: '7' },
+        { s: 'ø', t: 'Half-Dim' }, { s: 'o', t: 'Dim' }, { s: 'sus4', t: 'sus4' }, { s: 'add9', t: 'add9' },
+        { s: 'b', t: 'Flat' }, { s: '#', t: 'Sharp' }, { s: 'maj9', t: 'maj9' }, { s: 'm9', t: 'm9' }
+    ];
+
+    symbols.forEach(sym => {
+        const btn = document.createElement('button');
+        btn.className = 'symbol-btn';
+        btn.textContent = sym.s;
+        btn.title = sym.t;
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            if (!activeSymbolContext) return;
+            const { id, onUpdate } = activeSymbolContext;
+            
+            const card = document.querySelector(`.section-card[data-id="${id}"]`);
+            if (!card) return;
+            const input = card.querySelector('.section-prog-input');
+            if (!input) return;
+            
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const scrollTop = input.scrollTop;
+            const text = input.value;
+            const before = text.substring(0, start);
+            const after = text.substring(end, text.length);
+            const insert = sym.s === '|' ? ' | ' : sym.s;
+            input.value = before + insert + after;
+            
+            const newPos = start + insert.length;
+            input.focus();
+            input.setSelectionRange(newPos, newPos);
+            input.scrollTop = scrollTop;
+            
+            onUpdate(id, 'value', input.value);
+        };
+        symbolMenu.appendChild(btn);
+    });
+    
+    document.body.appendChild(symbolMenu);
+    
+    const closeMenu = () => {
+        if (symbolMenu) symbolMenu.style.display = 'none';
+    };
+    
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('scroll', closeMenu, true);
+    window.addEventListener('resize', closeMenu);
+
+    return symbolMenu;
+}
+
 /**
  * Renders the list of section inputs.
  * @param {Array} sections - The sections data.
@@ -272,7 +336,6 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             card.className = 'section-card';
             card.dataset.id = section.id;
             card.dataset.index = index;
-            // Removed card.draggable = true;
             if (section.color) card.style.borderLeft = `4px solid ${section.color}`;
 
             const header = document.createElement('div');
@@ -285,14 +348,12 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             dragHandle.draggable = true;
             dragHandle.title = 'Drag to reorder';
             
-            // Drag and Drop Listeners on Handle
             dragHandle.addEventListener('dragstart', (e) => {
                 card.classList.add('dragging');
                 e.dataTransfer.setData('text/plain', index);
                 e.dataTransfer.effectAllowed = 'move';
             });
 
-            // Allow dropping on the card itself (the drop target is usually the container/card)
             card.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
@@ -306,7 +367,6 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
 
             dragHandle.addEventListener('dragend', () => {
                 card.classList.remove('dragging');
-                // Calculate new order and notify main.js
                 const newOrder = Array.from(ui.sectionList.querySelectorAll('.section-card'))
                     .map(el => el.dataset.id);
                 onUpdate(null, 'reorder', newOrder);
@@ -362,6 +422,8 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             duplicateBtn.className = 'section-duplicate-btn';
             duplicateBtn.innerHTML = '⧉';
             duplicateBtn.title = 'Duplicate Section';
+            duplicateBtn.onclick = () => onDuplicate(section.id);
+
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'section-delete-btn';
             deleteBtn.innerHTML = '&times;';
@@ -373,63 +435,29 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             kebabBtn.innerHTML = '&#8942;'; // Vertical ellipsis
             kebabBtn.title = 'Insert Symbols';
 
-            const dropdown = document.createElement('div');
-            dropdown.className = 'symbol-dropdown';
-            dropdown.style.display = 'none';
-            
-            const symbols = [
-                { s: '|', t: 'Bar' }, { s: 'maj7', t: 'maj7' }, { s: 'm7', t: 'm7' }, { s: '7', t: '7' },
-                { s: 'ø', t: 'Half-Dim' }, { s: 'o', t: 'Dim' }, { s: 'sus4', t: 'sus4' }, { s: 'add9', t: 'add9' },
-                { s: 'b', t: 'Flat' }, { s: '#', t: 'Sharp' }, { s: 'maj9', t: 'maj9' }, { s: 'm9', t: 'm9' }
-            ];
-
-            symbols.forEach(sym => {
-                const btn = document.createElement('button');
-                btn.className = 'symbol-btn';
-                btn.textContent = sym.s;
-                btn.title = sym.t;
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    const input = card.querySelector('.section-prog-input');
-                    const start = input.selectionStart;
-                    const end = input.selectionEnd;
-                    const scrollTop = input.scrollTop; // Save scroll
-                    const text = input.value;
-                    const before = text.substring(0, start);
-                    const after = text.substring(end, text.length);
-                    // Add space for bar lines
-                    const insert = sym.s === '|' ? ' | ' : sym.s;
-                    input.value = before + insert + after;
-                    
-                    const newPos = start + insert.length;
-                    input.focus();
-                    input.setSelectionRange(newPos, newPos);
-                    input.scrollTop = scrollTop; // Restore scroll
-                    
-                    onUpdate(section.id, 'value', input.value);
-                };
-                dropdown.appendChild(btn);
-            });
-
             kebabBtn.onclick = (e) => {
                 e.stopPropagation();
-                const isVisible = dropdown.style.display === 'grid';
-                // Close all other dropdowns
-                document.querySelectorAll('.symbol-dropdown').forEach(d => d.style.display = 'none');
-                dropdown.style.display = isVisible ? 'none' : 'grid';
+                activeSymbolContext = { id: section.id, onUpdate };
+                const menu = getSymbolMenu();
+                
+                const rect = kebabBtn.getBoundingClientRect();
+                menu.style.display = 'grid';
+                
+                // Adjust position
+                let left = rect.left - 160; 
+                if (left < 10) left = 10;
+                
+                menu.style.top = `${rect.bottom + 5}px`;
+                menu.style.left = `${left}px`;
             };
 
-            // Close on outside click
-            window.addEventListener('click', () => dropdown.style.display = 'none', { once: true });
-            
-            header.appendChild(dragHandle); // Add drag handle first
+            header.appendChild(dragHandle);
             header.appendChild(labelGroup);
             actions.appendChild(moveUpBtn);
             actions.appendChild(moveDownBtn);
             actions.appendChild(duplicateBtn);
             actions.appendChild(kebabBtn);
             if (sections.length > 1) actions.appendChild(deleteBtn);
-            actions.appendChild(dropdown); // Move dropdown inside relative container
             header.appendChild(actions);
             
             const progInput = document.createElement('textarea');
@@ -457,7 +485,6 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         });
     };
     
-    // updateLogic handles the actual rendering of the section list
     updateLogic();
 }
 
@@ -776,4 +803,77 @@ export function clearActiveVisuals(viz) {
     document.querySelectorAll('.chord-card.active').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.section-card.active').forEach(s => s.classList.remove('active'));
     if (viz) viz.clear();
+}
+
+/**
+ * Updates the active chord UI: highlighting, progress bars, and scrolling.
+ * @param {number} index - The index of the active chord in the progression.
+ */
+export function updateActiveChordUI(index) {
+    if (cb.lastActiveChordIndex !== undefined && cb.lastActiveChordIndex !== null) {
+        if (arranger.cachedCards[cb.lastActiveChordIndex]) {
+            arranger.cachedCards[cb.lastActiveChordIndex].classList.remove('active');
+        }
+    }
+    
+    if (arranger.cachedCards[index]) {
+        const card = arranger.cachedCards[index];
+        card.classList.add('active');
+        cb.lastActiveChordIndex = index;
+
+        // Subtle haptic for chord changes
+        if (ui.haptic.checked && navigator.vibrate) {
+            navigator.vibrate(8); 
+        }
+
+        const chordData = arranger.progression[index];
+        if (chordData) {
+            if (ui.activeSectionLabel) ui.activeSectionLabel.textContent = chordData.sectionLabel || "";
+            
+            // Highlight active section block in Arranger view
+            if (ui.chordVisualizer) {
+                ui.chordVisualizer.querySelectorAll('.section-block').forEach(block => {
+                    const isActive = block.contains(card);
+                    block.classList.toggle('active-section', isActive);
+                });
+            }
+
+            // Highlight active section card in list and update progress bar
+            document.querySelectorAll('.section-card').forEach(sCard => {
+                const isActive = sCard.dataset.id == chordData.sectionId;
+                sCard.classList.toggle('active', isActive);
+                
+                if (isActive) {
+                    const progressFill = sCard.querySelector('.section-progress-fill');
+                    if (progressFill) {
+                        const sectionEntry = arranger.stepMap.find(e => e.chord.sectionId === chordData.sectionId);
+                        if (sectionEntry) {
+                            const sectionStartStep = sectionEntry.start;
+                            // Find section end
+                            let sectionEndStep = sectionStartStep;
+                            // We can optimize this search if needed, but for now it's robust
+                            arranger.stepMap.forEach(e => {
+                                if (e.chord.sectionId === chordData.sectionId) sectionEndStep = e.end;
+                            });
+                            
+                            const sectionTotalSteps = sectionEndStep - sectionStartStep;
+                            const currentStepInSection = (ctx.step % arranger.totalSteps) - sectionStartStep;
+                            const progress = Math.max(0, Math.min(100, (currentStepInSection / sectionTotalSteps) * 100));
+                            progressFill.style.width = `${progress}%`;
+                        }
+                    }
+                }
+            });
+        }
+
+        // Auto-scroll logic using cached dimensions (no reflow)
+        const container = ui.chordVisualizer;
+        const offsetTop = arranger.cardOffsets[index];
+        const cardHeight = arranger.cardHeights[index];
+        
+        if (offsetTop !== undefined && cardHeight !== undefined && container) {
+            const scrollPos = offsetTop - (container.clientHeight / 2) + (cardHeight / 2);
+            container.scrollTo({ top: scrollPos, behavior: 'smooth' });
+        }
+    }
 }
