@@ -230,7 +230,9 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
     thumpFilter.type = 'lowpass';
     thumpFilter.frequency.setValueAtTime(1500, time);
     const thumpGain = ctx.audio.createGain();
-    thumpGain.gain.setValueAtTime(vol * (muted ? 0.4 : 0.2), time);
+    const thumpTargetVol = vol * (muted ? 0.4 : 0.2);
+    thumpGain.gain.setValueAtTime(0, time);
+    thumpGain.gain.linearRampToValueAtTime(thumpTargetVol, time + 0.002);
     thumpGain.gain.exponentialRampToValueAtTime(0.001, time + (muted ? 0.03 : 0.04));
     thump.connect(thumpFilter);
     thumpFilter.connect(thumpGain);
@@ -261,7 +263,7 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
 
     const gain = ctx.audio.createGain();
     gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(tonalVol, time + 0.015);
+    gain.gain.linearRampToValueAtTime(tonalVol, time + 0.005);
     const tonalDecay = muted ? 0.08 : (duration * 1.5);
     gain.gain.exponentialRampToValueAtTime(0.001, time + tonalDecay);
 
@@ -288,8 +290,8 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
             } else {
                 g.cancelScheduledValues(t);
             }
-            // Fade out over ~15ms (3x time constant) to avoid clicking on low frequency bass waves
-            g.setTargetAtTime(0, t, 0.015);
+            // Linear fade out over 5ms to match the attack of the new note (symmetrical crossfade)
+            g.linearRampToValueAtTime(0, t + 0.005);
         } catch (e) {
             // Ignore errors if previous node is already gone/disconnected
         }

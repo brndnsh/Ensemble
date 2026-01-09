@@ -10,6 +10,8 @@ let bbBufferHead = 0;
 let sbBufferHead = 0;
 const LOOKAHEAD = 32;
 
+let pendingBassEvent = null;
+
 /**
  * Finds the active chord for a given global step using the worker's local state.
  */
@@ -57,7 +59,21 @@ function fillBuffers(currentStep) {
                     const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord, arranger.isMinor);
                     if (bassResult) {
                         bb.lastFreq = typeof bassResult === 'object' ? bassResult.freq : bassResult;
-                        notesToMain.push({ ...bassResult, step, module: 'bb' });
+                        const newNote = { ...bassResult, step, module: 'bb' };
+                        
+                        // Monophony enforcement: If we have a pending note, emit it now, 
+                        // effectively truncating its duration to the start of this new note.
+                        if (pendingBassEvent) {
+                            const gap = step - pendingBassEvent.step;
+                            // Ensure we don't accidentally extend a short note (like a staccato 16th),
+                            // but definitely shorten a long one if it overlaps.
+                            const currentDur = pendingBassEvent.durationMultiplier || 4; 
+                            if (gap < currentDur) {
+                                pendingBassEvent.durationMultiplier = gap;
+                            }
+                            notesToMain.push(pendingBassEvent);
+                        }
+                        pendingBassEvent = newNote;
                     }
                 }
                 bbBufferHead++;
@@ -76,6 +92,14 @@ function fillBuffers(currentStep) {
             }
         }
         head++;
+    }
+
+    // If the pending note is very old (e.g. > 3 measures passed), emit it.
+    // We hold it this long to ensure we can truncate it if a new note appears 
+    // in the next batch. 48 steps = 3 bars.
+    if (pendingBassEvent && head - pendingBassEvent.step > 48) {
+        notesToMain.push(pendingBassEvent);
+        pendingBassEvent = null;
     }
 
     if (notesToMain.length > 0) {
@@ -131,6 +155,7 @@ self.onmessage = (e) => {
                 bbBufferHead = data.step;
                 sbBufferHead = data.step;
                 lastMainStep = data.step;
+                pendingBassEvent = null;
                 // Reset soloist stateful tracking in the worker
                 sb.phraseSteps = 0;
                 sb.isResting = false; 
