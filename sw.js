@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ensemble-v1.20';
+const CACHE_NAME = 'ensemble-v1.21';
 const ASSETS = [
     './',
     './index.html',

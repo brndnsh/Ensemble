@@ -159,6 +159,46 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return result(getFrequency(clampAndNormalize(baseRoot + targetInterval)));
     }
 
+    // --- ROCK STYLE (8th Note Pedal) ---
+    if (style === 'rock') {
+        const stepInMeasure = step % 16;
+        const beat = Math.floor(stepInMeasure / 4);
+        const isDownbeat = stepInMeasure % 4 === 0;
+
+        // Palm-muted feel (Cliff Williams / Nate Mendel tightness)
+        const dur = 0.7; 
+
+        // Driving 8ths, mostly Root
+        // Heavy accents on 1 and 3 (Michael Anthony thunder)
+        const velocity = (beat === 0 || beat === 2) && isDownbeat ? 1.25 : 1.1;
+
+        // Fills/Transitions (Nate Mendel melodic punch)
+        // Occurs on the last beat of the measure (Beat 4)
+        if (beat === 3) {
+            // High energy fill probability
+            if (Math.random() < 0.4) {
+                 // Mendel often uses higher register fills or drops 
+                 // Pattern: 8th notes on (Root -> 5th) or (Octave -> 5th)
+                 if (stepInMeasure === 12) { // 4
+                     const fillNote = Math.random() < 0.5 ? baseRoot + 12 : baseRoot + 7;
+                     return result(getFrequency(clampAndNormalize(fillNote)), dur, 1.15);
+                 }
+                 if (stepInMeasure === 14) { // 4-and
+                     // Return to 5th or chromatic approach to next root
+                     const fillNote = Math.random() < 0.5 ? baseRoot + 7 : baseRoot + 5; 
+                     return result(getFrequency(clampAndNormalize(fillNote)), dur, 1.1);
+                 }
+            }
+        }
+        
+        // Grit/Ghost notes (rarely, on the 'and' of weak beats)
+        if (!isDownbeat && (beat === 1 || beat === 3) && Math.random() < 0.05) {
+             return result(getFrequency(baseRoot), dur, 0.8, true);
+        }
+        
+        return result(getFrequency(baseRoot), dur, velocity);
+    }
+
     // --- BOSSA NOVA STYLE ---
     if (style === 'bossa') {
         const stepInMeasure = step % 16;
@@ -175,22 +215,78 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     if (style === 'funk') {
         const stepInBeat = stepInChord % 4;
         const intBeat = Math.floor(stepInChord / 4);
-        const intervals = currentChord.intervals;
         
-        // Syncopated ghost notes
-        if (stepInBeat === 2 || stepInBeat === 3) {
-            return result(getFrequency(prevMidi || baseRoot), 2, 0.6, true);
+        // The "One" is sacred - heavy root
+        if (stepInChord === 0) return result(getFrequency(baseRoot), null, 1.2);
+
+        // Beat 3 (Backbeat/Snare) - often Root or 5th
+        if (intBeat === 2 && stepInBeat === 0) {
+             const target = Math.random() < 0.7 ? baseRoot : baseRoot + 7;
+             return result(getFrequency(clampAndNormalize(target)), null, 1.15);
         }
 
-        // Bass 1st and 3rd beats are usually strong
-        if (intBeat === 0 || intBeat === 2) {
-            return result(getFrequency(baseRoot), null, 1.1);
+        // Octave Pops on the 'and' (upbeats)
+        if (stepInBeat === 2 && Math.random() < 0.35) {
+             return result(getFrequency(clampAndNormalize(baseRoot + 12)), 1, 1.1);
         }
 
-        // Octave jumps or 7ths/4ths
-        const funkIntervals = [0, 12, intervals[intervals.length - 1], 5];
-        const choice = funkIntervals[Math.floor(Math.random() * funkIntervals.length)];
-        return result(getFrequency(clampAndNormalize(baseRoot + choice)), null, 0.9 + Math.random() * 0.2);
+        // Chromatic/Scale Approach on the 'a' (last 16th) into the next beat
+        if (stepInBeat === 3 && Math.random() < 0.3) {
+            const note = baseRoot + (currentChord.intervals.includes(10) ? 10 : 7); // b7 or 5th
+            return result(getFrequency(clampAndNormalize(note)), 1, 0.9);
+        }
+
+        // Ghost notes (dead notes) for percolation
+        if ((stepInBeat === 1 || stepInBeat === 2) && Math.random() < 0.15) {
+             return result(getFrequency(prevMidi || baseRoot), 1, 0.55, true);
+        }
+
+        return null;
+    }
+
+    // --- ROCCO STYLE (Tower of Power - Finger Funk) ---
+    if (style === 'rocco') {
+        const stepInMeasure = step % 16;
+        
+        // Staccato feel (Left-hand muting)
+        const dur = 0.6; 
+
+        // Always anchor the 1 (Heavy Root)
+        if (stepInMeasure === 0) return result(getFrequency(baseRoot), dur, 1.25);
+        
+        // Syncopation Accents: 1(a), 2(&), 3, 4, 4(&)
+        // The 'a' of 1 (step 3) and '&' of 2 (step 6) are classic syncopations
+        const accents = [3, 6, 8, 12, 14]; 
+        const isAccent = accents.includes(stepInMeasure);
+
+        // 1. Tonal Hits (Accents)
+        if (isAccent) {
+            if (Math.random() < 0.9) {
+                let note = baseRoot;
+                const r = Math.random();
+                
+                // Octave jumps common on the syncopated upbeats
+                if ([3, 6, 14].includes(stepInMeasure) && r > 0.4) {
+                    note = baseRoot + 12;
+                } 
+                // 5th on the back half
+                else if (stepInMeasure >= 8 && r > 0.7) {
+                    note = baseRoot + 7;
+                }
+                
+                return result(getFrequency(clampAndNormalize(note)), dur, 1.15);
+            }
+        }
+        
+        // 2. The "Chug" (Machine Gun 16ths)
+        // High density of notes, mostly muted or pedal roots
+        if (Math.random() < 0.85) {
+             const isGhost = Math.random() < 0.6; // 60% ghost, 40% tonal pedal
+             // If tonal, keep it low (root)
+             return result(getFrequency(baseRoot), dur, isGhost ? 0.6 : 0.8, isGhost);
+        }
+
+        return null;
     }
 
     // --- NEO-SOUL STYLE ---
@@ -271,4 +367,41 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     }
 
     return result(getFrequency(baseRoot), null, 1.1);
+}
+
+/**
+ * Determines if the bass should play at a specific step.
+ */
+export function isBassActive(style, step, stepInChord) {
+    if (style === 'whole') return stepInChord === 0;
+    if (style === 'half') return stepInChord % 8 === 0;
+    if (style === 'arp') return stepInChord % 4 === 0;
+    if (style === 'rock') return stepInChord % 2 === 0;
+    if (style === 'bossa') return [0, 6, 8, 14].includes(step % 16);
+    
+    // For these styles, we largely rely on getBassNote to decide (return null for silence),
+    // but we can provide a broad filter to save cycles, or just return true to delegate.
+    
+    if (style === 'quarter') {
+        // Quarter notes always, plus random 8ths
+        if (stepInChord % 4 === 0) return true;
+        if (stepInChord % 2 === 0) return true; // Allow chance for 8ths
+        return false;
+    }
+    
+    if (style === 'funk') {
+        // Allow all 16ths to be potential candidates
+        return true;
+    }
+
+    if (style === 'rocco') return true;
+
+    if (style === 'neo') {
+        if (stepInChord === 0) return true;
+        if (stepInChord % 8 === 0) return true;
+        if (step % 4 === 3) return true; // Syncopated 16ths
+        return false;
+    }
+
+    return false;
 }

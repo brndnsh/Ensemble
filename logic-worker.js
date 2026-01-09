@@ -1,4 +1,4 @@
-import { getBassNote } from './bass.js';
+import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 import { arranger, cb, bb, sb, ctx } from './state.js';
 
@@ -53,29 +53,7 @@ function fillBuffers(currentStep) {
 
             // 1. Bass Generation (if this step hasn't been processed for bass yet)
             if (bb.enabled && step >= bbBufferHead) {
-                let shouldPlay = false;
-                if (bb.style === 'whole' && stepInChord === 0) shouldPlay = true;
-                else if (bb.style === 'half' && stepInChord % 8 === 0) shouldPlay = true;
-                else if (bb.style === 'arp' && stepInChord % 4 === 0) shouldPlay = true;
-                else if (bb.style === 'bossa' && [0, 6, 8, 14].includes(step % 16)) shouldPlay = true;
-                else if (bb.style === 'quarter') {
-                    if (stepInChord % 4 === 0) shouldPlay = true;
-                    else if (stepInChord % 2 === 0 && Math.random() < 0.15) shouldPlay = true;
-                }
-                else if (bb.style === 'funk') {
-                    const stepInBeat = stepInChord % 4;
-                    if (stepInChord === 0) shouldPlay = true;
-                    else if (stepInChord % 4 === 0 && Math.random() < 0.7) shouldPlay = true;
-                    else if (stepInBeat === 2 && Math.random() < 0.4) shouldPlay = true;
-                    else if (stepInBeat === 3 && Math.random() < 0.2) shouldPlay = true;
-                }
-                else if (bb.style === 'neo') {
-                    if (stepInChord === 0) shouldPlay = true;
-                    else if (stepInChord % 8 === 0 && Math.random() < 0.5) shouldPlay = true;
-                    else if (step % 4 === 3 && Math.random() < 0.2) shouldPlay = true;
-                }
-
-                if (shouldPlay) {
+                if (isBassActive(bb.style, step, stepInChord)) {
                     const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord, arranger.isMinor);
                     if (bassResult) {
                         bb.lastFreq = typeof bassResult === 'object' ? bassResult.freq : bassResult;
