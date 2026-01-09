@@ -1,7 +1,7 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
 import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch } from './engine.js';
-import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS } from './config.js';
+import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS, APP_VERSION } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
 import { validateProgression, generateRandomProgression, mutateProgression, transformRelativeProgression } from './chords.js';
 import { chordPatterns } from './accompaniment.js';
@@ -1594,6 +1594,9 @@ function init() {
         syncWorker();
         // Show the app after everything is ready
         document.querySelector('.app-main-layout').classList.add('loaded');
+        
+        const versionEl = document.getElementById('appVersion');
+        if (versionEl) versionEl.textContent = `Ensemble v${APP_VERSION}`;
     } catch (e) { console.error("Error during init:", e); }
 }
 
@@ -1830,8 +1833,40 @@ window.addEventListener('load', () => {
     init();
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('SW registered'))
-            .catch(err => console.log('SW failed', err));
+        let newWorker;
+        const updateBanner = document.getElementById('updateBanner');
+        const refreshBtn = document.getElementById('updateRefreshBtn');
+
+        refreshBtn.addEventListener('click', () => {
+            if (newWorker) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+            }
+        });
+
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            console.log('SW registered');
+            
+            // Check for updates every hour
+            setInterval(() => {
+                reg.update();
+            }, 60 * 60 * 1000);
+            
+            reg.addEventListener('updatefound', () => {
+                newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        // New update available
+                        updateBanner.classList.add('show');
+                    }
+                });
+            });
+        }).catch(err => console.log('SW failed', err));
+
+        let refreshing;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            window.location.reload();
+            refreshing = true;
+        });
     }
 });

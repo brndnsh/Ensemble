@@ -98,6 +98,7 @@ Navigate to `http://localhost:8000` (or the port shown by your server) to view t
 *   **Off-Main-Thread Logic**: Algorithmic generation for the Bassist and Soloist is handled in `logic-worker.js` via `worker-client.js`. This prevents UI or complex rendering tasks from causing audio stutters by moving heavy musical calculations to a background worker.
 *   **Data-Driven UI**: `ui.js` programmatically builds the section list and sequencer grid from state.
 *   **Auto-Persistence**: The `saveCurrentState()` function ensures every arrangement change is captured.
+*   **Update Mechanism**: Service Worker updates are handled via a manual 'SKIP_WAITING' message triggered by the user from a banner. `main.js` performs periodic checks (every hour) for new service worker versions. `APP_VERSION` in `config.js` and `CACHE_NAME` in `sw.js` must be incremented manually for updates to be detected.
 
 ## Gemini Added Memories
 - The user prioritizes performance on mobile devices over complex visual effects and prefers simplified visuals if it prevents glitches/lag.
