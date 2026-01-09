@@ -1,5 +1,5 @@
 import { midiToNote } from './utils.js';
-import { cb, gb, arranger } from './state.js';
+import { ctx, cb, gb, arranger } from './state.js';
 import { clearDrumPresetHighlight } from './main.js';
 
 export const ui = {
@@ -483,17 +483,37 @@ function createChordLabel(data) {
  */
 export function renderChordVisualizer() {
     const panel = document.getElementById('panel-arranger');
+    const isMaximized = document.querySelector('.app-main-layout')?.classList.contains('chord-maximized');
     
     const updateLogic = () => {
         ui.chordVisualizer.innerHTML = '';
         arranger.cachedCards = [];
         if (arranger.progression.length === 0) return;
 
+        if (isMaximized) {
+            const header = document.createElement('div');
+            header.style.textAlign = 'center';
+            header.style.marginBottom = '0.75rem';
+            header.style.width = '100%';
+            header.style.maxWidth = '950px';
+            header.style.flexShrink = '0';
+            
+            const sub = document.createElement('div');
+            sub.textContent = `Key: ${arranger.key}${arranger.isMinor ? 'm' : ''}  |  BPM: ${ctx.bpm}`;
+            sub.style.fontSize = '1.1rem';
+            sub.style.fontWeight = 'bold';
+            sub.style.color = 'var(--accent-color)';
+            
+            header.appendChild(sub);
+            ui.chordVisualizer.appendChild(header);
+        }
+
         let currentSectionId = null;
         let sectionBlock = null;
         let sectionContent = null;
         let measureBox = null;
         let currentBeatsInBar = 0;
+        let globalMeasureCount = 1;
 
         arranger.progression.forEach((chord, i) => {
             // New Section Handling
@@ -509,13 +529,15 @@ export function renderChordVisualizer() {
                 // Use section color for subtle background
                 const section = arranger.sections.find(s => s.id === chord.sectionId);
                 if (section && section.color) {
-                    sectionBlock.style.background = `${section.color}10`; // Very low opacity
-                    sectionBlock.style.borderColor = `${section.color}20`;
+                    if (!isMaximized) {
+                        sectionBlock.style.background = `${section.color}10`; // Very low opacity
+                        sectionBlock.style.borderColor = `${section.color}20`;
+                    }
                 }
 
                 const header = document.createElement('div');
                 header.className = 'section-block-header';
-                if (section && section.color) header.style.color = section.color;
+                if (!isMaximized && section && section.color) header.style.color = section.color;
                 header.textContent = chord.sectionLabel || "Untitled Section";
                 sectionBlock.appendChild(header);
 
@@ -528,6 +550,12 @@ export function renderChordVisualizer() {
                 // Force new measure box at start of section
                 measureBox = document.createElement('div');
                 measureBox.className = 'measure-box';
+                if (isMaximized) {
+                    const mNum = document.createElement('span');
+                    mNum.className = 'measure-number';
+                    mNum.textContent = globalMeasureCount++;
+                    measureBox.appendChild(mNum);
+                }
                 sectionContent.appendChild(measureBox);
                 currentBeatsInBar = 0;
             }
@@ -536,6 +564,12 @@ export function renderChordVisualizer() {
             if (currentBeatsInBar >= 4) {
                 measureBox = document.createElement('div');
                 measureBox.className = 'measure-box';
+                if (isMaximized) {
+                    const mNum = document.createElement('span');
+                    mNum.className = 'measure-number';
+                    mNum.textContent = globalMeasureCount++;
+                    measureBox.appendChild(mNum);
+                }
                 sectionContent.appendChild(measureBox);
                 currentBeatsInBar = 0;
             }

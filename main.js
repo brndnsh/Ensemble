@@ -1099,12 +1099,25 @@ function setupUIHandlers() {
             saveCurrentState();
         }],
         [ui.maximizeChordBtn, 'click', () => {
-            const isMax = document.querySelector('.app-main-layout').classList.toggle('chord-maximized');
+            const isMax = document.body.classList.toggle('chord-maximized');
             ui.maximizeChordBtn.textContent = isMax ? '✕' : '⛶';
             ui.maximizeChordBtn.title = isMax ? 'Exit Maximize' : 'Maximize';
+            renderChordVisualizer();
         }]
     ];
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));
+
+    // Global keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (document.body.classList.contains('chord-maximized')) {
+                document.body.classList.remove('chord-maximized');
+                ui.maximizeChordBtn.textContent = '⛶';
+                ui.maximizeChordBtn.title = 'Maximize';
+                renderChordVisualizer();
+            }
+        }
+    });
 
     // Editor Overlay Listeners
     if (ui.editArrangementBtn) {
