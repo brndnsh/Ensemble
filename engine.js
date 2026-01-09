@@ -308,7 +308,9 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     // Pitch Envelope
     if (bendStartInterval !== 0) {
         const startFreq = freq * Math.pow(2, -bendStartInterval / 12);
-        const bendDuration = Math.min(duration * 0.8, (style === 'blues' ? 0.18 : 0.1) + (Math.random() * 0.08));
+        // Deliberate bends: longer for blues/minimal, and scaled with note duration
+        let bendDuration = (style === 'blues' || style === 'minimal') ? 0.25 : 0.15;
+        bendDuration = Math.min(duration * 0.6, bendDuration + (duration * 0.05));
         
         osc1.frequency.setValueAtTime(startFreq, time);
         osc1.frequency.exponentialRampToValueAtTime(freq, time + bendDuration);
@@ -367,7 +369,10 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     filter.Q.setValueAtTime(style === 'bird' ? 1.5 : (isLongNote ? 2 : 1), time); 
 
     // Amplitude Envelope
-    const attack = style === 'shred' ? 0.005 : 0.015;
+    // Dynamic attack based on duration to prevent "mushy" fast notes
+    const baseAttack = style === 'shred' ? 0.005 : 0.015;
+    const attack = Math.min(baseAttack, duration * 0.25);
+    
     gain.gain.setValueAtTime(0, time);
     gain.gain.linearRampToValueAtTime(randomizedVol, time + attack); 
     gain.gain.exponentialRampToValueAtTime(randomizedVol * 0.8, time + duration * 0.5);
@@ -381,12 +386,26 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     gain.connect(pan);
     pan.connect(ctx.soloistGain);
 
-    vibrato.start(time);
+    // Smart Vibrato Logic
+    // Only apply vibrato if note is long enough to warrant it
+    if (duration > 0.15) {
+        vibrato.start(time);
+        
+        let vibDelay = (style === 'minimal' ? 0.4 : (style === 'shred' ? 0.05 : 0.15)) + (Math.random() * 0.1);
+        // Ensure vibrato starts before the note fades too much
+        vibDelay = Math.min(vibDelay, duration * 0.5);
+
+        vibGain.gain.setValueAtTime(0, time);
+        vibGain.gain.setValueAtTime(0, time + vibDelay);
+        vibGain.gain.linearRampToValueAtTime(finalVibDepth, time + vibDelay + vibRamp); 
+        
+        vibrato.stop(time + releaseTime + 0.1);
+    }
+
     osc1.start(time);
     osc2.start(time);
     
     const stopTime = time + releaseTime + 0.1;
-    vibrato.stop(stopTime);
     osc1.stop(stopTime);
     osc2.stop(stopTime);
 
