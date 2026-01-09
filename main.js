@@ -194,7 +194,7 @@ function togglePlay() {
 }
 
 const POWER_CONFIG = {
-    chord: { state: cb, els: [ui.chordPowerBtn, ui.chordPowerBtnDesktop], cleanup: () => document.querySelectorAll('.chord-card.active').forEach(card => card.classList.remove('active')) },
+    chord: { state: cb, els: [ui.chordPowerBtn, ui.chordPowerBtnDesktop] },
     groove: { state: gb, els: [ui.groovePowerBtn, ui.groovePowerBtnDesktop], cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
     bass: { state: bb, els: [ui.bassPowerBtn, ui.bassPowerBtnDesktop] },
     soloist: { state: sb, els: [ui.soloistPowerBtn, ui.soloistPowerBtnDesktop] },
@@ -595,10 +595,9 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
     }
 }
 
-function scheduleChords(chordData, step, time) {
+function scheduleChordVisuals(chordData, time) {
     const { chord, stepInChord, chordIndex } = chordData;
     const spb = 60.0 / ctx.bpm;
-    const measureStep = step % 16;
     
     if (stepInChord === 0) {
         ctx.drawQueue.push({ 
@@ -609,6 +608,12 @@ function scheduleChords(chordData, step, time) {
             duration: chord.beats * spb
         });
     }
+}
+
+function scheduleChords(chordData, step, time) {
+    const { chord, stepInChord, chordIndex } = chordData;
+    const spb = 60.0 / ctx.bpm;
+    const measureStep = step % 16;
     
     const pattern = chordPatterns[cb.style];
     if (pattern) {
@@ -655,6 +660,8 @@ function scheduleGlobalEvent(step, swungTime) {
 
     const chordData = getChordAtStep(step);
     if (!chordData) return;
+
+    scheduleChordVisuals(chordData, t);
 
     if (bb.enabled) scheduleBass(chordData, step, t);
     if (sb.enabled) scheduleSoloist(chordData, step, t, soloistTime);
