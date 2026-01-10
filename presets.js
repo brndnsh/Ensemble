@@ -528,6 +528,7 @@ export const DRUM_PRESETS = {
 };
 
 export const CHORD_STYLES = [
+    { id: 'smart', name: 'Smart (Auto)', category: 'Experimental' },
     { id: 'pad', name: 'Pad', category: 'Pop/Rock' },
     { id: 'strum8', name: 'Strum', category: 'Pop/Rock' },
     { id: 'pop', name: 'Pop', category: 'Pop/Rock' },
