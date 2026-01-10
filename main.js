@@ -1,7 +1,8 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
 import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates, updateActiveChordUI } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime } from './engine.js';
-import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, CHORD_INSTRUMENTS, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
+import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
+import { SONG_TEMPLATES, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, CHORD_INSTRUMENTS, BASS_STYLES, SOLOIST_STYLES } from './presets.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
 import { validateProgression, generateRandomProgression, mutateProgression, transformRelativeProgression } from './chords.js';
 import { chordPatterns } from './accompaniment.js';
@@ -262,6 +263,7 @@ function saveCurrentState() {
         theme: ctx.theme,
         bpm: ctx.bpm,
         metronome: ui.metronome.checked,
+        applyPresetSettings: ui.applyPresetSettings.checked,
         vizEnabled: vizState.enabled,
         cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
         bb: { enabled: bb.enabled, style: bb.style, octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
@@ -1290,7 +1292,7 @@ function setupUIHandlers() {
     ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
 
     // Global Option Checkboxes
-    [ui.metronome, ui.countIn, ui.visualFlash, ui.haptic].forEach(el => {
+    [ui.metronome, ui.countIn, ui.visualFlash, ui.haptic, ui.applyPresetSettings].forEach(el => {
         el.addEventListener('change', () => saveCurrentState());
     });
 
@@ -1437,16 +1439,30 @@ function setupPresets() {
 
     // Chord Progression Presets
     renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', arranger.lastChordPreset, (item, chip) => {
-        if (item.sections) {
-            arranger.sections = item.sections.map(s => ({
-                id: generateId(),
-                label: s.label,
-                value: s.value
-            }));
-        } else {
-            // Reset to single section for legacy presets
-            arranger.sections = [{ id: generateId(), label: 'Main', value: item.prog }];
+        arranger.sections = item.sections.map(s => ({
+            id: generateId(),
+            label: s.label,
+            value: s.value
+        }));
+        
+        // Context-Aware Settings
+        if (item.settings) {
+            // Apply BPM and Style ONLY if the user has opted in (default: true)
+            if (ui.applyPresetSettings.checked) {
+                if (item.settings.bpm) {
+                    setBpm(item.settings.bpm);
+                }
+                if (item.settings.style) {
+                    updateStyle('chord', item.settings.style);
+                }
+            }
+            // Always apply structural changes like Time Signature to ensure the loop works
+            if (item.settings.timeSignature) {
+                arranger.timeSignature = item.settings.timeSignature;
+                ui.timeSigSelect.value = item.settings.timeSignature;
+            }
         }
+
         arranger.isMinor = item.isMinor || false;
         updateRelKeyButton();
         updateKeySelectLabels();
@@ -1545,6 +1561,7 @@ function init() {
             ui.autoFollowCheck.checked = gb.autoFollow;
             ui.drumBarsSelect.value = gb.measures;
             ui.metronome.checked = savedState.metronome || false;
+            ui.applyPresetSettings.checked = savedState.applyPresetSettings !== undefined ? savedState.applyPresetSettings : false;
 
             applyTheme(ctx.theme);
 

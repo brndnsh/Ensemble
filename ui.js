@@ -83,6 +83,7 @@ export const ui = {
     swingBase: document.getElementById('swingBaseSelect'),
     visualFlash: document.getElementById('visualFlashCheck'),
     haptic: document.getElementById('hapticCheck'),
+    applyPresetSettings: document.getElementById('applyPresetSettingsCheck'),
     exportMidiBtn: document.getElementById('exportMidiBtn'),
     settingsExportMidiBtn: document.getElementById('settingsExportMidiBtn'),
     exportOverlay: document.getElementById('exportOverlay'),

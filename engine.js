@@ -170,6 +170,20 @@ export const INSTRUMENT_PRESETS = {
         hp: true,
         reverbMult: 0.65,
         gainMult: 2.3 
+    },
+    'Classic': {
+        attack: 0.01,
+        decay: 1.5,
+        filterBase: 800,
+        filterDepth: 2000,
+        resonance: 1.0,
+        tine: true,
+        fundamental: 'sine',
+        harmonic: 'triangle',
+        fifth: 'sine',
+        weights: [1.5, 0.5, 0.1],
+        reverbMult: 0.9,
+        gainMult: 1.4
     }
 };
 
@@ -203,7 +217,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         
         // Clean needs to be more "plucky" (short sustain)
         // Pad styles (long duration) get full sustain, rhythmic styles get shortened
-        let sustainPercent = instrument === 'Clean' ? 0.25 : 0.75;
+        let sustainPercent = (instrument === 'Clean' && duration < 1.0) ? 0.25 : 0.75;
         if (isShortNote) sustainPercent *= 0.6; // Even tighter for rhythmic hits
 
         const attackEnd = startTime + preset.attack;
