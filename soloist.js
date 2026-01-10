@@ -32,11 +32,11 @@ const RHYTHMIC_CELLS = [
 
 const STYLE_CONFIG = {
     scalar: {
-        restBase: 0.18, // Slightly more breathing room
-        restGrowth: 0.05, // per bar of continuous playing
-        cells: [0, 2, 10, 6], // Added syncopated cell (6)
+        restBase: 0.1, // Reduced for less sparsity
+        restGrowth: 0.02, // Slower rest growth for longer phrases
+        cells: [0, 1, 2], // Focused on 8ths (0), 16ths (1), and Quarters (2) for flow
         registerSoar: 7,
-        tensionScale: 0.6, // Increased tension scale
+        tensionScale: 0.6, 
         timingJitter: 15
     },
     shred: {
@@ -368,7 +368,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             if (dist === 0) weight -= 5; // Avoid same note repeated too much
             
             // Step-wise is VERY good (1-2 semi) - Primary movement
-            if (dist > 0 && dist <= 2) weight += 15; 
+            if (dist > 0 && dist <= 2) {
+                weight += 15;
+                if (style === 'scalar') weight += 20; // Strong bias for smooth lines in scalar mode
+            } 
             
             // Small Skips (3rds, 4ths) - Secondary movement
             if (dist >= 3 && dist <= 5) {
@@ -411,16 +414,23 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
     // --- 5. Articulation & Humanization ---
     
-    // A. Blue Note Curls
+    // A. Blue Note Curls & Scoops
     let bendStartInterval = 0;
     const intervalFromRoot = (selectedMidi - rootMidi + 120) % 12;
     
-    // Target is Major 3rd (4)
+    // 1. Target: Major 3rd (4) -> Curl from Minor 3rd
     if (intervalFromRoot === 4 && ['blues', 'neo', 'bird', 'minimal'].includes(style)) {
-        // 40% chance to curl up from Minor 3rd
-        if (Math.random() < 0.4) {
-            bendStartInterval = 1; // Start 1 semitone lower (Minor 3rd)
-        }
+        if (Math.random() < 0.4) bendStartInterval = 1; 
+    }
+    
+    // 2. Target: Perfect 5th (7) -> Curl from b5 (Blues only)
+    if (intervalFromRoot === 7 && style === 'blues') {
+         if (Math.random() < 0.3) bendStartInterval = 1; 
+    }
+
+    // 3. Target: Root (0) -> Soulful Scoop (Neo/Soul)
+    if (intervalFromRoot === 0 && ['neo', 'bird', 'blues'].includes(style) && isStrongBeat) {
+         if (Math.random() < 0.35) bendStartInterval = 0.5; // Quarter-tone scoop
     }
 
     // B. Dynamic Arcs (Storytelling Velocity)
