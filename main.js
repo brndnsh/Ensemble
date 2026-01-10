@@ -1510,7 +1510,17 @@ function init() {
             if (savedState.sb) {
                 sb.enabled = savedState.sb.enabled !== undefined ? savedState.sb.enabled : false;
                 sb.style = savedState.sb.style || 'scalar';
-                sb.octave = savedState.sb.octave;
+                
+                // MIGRATION: Update old default (77) to new default (67)
+                // If it was exactly 77, we assume it was the default and update it.
+                // If undefined, we use the new default.
+                // If it's anything else, the user customized it, so we keep it.
+                if (savedState.sb.octave === 77 || savedState.sb.octave === undefined) {
+                    sb.octave = 67;
+                } else {
+                    sb.octave = savedState.sb.octave;
+                }
+                
                 sb.volume = savedState.sb.volume;
                 sb.reverb = savedState.sb.reverb;
             }
@@ -1758,7 +1768,7 @@ function resetToDefaults() {
     ui.densitySelect.value = 'standard';
     ui.octave.value = 65;
     ui.bassOctave.value = 41;
-    ui.soloistOctave.value = 77;
+    ui.soloistOctave.value = 67;
     ui.chordVol.value = 0.5;
     ui.chordReverb.value = 0.3;
     ui.bassVol.value = 0.45;
