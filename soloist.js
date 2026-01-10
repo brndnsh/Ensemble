@@ -32,12 +32,12 @@ const RHYTHMIC_CELLS = [
 
 const STYLE_CONFIG = {
     scalar: {
-        restBase: 0.15,
+        restBase: 0.18, // Slightly more breathing room
         restGrowth: 0.05, // per bar of continuous playing
-        cells: [0, 2, 10],
+        cells: [0, 2, 10, 6], // Added syncopated cell (6)
         registerSoar: 7,
-        tensionScale: 0.5, // How much tension affects note choice
-        timingJitter: 12
+        tensionScale: 0.6, // Increased tension scale
+        timingJitter: 15
     },
     shred: {
         restBase: 0.05,
@@ -141,14 +141,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     
     // --- 1. Cycle & Tension Tracking ---
     
-    // Assuming 4-bar cycles for tension resolution
-    const CYCLE_BARS = 4;
+    // Dynamic Cycle length: Match progression if short, else default to 4
+    const progressionBars = arranger.progression.length / stepsPerMeasure;
+    const CYCLE_BARS = (progressionBars > 0 && progressionBars <= 8) ? progressionBars : 4;
     const stepsPerCycle = stepsPerMeasure * CYCLE_BARS;
     const cycleStep = step % stepsPerCycle;
     
-    // Ramp up tension in bar 4, release in bar 1
+    // Ramp up tension towards the end of the cycle
     const measureIndex = Math.floor(cycleStep / stepsPerMeasure);
-    let baseTension = measureIndex * 0.25; 
+    let baseTension = (measureIndex / CYCLE_BARS); 
     
     // Beat Strength: Strong on 1 & 3 (4/4)
     const isStrongBeat = (beatInMeasure === 0 || beatInMeasure === 2) && stepInBeat === 0;
@@ -169,7 +170,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const phraseLengthBars = sb.currentPhraseSteps / stepsPerMeasure;
     
     // Tempo Scaling: Faster tempo = measures fly by = need to breathe "sooner" in bar count
-    // At 180 BPM, we add ~0.18 to the probability
     const tempoBreathFactor = Math.max(0, (ctx.bpm - 120) * 0.003); 
     
     let restProb = config.restBase + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
@@ -182,13 +182,24 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (Math.random() < 0.4) { // Chance to start phrase
             sb.isResting = false;
             sb.currentPhraseSteps = 0;
-            // Decision: Repeat Motif?
-            if (sb.motifBuffer && sb.motifBuffer.length > 0 && Math.random() < 0.4) {
+            
+            // Decision: Repeat a Hook or a Motif?
+            const hasHook = sb.hookBuffer && sb.hookBuffer.length > 0;
+            const hasMotif = sb.motifBuffer && sb.motifBuffer.length > 0;
+            
+            if ((hasHook || hasMotif) && Math.random() < 0.5) {
                 sb.isReplayingMotif = true;
+                // Prefer hook on short loops, motif on long ones
+                const useHook = hasHook && (progressionBars <= 8 || Math.random() < 0.3);
+                sb.activeBuffer = useHook ? sb.hookBuffer : sb.motifBuffer;
                 sb.motifReplayIndex = 0;
             } else {
                 sb.isReplayingMotif = false;
-                sb.motifBuffer = []; // Clear buffer for new motif
+                // If we didn't replay, maybe move motif to hook if it was long enough
+                if (hasMotif && sb.motifBuffer.length > 4 && Math.random() < sb.hookRetentionProb) {
+                    sb.hookBuffer = [...sb.motifBuffer];
+                }
+                sb.motifBuffer = []; // Clear short-term memory
             }
         } else {
             return null; // Continue resting
@@ -215,40 +226,51 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
     let shouldPlay = false;
     let durationMultiplier = 1;
-    let isMotifNote = false;
     let selectedMidi = null;
 
-    // A. Motif Replay Logic
-    if (sb.isReplayingMotif && sb.motifBuffer.length > 0) {
-        // Try to find a note in the buffer that corresponds to this relative cycle position
-        // The buffer stores { interval, dur, cyclePos }
-        // We use a loose match logic
-        const targetPos = cycleStep % 16; // Use simplified 1-bar cycle relative pos for now to allow looping
-        
-        // Find stored note close to this relative rhythmic position
-        // We iterate through buffer to find the next valid note
-        if (sb.motifReplayIndex < sb.motifBuffer.length) {
-            const stored = sb.motifBuffer[sb.motifReplayIndex];
-            // Simple sequential playback for now, assuming rhythm aligns
-            // To make it rhythmically accurate, we'd need to store 'rests' in buffer too.
-            // Let's rely on the Cell system for rhythm and just steal the Pitch/Interval.
+    // A. Motif/Hook Replay Logic (Position-Locked)
+    if (sb.isReplayingMotif && sb.activeBuffer) {
+        // Look for a note in the buffer that matches the current cycleStep
+        const storedNote = sb.activeBuffer.find(n => n.step === cycleStep);
+        if (storedNote) {
+            shouldPlay = true;
+            durationMultiplier = storedNote.dur;
             
-            // Actually, for "Smart Transposition", we need to know IF we play now.
-            // Let's stick to the Cell system for *when* to play, but use the Buffer for *what* to play.
+            // SMART TRANSPOSITION & DEVELOPMENT
+            const rootMidi = currentChord.rootMidi;
+            let targetMidi = rootMidi + storedNote.interval;
+            
+            // "Development": 20% chance to shift scale degree
+            if (Math.random() < 0.2) {
+                const shift = Math.random() > 0.5 ? 1 : -1;
+                targetMidi += shift; 
+            }
+
+            // Snap to scale
+            const scaleIntervals = getScaleForChord(currentChord, style);
+            const scaleTones = scaleIntervals.map(i => rootMidi + i);
+            
+            let bestMidi = targetMidi;
+            let minDist = 100;
+            for (let m = targetMidi - 6; m <= targetMidi + 6; m++) {
+                if (scaleTones.some(s => (s % 12 + 12) % 12 === (m % 12 + 12) % 12)) {
+                    const d = Math.abs(m - targetMidi);
+                    if (d < minDist) { minDist = d; bestMidi = m; }
+                }
+            }
+            selectedMidi = bestMidi;
         }
     }
 
-    // B. Cell Selection (Rhythm)
-    if (stepInBeat === 0) {
+    // B. Cell Selection (Rhythm) - only if not replaying or if replay didn't trigger a note
+    if (!selectedMidi && stepInBeat === 0) {
         // New beat, pick a cell
         let cellPool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
 
-        // SPEED GOVERNOR: At high tempos, 16th notes (cells with index 1, 3, 4, 7, 9) become unplayable/messy
-        // Exception: Shredders love it.
+        // SPEED GOVERNOR: At high tempos, 16th notes become unplayable/messy
         if (ctx.bpm > 140 && style !== 'shred') {
-             // Filter out 16th-heavy cells
              cellPool = cellPool.filter((_, idx) => ![1, 3, 4, 7, 9].includes(idx));
-             if (cellPool.length === 0) cellPool = [RHYTHMIC_CELLS[0]]; // Fallback to 8ths
+             if (cellPool.length === 0) cellPool = [RHYTHMIC_CELLS[0]]; 
         }
         
         // Tension influence
@@ -261,70 +283,49 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (Math.random() < 0.1) sb.currentCell = [0, 0, 0, 0];
     }
     
-    if (sb.currentCell[stepInBeat] === 1) shouldPlay = true;
+    if (!selectedMidi && sb.currentCell[stepInBeat] === 1) shouldPlay = true;
 
     if (!shouldPlay) return null;
 
 
-    // --- 4. Pitch Selection (Harmonic Weighting & Smart Transposition) ---
+    // --- 4. Pitch Selection (Standard Weighted Generation) ---
 
     const rootMidi = currentChord.rootMidi;
-    const chordTones = currentChord.intervals.map(i => rootMidi + i);
-    const scaleIntervals = getScaleForChord(currentChord, style);
-    const scaleTones = scaleIntervals.map(i => rootMidi + i);
-    const dynamicCenter = centerMidi + Math.floor(sb.tension * 5);
-    const minMidi = dynamicCenter - 18;
-    const maxMidi = dynamicCenter + 18;
-    const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
 
-
-    // SMART TRANSPOSITION LOGIC
-    if (sb.isReplayingMotif && sb.motifBuffer.length > sb.motifReplayIndex) {
-        const stored = sb.motifBuffer[sb.motifReplayIndex];
-        // Calculate target pitch based on stored interval relative to NEW root
-        let targetMidi = rootMidi + stored.interval;
-        
-        // Snap to valid scale tone
-        // Find closest scale tone
-        let bestMidi = targetMidi;
-        let minDist = 100;
-        
-        // Build full scale range
-        const fullScale = [];
-        for (let m = minMidi - 12; m <= maxMidi + 12; m++) {
-            if (scaleTones.some(s => s % 12 === m % 12)) fullScale.push(m);
-        }
-        
-        fullScale.forEach(m => {
-            const d = Math.abs(m - targetMidi);
-            if (d < minDist) { minDist = d; bestMidi = m; }
-        });
-        
-        selectedMidi = bestMidi;
-        sb.motifReplayIndex = (sb.motifReplayIndex + 1) % sb.motifBuffer.length;
-        isMotifNote = true;
-    } 
-    
     if (!selectedMidi) {
-        // Standard Weighted Generation
+        const chordTones = currentChord.intervals.map(i => rootMidi + i);
+        const scaleIntervals = getScaleForChord(currentChord, style);
+        const scaleTones = scaleIntervals.map(i => rootMidi + i);
+        const dynamicCenter = centerMidi + Math.floor(sb.tension * 5);
+        const minMidi = dynamicCenter - 18;
+        const maxMidi = dynamicCenter + 18;
+        const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
+
         let candidates = [];
         
         for (let m = minMidi; m <= maxMidi; m++) {
-            const pc = m % 12;
-            const rootPC = rootMidi % 12;
+            const pc = (m % 12 + 12) % 12;
+            const rootPC = (rootMidi % 12 + 12) % 12;
             const interval = (pc - rootPC + 12) % 12;
             
             let weight = 1.0;
             
-            const isChordTone = chordTones.some(ct => ct % 12 === pc);
-            const isScaleTone = scaleTones.some(st => st % 12 === pc);
+            const isChordTone = chordTones.some(ct => (ct % 12 + 12) % 12 === pc);
+            const isScaleTone = scaleTones.some(st => (st % 12 + 12) % 12 === pc);
             
             if (!isScaleTone) continue; 
 
-            // Beat Strength
+            // Beat Strength & "Sweet Notes"
             if (isStrongBeat) {
-                if (isChordTone) weight += 10;
-                else weight -= 5;
+                if (isChordTone) {
+                    weight += 10;
+                    // Target the 3rd on the Downbeat (Sweetness)
+                    if (beatInMeasure === 0 && (interval === 3 || interval === 4)) {
+                        weight += 15; 
+                    }
+                } else {
+                    weight -= 5;
+                }
             } else {
                 if (!isChordTone) weight += 2; 
             }
@@ -336,11 +337,17 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                 if (interval === 0 || interval === 7) weight += 8;
             }
             
-            // Proximity
+            // Proximity & Melodic Flow
             const dist = Math.abs(m - lastMidi);
-            if (dist > 12) weight -= 10; 
-            if (dist === 0) weight -= 5; 
-            if (dist < 5) weight += 5; 
+            if (dist > 12) weight -= 10; // Avoid huge leaps
+            if (dist === 0) weight -= 5; // Avoid same note repeated too much
+            
+            // Step-wise is good (1-2 semi)
+            if (dist > 0 && dist <= 2) weight += 5; 
+            
+            // Melodic Skips (3rds, 4ths, 5ths) are "musical" (3-7 semi)
+            // Give them a boost if we haven't skipped recently (random chance)
+            if (dist >= 3 && dist <= 7 && Math.random() < 0.4) weight += 6;
 
             candidates.push({ midi: m, weight: Math.max(0.1, weight) });
         }
@@ -360,16 +367,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         
         // Force Root on Cycle Reset
         if (cycleStep === 0 && isStrongBeat) {
-            let closest = chordTones[0];
-            let minDist = 100;
-            chordTones.forEach(ct => {
-                let m = ct;
-                while (m < minMidi) m += 12;
-                while (m > maxMidi) m -= 12;
-                let d = Math.abs(m - lastMidi);
-                if (d < minDist) { minDist = d; closest = m; }
-            });
-            selectedMidi = closest;
+            selectedMidi = chordTones[0];
+            while (selectedMidi < minMidi) selectedMidi += 12;
+            while (selectedMidi > maxMidi) selectedMidi -= 12;
         }
     }
 

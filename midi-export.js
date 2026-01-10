@@ -188,8 +188,7 @@ export function exportToMidi(options = {}) {
         sbBackup = { ...sb };
         Object.assign(sb, {
             busySteps: 0, phraseSteps: 0, isResting: false,
-            currentLick: null, sequenceType: null, patternSteps: 0,
-            direction: 1, patternMode: 'scale'
+            direction: 1
         });
         
         // Tracks

@@ -160,14 +160,11 @@ self.onmessage = (e) => {
                 sb.phraseSteps = 0;
                 sb.isResting = false; 
                 sb.busySteps = 0;
-                sb.currentLick = null;
-                sb.sequenceType = null;
-                sb.motifCell = null;
-                sb.motifCounter = 0;
-                sb.enclosureNotes = null;
-                sb.enclosureIndex = 0;
                 sb.currentPhraseSteps = 0;
                 sb.motifBuffer = [];
+                sb.hookBuffer = [];
+                sb.isReplayingMotif = false;
+                sb.motifReplayIndex = 0;
                 sb.tension = 0;
                 fillBuffers(data.step);
                 break;

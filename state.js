@@ -192,24 +192,17 @@ export const bb = {
  * @property {number} lastNoteEnd - Time when the last note ends.
  * @property {number} octave - Base MIDI octave.
  * @property {string} style - Soloing style ID (e.g., 'blues', 'shred').
- * @property {number} direction - Current melodic direction (1 or -1).
- * @property {string} patternMode - Current generation mode ('scale', 'arp', 'stay').
- * @property {number} patternSteps - Steps remaining in current mode.
- * @property {string|null} sequenceType - Current sequence type.
- * @property {number} sequenceIndex - Current position in sequence.
- * @property {number|null} sequenceBaseMidi - Base pitch for sequence.
- * @property {number} phraseSteps - Steps remaining in current phrase.
+ * @property {number} direction - Melodic direction (1 or -1).
+ * @property {number} phraseSteps - Total steps in current phrase (or remaining, context dependent).
+ * @property {number} currentPhraseSteps - Steps elapsed in current phrase.
  * @property {boolean} isResting - Whether the soloist is taking a breath.
  * @property {Array<number>} currentCell - Current rhythmic cell.
- * @property {Array<number>|null} motifCell - Stored motif for repetition.
- * @property {number} motifCounter - Counter for motif repetition.
- * @property {Array<Object>|null} currentLick - Currently playing pre-defined lick.
- * @property {number} lickIndex - Position in current lick.
- * @property {number|null} lickBaseMidi - Base pitch for lick transposition.
- * @property {Array<number>|null} enclosureNotes - Pending enclosure notes.
- * @property {number} enclosureIndex - Position in enclosure.
  * @property {number} busySteps - Counter for "busy" playing periods.
- * @property {Array<Object>} motifBuffer - Buffer to store recent notes for motif repetition.
+ * @property {Array<Object>} motifBuffer - Short-term memory for current phrase.
+ * @property {Array<Object>} hookBuffer - Long-term memory for catchy loops.
+ * @property {boolean} isReplayingMotif - Whether currently replaying a motif.
+ * @property {number} motifReplayIndex - Current index in motif/hook replay.
+ * @property {number} hookRetentionProb - Probability of retaining a motif as a "hook".
  * @property {number} tension - Current harmonic tension level (0.0 - 1.0).
  */
 export const sb = {
@@ -223,24 +216,17 @@ export const sb = {
     lastNoteStartTime: 0,
     octave: 77, // F5
     style: 'scalar',
-    direction: 1,      // 1 for up, -1 for down
-    patternMode: 'scale', // 'scale', 'arp', 'stay'
-    patternSteps: 0,     // How many steps remain in current pattern
-    sequenceType: null,   // Type of sequence currently playing
-    sequenceIndex: 0,    // Current step in the sequence
-    sequenceBaseMidi: null, // The starting midi note for the sequence
+    direction: 1,
     phraseSteps: 0,
+    currentPhraseSteps: 0,
     isResting: false,
     currentCell: [1, 0, 1, 0],
-    motifCell: null,
-    motifCounter: 0,
-    currentLick: null,
-    lickIndex: 0,
-    lickBaseMidi: null,
-    enclosureNotes: null,
-    enclosureIndex: 0,
     busySteps: 0,
     motifBuffer: [],
+    hookBuffer: [],
+    isReplayingMotif: false,
+    motifReplayIndex: 0,
+    hookRetentionProb: 0.4,
     tension: 0
 };
 
