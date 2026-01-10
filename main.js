@@ -1478,7 +1478,7 @@ function init() {
             if (savedState.cb) {
                 cb.enabled = savedState.cb.enabled !== undefined ? savedState.cb.enabled : true;
                 cb.style = savedState.cb.style || 'pad';
-                cb.instrument = savedState.cb.instrument || 'Warm EP';
+                cb.instrument = savedState.cb.instrument || 'Clean';
                 cb.octave = savedState.cb.octave;
                 cb.density = savedState.cb.density;
                 cb.volume = savedState.cb.volume;
@@ -1717,7 +1717,7 @@ function resetToDefaults() {
     
     cb.volume = 0.5;
     cb.reverb = 0.3;
-    cb.instrument = 'Warm';
+    cb.instrument = 'Clean';
     cb.octave = 65;
     cb.density = 'standard';
     

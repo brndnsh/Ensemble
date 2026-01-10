@@ -262,8 +262,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         }
     }
 
-    // B. Cell Selection (Rhythm) - only if not replaying or if replay didn't trigger a note
-    if (!selectedMidi && stepInBeat === 0) {
+    // B. Cell Selection (Rhythm) - strictly strictly only if NOT replaying
+    // If we are replaying a motif, we must respect its silence (gaps) and not fill them with random cells
+    if (!sb.isReplayingMotif && !selectedMidi && stepInBeat === 0) {
         // New beat, pick a cell
         let cellPool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
 
@@ -283,7 +284,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (Math.random() < 0.1) sb.currentCell = [0, 0, 0, 0];
     }
     
-    if (!selectedMidi && sb.currentCell[stepInBeat] === 1) shouldPlay = true;
+    // Only trigger cell-based play if we are NOT replaying a motif
+    if (!sb.isReplayingMotif && !selectedMidi && sb.currentCell[stepInBeat] === 1) shouldPlay = true;
 
     if (!shouldPlay) return null;
 
@@ -296,9 +298,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         const chordTones = currentChord.intervals.map(i => rootMidi + i);
         const scaleIntervals = getScaleForChord(currentChord, style);
         const scaleTones = scaleIntervals.map(i => rootMidi + i);
-        const dynamicCenter = centerMidi + Math.floor(sb.tension * 5);
-        const minMidi = dynamicCenter - 18;
-        const maxMidi = dynamicCenter + 18;
+        
+        // Use the style-specific 'registerSoar' value instead of hardcoded 5
+        const dynamicCenter = centerMidi + Math.floor(sb.tension * config.registerSoar);
+        
+        const minMidi = dynamicCenter - 15; // Reduced range
+        const maxMidi = dynamicCenter + 15;
         const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
 
         let candidates = [];
@@ -324,7 +329,27 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                         weight += 15; 
                     }
                 } else {
-                    weight -= 5;
+                    // HARMONIC SIEVE: Filter out "Avoid Notes" on strong beats
+                    // These are notes that are "in the scale" but clash horribly with chord tones
+                    let isClash = false;
+                    
+                    const isDominant = currentChord.intervals.includes(10) && currentChord.intervals.includes(4);
+                    const isMajorLike = ['major', 'maj7'].includes(currentChord.quality) || isDominant;
+                    
+                    // 1. Avoid 4th (5 semitones) on Major/Dominant chords (Clashes with 3rd)
+                    if (isMajorLike && interval === 5) isClash = true;
+
+                    // 2. Avoid b6 (8 semitones) on Minor chords (Clashes with 5th)
+                    if (currentChord.quality === 'minor' && interval === 8) isClash = true;
+
+                    // 3. Avoid b2 (1 semitone) generally (unless altered context)
+                    if (interval === 1) isClash = true;
+
+                    if (isClash) {
+                        weight -= 50; // Hard Veto: Overpowers stepwise bonus
+                    } else {
+                        weight -= 5; // Soft Penalty: "Tensions" (9, 13) are okay-ish
+                    }
                 }
             } else {
                 if (!isChordTone) weight += 2; 
@@ -339,15 +364,25 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             
             // Proximity & Melodic Flow
             const dist = Math.abs(m - lastMidi);
-            if (dist > 12) weight -= 10; // Avoid huge leaps
+            
             if (dist === 0) weight -= 5; // Avoid same note repeated too much
             
-            // Step-wise is good (1-2 semi)
-            if (dist > 0 && dist <= 2) weight += 5; 
+            // Step-wise is VERY good (1-2 semi) - Primary movement
+            if (dist > 0 && dist <= 2) weight += 15; 
             
-            // Melodic Skips (3rds, 4ths, 5ths) are "musical" (3-7 semi)
-            // Give them a boost if we haven't skipped recently (random chance)
-            if (dist >= 3 && dist <= 7 && Math.random() < 0.4) weight += 6;
+            // Small Skips (3rds, 4ths) - Secondary movement
+            if (dist >= 3 && dist <= 5) {
+                weight += 4;
+            }
+            
+            // Musical Skips (5ths, 6ths) - Use sparingly
+            if (dist > 5 && dist <= 9) {
+                if (Math.random() < 0.3) weight += 2;
+                else weight -= 2;
+            }
+
+            // Penalize large leaps heavily
+            if (dist > 9) weight -= 20;
 
             candidates.push({ midi: m, weight: Math.max(0.1, weight) });
         }
