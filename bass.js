@@ -343,6 +343,62 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return result(getFrequency(deepRoot), null, 0.9);
     }
 
+    // --- DISCO STYLE ---
+    if (style === 'disco') {
+        const stepInBeat = stepInChord % 4; 
+        
+        // Downbeats (1, 2, 3, 4): Root
+        if (stepInBeat === 0) {
+            return result(getFrequency(baseRoot), 0.5, 1.15); // Punchy root
+        }
+        
+        // Upbeats ('and'): Octave
+        if (stepInBeat === 2) {
+             return result(getFrequency(clampAndNormalize(baseRoot + 12)), 0.4, 1.05); // Short octave pop
+        }
+        
+        // Occasional 16th note ghost/pickup
+        if (stepInBeat === 3 && Math.random() < 0.2) {
+            return result(getFrequency(baseRoot), 0.3, 0.75, true);
+        }
+        
+        return null;
+    }
+
+    // --- DUB STYLE ---
+    if (style === 'dub') {
+        // Deep sub-bass feel.
+        const deepRoot = clampAndNormalize(baseRoot - 12); // Force low octave
+        
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+        const stepInMeasure = step % stepsPerMeasure;
+
+        // Beat 1: Heavy Anchor
+        if (stepInMeasure === 0) return result(getFrequency(deepRoot), 1.0, 1.2); 
+        
+        // Beat 2.5 (the 'and' of 2): Syncopated 5th or Octave
+        if (beatIndex === 1.5 && Math.random() < 0.6) {
+             return result(getFrequency(deepRoot + 7), 0.8, 1.0);
+        }
+        
+        // Beat 3: often a rest or a lower 5th
+        if (beatIndex === 2.0 && Math.random() < 0.5) {
+             return result(getFrequency(deepRoot), 1.0, 1.1);
+        }
+        
+        // Beat 4: Fill/Pickup
+        if (beatIndex >= 3.0 && stepInChord % 2 === 0) { // 8th notes on beat 4
+             if (Math.random() < 0.4) {
+                 // b7 or 5th
+                 const interval = currentChord.intervals.includes(10) ? 10 : 7;
+                 return result(getFrequency(deepRoot + interval), 0.5, 0.9);
+             }
+        }
+        
+        return null;
+    }
+
     // --- QUARTER NOTE (WALKING) STYLE ---
     
     // Check for eighth-note skip ("and" of a beat)
@@ -438,6 +494,8 @@ export function isBassActive(style, step, stepInChord) {
     }
 
     if (style === 'rocco') return true;
+    if (style === 'disco') return true;
+    if (style === 'dub') return true;
 
     if (style === 'neo') {
         if (stepInChord === 0) return true;
