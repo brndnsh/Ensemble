@@ -559,6 +559,8 @@ export const BASS_STYLES = [
     { id: 'quarter', name: 'Walking', category: 'Jazz' },
     { id: 'funk', name: 'Funk', category: 'Soul/Funk' },
     { id: 'rocco', name: 'Rocco (16ths)', category: 'Soul/Funk' },
+    { id: 'disco', name: 'Disco (Octaves)', category: 'Soul/Funk' },
+    { id: 'dub', name: 'Dub (Reggae)', category: 'World/Latin' },
     { id: 'neo', name: 'Neo-Soul', category: 'Soul/R&B' },
     { id: 'bossa', name: 'Bossa Nova', category: 'World/Latin' }
 ];
