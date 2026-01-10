@@ -127,7 +127,7 @@ function getScaleForChord(chord, style) {
 
 // --- Main Generator ---
 
-export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 77, style = 'scalar', stepInChord = 0, bassFreq = null) {
+export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 67, style = 'scalar', stepInChord = 0, bassFreq = null) {
     if (!currentChord) return null;
     
     const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;
@@ -319,6 +319,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             const isScaleTone = scaleTones.some(st => (st % 12 + 12) % 12 === pc);
             
             if (!isScaleTone) continue; 
+
+            // Vocal Range Gravity: Prefer the "meat" of the range
+            // Penalize upper register to use it sparingly
+            if (m > centerMidi + 7) weight -= 4;
+            if (m > centerMidi + 12) weight -= 10;
 
             // Beat Strength & "Sweet Notes"
             if (isStrongBeat) {
