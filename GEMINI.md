@@ -13,10 +13,10 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **`main.js`**: Orchestrates the application initialization, event listeners, connects the UI with the audio engine, and registers the Service Worker.
 *   **`engine.js`**: Handles all Web Audio API operations, including the scheduler loop, sound synthesis (oscillators for chords), and drum sample playback. Now includes `getVisualTime()` for synchronized visuals.
 *   **`state.js`**: Manages the global application state (playback status, BPM, active instruments, user presets). **Contains JSDoc type definitions for the entire state schema.**
-*   **`chords.js`**: Contains logic for parsing chord progressions. Modularized into `resolveChordRoot`, `getIntervals`, and `getFormattedChordNames` returning structured data.
+*   **`chords.js`**: Core logic for parsing chord symbols, optimizing voicings (`getBestInversion`), generating random progressions, and handling intelligent relative key transformations.
 *   **`accompaniment.js`**: Defines the rhythmic playback patterns for all chord styles (e.g., Funk, Reggae, Bossa Nova).
 *   **`bass.js`**: Generates walking bass lines and patterns based on chord progressions and desired register.
-*   **`soloist.js`**: Implements advanced algorithmic soloing logic, including phrasing, rhythmic cells, and harmonic targeting.
+*   **`soloist.js`**: Implements "Expressive Musicality" logic for the algorithmic soloist, featuring phrasing ("breath"), motif retention, dynamic velocity arcs, and micro-timing.
 *   **`visualizer.js`**: Implements the `UnifiedVisualizer` class for multi-track, time-based harmonic and melodic visualization.
 *   **`midi-export.js`**: Handles offline generation of Standard MIDI Files (SMF) including track assembly and timing calculations.
 *   **`ui.js`**: Centralizes DOM element creation and UI manipulation. Implements singleton patterns for reusable UI components like the symbol menu.
