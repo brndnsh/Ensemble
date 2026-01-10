@@ -127,7 +127,7 @@ function getScaleForChord(chord, style) {
 
 // --- Main Generator ---
 
-export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 67, style = 'scalar', stepInChord = 0, bassFreq = null) {
+export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 72, style = 'scalar', stepInChord = 0, bassFreq = null) {
     if (!currentChord) return null;
     
     const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;

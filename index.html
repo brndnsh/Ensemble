@@ -373,11 +373,13 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <div>
                         <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
-                        <div class="control-row-header">
-                            <span>Register</span>
-                            <span id="soloistOctaveLabel" style="color: var(--accent-color); font-weight: bold;">G4</span>
-                        </div>
-                        <input type="range" id="soloistOctaveSlider" min="48" max="91" value="67" style="width: 100%;" aria-label="Soloist Octave">
+<div style="flex: 1;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+        <span>Register</span>
+        <span id="soloistOctaveLabel">C5</span>
+    </div>
+    <input type="range" id="soloistOctaveSlider" min="48" max="91" value="72" style="width: 100%;" aria-label="Soloist Octave">
+</div>
                             <div style="text-align: right; margin-top: 0.5rem;">
                                 <span id="soloistHeaderReg" style="display:none;"></span>
                         </div>
