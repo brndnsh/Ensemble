@@ -455,87 +455,122 @@ export function playDrumSound(name, time, velocity = 1.0) {
     const humanizeFactor = (gb.humanize || 0) / 100;
     const velJitter = 1.0 + (Math.random() - 0.5) * (humanizeFactor * 0.4);
     const masterVol = velocity * 1.35 * velJitter;
+    
+    // Round-robin variation (±1.5%)
+    const rr = (amt = 0.03) => 1 + (Math.random() - 0.5) * amt;
+
     if (name === 'Kick') {
-        const osc = ctx.audio.createOscillator();
-        const gain = ctx.audio.createGain();
-        gain.connect(ctx.drumsGain);
+        const vol = masterVol * rr();
+        const kickDecay = 0.5 * rr();
+
+        // 1. Transient stage (Beater click)
+        const beater = ctx.audio.createOscillator();
+        const beaterGain = ctx.audio.createGain();
+        beater.type = 'sine';
+        beater.frequency.setValueAtTime(4000 * rr(), time);
+        beater.frequency.exponentialRampToValueAtTime(200, time + 0.005);
+        beaterGain.gain.setValueAtTime(vol * 0.4, time);
+        beaterGain.gain.exponentialRampToValueAtTime(0.001, time + 0.01);
+        beater.connect(beaterGain);
+        beaterGain.connect(ctx.drumsGain);
+
+        // 2. Body stage (Thump)
+        const body = ctx.audio.createOscillator();
+        const bodyGain = ctx.audio.createGain();
+        body.type = 'triangle';
+        body.frequency.setValueAtTime(150 * rr(), time);
+        body.frequency.exponentialRampToValueAtTime(50, time + 0.05);
+        bodyGain.gain.setValueAtTime(vol, time);
+        bodyGain.gain.exponentialRampToValueAtTime(0.001, time + kickDecay);
+        body.connect(bodyGain);
+        bodyGain.connect(ctx.drumsGain);
+
+        beater.start(time);
+        beater.stop(time + 0.01);
+        body.start(time);
+        body.stop(time + kickDecay);
         
-        // Add a transient 'click' for definition
-        const click = ctx.audio.createOscillator();
-        const clickGain = ctx.audio.createGain();
-        click.type = 'sine';
-        click.frequency.setValueAtTime(2500, time);
-        clickGain.gain.setValueAtTime(velocity * 0.15, time);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
-        click.connect(clickGain);
-        clickGain.connect(ctx.drumsGain);
+        body.onended = () => safeDisconnect([beater, beaterGain, body, bodyGain]);
 
-        const pitch = 120 + (Math.random() * 10 - 5);
-        const decay = 0.45 + (Math.random() * 0.2);
-        const vol = masterVol * (0.95 + Math.random() * 0.1);
-
-        osc.frequency.setValueAtTime(pitch, time);
-        osc.frequency.exponentialRampToValueAtTime(40, time + 0.04);
-        osc.frequency.exponentialRampToValueAtTime(0.01, time + decay);
-        gain.gain.setValueAtTime(vol, time);
-        gain.gain.exponentialRampToValueAtTime(0.001, time + decay);
-        osc.onended = () => safeDisconnect([gain, osc, click, clickGain]);
-        osc.connect(gain);
-        osc.start(time);
-        osc.stop(time + decay);
-        click.start(time);
-        click.stop(time + 0.02);
     } else if (name === 'Snare') {
-        const vol = masterVol * (0.9 + Math.random() * 0.2);
-        const decay = 0.2 + (Math.random() * 0.1);
+        const vol = masterVol * rr();
+        const toneDecay = 0.12 * rr();
+        const wireDecay = 0.25 * rr();
 
+        // 1. The Tone (Drum head resonance)
+        const tone1 = ctx.audio.createOscillator();
+        const tone2 = ctx.audio.createOscillator();
+        const toneGain = ctx.audio.createGain();
+        tone1.type = 'triangle';
+        tone2.type = 'sine';
+        tone1.frequency.setValueAtTime(180 * rr(), time);
+        tone2.frequency.setValueAtTime(330 * rr(), time);
+        toneGain.gain.setValueAtTime(vol * 0.5, time);
+        toneGain.gain.exponentialRampToValueAtTime(0.01, time + toneDecay);
+        tone1.connect(toneGain);
+        tone2.connect(toneGain);
+        toneGain.connect(ctx.drumsGain);
+
+        // 2. The Wires (Snare rattle)
         const noise = ctx.audio.createBufferSource();
         noise.buffer = gb.audioBuffers.noise;
         const noiseFilter = ctx.audio.createBiquadFilter();
-        noiseFilter.type = 'highpass';
-        noiseFilter.frequency.value = 1000 + (Math.random() * 200 - 100);
         const noiseGain = ctx.audio.createGain();
+        noiseFilter.type = 'bandpass';
+        // Velocity mapping for brightness (1.5kHz to 2.5kHz)
+        const centerFreq = 1500 + (velocity * 1000);
+        noiseFilter.frequency.setValueAtTime(centerFreq * rr(), time);
+        noiseFilter.Q.setValueAtTime(1.2, time);
+        noiseGain.gain.setValueAtTime(vol, time);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, time + wireDecay);
         noise.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(ctx.drumsGain);
-        noiseGain.gain.setValueAtTime(vol, time);
-        noiseGain.gain.exponentialRampToValueAtTime(0.01, time + decay);
-        noise.onended = () => safeDisconnect([noiseGain, noiseFilter, noise]);
-        noise.start(time);
-        noise.stop(time + decay);
-        
-        const tone = ctx.audio.createOscillator();
-        tone.type = 'triangle';
-        tone.frequency.setValueAtTime(250 + (Math.random() * 20 - 10), time);
-        const toneGain = ctx.audio.createGain();
-        toneGain.connect(ctx.drumsGain);
-        toneGain.gain.setValueAtTime(vol * 0.5, time);
-        toneGain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
-        tone.onended = () => safeDisconnect([toneGain, tone]);
-        tone.connect(toneGain);
-        tone.start(time);
-        tone.stop(time + 0.1);
-    } else if (name === 'HiHat' || name === 'Open') {
-        const noise = ctx.audio.createBufferSource();
-        noise.buffer = gb.audioBuffers.noise;
-        const filter = ctx.audio.createBiquadFilter();
-        filter.type = 'highpass';
-        filter.frequency.value = 6000 + (Math.random() * 2000 - 1000);
-        
-        const hGain = ctx.audio.createGain();
-        noise.connect(filter);
-        filter.connect(hGain);
-        hGain.connect(ctx.drumsGain);
-        
-        const baseDuration = (name === 'Open' ? 0.4 : 0.05);
-        const duration = baseDuration * (0.8 + Math.random() * 0.4);
-        const vol = masterVol * 0.7 * (0.8 + Math.random() * 0.4);
 
-        hGain.gain.setValueAtTime(vol, time);
-        hGain.gain.exponentialRampToValueAtTime(0.01, time + duration);
-        noise.onended = () => safeDisconnect([hGain, filter, noise]);
+        tone1.start(time);
+        tone2.start(time);
         noise.start(time);
-        noise.stop(time + duration);
+        tone1.stop(time + toneDecay);
+        tone2.stop(time + toneDecay);
+        noise.stop(time + wireDecay);
+        
+        noise.onended = () => safeDisconnect([tone1, tone2, toneGain, noise, noiseFilter, noiseGain]);
+
+    } else if (name === 'HiHat' || name === 'Open') {
+        const isOpen = name === 'Open';
+        const vol = masterVol * 0.6 * rr();
+        const duration = (isOpen ? 0.4 : 0.06) * rr();
+        
+        // Metallic Bank (6 square wave oscillators using 808-style ratios)
+        const ratios = [2.0, 3.0, 4.16, 5.43, 6.79, 8.21];
+        const baseFreq = 40 * rr();
+        const oscs = ratios.map(r => {
+            const o = ctx.audio.createOscillator();
+            o.type = 'square';
+            o.frequency.setValueAtTime(baseFreq * r, time);
+            return o;
+        });
+
+        const hpFilter = ctx.audio.createBiquadFilter();
+        hpFilter.type = 'highpass';
+        // Velocity mapping for brightness
+        const cutoff = (7000 + velocity * 3000) * rr();
+        hpFilter.frequency.setValueAtTime(cutoff, time);
+        hpFilter.Q.setValueAtTime(1.5, time);
+        
+        const gain = ctx.audio.createGain();
+        gain.gain.setValueAtTime(vol, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
+
+        oscs.forEach(o => {
+            o.connect(hpFilter);
+            o.start(time);
+            o.stop(time + duration);
+        });
+        hpFilter.connect(gain);
+        gain.connect(ctx.drumsGain);
+
+        oscs[0].onended = () => safeDisconnect([...oscs, hpFilter, gain]);
     }
 }
 
