@@ -61,25 +61,67 @@ export function getChordDetails(symbol) {
 }
 
 /**
- * Calculates the best inversion for a chord to maintain smooth voice leading.
- * @param {number} rootMidi 
- * @param {number[]} intervals 
- * @param {number[]} previousMidis 
- * @returns {number[]}
+ * Calculates the best inversion for a chord to maintain smooth voice leading
+ * while preventing register creep using an anchored "Home Register".
+ * 
+ * @param {number} rootMidi - The raw root MIDI note.
+ * @param {number[]} intervals - Semitone intervals from the root.
+ * @param {number[]} previousMidis - MIDI notes of the previous chord.
+ * @param {boolean} isPivot - Whether this chord is a section/phrase pivot point.
+ * @returns {number[]} - Optimized MIDI notes for the chord.
  */
-export function getBestInversion(rootMidi, intervals, previousMidis) {
-    const targetCenter = previousMidis && previousMidis.length > 0 
-        ? previousMidis.reduce((a, b) => a + b, 0) / previousMidis.length 
-        : cb.octave;
+export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false) {
+    // 1. Home Register Anchor (C4 = 60)
+    const homeAnchor = cb.octave || 60;
+    const registerPullWeight = 0.4; // 0.0 to 1.0 (Higher = stronger pull to center)
+    
+    // Hard Caps for Range Clamping (G2 to C6)
+    const RANGE_MIN = 43; // G2
+    const RANGE_MAX = 84; // C6
 
-    return intervals.map(inter => {
+    // 2. Determine target center
+    let targetCenter = homeAnchor;
+    
+    if (previousMidis && previousMidis.length > 0) {
+        const prevAvg = previousMidis.reduce((a, b) => a + b, 0) / previousMidis.length;
+        
+        // Dynamic Leap Logic (The "Rubber Band" Effect)
+        // If we've drifted > 7 semitones from center, we pull back, especially at pivots
+        const drift = prevAvg - homeAnchor;
+        const driftLimit = isPivot ? 4 : 7; 
+
+        if (Math.abs(drift) > driftLimit) {
+            // Apply "Register Pull": Interpolate between previous chord and anchor
+            // This pulls the center back toward the Home Register
+            targetCenter = prevAvg - (drift * registerPullWeight);
+        } else {
+            // Standard Smoothness (Stay near previous chord)
+            targetCenter = prevAvg;
+        }
+    }
+
+    // 3. Find optimal octave for each note in the chord
+    let result = intervals.map(inter => {
         let note = rootMidi + inter;
         let pc = note % 12;
+        
+        // Find candidate in octaves closest to our targetCenter
         let octaves = [-24, -12, 0, 12, 24];
         let candidates = octaves.map(o => (Math.floor(targetCenter / 12) * 12) + o + pc);
+        
+        // Weighting proximity to targetCenter
         candidates.sort((a, b) => Math.abs(a - targetCenter) - Math.abs(b - targetCenter));
         return candidates[0];
-    }).sort((a, b) => a - b);
+    });
+
+    // 4. Range Clamping / Safety Check
+    // If the whole chord is escaping the range, shift the entire block
+    const avg = result.reduce((a, b) => a + b, 0) / result.length;
+    if (avg < RANGE_MIN) result = result.map(n => n + 12);
+    if (avg > RANGE_MAX) result = result.map(n => n - 12);
+
+    // Final sort to ensure notes are in ascending order
+    return result.sort((a, b) => a - b);
 }
 
 /**
@@ -444,7 +486,9 @@ function parseProgressionPart(input, key, initialMidis) {
                     }
                 }
 
-                let currentMidis = getBestInversion(rootMidi, intervals, lastMidis);
+                let isPivot = (barInternalOffset === 0); // Start of a bar is a pivot
+
+                let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot);
                 if (bassMidi !== null) {
                     const bassPC = bassMidi % 12;
                     currentMidis = currentMidis.filter(m => m % 12 !== bassPC);

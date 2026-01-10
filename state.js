@@ -2,8 +2,11 @@
  * @typedef {Object} GlobalContext
  * @property {AudioContext|null} audio - The Web Audio API context.
  * @property {GainNode|null} masterGain - The master volume gain node.
+ * @property {WaveShaperNode|null} limiter - The master soft-clipper.
  * @property {ConvolverNode|null} reverbNode - The global reverb node.
+ * @property {GainNode|null} chordsGain - The gain node for chords.
  * @property {GainNode|null} chordsReverb - Reverb send for chords.
+ * @property {BiquadFilterNode|null} chordsEQ - EQ for chords (HP/Notch).
  * @property {GainNode|null} drumsReverb - Reverb send for drums.
  * @property {GainNode|null} bassReverb - Reverb send for bass.
  * @property {GainNode|null} soloistReverb - Reverb send for soloist.
@@ -23,8 +26,11 @@
 export const ctx = {
     audio: null,
     masterGain: null,
+    limiter: null,
     reverbNode: null,
+    chordsGain: null,
     chordsReverb: null,
+    chordsEQ: null,
     drumsReverb: null,
     bassReverb: null,
     soloistReverb: null,
@@ -90,6 +96,7 @@ export const arranger = {
  * @typedef {Object} ChordState
  * @property {boolean} enabled - Whether the chord engine is active.
  * @property {string} style - The accompaniment style ID (e.g., 'pad', 'strum8').
+ * @property {string} instrument - The instrument preset ID (e.g., 'Warm EP').
  * @property {number} volume - Volume level (0.0 - 1.0).
  * @property {number} reverb - Reverb send level (0.0 - 1.0).
  * @property {number} octave - Base MIDI octave for voicing.
@@ -99,6 +106,7 @@ export const arranger = {
 export const cb = {
     enabled: true,
     style: 'pad',
+    instrument: 'Warm',
     volume: 0.5,
     reverb: 0.3,
     octave: 65,
