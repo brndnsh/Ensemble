@@ -38,6 +38,13 @@ function updateCompingState(step, style, soloistBusy) {
     if (soloistBusy) {
         compingState.currentVibe = 'sparse';
         compingState.density = 0.2;
+    } else if (style === 'funk') {
+        // Assertive Funk Logic: Bias towards Active/Syncopated
+        const r = Math.random();
+        if (r < 0.5) compingState.currentVibe = 'active'; // 50% Active
+        else if (r < 0.85) compingState.currentVibe = 'syncopated'; // 35% Syncopated
+        else compingState.currentVibe = 'balanced';
+        compingState.density = Math.random() * 0.4 + 0.5; // High density (0.5 - 0.9)
     } else {
         const r = Math.random();
         if (r < 0.3) compingState.currentVibe = 'active';
@@ -161,9 +168,10 @@ export const chordPatterns = {
             if (cellStep === 14 && Math.random() < 0.2) isHit = true;
 
             if (isHit) {
-                // Check interlock: Don't step on Bass One
-                if (measureStep === 0 && isBassActive('funk', step, 0)) {
-                    // Bass has the One. We lay out or play a scratch.
+                // Check interlock: Don't step on Bass One if vibe is Sparse
+                // In Active/Syncopated vibes, hitting the One (James Brown style) is encouraged.
+                if (measureStep === 0 && isBassActive('funk', step, 0) && compingState.currentVibe === 'sparse') {
+                    // Bass has the One and we are chilling. Lay out or scratch.
                     if (Math.random() < 0.5) {
                         playChordScratch(time, spb * 0.1);
                     }
@@ -175,12 +183,12 @@ export const chordPatterns = {
                 // Texture: Randomly thin the chord for percussive guitar feel
                 // Funk players often hit just the top 1-2 strings on syncopations
                 let stepVoicing = voicing;
-                if (Math.random() < 0.5 && stepVoicing.length > 1) {
+                if (Math.random() < 0.3 && stepVoicing.length > 1) { // Reduced thinning prob from 0.5 to 0.3
                     const keep = Math.random() < 0.5 ? 1 : 2;
                     stepVoicing = stepVoicing.slice(-keep); 
                 }
 
-                stepVoicing.forEach((f, i) => playNote(f, time, dur, { vol: 0.18, index: i }));
+                stepVoicing.forEach((f, i) => playNote(f, time, dur, { vol: 0.22, index: i })); // Increased vol from 0.18
             } else {
                 // Ghost note scratches (percolation)
                 if (compingState.currentVibe === 'active' && Math.random() < 0.1) {
