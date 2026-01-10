@@ -369,6 +369,20 @@ export function exportToMidi(options = {}) {
                     }
                     const soloResult = getSoloistNote(activeChord, nextChord, step, lastSoloFreq, sb.octave, sb.style, stepInChord);
                     if (soloResult && soloResult.freq) {
+                        // Enforce Monophony: Cut off previous soloist notes ONLY if it's a new time
+                        if (soloistTimeInPulses > (sb.lastNoteStartTimePulses || 0)) {
+                            for (let i = soloistNotesOff.length - 1; i >= 0; i--) {
+                                if (soloistNotesOff[i].time > soloistTimeInPulses) {
+                                    const pending = soloistNotesOff[i];
+                                    const offDelta = Math.max(0, soloistTimeInPulses - soloistTrack.currentTime);
+                                    pending.notes.forEach(n => soloistTrack.noteOff(offDelta, 2, n));
+                                    soloistTrack.currentTime = soloistTimeInPulses;
+                                    soloistNotesOff.splice(i, 1);
+                                }
+                            }
+                        }
+                        sb.lastNoteStartTimePulses = soloistTimeInPulses;
+
                         lastSoloFreq = soloResult.freq;
                         const midi = soloResult.midi || getMidi(soloResult.freq);
                         const notesToPlay = [midi];
