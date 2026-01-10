@@ -289,16 +289,16 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
                     note = baseRoot + 7;
                 }
                 
-                return result(getFrequency(clampAndNormalize(note)), dur, 1.15);
+                return result(getFrequency(clampAndNormalize(note)), dur, 1.2);
             }
         }
         
         // 2. The "Chug" (Machine Gun 16ths)
         // High density of notes, mostly muted or pedal roots
         if (Math.random() < 0.85) {
-             const isGhost = Math.random() < 0.6; // 60% ghost, 40% tonal pedal
+             const isGhost = Math.random() < 0.5; // 50% ghost, 50% tonal pedal
              // If tonal, keep it low (root)
-             return result(getFrequency(baseRoot), dur, isGhost ? 0.6 : 0.8, isGhost);
+             return result(getFrequency(baseRoot), dur, isGhost ? 0.85 : 0.95, isGhost);
         }
 
         return null;
