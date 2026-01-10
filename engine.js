@@ -23,6 +23,21 @@ function createReverbImpulse(audioCtx, duration = 2.0, decay = 2.0) {
 }
 
 /**
+ * Creates a soft-clipping curve for the WaveShaperNode.
+ * @returns {Float32Array}
+ */
+function createSoftClipCurve() {
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    for (let i = 0; i < n_samples; ++i) {
+        const x = (i * 2) / n_samples - 1;
+        // Cubic soft saturation curve
+        curve[i] = (3 * x - x * x * x) / 2;
+    }
+    return curve;
+}
+
+/**
  * Initializes the Web Audio context and global audio nodes.
  * Must be called in response to a user gesture.
  */
@@ -38,15 +53,22 @@ export function initAudio() {
         ctx.masterGain = ctx.audio.createGain();
         ctx.masterGain.gain.value = parseFloat(ui.masterVol.value);
         
+        // 1. Master Soft-Clipper (Analog Glue & Safety)
+        ctx.limiter = ctx.audio.createWaveShaper();
+        ctx.limiter.curve = createSoftClipCurve();
+        ctx.limiter.oversample = '4x';
+
         ctx.compressor = ctx.audio.createDynamicsCompressor();
         // Relaxed settings: higher threshold, lower ratio, faster release
         ctx.compressor.threshold.setValueAtTime(-15, ctx.audio.currentTime);
         ctx.compressor.knee.setValueAtTime(30, ctx.audio.currentTime);
         ctx.compressor.ratio.setValueAtTime(4, ctx.audio.currentTime);
-        ctx.compressor.attack.setValueAtTime(0.003, ctx.audio.currentTime); // Slight attack to preserve transients
-        ctx.compressor.release.setValueAtTime(0.1, ctx.audio.currentTime); // Faster recovery
+        ctx.compressor.attack.setValueAtTime(0.003, ctx.audio.currentTime); 
+        ctx.compressor.release.setValueAtTime(0.1, ctx.audio.currentTime); 
         
-        ctx.masterGain.connect(ctx.compressor);
+        // Signal Chain: MasterGain -> Limiter -> Compressor -> Destination
+        ctx.masterGain.connect(ctx.limiter);
+        ctx.limiter.connect(ctx.compressor);
         ctx.compressor.connect(ctx.audio.destination);
 
         // Reverb setup
@@ -65,7 +87,27 @@ export function initAudio() {
         modules.forEach(m => {
             const gainNode = ctx.audio.createGain();
             gainNode.gain.value = m.state.volume * m.mult;
-            gainNode.connect(ctx.masterGain);
+            
+            // 3. Mix Glue: EQ for Chords
+            if (m.name === 'chords') {
+                const hp = ctx.audio.createBiquadFilter();
+                hp.type = 'highpass';
+                hp.frequency.value = 180; // Clear room for Bass
+                
+                const notch = ctx.audio.createBiquadFilter();
+                notch.type = 'peaking';
+                notch.frequency.value = 2500;
+                notch.Q.value = 0.7;
+                notch.gain.value = -4; // Clear room for Soloist bite
+                
+                gainNode.connect(hp);
+                hp.connect(notch);
+                notch.connect(ctx.masterGain);
+                ctx.chordsEQ = hp; // Reference if needed
+            } else {
+                gainNode.connect(ctx.masterGain);
+            }
+
             ctx[`${m.name}Gain`] = gainNode;
 
             const reverbGain = ctx.audio.createGain();
@@ -96,69 +138,190 @@ function safeDisconnect(nodes) {
     });
 }
 
-export function playNote(freq, time, duration, { vol = 0.1, att = 0.05, soft = false, resonance = 1, lfoHz = 0 } = {}) {
+/**
+ * Instrument definitions for the chord engine.
+ */
+export const INSTRUMENT_PRESETS = {
+    'Warm': {
+        attack: 0.03, // Slightly softer attack
+        decay: 0.6, // Shortened from 0.8 for better clarity
+        filterBase: 600, // Darker base
+        filterDepth: 1800,
+        resonance: 2.2, // Increased for a "sweeter" bloom
+        tine: true,
+        fundamental: 'triangle', // Swapped from sine for more body
+        harmonic: 'sine',
+        fifth: 'sine',
+        weights: [1.2, 0.3, 0.1],
+        reverbMult: 1.1,
+        gainMult: 1.0
+    },
+    'Clean': {
+        attack: 0.008,
+        decay: 0.4, 
+        filterBase: 600, 
+        filterDepth: 1500, // Reduced for a smoother, less "swept" sound
+        resonance: 0.5, // Low resonance for purity
+        tine: false,
+        fundamental: 'sine',
+        harmonic: 'sine',
+        fifth: 'sine',
+        weights: [1.8, 0.4, 0.05], // Heavily weighted toward the fundamental
+        hp: true,
+        reverbMult: 0.65,
+        gainMult: 2.3 
+    }
+};
+
+/**
+ * Plays a musical note with advanced synthesis based on instrument presets.
+ * @param {number} freq - Frequency in Hz.
+ * @param {number} time - AudioContext start time.
+ * @param {number} duration - Note duration in seconds.
+ * @param {Object} options - Synthesis options.
+ */
+export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrument = cb.instrument, muted = false } = {}) {
+    if (!Number.isFinite(freq)) return;
+    
     try {
-        // Add subtle volume randomization
-        const randomizedVol = vol * (0.92 + Math.random() * 0.16);
-        const gain = ctx.audio.createGain();
-        let pan = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
+        const preset = INSTRUMENT_PRESETS[instrument] || INSTRUMENT_PRESETS['Warm'];
         
+        // 1. The "Strum" Offset: 5-15ms stagger between notes in a chord
+        // Muted ghost notes are tighter (2-6ms)
+        const staggerMult = muted ? 0.4 : 1.0;
+        const stagger = index * (0.005 + Math.random() * 0.010) * staggerMult;
+        const startTime = time + stagger;
+        
+        // Envelope timing calculation: 
+        // Muted notes have a very short duration and decay
+        const actualDuration = muted ? 0.015 : duration;
+        
+        // Rhythmic Tightening: 
+        // If the duration is short (like in Funk/Clave), we tighten the decay to ensure definition.
+        const isShortNote = duration < 0.45;
+        const actualDecay = muted ? 0.03 : (isShortNote ? Math.min(preset.decay, 0.25) : preset.decay);
+        
+        // Clean needs to be more "plucky" (short sustain)
+        // Pad styles (long duration) get full sustain, rhythmic styles get shortened
+        let sustainPercent = instrument === 'Clean' ? 0.25 : 0.75;
+        if (isShortNote) sustainPercent *= 0.6; // Even tighter for rhythmic hits
+
+        const attackEnd = startTime + preset.attack;
+        const sustainEnd = startTime + Math.max(preset.attack, actualDuration * sustainPercent);
+        const releaseTime = sustainEnd + actualDecay;
+        
+        // Scale base volume by instrument-specific multiplier
+        const baseVol = vol * (preset.gainMult || 1.0);
+        const randomizedVol = baseVol * (0.95 + Math.random() * 0.1);
+        const gainNode = ctx.audio.createGain();
+        
+        // 2. Stereophony: Frequency-based panning (Lows Left, Highs Right)
+        const panNode = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
         if (ctx.audio.createStereoPanner) {
-            // Pitch-based panning for stable stereo image (Piano style: Lows Left, Highs Right)
-            // Center around Middle C (261.63 Hz)
-            // Map 2 octaves down/up to full pan width
-            if (Number.isFinite(freq)) {
-                let panVal = (Math.log2(freq / 261.63) / 2.5); 
-                panVal = Math.max(-0.7, Math.min(0.7, panVal));
-                pan.pan.setValueAtTime(panVal, time);
-            } else {
-                 pan.pan.setValueAtTime(0, time);
-            }
+            let panVal = (Math.log2(freq / 261.63) / 2.5); // Center around Middle C
+            panVal = Math.max(-0.7, Math.min(0.7, panVal));
+            panNode.pan.setValueAtTime(panVal, startTime);
         }
 
-        const osc1 = ctx.audio.createOscillator();
-        osc1.type = 'triangle';
-        if (Number.isFinite(freq)) osc1.frequency.setValueAtTime(freq, time);
-        osc1.detune.setValueAtTime(Math.random() * 4 - 2, time);
+        // 3. Additive Layering
+        const oscs = [];
+        const harmonicRatios = [1, 2, 1.5]; 
+        const oscTypes = [preset.fundamental, preset.harmonic, preset.fifth];
         
-        let lfo = null, lfoGain = null;
-        if (lfoHz > 0) {
-            lfo = ctx.audio.createOscillator();
-            lfoGain = ctx.audio.createGain();
-            lfo.frequency.setValueAtTime(lfoHz, time);
-            lfoGain.gain.setValueAtTime(freq * 0.005, time);
-            lfo.connect(lfoGain); lfoGain.connect(osc1.frequency);
-            lfo.start(time); lfo.stop(time + duration * 2);
-        }
-        
-        const osc2 = ctx.audio.createOscillator();
-        osc2.type = 'sine';
-        if (Number.isFinite(freq)) osc2.frequency.setValueAtTime(freq, time);
+        harmonicRatios.forEach((ratio, i) => {
+            // Only use fundamental for muted notes to prevent "bloopy" harmonics
+            if (muted && i > 0) return;
+
+            const osc = ctx.audio.createOscillator();
+            const oscGain = ctx.audio.createGain();
+            
+            osc.type = oscTypes[i];
+            osc.frequency.setValueAtTime(freq * ratio, startTime);
+            osc.detune.setValueAtTime((Math.random() * 6 - 3), startTime);
+            
+            oscGain.gain.setValueAtTime(preset.weights[i], startTime);
+            
+            osc.connect(oscGain);
+            oscs.push({ osc, gain: oscGain });
+        });
+
+        // 4. Dynamic Filtering & Velocity Dynamics
         const filter = ctx.audio.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(soft ? 600 : 1800, time);
-        filter.frequency.exponentialRampToValueAtTime(soft ? 200 : 300, time + duration);
-        filter.Q.setValueAtTime(resonance, time);
-        gain.gain.setValueAtTime(0, time);
-        gain.gain.linearRampToValueAtTime(randomizedVol, time + att);
-        const releaseTime = soft ? duration * 1.5 : duration;
-        gain.gain.exponentialRampToValueAtTime(0.001, time + releaseTime);
-        osc1.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(pan); 
-        pan.connect(ctx.chordsGain);
+        filter.type = (preset.hp && !muted) ? 'highpass' : 'lowpass';
         
-        osc1.onended = () => safeDisconnect([pan, gain, filter, osc1, osc2, lfo, lfoGain]);
+        // Velocity Mapping: vol maps to filter cutoff
+        // Muted notes are darker and use NO resonance (static filter)
+        const baseCutoff = muted ? preset.filterBase * 0.6 : preset.filterBase;
+        const velocityCutoff = baseCutoff + (vol * preset.filterDepth);
         
-        osc1.start(time); osc1.stop(time + releaseTime); osc2.start(time); osc2.stop(time + releaseTime);
-        if (!soft) {
-            const tine = ctx.audio.createOscillator(), tGain = ctx.audio.createGain();
-            tine.type = 'sine'; if (Number.isFinite(freq)) tine.frequency.setValueAtTime(freq * 4, time);
-            tGain.gain.setValueAtTime(0, time); tGain.gain.linearRampToValueAtTime(randomizedVol * 0.25, time + 0.002);
-            tGain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
-            tine.onended = () => safeDisconnect([tGain, tine]);
-            tine.connect(tGain); 
-            tGain.connect(pan); 
-            tine.start(time); tine.stop(time + 0.15);
+        filter.frequency.setValueAtTime(velocityCutoff, startTime);
+        if (!muted) {
+            filter.frequency.exponentialRampToValueAtTime(baseCutoff, sustainEnd);
+            filter.Q.setValueAtTime(preset.resonance, startTime);
+        } else {
+            filter.Q.setValueAtTime(0.1, startTime); // Kill resonance for muted thuds
         }
+
+        // Envelopes: Attack -> Sustain -> Decay
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(randomizedVol, attackEnd);
+        gainNode.gain.setValueAtTime(randomizedVol, sustainEnd);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, releaseTime);
+
+        // Connections
+        oscs.forEach(o => o.gain.connect(filter));
+        filter.connect(gainNode);
+        gainNode.connect(panNode);
+        panNode.connect(ctx.chordsGain);
+
+        // Dynamic Reverb Adjust
+        if (ctx.chordsReverb && preset.reverbMult !== undefined) {
+            // We can't easily change the global send per note without a separate gain node
+            // So we add a per-note reverb send gain
+            const noteReverbGain = ctx.audio.createGain();
+            // Dry out muted notes further
+            const revMult = muted ? preset.reverbMult * 0.2 : preset.reverbMult;
+            noteReverbGain.gain.setValueAtTime(cb.reverb * revMult, startTime);
+            gainNode.connect(noteReverbGain);
+            noteReverbGain.connect(ctx.reverbNode);
+            
+            // Cleanup noteReverbGain
+            oscs[0].osc.addEventListener('ended', () => safeDisconnect([noteReverbGain]));
+        }
+
+        // Percussive Click (Tine or B3 Key Click)
+        if (preset.tine || muted) {
+            const click = ctx.audio.createOscillator();
+            const clickGain = ctx.audio.createGain();
+            click.type = 'sine';
+            // Lowered frequency multiplier (from 4.1 to 3.2) for a more "wooden" feel
+            click.frequency.setValueAtTime(freq * (muted ? 1.2 : 3.2), startTime);
+            clickGain.gain.setValueAtTime(0, startTime);
+            // Lowered click volume (from 0.4 to 0.25)
+            clickGain.gain.linearRampToValueAtTime(randomizedVol * 0.25, startTime + 0.002);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, startTime + (muted ? 0.03 : 0.08));
+            click.connect(clickGain);
+            clickGain.connect(panNode);
+            click.start(startTime);
+            click.stop(startTime + 0.15);
+            click.onended = () => safeDisconnect([click, clickGain]);
+        }
+
+        oscs.forEach(o => {
+            o.osc.start(startTime);
+            o.osc.stop(releaseTime + 0.1);
+        });
+
+        oscs[0].osc.onended = () => {
+            const allNodes = [panNode, gainNode, filter];
+            oscs.forEach(o => {
+                allNodes.push(o.osc);
+                allNodes.push(o.gain);
+            });
+            safeDisconnect(allNodes);
+        };
+
+        
     } catch (e) { console.error("playNote error:", e); }
 }
 
@@ -429,15 +592,6 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     // Only apply vibrato if note is long enough to warrant it
     if (duration > 0.15) {
         vibrato.start(time);
-        
-        let vibDelay = (style === 'minimal' ? 0.4 : (style === 'shred' ? 0.05 : 0.15)) + (Math.random() * 0.1);
-        // Ensure vibrato starts before the note fades too much
-        vibDelay = Math.min(vibDelay, duration * 0.5);
-
-        vibGain.gain.setValueAtTime(0, time);
-        vibGain.gain.setValueAtTime(0, time + vibDelay);
-        vibGain.gain.linearRampToValueAtTime(finalVibDepth, time + vibDelay + vibRamp); 
-        
         vibrato.stop(time + releaseTime + 0.1);
     }
 

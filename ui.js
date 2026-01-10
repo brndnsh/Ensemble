@@ -41,6 +41,7 @@ export const ui = {
     chordPresets: document.getElementById('chordPresets'),
     userPresetsContainer: document.getElementById('userPresetsContainer'),
     chordStylePresets: document.getElementById('chordStylePresets'),
+    chordInstrumentPresets: document.getElementById('chordInstrumentPresets'),
     bassStylePresets: document.getElementById('bassStylePresets'),
     soloistStylePresets: document.getElementById('soloistStylePresets'),
     chordVol: document.getElementById('chordVolume'),

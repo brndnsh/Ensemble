@@ -1,5 +1,5 @@
 // Note: Keep APP_VERSION in sync with CACHE_NAME in sw.js
-export const APP_VERSION = '1.35';
+export const APP_VERSION = '1.40';
 export const KEY_ORDER = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 export const ENHARMONIC_MAP = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
 export const ROMAN_VALS = { 'I': 0, 'II': 2, 'III': 4, 'IV': 5, 'V': 7, 'VI': 9, 'VII': 11 };
@@ -570,6 +570,11 @@ export const CHORD_STYLES = [
     { id: 'jazz', name: 'Jazz Comp', category: 'Jazz' },
     { id: 'green', name: 'Freddie Green', category: 'Jazz' },
     { id: 'bossa', name: 'Bossa', category: 'World/Latin' }
+];
+
+export const CHORD_INSTRUMENTS = [
+    { id: 'Warm', name: 'Warm', category: 'Keys' },
+    { id: 'Clean', name: 'Clean', category: 'String' }
 ];
 
 export const BASS_STYLES = [

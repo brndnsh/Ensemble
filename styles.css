@@ -1370,6 +1370,9 @@ h2 {
 .preset-chip[data-category="Classical/Trad"] { border-color: var(--red); }
 .preset-chip[data-category="Theory"] { border-color: var(--yellow); }
 .preset-chip[data-category="Rock/Metal"] { border-color: var(--red); }
+.preset-chip[data-category="Keys"] { border-color: var(--blue); }
+.preset-chip[data-category="Synth"] { border-color: var(--violet); }
+.preset-chip[data-category="String"] { border-color: var(--orange); }
 .preset-chip[data-category="User"] { border-color: var(--text-color); opacity: 0.8; }
 
 .preset-chip.active[data-category="Basic"] { background: var(--base01); color: white; }
@@ -1382,6 +1385,9 @@ h2 {
 .preset-chip.active[data-category="Classical/Trad"] { background: var(--red); color: white; }
 .preset-chip.active[data-category="Theory"] { background: var(--yellow); color: white; }
 .preset-chip.active[data-category="Rock/Metal"] { background: var(--red); color: white; }
+.preset-chip.active[data-category="Keys"] { background: var(--blue); color: white; }
+.preset-chip.active[data-category="Synth"] { background: var(--violet); color: white; }
+.preset-chip.active[data-category="String"] { background: var(--orange); color: white; }
 
 .user-preset-chip {
     border-color: var(--border-color);
@@ -1881,4 +1887,12 @@ select option {
     .update-banner.show {
         transform: translateY(0);
     }
+}
+
+/* Disabled state for grouped UI elements */
+.disabled-group {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(1);
+    transition: all 0.3s ease;
 }

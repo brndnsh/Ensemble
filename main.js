@@ -1,7 +1,7 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
 import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates, updateActiveChordUI } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime } from './engine.js';
-import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
+import { SONG_TEMPLATES, KEY_ORDER, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, CHORD_INSTRUMENTS, BASS_STYLES, SOLOIST_STYLES, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections } from './utils.js';
 import { validateProgression, generateRandomProgression, mutateProgression, transformRelativeProgression } from './chords.js';
 import { chordPatterns } from './accompaniment.js';
@@ -45,18 +45,21 @@ function releaseWakeLock() {
  * @param {string} styleId - The ID of the selected style
  */
 const UPDATE_STYLE_CONFIG = {
-    chord: { state: cb, selector: '.chord-style-chip' },
-    bass: { state: bb, selector: '.bass-style-chip' },
-    soloist: { state: sb, selector: '.soloist-style-chip' }
+    chord: { state: cb, selector: '.chord-style-chip', field: 'style' },
+    chordInstrument: { state: cb, selector: '.chord-instrument-chip', field: 'instrument' },
+    bass: { state: bb, selector: '.bass-style-chip', field: 'style' },
+    soloist: { state: sb, selector: '.soloist-style-chip', field: 'style' }
 };
 
 function updateStyle(type, styleId) {
     const c = UPDATE_STYLE_CONFIG[type];
     if (!c) return;
-    c.state.style = styleId;
+    const field = c.field || 'style';
+    c.state[field] = styleId;
     document.querySelectorAll(c.selector).forEach(chip => {
         chip.classList.toggle('active', chip.dataset.id === styleId);
     });
+
     flushBuffers();
     syncWorker();
     saveCurrentState();
@@ -260,7 +263,7 @@ function saveCurrentState() {
         bpm: ctx.bpm,
         metronome: ui.metronome.checked,
         vizEnabled: vizState.enabled,
-        cb: { enabled: cb.enabled, style: cb.style, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
+        cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
         bb: { enabled: bb.enabled, style: bb.style, octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
         sb: { enabled: sb.enabled, style: sb.style, octave: sb.octave, volume: sb.volume, reverb: sb.reverb },
         gb: { 
@@ -1415,6 +1418,7 @@ function setupPresets() {
 
     // Style Presets
     renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', cb.style, (item) => updateStyle('chord', item.id));
+    renderCategorized(ui.chordInstrumentPresets, CHORD_INSTRUMENTS, 'chord-instrument', cb.instrument, (item) => updateStyle('chordInstrument', item.id));
     renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', sb.style, (item) => updateStyle('soloist', item.id));
     renderCategorized(ui.bassStylePresets, BASS_STYLES, 'bass-style', bb.style, (item) => updateStyle('bass', item.id));
 
@@ -1474,6 +1478,7 @@ function init() {
             if (savedState.cb) {
                 cb.enabled = savedState.cb.enabled !== undefined ? savedState.cb.enabled : true;
                 cb.style = savedState.cb.style || 'pad';
+                cb.instrument = savedState.cb.instrument || 'Warm EP';
                 cb.octave = savedState.cb.octave;
                 cb.density = savedState.cb.density;
                 cb.volume = savedState.cb.volume;
@@ -1712,6 +1717,7 @@ function resetToDefaults() {
     
     cb.volume = 0.5;
     cb.reverb = 0.3;
+    cb.instrument = 'Warm';
     cb.octave = 65;
     cb.density = 'standard';
     
