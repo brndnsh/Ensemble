@@ -214,7 +214,7 @@ export const sb = {
     buffer: new Map(),
     lastNoteEnd: 0,
     lastNoteStartTime: 0,
-    octave: 67, // G4
+    octave: 72, // C5
     style: 'scalar',
     direction: 1,
     phraseSteps: 0,
