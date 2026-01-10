@@ -635,17 +635,21 @@ export const CHORD_PRESETS = [
         settings: { bpm: 140, style: 'jazz' }
     },
     { 
-        name: "Jazz II-V-I", 
-        sections: [{ label: 'Main', value: "ii7 | V7 | Imaj7 | Imaj7" }], 
+        name: "Giant Steps", 
+        sections: [{ label: 'Main', value: "Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7 | Am7 D7 | Gmaj7 Bb7 | Ebmaj7 F#7 | Bmaj7 | Fm7 Bb7 | Ebmaj7 | Am7 D7 | Gmaj7 | C#m7 F#7 | Bmaj7 | Fm7 Bb7 | Ebmaj7 | C#m7 F#7" }], 
         category: "Jazz",
-        settings: { bpm: 160, style: 'jazz' }
+        settings: { bpm: 220, style: 'jazz' }
     },
     { 
-        name: "Minor II-V-I", 
-        sections: [{ label: 'Main', value: "iiø7 | V7 | i7 | i7" }], 
-        category: "Jazz", 
-        isMinor: true,
-        settings: { bpm: 130, style: 'jazz' }
+        name: "Ornithology", 
+        sections: [
+            { label: 'A', value: "Gmaj7 | Gmaj7 | Gm7 | C7 | Fmaj7 | Fmaj7 | Fm7 | Bb7" },
+            { label: 'A', value: "Gmaj7 | Gmaj7 | Gm7 | C7 | Fmaj7 | Fmaj7 | Fm7 | Bb7" },
+            { label: 'B', value: "Ebmaj7 | Ebmaj7 | Am7b5 | D7b9 | Gm7 | Gm7 | Am7 | D7" },
+            { label: 'A', value: "Gmaj7 | Gmaj7 | Gm7 | C7 | Fm7 | Bb7 | Ebmaj7 D7 | Gmaj7" }
+        ], 
+        category: "Jazz",
+        settings: { bpm: 160, style: 'jazz' }
     },
     { 
         name: "Rhythm Changes", 
