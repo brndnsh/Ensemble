@@ -4,10 +4,83 @@ import { getMidi } from './utils.js';
 import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 import { TIME_SIGNATURES } from './config.js';
+import { DRUM_PRESETS } from './presets.js';
 
 /**
  * Minimal MIDI file generator (Standard MIDI File Format 1)
  */
+
+// --- COMPING STATE ENGINE (Adapted for MIDI Export) ---
+const compingState = {
+    lastChangeStep: -1,
+    currentVibe: 'balanced',
+    currentCell: [0, 0, 0, 0], 
+    density: 0.5,
+    lockedUntil: 0
+};
+
+const COMPING_CELLS = {
+    jazz: [
+        { name: 'Charleston',  pattern: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 4 },
+        { name: 'Red Garland', pattern: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0], weight: 3 },
+        { name: 'Bill Evans',  pattern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 2 },
+        { name: 'Anticipation',pattern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], weight: 2 },
+        { name: 'Quarter',     pattern: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], weight: 1 }
+    ],
+    funk: [
+        { name: 'The One',     pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 3 },
+        { name: 'Backbeat',    pattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], weight: 3 },
+        { name: 'Syncopated',  pattern: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 2 },
+        { name: 'Offbeat',     pattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], weight: 2 }
+    ]
+};
+
+function updateCompingState(step, style, soloistBusy) {
+    if (step < compingState.lockedUntil) return;
+
+    if (soloistBusy) {
+        compingState.currentVibe = 'sparse';
+        compingState.density = 0.2;
+    } else if (style === 'funk') {
+        const r = Math.random();
+        if (r < 0.5) compingState.currentVibe = 'active';
+        else if (r < 0.85) compingState.currentVibe = 'syncopated';
+        else compingState.currentVibe = 'balanced';
+        compingState.density = Math.random() * 0.4 + 0.5;
+    } else {
+        const r = Math.random();
+        if (r < 0.3) compingState.currentVibe = 'active';
+        else if (r < 0.6) compingState.currentVibe = 'syncopated';
+        else compingState.currentVibe = 'balanced';
+        compingState.density = Math.random() * 0.5 + 0.3;
+    }
+
+    const pool = COMPING_CELLS[style] || COMPING_CELLS.jazz;
+    let candidates = pool;
+    
+    if (compingState.currentVibe === 'sparse') {
+        candidates = pool.filter(c => c.name === 'Bill Evans' || c.name === 'Anticipation');
+    } else if (compingState.currentVibe === 'active') {
+        candidates = pool.filter(c => c.name !== 'Bill Evans');
+    }
+    if (candidates.length === 0) candidates = pool;
+
+    let totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
+    let randomVal = Math.random() * totalWeight;
+    let selected = candidates[0];
+    for (const c of candidates) {
+        randomVal -= c.weight;
+        if (randomVal <= 0) { selected = c; break; }
+    }
+
+    compingState.currentCell = [...selected.pattern];
+
+    if ((compingState.currentVibe === 'sparse' || compingState.currentVibe === 'balanced') && Math.random() < 0.15) {
+        compingState.currentCell = new Array(16).fill(0);
+    }
+    
+    compingState.lockedUntil = step + 16;
+}
 
 const PPQ = 192; // Pulses per quarter note
 
@@ -126,6 +199,118 @@ class MidiTrack {
 }
 
 const midiChordPatterns = {
+    smart: (chord, stepInChord, measureStep, globalStep) => {
+        // 1. Context
+        const drumPresetName = gb.lastDrumPreset || 'Standard';
+        const drumConfig = DRUM_PRESETS[drumPresetName] || DRUM_PRESETS['Standard'];
+        const drumCategory = drumConfig.category || 'Basic';
+        const soloistBusy = sb.enabled && (sb.busySteps > 0 || sb.tension > 0.7);
+
+        // Voicing Logic
+        let voicing = [...chord.freqs];
+        
+        // Rootless Logic
+        if (['Soul/Funk', 'Jazz', 'Soul/R&B'].includes(drumCategory) || bb.style === 'quarter' || bb.style === 'funk') {
+            if (voicing.length > 3) voicing.shift(); 
+        }
+        // Funk Scratch Logic
+        if (drumCategory === 'Soul/Funk' || bb.style === 'funk') {
+            if (voicing.length > 3) voicing = voicing.slice(-3);
+        }
+        // Soloist Space Logic
+        if (soloistBusy && voicing.length > 2) {
+            voicing.pop();
+        }
+        if (voicing.length === 0) voicing = [chord.freqs[0]];
+
+        const smartChord = { ...chord, freqs: voicing };
+
+        // 2. Priority Logic
+        
+        // A. LATIN / WORLD
+        if (drumCategory === 'World/Latin' || bb.style === 'bossa' || bb.style === 'dub') {
+            if (drumPresetName.includes('Bossa') || bb.style === 'bossa') {
+                return midiChordPatterns.bossa(smartChord, stepInChord, measureStep, globalStep);
+            }
+            if (drumPresetName.includes('Reggae') || bb.style === 'skank' || bb.style === 'dub') {
+                return midiChordPatterns.skank(smartChord, stepInChord, measureStep);
+            }
+            return midiChordPatterns.clave(smartChord, stepInChord, measureStep);
+        }
+
+        // B. FUNK / SOUL
+        if (drumCategory === 'Soul/Funk' || bb.style === 'funk' || bb.style === 'rocco' || bb.style === 'disco') {
+            updateCompingState(globalStep, 'funk', soloistBusy);
+            
+            const cellStep = measureStep % 16;
+            let isHit = compingState.currentCell[cellStep] === 1;
+
+            if (isHit) {
+                if (Math.random() < 0.1) isHit = false;
+            } else {
+                if (Math.random() < 0.03) isHit = true;
+            }
+            if (cellStep === 14 && Math.random() < 0.2) isHit = true;
+
+            if (isHit) {
+                if (measureStep === 0 && isBassActive('funk', globalStep, 0) && compingState.currentVibe === 'sparse') {
+                    // Scratch
+                    if (Math.random() < 0.5) return [{ midi: smartChord.freqs.map(getMidi), dur: 0.4, vel: 0.2 }]; 
+                    return [];
+                }
+
+                const dur = Math.random() < 0.5 ? 0.8 : 1.6; // spb * 0.2 / 0.4 -> 4 * 0.2 = 0.8
+                
+                let stepVoicing = voicing;
+                if (Math.random() < 0.3 && stepVoicing.length > 1) {
+                    const keep = Math.random() < 0.5 ? 1 : 2;
+                    stepVoicing = stepVoicing.slice(-keep); 
+                }
+                
+                return [{ midi: stepVoicing.map(getMidi), dur: dur, vel: 0.65 }]; // vol 0.22 -> ~0.65 (relative to base)
+            } else {
+                if (compingState.currentVibe === 'active' && Math.random() < 0.1) {
+                    return [{ midi: smartChord.freqs.map(getMidi), dur: 0.2, vel: 0.2 }]; // Scratch
+                }
+            }
+            return [];
+        }
+
+        // C. JAZZ
+        if (drumCategory === 'Jazz' || bb.style === 'quarter') {
+            updateCompingState(globalStep, 'jazz', soloistBusy);
+            const cellStep = measureStep % 16;
+            let isHit = compingState.currentCell[cellStep] === 1;
+            
+            if (isHit) {
+                if (Math.random() < 0.1) isHit = false;
+            } else {
+                if (Math.random() < 0.03) isHit = true;
+            }
+            if (cellStep === 14 && Math.random() < 0.3) isHit = true;
+
+            if (isHit) {
+                const isUpbeat = (measureStep % 4) !== 0; 
+                // vol 0.22 (accent) vs 0.16. 
+                const vel = isUpbeat ? 0.7 : 0.5; 
+                const dur = isUpbeat ? 1.6 : 3.2; // 0.4 * 4, 0.8 * 4
+
+                let stepVoicing = voicing;
+                if (Math.random() < 0.4 && stepVoicing.length > 2) {
+                     stepVoicing = [stepVoicing[0], stepVoicing[stepVoicing.length - 1]];
+                }
+                return [{ midi: stepVoicing.map(getMidi), dur: dur, vel: vel }];
+            }
+            return [];
+        }
+
+        // D. POP/ROCK Fallback
+        if (ctx.bpm < 100) {
+             return midiChordPatterns.pad(smartChord, stepInChord);
+        } else {
+             return midiChordPatterns.pop(smartChord, stepInChord, measureStep);
+        }
+    },
     pad: (chord, stepInChord) => stepInChord === 0 ? [{ midi: chord.freqs.map(getMidi), dur: chord.beats * 4 }] : [],
     strum8: (chord, stepInChord, measureStep) => measureStep % 2 === 0 ? [{ midi: chord.freqs.map(getMidi), dur: 1 }] : [],
     pop: (chord, stepInChord, measureStep) => [0, 3, 6, 10, 12, 14].includes(measureStep) ? [{ midi: chord.freqs.map(getMidi), dur: 1.5 }] : [],
@@ -156,6 +341,13 @@ const midiChordPatterns = {
 export function exportToMidi(options = {}) {
     let sbBackup;
     try {
+        // Reset Comping State
+        compingState.lastChangeStep = -1;
+        compingState.currentVibe = 'balanced';
+        compingState.currentCell = [0, 0, 0, 0];
+        compingState.density = 0.5;
+        compingState.lockedUntil = 0;
+
         const { includedTracks = ['chords', 'bass', 'soloist', 'drums'], loopMode = 'time', targetDuration = 3, filename } = options;
 
         if (arranger.progression.length === 0) {
@@ -307,7 +499,12 @@ export function exportToMidi(options = {}) {
                     const events = patternFunc(activeChord, stepInChord, measureStep, globalStep);
                     events.forEach(ev => {
                         const delta = Math.max(0, currentTimeInPulses - chordTrack.currentTime);
-                        const humanVel = Math.min(127, Math.max(40, 80 + (Math.random() * 10 - 5)));
+                        
+                        let baseVel = 80;
+                        if (ev.vel !== undefined) baseVel = Math.floor(ev.vel * 127);
+
+                        const humanVel = Math.min(127, Math.max(10, baseVel + (Math.random() * 10 - 5)));
+                        
                         ev.midi.forEach((n, i) => chordTrack.noteOn(i === 0 ? delta : 0, 0, n, humanVel));
                         chordTrack.currentTime = currentTimeInPulses;
                         const endStep = globalStep + ev.dur;
