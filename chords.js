@@ -73,7 +73,7 @@ export function getChordDetails(symbol) {
 export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false) {
     // 1. Home Register Anchor (C4 = 60)
     const homeAnchor = cb.octave || 60;
-    const registerPullWeight = 0.4; // 0.0 to 1.0 (Higher = stronger pull to center)
+    const registerPullWeight = 0.6; // Stronger pull to prevent drift
     
     // Hard Caps for Range Clamping (G2 to C6)
     const RANGE_MIN = 43; // G2
@@ -86,9 +86,9 @@ export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = f
         const prevAvg = previousMidis.reduce((a, b) => a + b, 0) / previousMidis.length;
         
         // Dynamic Leap Logic (The "Rubber Band" Effect)
-        // If we've drifted > 7 semitones from center, we pull back, especially at pivots
+        // If we've drifted > 5 semitones from center, we pull back strongly
         const drift = prevAvg - homeAnchor;
-        const driftLimit = isPivot ? 4 : 7; 
+        const driftLimit = isPivot ? 3 : 5;   
 
         if (Math.abs(drift) > driftLimit) {
             // Apply "Register Pull": Interpolate between previous chord and anchor
