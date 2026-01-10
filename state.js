@@ -106,7 +106,7 @@ export const arranger = {
 export const cb = {
     enabled: true,
     style: 'pad',
-    instrument: 'Warm',
+    instrument: 'Clean',
     volume: 0.5,
     reverb: 0.3,
     octave: 65,
