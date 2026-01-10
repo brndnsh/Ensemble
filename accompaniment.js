@@ -137,19 +137,19 @@ export const chordPatterns = {
         // 2. Priority Logic
         
         // A. LATIN / WORLD -> Clave or Bossa
-        if (drumCategory === 'World/Latin' || bb.style === 'bossa') {
+        if (drumCategory === 'World/Latin' || bb.style === 'bossa' || bb.style === 'dub') {
             const latinChord = { ...chord, freqs: voicing }; // Use filtered voicing
             if (drumPresetName.includes('Bossa') || bb.style === 'bossa') {
                 return chordPatterns.bossa(latinChord, time, spb, measureStep, step);
             }
-            if (drumPresetName.includes('Reggae') || bb.style === 'skank') {
+            if (drumPresetName.includes('Reggae') || bb.style === 'skank' || bb.style === 'dub') {
                 return chordPatterns.skank(latinChord, time, spb, measureStep);
             }
             return chordPatterns.clave(latinChord, time, spb, measureStep);
         }
 
         // B. FUNK / SOUL -> Interlocking Comping
-        if (drumCategory === 'Soul/Funk' || bb.style === 'funk' || bb.style === 'rocco') {
+        if (drumCategory === 'Soul/Funk' || bb.style === 'funk' || bb.style === 'rocco' || bb.style === 'disco') {
             updateCompingState(step, 'funk', soloistBusy);
             
             // Map global step to our 16-step cell
