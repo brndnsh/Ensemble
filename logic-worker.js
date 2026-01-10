@@ -166,6 +166,9 @@ self.onmessage = (e) => {
                 sb.motifCounter = 0;
                 sb.enclosureNotes = null;
                 sb.enclosureIndex = 0;
+                sb.currentPhraseSteps = 0;
+                sb.motifBuffer = [];
+                sb.tension = 0;
                 fillBuffers(data.step);
                 break;
             case 'requestBuffer':

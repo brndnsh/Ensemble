@@ -209,6 +209,8 @@ export const bb = {
  * @property {Array<number>|null} enclosureNotes - Pending enclosure notes.
  * @property {number} enclosureIndex - Position in enclosure.
  * @property {number} busySteps - Counter for "busy" playing periods.
+ * @property {Array<Object>} motifBuffer - Buffer to store recent notes for motif repetition.
+ * @property {number} tension - Current harmonic tension level (0.0 - 1.0).
  */
 export const sb = {
     enabled: false,
@@ -237,7 +239,9 @@ export const sb = {
     lickBaseMidi: null,
     enclosureNotes: null,
     enclosureIndex: 0,
-    busySteps: 0
+    busySteps: 0,
+    motifBuffer: [],
+    tension: 0
 };
 
 /**
