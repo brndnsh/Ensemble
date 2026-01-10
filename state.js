@@ -210,6 +210,7 @@ export const sb = {
     lastPlayedFreq: null,
     buffer: new Map(),
     lastNoteEnd: 0,
+    lastNoteStartTime: 0,
     octave: 77, // F5
     style: 'scalar',
     direction: 1,      // 1 for up, -1 for down

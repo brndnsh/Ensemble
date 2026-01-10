@@ -55,7 +55,8 @@ const STYLE_CONFIG = {
         sequenceProb: 0.25,
         bendProb: 0.12,
         doubleStopProb: 0,
-        patternModeProb: 0.4 // Chance of 'scale' vs 'arp'
+        patternModeProb: 0.4, // Chance of 'scale' vs 'arp'
+        timingJitter: 10
     },
     shred: {
         restProb: () => 0.15, // Shredders don't breathe
@@ -66,7 +67,9 @@ const STYLE_CONFIG = {
         sequenceProb: 0.25,
         bendProb: 0.04,
         doubleStopProb: 0,
-        patternModeProb: 0.1 // Mostly Arps (90%)
+        patternModeProb: 0.1, // Mostly Arps (90%)
+        allowAltered: true,
+        timingJitter: 5
     },
     blues: {
         restProb: (intensity) => 0.4 - (intensity * 0.3),
@@ -77,7 +80,8 @@ const STYLE_CONFIG = {
         sequenceProb: 0.15,
         bendProb: 0.25,
         doubleStopProb: 0.25,
-        patternModeProb: 0.5
+        patternModeProb: 0.5,
+        timingJitter: 20
     },
     neo: {
         restProb: (intensity) => 0.5 - (intensity * 0.2), // Laid back
@@ -88,7 +92,9 @@ const STYLE_CONFIG = {
         sequenceProb: 0.15,
         bendProb: 0.3,
         doubleStopProb: 0.35,
-        patternModeProb: 0.5
+        patternModeProb: 0.5,
+        allowAltered: true,
+        timingJitter: 25
     },
     minimal: {
         restProb: (intensity) => 0.65 - (intensity * 0.4), // Lots of space
@@ -99,7 +105,8 @@ const STYLE_CONFIG = {
         sequenceProb: 0.15,
         bendProb: 0.12, // Lower prob, but high impact logic below
         doubleStopProb: 0.35,
-        patternModeProb: 0.0 // Always Arp/Chord tones
+        patternModeProb: 0.0, // Always Arp/Chord tones
+        timingJitter: 30
     },
     bird: {
         restProb: (intensity) => (ctx.bpm > 150 ? 0.45 : 0.25) - (intensity * 0.2),
@@ -110,7 +117,9 @@ const STYLE_CONFIG = {
         sequenceProb: 0.15,
         bendProb: 0.12,
         doubleStopProb: 0,
-        patternModeProb: 0.4
+        patternModeProb: 0.4,
+        allowAltered: true,
+        timingJitter: 15
     }
 };
 
@@ -150,7 +159,14 @@ function getScaleNote(midi, list, offset) {
  * Determines harmonic scale based on chord quality and style.
  */
 function getScaleForChord(chord, style, nextChord) {
-    const isV7toMinor = chord.intervals.includes(10) && chord.intervals.includes(4) && 
+    const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;
+    const isDominant = chord.intervals.includes(10) && chord.intervals.includes(4);
+
+    if (config.allowAltered && isDominant) {
+        return [0, 1, 3, 4, 6, 8, 10]; // Altered Scale
+    }
+
+    const isV7toMinor = isDominant && 
                         nextChord && ['minor', 'dim', 'halfdim'].includes(nextChord.quality);
 
     if (style === 'blues') {
@@ -297,6 +313,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const scaleIntervals = getScaleForChord(currentChord, style, nextChord);
     const scaleTones = scaleIntervals.map(i => rootMidi + i);
 
+    // --- Metadata Prep ---
+    let noteType = sb.patternMode === 'arp' ? 'arp' : 'scale';
+    if (scaleIntervals.includes(1) && scaleIntervals.includes(10) && scaleIntervals.includes(4)) {
+        if (sb.patternMode !== 'arp') noteType = 'altered';
+    }
+
     // --- Phrasing Logic ---
     if (measureStep === 0 || sb.phraseSteps <= 0) {
         let restProb = config.restProb(intensity);
@@ -379,7 +401,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         finalMidi = sb.enclosureNotes[sb.enclosureIndex];
         sb.enclosureIndex++;
         if (sb.enclosureIndex >= sb.enclosureNotes.length) sb.enclosureNotes = null;
-        return { freq: getFrequency(finalMidi), durationMultiplier: 1, style };
+        return { freq: getFrequency(finalMidi), durationMultiplier: 1, style, noteType: 'target' };
     }
 
     // 2. Sequences (Math)
@@ -428,32 +450,54 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         while (finalMidi > maxMidi) finalMidi -= 12;
         while (finalMidi < minMidi) finalMidi += 12;
         
-        return { freq: getFrequency(finalMidi), durationMultiplier, style };
+        return { freq: getFrequency(finalMidi), durationMultiplier, style, noteType };
     }
 
-    // 3. Standard Melodic Generation
-    if (style === 'blues' && Math.random() < 0.25 && stepInBeat !== 0) isGraceNote = true;
+    // 3. Tonic Resolution & Targeting
+    const keyRootIdx = KEY_ORDER.indexOf(arranger.key);
+    const chordRootIdx = KEY_ORDER.indexOf(currentChord.root);
+    const isTonic = (chordRootIdx === keyRootIdx);
 
-    // Change direction / targeting
-    const isApproachingChange = measureStep >= (stepsPerMeasure - tsConfig.stepsPerBeat) && nextChord && nextChord !== currentChord;
-    if (isApproachingChange && Math.random() < 0.7) {
-        // Target next chord tone
-        const nextRoot = nextChord.rootMidi;
-        const targetIntervals = [nextChord.intervals[1], nextChord.intervals[nextChord.intervals.length-1]];
-        const targets = targetIntervals.map(i => {
-            let m = nextRoot + i;
+    if (stepInChord === 0 && isTonic) {
+        // Safe chord tones to resolve tension
+        const safeIntervals = arranger.isMinor ? [0, 3, 7] : [0, 4, 7];
+        const targets = safeIntervals.map(i => {
+            let m = currentChord.rootMidi + i;
             while (m < minMidi) m += 12;
             while (m > maxMidi) m -= 12;
             return m;
         });
         targets.sort((a, b) => Math.abs(a - prevMidi) - Math.abs(b - prevMidi));
         finalMidi = targets[0];
-        if (style !== 'scalar' && style !== 'shred') {
-             // Decorate target
-             if (targets[0] > prevMidi) finalMidi = prevMidi + (Math.random() < 0.5 ? 1 : 2);
-             else if (targets[0] < prevMidi) finalMidi = prevMidi - (Math.random() < 0.5 ? 1 : 2);
+        noteType = 'target';
+    } else if (measureStep >= (stepsPerMeasure - 2) && nextChord && nextChord !== currentChord) {
+        // Target next chord tone (3rd or 7th)
+        const nextRoot = nextChord.rootMidi;
+        const targets = [3, 4, 10, 11].filter(i => nextChord.intervals.includes(i)).map(i => {
+            let m = nextRoot + i;
+            while (m < minMidi) m += 12;
+            while (m > maxMidi) m -= 12;
+            return m;
+        });
+        if (targets.length === 0) targets.push(nextRoot);
+        targets.sort((a, b) => Math.abs(a - prevMidi) - Math.abs(b - prevMidi));
+        const targetMidi = targets[0];
+
+        if (measureStep === stepsPerMeasure - 1) {
+            // One step away: Chromatic approach
+            const diff = targetMidi - prevMidi;
+            if (diff > 0) finalMidi = targetMidi - 1;
+            else if (diff < 0) finalMidi = targetMidi + 1;
+            else finalMidi = targetMidi + (Math.random() > 0.5 ? 1 : -1);
+        } else {
+            // Two steps away: Neighbor tone trajectory
+            finalMidi = targetMidi + (Math.random() > 0.5 ? 2 : -2);
         }
+        noteType = 'target';
     } else {
+        // Standard Melodic Generation
+        if (style === 'blues' && Math.random() < 0.25 && stepInBeat !== 0) isGraceNote = true;
+
         if (sb.patternSteps <= 0) {
             sb.patternSteps = (style === 'shred' ? 8 : 2) + Math.floor(Math.random() * 6);
             if (prevMidi > maxMidi - 10) sb.direction = -1;
@@ -476,7 +520,14 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             if (candidates.length > 0) {
                 candidates.sort((a, b) => dir > 0 ? a - b : b - a);
                 const idx = (Math.random() < 0.3 && candidates.length > 1) ? 1 : 0;
-                return candidates[idx];
+                let next = candidates[idx];
+
+                // Chromatic approach (20% chance for bird/neo)
+                if (['bird', 'neo'].includes(style) && Math.random() < 0.2) {
+                    noteType = 'target';
+                    return next + (Math.random() > 0.5 ? 1 : -1);
+                }
+                return next;
             }
             sb.direction *= -1;
             return current;
@@ -546,16 +597,20 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
     // Duration Logic
     if (style === 'minimal') {
-        if (Math.random() < 0.6) durationMultiplier = 4 + Math.floor(Math.random() * 8);
+        if (Math.random() < 0.6) durationMultiplier = 3 + Math.floor(Math.random() * 6);
         else durationMultiplier = 2;
+        sb.busySteps = durationMultiplier - 1;
     } else if (style === 'shred' && sb.phraseSteps <= 1 && !sb.isResting) {
         if (Math.random() < 0.8) durationMultiplier = 8 + Math.floor(Math.random() * 8);
+        sb.busySteps = durationMultiplier - 1;
     } else if (style === 'neo' && isLongNote && Math.random() < 0.3) {
         durationMultiplier = 4 + Math.floor(Math.random() * 4);
+        sb.busySteps = durationMultiplier - 1;
     }
-    if (style === 'blues' && durationMultiplier > 1 && Math.random() < 0.6) durationMultiplier = 1; // Staccato
-
-    sb.busySteps = durationMultiplier - 1;
+    if (style === 'blues' && durationMultiplier > 1 && Math.random() < 0.6) {
+        durationMultiplier = 1; // Staccato
+        sb.busySteps = 0;
+    }
 
     // Double/Triple Stops
     let extraFreq = null, extraMidi = null, extraFreq2 = null, extraMidi2 = null;
@@ -586,6 +641,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         durationMultiplier,
         bendStartInterval,
         velocity,
-        style
+        style,
+        timingOffset: Math.random() * config.timingJitter,
+        noteType
     };
 }

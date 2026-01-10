@@ -338,7 +338,7 @@ export class UnifiedVisualizer {
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             
-            let activeX = -10, activeY = -10, isActive = false;
+            let activeX = -10, activeY = -10, isActive = false, activeColor = null;
 
             // First pass: Glow/outline for distinctness
             ctx.strokeStyle = outlineColor;
@@ -363,8 +363,6 @@ export class UnifiedVisualizer {
             ctx.stroke();
 
             // Second pass: Colored line
-            ctx.strokeStyle = color;
-            ctx.lineWidth = baseWidth;
             ctx.beginPath();
             for (const ev of track.history) {
                 const noteEnd = ev.time + (ev.duration || 0.25);
@@ -378,20 +376,30 @@ export class UnifiedVisualizer {
                 const y = Math.round(getY(ev.midi));
 
                 if (y >= -10 && y <= h + 10) {
+                    // Context-aware coloring for soloist
+                    if (name === 'soloist' && ev.noteType) {
+                        if (ev.noteType === 'arp') ctx.strokeStyle = chordColors.fifth;
+                        else if (ev.noteType === 'target') ctx.strokeStyle = chordColors.root;
+                        else if (ev.noteType === 'altered') ctx.strokeStyle = chordColors.seventh;
+                        else ctx.strokeStyle = color;
+                    } else {
+                        ctx.strokeStyle = color;
+                    }
+
+                    ctx.beginPath();
                     ctx.moveTo(x1, y);
                     ctx.lineTo(x2, y);
+                    ctx.stroke();
                     
                     if (ev.time <= currentTime && noteEnd >= currentTime) {
-                        // In reversed mode, 'endT' (closer to now) is at x2 (closer to piano roll)
-                        // So the active head is x2
                         activeX = x2; activeY = y; isActive = true;
+                        activeColor = ctx.strokeStyle;
                     }
                 }
             }
-            ctx.stroke();
 
             if (isActive) {
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = activeColor || '#fff';
                 ctx.strokeStyle = outlineColor;
                 ctx.lineWidth = 2;
                 ctx.beginPath();

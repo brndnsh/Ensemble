@@ -409,6 +409,22 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     gain.connect(pan);
     pan.connect(ctx.soloistGain);
 
+    // Monophonic Cutoff: Only cutoff if this is a NEW time (allows double stops at same time)
+    if (sb.lastSoloistGain && time > (sb.lastNoteStartTime || 0)) {
+        try {
+            const t = time;
+            const g = sb.lastSoloistGain.gain;
+            if (g.cancelAndHoldAtTime) {
+                g.cancelAndHoldAtTime(t);
+            } else {
+                g.cancelScheduledValues(t);
+            }
+            g.linearRampToValueAtTime(0, t + 0.005);
+        } catch (e) {}
+    }
+    sb.lastSoloistGain = gain;
+    sb.lastNoteStartTime = time;
+
     // Smart Vibrato Logic
     // Only apply vibrato if note is long enough to warrant it
     if (duration > 0.15) {

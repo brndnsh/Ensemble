@@ -582,9 +582,11 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
     sb.buffer.delete(step); // Cleanup
 
     if (noteEntry && noteEntry.freq) {
-        const { freq, extraFreq, extraMidi, extraFreq2, extraMidi2, durationMultiplier, velocity, bendStartInterval, style, chordData: cData, timingOffset } = noteEntry;
+        const { freq, extraFreq, extraMidi, extraFreq2, extraMidi2, durationMultiplier, velocity, bendStartInterval, style, chordData: cData, timingOffset, noteType } = noteEntry;
         const { chord } = cData || chordData;
-        const adjustedTime = time + (timingOffset || 0);
+        
+        const offsetS = (timingOffset || 0) / 1000;
+        const adjustedTime = time + offsetS;
         
         sb.lastPlayedFreq = freq;
         const midi = noteEntry.midi || getMidi(freq);
@@ -596,7 +598,7 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
         
         // Neo-soul "Lazy" Lag: Additional variable delay for neo style
         const styleLag = style === 'neo' ? (0.01 + Math.random() * 0.035) : 0;
-        const playTime = unswungTime + styleLag;
+        const playTime = unswungTime + styleLag + offsetS;
 
         playSoloNote(freq, playTime, duration, vel, bendStartInterval || 0, style);
 
@@ -608,7 +610,8 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
                 ctx.drawQueue.push({ 
                     type: 'soloist_vis', name: extra.name, octave: extra.octave, midi: extraMidi, time: playTime,
                     chordNotes: chord.freqs.map(f => getMidi(f)),
-                    duration
+                    duration,
+                    noteType
                 });
             }
             
@@ -618,14 +621,16 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
                 ctx.drawQueue.push({ 
                     type: 'soloist_vis', name: extra2.name, octave: extra2.octave, midi: extraMidi2, time: playTime,
                     chordNotes: chord.freqs.map(f => getMidi(f)),
-                    duration
+                    duration,
+                    noteType
                 });
             }
 
             ctx.drawQueue.push({ 
                 type: 'soloist_vis', name, octave, midi, time: playTime,
                 chordNotes: chord.freqs.map(f => getMidi(f)),
-                duration
+                duration,
+                noteType
             });
         } else {
             // Still play extra notes if not visualizing
