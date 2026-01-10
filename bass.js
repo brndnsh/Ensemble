@@ -228,29 +228,45 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         const stepInBeat = stepInChord % 4;
         const intBeat = Math.floor(stepInChord / 4);
         
-        // The "One" is sacred - heavy root
-        if (stepInChord === 0) return result(getFrequency(baseRoot), null, 1.2);
+        // The "One" is sacred - Heavy Root with good sustain
+        if (stepInChord === 0) return result(getFrequency(baseRoot), 1.5, 1.25);
 
-        // Beat 3 (Backbeat/Snare) - often Root or 5th
-        if (intBeat === 2 && stepInBeat === 0) {
-             const target = Math.random() < 0.7 ? baseRoot : baseRoot + 7;
-             return result(getFrequency(clampAndNormalize(target)), null, 1.1);
+        // "Bootsy" Octave Pops on the 'and' (upbeats)
+        // High probability on the 'and' of 1 or 2 to lock with the kick/snare interplay
+        if (stepInBeat === 2) {
+             if (intBeat < 3 && Math.random() < 0.45) {
+                 return result(getFrequency(clampAndNormalize(baseRoot + 12)), 0.4, 1.15); // Short, punchy pop
+             }
         }
 
-        // Octave Pops on the 'and' (upbeats)
-        if (stepInBeat === 2 && Math.random() < 0.35) {
-             return result(getFrequency(clampAndNormalize(baseRoot + 12)), 1, 1.0);
+        // Beat 3 (Backbeat) - Sometimes reinforce, sometimes leave space for snare
+        if (intBeat === 2 && stepInBeat === 0 && Math.random() < 0.4) {
+             return result(getFrequency(baseRoot), 0.8, 1.1);
         }
 
-        // Chromatic/Scale Approach on the 'a' (last 16th) into the next beat
-        if (stepInBeat === 3 && Math.random() < 0.3) {
-            const note = baseRoot + (currentChord.intervals.includes(10) ? 10 : 7); // b7 or 5th
-            return result(getFrequency(clampAndNormalize(note)), 1, 0.9);
+        // The "Grease" - b7 or 5th usage on weak 16ths ('e' or 'a')
+        if ((stepInBeat === 1 || stepInBeat === 3) && Math.random() < 0.3) {
+            // Funk loves the b7 (minor 7th) even on major chords (The "James Brown" chord)
+            const useFlat7 = currentChord.intervals.includes(10) || Math.random() < 0.6;
+            const interval = useFlat7 ? 10 : 7;
+            const note = baseRoot + interval; 
+            return result(getFrequency(clampAndNormalize(note)), 0.5, 0.95);
+        }
+
+        // Beat 4: Turnaround / Fill to lead back to the One
+        if (intBeat === 3) {
+            // On the 'and' or 'a' of 4
+            if (stepInBeat >= 2 && Math.random() < 0.5) {
+                // Chromatic approach from below (b2) or above (b2) or 5th
+                const approach = Math.random() < 0.5 ? baseRoot - 1 : baseRoot + 7;
+                return result(getFrequency(clampAndNormalize(approach)), 0.5, 1.1);
+            }
         }
 
         // Ghost notes (dead notes) for percolation
-        if ((stepInBeat === 1 || stepInBeat === 2) && Math.random() < 0.15) {
-             return result(getFrequency(prevMidi || baseRoot), 0.5, 0.55, true);
+        // Keep them tight (short duration)
+        if (Math.random() < 0.15) {
+             return result(getFrequency(prevMidi || baseRoot), 0.25, 0.65, true);
         }
 
         return null;
@@ -289,16 +305,16 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
                     note = baseRoot + 7;
                 }
                 
-                return result(getFrequency(clampAndNormalize(note)), dur, 1.15);
+                return result(getFrequency(clampAndNormalize(note)), dur, 1.2);
             }
         }
         
         // 2. The "Chug" (Machine Gun 16ths)
         // High density of notes, mostly muted or pedal roots
         if (Math.random() < 0.85) {
-             const isGhost = Math.random() < 0.6; // 60% ghost, 40% tonal pedal
+             const isGhost = Math.random() < 0.5; // 50% ghost, 50% tonal pedal
              // If tonal, keep it low (root)
-             return result(getFrequency(baseRoot), dur, isGhost ? 0.6 : 0.8, isGhost);
+             return result(getFrequency(baseRoot), dur, isGhost ? 0.85 : 0.95, isGhost);
         }
 
         return null;
@@ -325,6 +341,62 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         if (step % 4 === 3) return result(getFrequency(deepRoot), 1, 0.5, true);
         
         return result(getFrequency(deepRoot), null, 0.9);
+    }
+
+    // --- DISCO STYLE ---
+    if (style === 'disco') {
+        const stepInBeat = stepInChord % 4; 
+        
+        // Downbeats (1, 2, 3, 4): Root
+        if (stepInBeat === 0) {
+            return result(getFrequency(baseRoot), 0.5, 1.15); // Punchy root
+        }
+        
+        // Upbeats ('and'): Octave
+        if (stepInBeat === 2) {
+             return result(getFrequency(clampAndNormalize(baseRoot + 12)), 0.4, 1.05); // Short octave pop
+        }
+        
+        // Occasional 16th note ghost/pickup
+        if (stepInBeat === 3 && Math.random() < 0.2) {
+            return result(getFrequency(baseRoot), 0.3, 0.75, true);
+        }
+        
+        return null;
+    }
+
+    // --- DUB STYLE ---
+    if (style === 'dub') {
+        // Deep sub-bass feel.
+        const deepRoot = clampAndNormalize(baseRoot - 12); // Force low octave
+        
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+        const stepInMeasure = step % stepsPerMeasure;
+
+        // Beat 1: Heavy Anchor
+        if (stepInMeasure === 0) return result(getFrequency(deepRoot), 1.0, 1.2); 
+        
+        // Beat 2.5 (the 'and' of 2): Syncopated 5th or Octave
+        if (beatIndex === 1.5 && Math.random() < 0.6) {
+             return result(getFrequency(deepRoot + 7), 0.8, 1.0);
+        }
+        
+        // Beat 3: often a rest or a lower 5th
+        if (beatIndex === 2.0 && Math.random() < 0.5) {
+             return result(getFrequency(deepRoot), 1.0, 1.1);
+        }
+        
+        // Beat 4: Fill/Pickup
+        if (beatIndex >= 3.0 && stepInChord % 2 === 0) { // 8th notes on beat 4
+             if (Math.random() < 0.4) {
+                 // b7 or 5th
+                 const interval = currentChord.intervals.includes(10) ? 10 : 7;
+                 return result(getFrequency(deepRoot + interval), 0.5, 0.9);
+             }
+        }
+        
+        return null;
     }
 
     // --- QUARTER NOTE (WALKING) STYLE ---
@@ -422,6 +494,8 @@ export function isBassActive(style, step, stepInChord) {
     }
 
     if (style === 'rocco') return true;
+    if (style === 'disco') return true;
+    if (style === 'dub') return true;
 
     if (style === 'neo') {
         if (stepInChord === 0) return true;
