@@ -1059,6 +1059,10 @@ h2 {
     justify-content: center;
 }
 
+.chord-maximized .chord-card.minor {
+    color: var(--soloist-color);
+}
+
 .chord-maximized .chord-card.active {
     background: var(--accent-color);
     color: white;
