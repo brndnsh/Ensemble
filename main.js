@@ -1167,18 +1167,6 @@ function setupUIHandlers() {
         });
     });
 
-    // Global keyboard shortcuts
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (document.body.classList.contains('chord-maximized')) {
-                document.body.classList.remove('chord-maximized');
-                ui.maximizeChordBtn.textContent = '⛶';
-                ui.maximizeChordBtn.title = 'Maximize';
-                renderChordVisualizer();
-            }
-        }
-    });
-
     // Editor Overlay Listeners
     if (ui.editArrangementBtn) {
         ui.editArrangementBtn.addEventListener('click', () => {
@@ -1386,11 +1374,11 @@ function setupUIHandlers() {
             switchMeasure(next);
         }
         if (e.key === 'Escape') {
-            const layout = document.querySelector('.app-main-layout');
-            if (layout.classList.contains('chord-maximized')) {
-                layout.classList.remove('chord-maximized');
+            if (document.body.classList.contains('chord-maximized')) {
+                document.body.classList.remove('chord-maximized');
                 ui.maximizeChordBtn.textContent = '⛶';
                 ui.maximizeChordBtn.title = 'Maximize';
+                renderChordVisualizer();
             }
             if (ui.settingsOverlay.classList.contains('active')) {
                 ui.settingsOverlay.classList.remove('active');

@@ -525,7 +525,7 @@ function createChordLabel(data) {
  */
 export function renderChordVisualizer() {
     const panel = document.getElementById('panel-arranger');
-    const isMaximized = document.querySelector('.app-main-layout')?.classList.contains('chord-maximized');
+    const isMaximized = document.body.classList.contains('chord-maximized');
     
     const updateLogic = () => {
         ui.chordVisualizer.innerHTML = '';
