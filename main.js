@@ -10,6 +10,7 @@ import { exportToMidi } from './midi-export.js';
 import { UnifiedVisualizer } from './visualizer.js';
 import { initWorker, startWorker, stopWorker, flushWorker, requestBuffer, syncWorker } from './worker-client.js';
 import { generateProceduralFill } from './fills.js';
+import { analyzeForm, getSectionEnergy } from './form-analysis.js';
 
 let userPresets = storage.get('userPresets');
 let userDrumPresets = storage.get('userDrumPresets');
@@ -1161,79 +1162,18 @@ const SMART_GENRES = {
     'Neo-Soul': { swing: 45, sub: '16th', drum: 'Neo-Soul', feel: 'Neo-Soul', bass: 'neo', soloist: 'neo' }
 };
 
-const SECTION_ENERGY_MAP = {
-    'intro': 0.4, 'verse': 0.5, 'pre-chorus': 0.6, 'build': 0.7,
-    'chorus': 0.9, 'drop': 1.0, 'bridge': 0.6, 'solo': 0.8,
-    'outro': 0.4, 'breakdown': 0.3
-};
-
-function getSectionEnergy(label) {
-    if (!label) return 0.5;
-    const lower = label.toLowerCase();
-    for (const [key, val] of Object.entries(SECTION_ENERGY_MAP)) {
-        if (lower.includes(key)) return val;
+function analyzeFormUI() {
+    const form = analyzeForm();
+    if (form) {
+        conductorState.form = form;
+        console.log(`Analyzed Form: ${form.type}`, form.roles);
     }
-    return 0.5; // Default
-}
-
-function analyzeForm() {
-    if (!arranger.stepMap.length) return;
-    
-    // 1. Simplify Labels to Abstract Sections (A, B, C...)
-    const labels = arranger.stepMap.map(s => {
-        const l = s.chord.sectionLabel.toLowerCase();
-        if (l.includes('verse') || l.includes('a section')) return 'A';
-        if (l.includes('chorus') || l.includes('b section')) return 'B';
-        if (l.includes('bridge') || l.includes('c section')) return 'C';
-        if (l.includes('intro')) return 'Intro';
-        if (l.includes('outro')) return 'Outro';
-        // Fallback: use first letter or simplified name
-        return l.charAt(0).toUpperCase();
-    });
-    
-    // 2. Detect Form
-    const sequence = labels.join('-');
-    let formType = 'Linear';
-    
-    if (sequence.includes('A-A-B-A')) formType = 'AABA';
-    else if (sequence.includes('A-A-B-C')) formType = 'AABC';
-    else if (sequence.includes('A-B-A-B')) formType = 'ABAB';
-    
-    // 3. Assign Roles
-    const roles = labels.map((label, i) => {
-        if (label === 'Intro') return 'Exposition';
-        if (label === 'Outro') return 'Resolution';
-        
-        // Context-aware roles
-        if (formType === 'AABA') {
-            if (i === 0) return 'Exposition';
-            if (i === 1) return 'Development'; // Second A
-            if (label === 'B') return 'Contrast';
-            if (i === 3) return 'Recapitulation'; // Final A
-        }
-        
-        if (formType === 'AABC') {
-            if (i === 0) return 'Exposition';
-            if (i === 1) return 'Development';
-            if (label === 'B') return 'Build';
-            if (label === 'C') return 'Climax';
-        }
-
-        // Generic Fallbacks
-        if (label === 'B' || label === 'Chorus') return 'Climax';
-        if (label === 'C' || label === 'Bridge') return 'Contrast';
-        
-        return 'Standard';
-    });
-
-    conductorState.form = { type: formType, sequence, roles };
-    console.log(`Analyzed Form: ${formType}`, roles);
 }
 
 function validateAndAnalyze() {
     validateProgression(() => {
         renderChordVisualizer();
-        analyzeForm();
+        analyzeFormUI();
     });
 }
 
@@ -2103,7 +2043,7 @@ function init() {
         renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         validateProgression(() => {
             renderChordVisualizer();
-            analyzeForm();
+            analyzeFormUI();
         });
         updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
         updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
@@ -2325,7 +2265,7 @@ function resetToDefaults() {
     renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateProgression(() => {
         renderChordVisualizer();
-        analyzeForm();
+        analyzeFormUI();
     });
     flushBuffers();
     

@@ -1,5 +1,5 @@
 // Note: Keep CACHE_NAME version in sync with APP_VERSION in config.js
-const CACHE_NAME = 'ensemble-v1.60';
+const CACHE_NAME = 'ensemble-v1.61';
 const ASSETS = [
     './',
     './index.html',
@@ -20,6 +20,7 @@ const ASSETS = [
     './logic-worker.js',
     './worker-client.js',
     './fills.js',
+    './form-analysis.js',
     './styles.css',
     './manifest.json',
     './icon.svg',
