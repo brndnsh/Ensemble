@@ -131,8 +131,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (!currentChord) return null;
 
     if (style === 'smart') {
-        const mapping = { 'Rock': 'shred', 'Jazz': 'bird', 'Funk': 'blues', 'Blues': 'blues', 'Neo-Soul': 'neo' };
-        style = mapping[gb.genreFeel] || 'scalar';
+        if (arranger.lastChordPreset === 'Minor Blues') {
+            style = 'blues';
+        } else {
+            const mapping = { 'Rock': 'shred', 'Jazz': 'bird', 'Funk': 'blues', 'Blues': 'blues', 'Neo-Soul': 'neo' };
+            style = mapping[gb.genreFeel] || 'scalar';
+        }
     }
     
     const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;

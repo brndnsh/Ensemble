@@ -1,6 +1,6 @@
 import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
-import { arranger, cb, bb, sb, ctx } from './state.js';
+import { arranger, cb, bb, sb, gb, ctx } from './state.js';
 
 let timerID = null;
 let interval = 25;
@@ -121,6 +121,7 @@ self.onmessage = (e) => {
                 if (data.cb) Object.assign(cb, data.cb);
                 if (data.bb) Object.assign(bb, data.bb);
                 if (data.sb) Object.assign(sb, data.sb);
+                if (data.gb) Object.assign(gb, data.gb);
                 if (data.ctx) Object.assign(ctx, data.ctx);
                 fillBuffers(lastMainStep);
                 break;

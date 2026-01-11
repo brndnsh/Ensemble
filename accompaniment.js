@@ -28,6 +28,13 @@ const COMPING_CELLS = {
         { name: 'Backbeat',    pattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], weight: 3 }, // HIT 2, 4
         { name: 'Syncopated',  pattern: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 2 }, // 1 (a) (&)
         { name: 'Offbeat',     pattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], weight: 2 }  // & & & &
+    ],
+    neo: [
+        { name: 'The One',     pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 4 },
+        { name: 'Pushed',      pattern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], weight: 3 }, // &4 (Anticipation)
+        { name: 'Lazy',        pattern: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 1 }, // slightly after 1
+        { name: 'Dilla',       pattern: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0], weight: 3 }, // 1, &2, 4
+        { name: 'Space',       pattern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 1 }
     ]
 };
 
@@ -57,8 +64,8 @@ function updateCompingState(step, style, soloistBusy) {
         else if (r < 0.8) compingState.currentVibe = 'syncopated';
         else compingState.currentVibe = 'balanced';
         compingState.density = 0.6 + (Math.random() * 0.3); // Min 0.6
-    } else if (style === 'funk') {
-        // Assertive Funk Logic (Standard Tempo)
+    } else if (style === 'funk' || style === 'neo') {
+        // Assertive Funk/Neo Logic (Standard Tempo)
         const r = Math.random();
         if (r < 0.5) compingState.currentVibe = 'active'; 
         else if (r < 0.85) compingState.currentVibe = 'syncopated'; 
@@ -79,9 +86,9 @@ function updateCompingState(step, style, soloistBusy) {
     
     // Filter candidates based on vibe and TEMPO constraints
     if (compingState.currentVibe === 'sparse') {
-        candidates = pool.filter(c => c.name === 'Bill Evans' || c.name === 'Anticipation');
+        candidates = pool.filter(c => c.name === 'Bill Evans' || c.name === 'Anticipation' || c.name === 'Space');
     } else if (compingState.currentVibe === 'active') {
-        candidates = pool.filter(c => c.name !== 'Bill Evans');
+        candidates = pool.filter(c => c.name !== 'Bill Evans' && c.name !== 'Space');
     } else if (compingState.currentVibe === 'balanced' && complexity < 0.35) {
         candidates = pool.filter(c => c.name === 'Quarter' || c.name === 'Red Garland' || c.name === 'Backbeat' || c.name === 'The One');
     }
@@ -93,7 +100,7 @@ function updateCompingState(step, style, soloistBusy) {
         candidates = candidates.filter(c => c.name !== 'Anticipation' && c.name !== 'Syncopated' && c.name !== 'Offbeat');
     } else if (bpm < 60) {
         // Remove 'Bill Evans' (too much silence)
-        candidates = candidates.filter(c => c.name !== 'Bill Evans');
+        candidates = candidates.filter(c => c.name !== 'Bill Evans' && c.name !== 'Space');
     }
 
     if (candidates.length === 0) candidates = pool;
@@ -146,7 +153,7 @@ export const chordPatterns = {
 
         // A. Rootless Logic (Jazz/Funk/Soul)
         // If the bass is active, we don't need the root in the chords (cleans up low-mid mud)
-        if (['Soul/Funk', 'Jazz', 'Soul/R&B'].includes(drumCategory) || bb.style === 'quarter' || bb.style === 'funk') {
+        if (['Soul/Funk', 'Jazz', 'Soul/R&B'].includes(drumCategory) || bb.style === 'quarter' || bb.style === 'funk' || bb.style === 'neo') {
             if (voicing.length > 3) {
                 voicing.shift(); // Drop the lowest note (Root)
             }
@@ -189,9 +196,10 @@ export const chordPatterns = {
             return chordPatterns.blues(chord, time, spb, stepInChord, measureStep, step);
         }
 
-        // C. FUNK / SOUL -> Interlocking Comping
-        if (drumCategory === 'Soul/Funk' || bb.style === 'funk' || bb.style === 'rocco' || bb.style === 'disco') {
-            updateCompingState(step, 'funk', soloistBusy);
+        // C. FUNK / SOUL / NEO -> Interlocking Comping
+        if (drumCategory === 'Soul/Funk' || drumCategory === 'Soul/R&B' || bb.style === 'funk' || bb.style === 'rocco' || bb.style === 'disco' || bb.style === 'neo') {
+            const isNeo = drumCategory === 'Soul/R&B' || bb.style === 'neo';
+            updateCompingState(step, isNeo ? 'neo' : 'funk', soloistBusy);
             
             // Map global step to our 16-step cell
             const cellStep = measureStep % 16;
@@ -219,17 +227,20 @@ export const chordPatterns = {
                     return;
                 }
 
+                // Neo-Soul Timing Lag (Tightened)
+                const lag = isNeo ? (0.002 + Math.random() * 0.008) : 0;
+                const playTime = time + lag;
+
                 const dur = spb * (Math.random() < 0.5 ? 0.2 : 0.4); // Staccato
                 
                 // Texture: Randomly thin the chord for percussive guitar feel
-                // Funk players often hit just the top 1-2 strings on syncopations
                 let stepVoicing = voicing;
                 if (Math.random() < 0.3 && stepVoicing.length > 1) { 
                     const keep = Math.random() < 0.5 ? 1 : 2;
                     stepVoicing = stepVoicing.slice(-keep); 
                 }
 
-                stepVoicing.forEach((f, i) => playNote(f, time, dur, { vol: 0.32, index: i })); 
+                stepVoicing.forEach((f, i) => playNote(f, playTime, dur, { vol: 0.32, index: i })); 
             } else {
                 // Ghost note scratches (percolation) - Only at higher complexity
                 if (complexity > 0.4 && compingState.currentVibe === 'active' && Math.random() < 0.1) {

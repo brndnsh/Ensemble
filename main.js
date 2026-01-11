@@ -583,12 +583,21 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
         const fillStep = absoluteStep - gb.fillStartStep;
         // Check bounds again in case we just disabled it (though above block handles >= length)
         if (fillStep >= 0 && fillStep < gb.fillLength) {
-            const notes = gb.fillSteps[fillStep];
-            if (notes && notes.length > 0) {
-                notes.forEach(note => {
-                    playDrumSound(note.name, time, note.vel * conductorVel);
-                });
-                return; // Mute standard groove elements for this step
+            
+            // Smart Fill Logic: "Late Entry"
+            // If intensity is low, don't play fill notes in the first half of the bar.
+            // This keeps the groove tight until the turnaround.
+            const isLateEntry = ctx.bandIntensity < 0.5;
+            const isFirstHalf = fillStep < (gb.fillLength / 2);
+
+            if (!isLateEntry || !isFirstHalf) {
+                const notes = gb.fillSteps[fillStep];
+                if (notes && notes.length > 0) {
+                    notes.forEach(note => {
+                        playDrumSound(note.name, time, note.vel * conductorVel);
+                    });
+                    return; // Mute standard groove elements for this step
+                }
             }
         }
     }
@@ -598,13 +607,21 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
         
         if (stepVal > 0 && !inst.muted) {
             let velocity = stepVal === 2 ? 1.25 : 0.9;
-            
+            let soundName = inst.name;
+
             // Genre Nuances
             if (gb.genreFeel === 'Rock') {
                 if (inst.name === 'Kick' && isDownbeat) velocity *= 1.2;
                 if (inst.name === 'Snare' && isBackbeat) velocity *= 1.2;
             } else if (gb.genreFeel === 'Funk') {
                 if (stepVal === 2) velocity *= 1.1; // Sharp accents
+            }
+
+            // Ride Mode: High intensity washes out the hats
+            // Exempt Jazz because it uses Open for the ride pattern already
+            if (inst.name === 'HiHat' && gb.genreFeel !== 'Jazz' && ctx.bandIntensity > 0.8 && isQuarter) {
+                soundName = 'Open';
+                velocity *= 1.1;
             }
 
             // Standard dynamics
@@ -615,6 +632,12 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
             } else if (inst.name === 'HiHat' || inst.name === 'Open') {
                 velocity *= isQuarter ? 1.1 : 0.85;
                 
+                // Jazz Taming: Prevent hi-hats from becoming too harsh/electronic at high intensity
+                if (gb.genreFeel === 'Jazz') {
+                    // Slightly reduce velocity as intensity climbs to keep the hats "in the pocket"
+                    velocity *= (1.0 - (ctx.bandIntensity * 0.2));
+                }
+
                 // High Tempo Adaptation: Tame the HiHats
                 if (ctx.bpm > 165) {
                     velocity *= 0.7; // General reduction
@@ -622,7 +645,7 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                 }
             }
             
-            playDrumSound(inst.name, time, velocity * conductorVel);
+            playDrumSound(soundName, time, velocity * conductorVel);
         } 
         // Ghost Note Logic
         else if (stepVal === 0 && !inst.muted && inst.name === 'Snare') {
@@ -1216,6 +1239,28 @@ function validateAndAnalyze() {
 
 function checkSectionTransition(currentStep) {
     if (arranger.stepMap.length === 0) return;
+
+    // General 12-Bar Logic: Trigger fills at end of Bar 4 and Bar 12
+    const is12BarBlues = ['Jazz Blues', '12-Bar Blues', 'Minor Blues', 'Blues (12 Bar)'].includes(arranger.lastChordPreset);
+    if (is12BarBlues) {
+        const stepsPerMeasure = getStepsPerMeasure();
+        const currentBar = Math.floor(currentStep / stepsPerMeasure);
+        const barInCycle = currentBar % 12; 
+        
+        if (currentStep % stepsPerMeasure === 0) {
+            if (barInCycle === 3 || barInCycle === 11) {
+                // Choose style: Jazz Blues uses 'Jazz', others use the current genre feel
+                const fillStyle = (arranger.lastChordPreset === 'Jazz Blues') ? 'Jazz' : gb.genreFeel;
+                gb.fillSteps = generateProceduralFill(fillStyle, ctx.bandIntensity, stepsPerMeasure);
+                gb.fillActive = true;
+                gb.fillStartStep = currentStep;
+                gb.fillLength = stepsPerMeasure;
+                gb.pendingCrash = true;
+                triggerFlash(0.25);
+                return;
+            }
+        }
+    }
     
     // Find where we are
     const total = arranger.totalSteps;
