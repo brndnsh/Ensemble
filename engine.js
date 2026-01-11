@@ -687,8 +687,15 @@ export function playDrumSound(name, time, velocity = 1.0) {
         noiseFilter.type = 'bandpass';
         // Velocity mapping for brightness (1.5kHz to 2.5kHz)
         const centerFreq = 1500 + (velocity * 1000);
-        noiseFilter.frequency.setValueAtTime(centerFreq * rr(), time);
+        const finalFreq = centerFreq * rr();
+        
+        // Firefox Fix: Explicitly set .value to ensure filter state is correct
+        noiseFilter.frequency.value = finalFreq;
+        noiseFilter.frequency.setValueAtTime(finalFreq, time);
+        
+        noiseFilter.Q.value = 1.2;
         noiseFilter.Q.setValueAtTime(1.2, time);
+        
         noiseGain.gain.setValueAtTime(vol, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.01, time + wireDecay);
         noise.connect(noiseFilter);
@@ -723,7 +730,15 @@ export function playDrumSound(name, time, velocity = 1.0) {
         hpFilter.type = 'highpass';
         // Velocity mapping for brightness
         const cutoff = (7000 + velocity * 3000) * rr();
+        
+        // Firefox Fix: Explicitly set .value to ensure filter state is correct 
+        // even if setValueAtTime is processed with slight scheduling latency.
+        // Without this, Firefox may momentarily use the default LowPass filter,
+        // letting the low square waves through as a "kick" sound.
+        hpFilter.frequency.value = cutoff;
         hpFilter.frequency.setValueAtTime(cutoff, time);
+        
+        hpFilter.Q.value = 1.5;
         hpFilter.Q.setValueAtTime(1.5, time);
         
         const gain = ctx.audio.createGain();
