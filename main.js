@@ -1,5 +1,5 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates, updateActiveChordUI } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, createPresetChip, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates, updateActiveChordUI, recalculateScrollOffsets } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime } from './engine.js';
 import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { SONG_TEMPLATES, DRUM_PRESETS, CHORD_PRESETS, CHORD_STYLES, CHORD_INSTRUMENTS, BASS_STYLES, SOLOIST_STYLES } from './presets.js';
@@ -1396,6 +1396,14 @@ function setupUIHandlers() {
                 ui.editorOverlay.classList.remove('active');
             }
         }
+    });
+
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            recalculateScrollOffsets();
+        }, 150);
     });
 }
 
