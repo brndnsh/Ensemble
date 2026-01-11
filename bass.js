@@ -128,6 +128,9 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return { freq, durationMultiplier, velocity, muted, timingOffset };
     };
 
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const isDownbeat = stepInChord % ts.stepsPerBeat === 0;
+
     // --- HARMONIC RESET ---
     // Beat 1 of a chord: Always land on Root or 5th
     if (stepInChord === 0) {
@@ -162,11 +165,9 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- ROCK STYLE (8th Note Pedal) ---
     if (style === 'rock') {
-        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
         const stepInMeasure = step % stepsPerMeasure;
         const beat = Math.floor(stepInMeasure / ts.stepsPerBeat);
-        const isDownbeat = stepInMeasure % ts.stepsPerBeat === 0;
 
         // Palm-muted feel (Cliff Williams / Nate Mendel tightness)
         const dur = 0.7; 
