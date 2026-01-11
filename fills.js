@@ -1,0 +1,96 @@
+// Fill Generation Logic
+// Uses block-based generation and templates for natural sounding fills
+
+export const FILL_TEMPLATES = {
+    'Rock': {
+        low: [
+            // Simple snare hits on 4, 4&
+            { steps: [12, 14], instruments: ['Snare'], velocities: [0.8, 0.7] },
+            // Kick/Snare interplay
+            { steps: [12, 13, 14], instruments: ['Kick', 'Snare', 'Snare'], velocities: [1.0, 0.7, 0.9] }
+        ],
+        medium: [
+            // 8th note build
+            { steps: [8, 10, 12, 14], instruments: ['Snare', 'Snare', 'Snare', 'Snare'], velocities: [0.6, 0.7, 0.8, 0.9] },
+            // Tom-Snare movement (Simulated with Snare/Kick for now as we lack Toms)
+            { steps: [8, 10, 12, 14], instruments: ['Snare', 'Kick', 'Snare', 'Kick'], velocities: [0.8, 1.0, 0.9, 1.1] }
+        ],
+        high: [
+            // 16th note roll
+            { steps: [8, 9, 10, 11, 12, 13, 14, 15], instruments: Array(8).fill('Snare'), velocities: [0.5, 0.4, 0.6, 0.5, 0.7, 0.6, 0.9, 0.8] },
+            // Flam-like accents (using Flam logic if engine supported, or just tight notes)
+            { steps: [0, 2, 4, 6, 8, 10, 12, 14], instruments: ['Kick', 'Crash', 'Snare', 'Snare', 'Kick', 'Crash', 'Snare', 'Kick'], velocities: [1.2, 1.0, 0.9, 0.9, 1.2, 1.0, 1.0, 1.2] }
+        ]
+    },
+    'Funk': {
+        low: [
+            // Ghost note syncopation
+            { steps: [13, 15], instruments: ['Snare', 'Snare'], velocities: [0.3, 0.4] },
+            // Hi-hat open on upbeat
+            { steps: [14], instruments: ['Open'], velocities: [0.8] }
+        ],
+        medium: [
+            // Linear pattern
+            { steps: [12, 13, 14, 15], instruments: ['Kick', 'Snare', 'Kick', 'Snare'], velocities: [0.9, 0.4, 0.9, 0.8] }
+        ],
+        high: [
+            // Syncopated 16ths
+            { steps: [8, 10, 11, 13, 14], instruments: ['Snare', 'Snare', 'Kick', 'Snare', 'Kick'], velocities: [0.9, 0.4, 1.0, 0.9, 1.1] }
+        ]
+    },
+    'Jazz': {
+        low: [
+            // Soft snare comping
+            { steps: [11, 14], instruments: ['Snare', 'Snare'], velocities: [0.4, 0.5] }
+        ],
+        medium: [
+            // Triplet feel on snare (mapped to 16ths roughly or Swing engine handles it)
+            { steps: [8, 11, 14], instruments: ['Snare', 'Snare', 'Snare'], velocities: [0.5, 0.6, 0.7] }
+        ],
+        high: [
+            // Busy snare/kick interaction
+            { steps: [4, 7, 10, 13], instruments: ['Snare', 'Kick', 'Snare', 'Kick'], velocities: [0.7, 0.8, 0.8, 0.9] }
+        ]
+    }
+};
+
+/**
+ * Generates a fill based on genre and intensity.
+ * @param {string} genre - 'Rock', 'Funk', or 'Jazz'
+ * @param {number} intensity - 0.0 to 1.0
+ * @param {number} stepsPerMeasure - Typically 16
+ * @returns {Object} Map of step -> array of {name, vel}
+ */
+export function generateProceduralFill(genre, intensity, stepsPerMeasure) {
+    const fill = {};
+    const templates = FILL_TEMPLATES[genre] || FILL_TEMPLATES['Rock'];
+    
+    let level = 'low';
+    if (intensity > 0.4) level = 'medium';
+    if (intensity > 0.75) level = 'high';
+    
+    const options = templates[level];
+    if (!options || options.length === 0) return fill;
+    
+    // Pick a random template
+    const template = options[Math.floor(Math.random() * options.length)];
+    
+    // Apply template to the LAST beat(s) of the measure
+    // Templates use steps 0-15 relative to a 1-bar measure.
+    // We assume the fill happens at the END of the measure.
+    
+    template.steps.forEach((stepIdx, i) => {
+        const inst = template.instruments[i];
+        const vel = template.velocities[i];
+        
+        if (!fill[stepIdx]) fill[stepIdx] = [];
+        fill[stepIdx].push({ name: inst, vel });
+    });
+    
+    // Crash on the '1' of the NEXT measure is handled by the caller or a separate flag?
+    // Usually fills end with a crash on the next downbeat.
+    // We can signal this by adding a special event at step 'stepsPerMeasure' (16) if we wanted,
+    // but the engine loops at 15. The Crash should be scheduled by the main loop on the next beat 0.
+    
+    return fill;
+}

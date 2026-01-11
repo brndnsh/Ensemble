@@ -553,6 +553,7 @@ export const CHORD_INSTRUMENTS = [
 ];
 
 export const BASS_STYLES = [
+    { id: 'smart', name: 'Smart (Auto)', category: 'Experimental' },
     { id: 'whole', name: 'Whole', category: 'Basic' },
     { id: 'half', name: 'Half', category: 'Basic' },
     { id: 'arp', name: 'Arp (1-3-5-3)', category: 'Basic' },
@@ -567,6 +568,7 @@ export const BASS_STYLES = [
 ];
 
 export const SOLOIST_STYLES = [
+    { id: 'smart', name: 'Smart (Auto)', category: 'Experimental' },
     { id: 'scalar', name: 'Scalar', category: 'Basic' },
     { id: 'shred', name: 'Shreddy', category: 'Rock/Metal' },
     { id: 'blues', name: 'Blues', category: 'Blues' },

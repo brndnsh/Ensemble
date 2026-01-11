@@ -62,6 +62,7 @@ export const ui = {
     saveDrumBtn: document.getElementById('saveDrumBtn'),
     drumVol: document.getElementById('drumVolume'),
     drumReverb: document.getElementById('drumReverb'),
+    smartDrumPresets: document.getElementById('smartDrumPresets'),
     settingsOverlay: document.getElementById('settingsOverlay'),
     settingsBtn: document.getElementById('settingsBtn'),
     closeSettings: document.getElementById('closeSettingsBtn'),
@@ -102,7 +103,12 @@ export const ui = {
     refreshAppBtn: document.getElementById('refreshAppBtn'),
     editorOverlay: document.getElementById('editorOverlay'),
     editArrangementBtn: document.getElementById('editArrangementBtn'),
-    closeEditorBtn: document.getElementById('closeEditorBtn')
+    closeEditorBtn: document.getElementById('closeEditorBtn'),
+    intensitySlider: document.getElementById('intensitySlider'),
+    complexitySlider: document.getElementById('complexitySlider'),
+    intensityValue: document.getElementById('intensityValue'),
+    autoIntensityCheck: document.getElementById('autoIntensityCheck'),
+    complexityValue: document.getElementById('complexityValue')
 };
 
 export function setupPanelMenus() {
@@ -164,6 +170,45 @@ export function initTabs() {
             const targetId = btn.dataset.target;
             const target = document.getElementById(targetId);
             if (target) target.classList.add('active-mobile');
+        });
+    });
+
+    initGrooveTabs();
+}
+
+export function initGrooveTabs() {
+    const tabs = document.querySelectorAll('.groove-tab-btn');
+    const contents = document.querySelectorAll('.groove-tab-content');
+    
+    const activeId = gb.activeTab || 'classic';
+
+    // 1. Restore State
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === activeId));
+    contents.forEach(c => {
+        const isActive = c.id === `groove-tab-${activeId}`;
+        c.classList.toggle('active', isActive);
+        c.style.display = isActive ? 'block' : 'none';
+    });
+
+    // 2. Setup Listeners
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            
+            tab.classList.add('active');
+            const targetId = `groove-tab-${tab.dataset.tab}`;
+            
+            gb.activeTab = tab.dataset.tab;
+            
+            contents.forEach(c => {
+                if (c.id === targetId) {
+                    c.classList.add('active');
+                    c.style.display = 'block';
+                } else {
+                    c.classList.remove('active');
+                    c.style.display = 'none';
+                }
+            });
         });
     });
 }

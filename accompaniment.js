@@ -34,34 +34,66 @@ const COMPING_CELLS = {
 function updateCompingState(step, style, soloistBusy) {
     if (step < compingState.lockedUntil) return;
 
+    const complexity = ctx.complexity || 0.5;
+    const bpm = ctx.bpm || 100;
+
     // DECISION POINT: Every measure (approx)
-    // 1. Determine new Vibe based on Soloist
+    // 1. Determine new Vibe based on Soloist, Complexity & Tempo
     if (soloistBusy) {
         compingState.currentVibe = 'sparse';
         compingState.density = 0.2;
-    } else if (style === 'funk') {
-        // Assertive Funk Logic: Bias towards Active/Syncopated
+    } else if (complexity < 0.35) {
+        // Low Complexity: Stick to the grid, simple patterns
+        compingState.currentVibe = 'balanced';
+        compingState.density = 0.6;
+    } else if (bpm > 160) {
+        // High Tempo: Needs space to breathe, avoid clutter
+        compingState.currentVibe = Math.random() < 0.6 ? 'balanced' : 'sparse';
+        compingState.density = 0.3 + (Math.random() * 0.2); // Max 0.5
+    } else if (bpm < 60) {
+        // Low Tempo: Needs motion to keep time moving
         const r = Math.random();
-        if (r < 0.5) compingState.currentVibe = 'active'; // 50% Active
-        else if (r < 0.85) compingState.currentVibe = 'syncopated'; // 35% Syncopated
+        if (r < 0.4) compingState.currentVibe = 'active';
+        else if (r < 0.8) compingState.currentVibe = 'syncopated';
         else compingState.currentVibe = 'balanced';
-        compingState.density = Math.random() * 0.4 + 0.5; // High density (0.5 - 0.9)
+        compingState.density = 0.6 + (Math.random() * 0.3); // Min 0.6
+    } else if (style === 'funk') {
+        // Assertive Funk Logic (Standard Tempo)
+        const r = Math.random();
+        if (r < 0.5) compingState.currentVibe = 'active'; 
+        else if (r < 0.85) compingState.currentVibe = 'syncopated'; 
+        else compingState.currentVibe = 'balanced';
+        compingState.density = Math.random() * 0.4 + 0.5; 
     } else {
+        // Standard Jazz/Generic
         const r = Math.random();
         if (r < 0.3) compingState.currentVibe = 'active';
         else if (r < 0.6) compingState.currentVibe = 'syncopated';
         else compingState.currentVibe = 'balanced';
-        compingState.density = Math.random() * 0.5 + 0.3; // 0.3 to 0.8
+        compingState.density = Math.random() * 0.5 + 0.3; 
     }
 
     // 2. Select a Cell Pattern
     const pool = COMPING_CELLS[style] || COMPING_CELLS.jazz;
     let candidates = pool;
     
+    // Filter candidates based on vibe and TEMPO constraints
     if (compingState.currentVibe === 'sparse') {
         candidates = pool.filter(c => c.name === 'Bill Evans' || c.name === 'Anticipation');
     } else if (compingState.currentVibe === 'active') {
         candidates = pool.filter(c => c.name !== 'Bill Evans');
+    } else if (compingState.currentVibe === 'balanced' && complexity < 0.35) {
+        candidates = pool.filter(c => c.name === 'Quarter' || c.name === 'Red Garland' || c.name === 'Backbeat' || c.name === 'The One');
+    }
+
+    // Tempo Specific Filtering
+    if (bpm > 160) {
+        // Remove 'Anticipation' (can feel rushed/late at speed)
+        // Remove 'Syncopated' heavy stuff
+        candidates = candidates.filter(c => c.name !== 'Anticipation' && c.name !== 'Syncopated' && c.name !== 'Offbeat');
+    } else if (bpm < 60) {
+        // Remove 'Bill Evans' (too much silence)
+        candidates = candidates.filter(c => c.name !== 'Bill Evans');
     }
 
     if (candidates.length === 0) candidates = pool;
@@ -75,10 +107,11 @@ function updateCompingState(step, style, soloistBusy) {
         if (randomVal <= 0) { selected = c; break; }
     }
 
-    compingState.currentCell = [...selected.pattern]; // Copy to allow mutation
+    compingState.currentCell = [...selected.pattern]; 
 
-    // Laying Out (Silence) - 15% chance in sparse/balanced vibes
-    if ((compingState.currentVibe === 'sparse' || compingState.currentVibe === 'balanced') && Math.random() < 0.15) {
+    // Laying Out (Silence) - Disable at low tempo or low complexity
+    const allowSilence = complexity > 0.4 && bpm > 60;
+    if (allowSilence && (compingState.currentVibe === 'sparse' || compingState.currentVibe === 'balanced') && Math.random() < 0.15) {
         compingState.currentCell = new Array(16).fill(0);
     }
     
@@ -96,6 +129,8 @@ export const chordPatterns = {
      * Analyzes Drum, Bass, and Soloist state to choose the best strategy.
      */
     smart: (chord, time, spb, stepInChord, measureStep, step) => {
+        const complexity = ctx.complexity || 0.5;
+
         // 1. Identify Context
         const drumPresetName = gb.lastDrumPreset || 'Standard';
         const drumConfig = DRUM_PRESETS[drumPresetName] || DRUM_PRESETS['Standard'];
@@ -162,16 +197,16 @@ export const chordPatterns = {
             const cellStep = measureStep % 16;
             let isHit = compingState.currentCell[cellStep] === 1;
 
-            // Mutation: 10% chance to flip the script for variation
-            // Mutation: Asymmetric (Favors space over clutter)
-            if (isHit) {
-                if (Math.random() < 0.1) isHit = false; // 10% chance to ghost/skip
-            } else {
-                if (Math.random() < 0.03) isHit = true; // Only 3% chance to add a random hit
+            // Mutation: 10% chance to flip the script for variation (Only if complexity is high enough)
+            if (complexity > 0.4) {
+                if (isHit) {
+                    if (Math.random() < 0.1) isHit = false; 
+                } else {
+                    if (Math.random() < 0.03) isHit = true; 
+                }
+                // Anticipation: Push the next bar? (On the 'a' of 4)
+                if (cellStep === 14 && Math.random() < 0.2) isHit = true;
             }
-
-            // Anticipation: Push the next bar? (On the 'a' of 4)
-            if (cellStep === 14 && Math.random() < 0.2) isHit = true;
 
             if (isHit) {
                 // Check interlock: Don't step on Bass One if vibe is Sparse
@@ -189,15 +224,15 @@ export const chordPatterns = {
                 // Texture: Randomly thin the chord for percussive guitar feel
                 // Funk players often hit just the top 1-2 strings on syncopations
                 let stepVoicing = voicing;
-                if (Math.random() < 0.3 && stepVoicing.length > 1) { // Reduced thinning prob from 0.5 to 0.3
+                if (Math.random() < 0.3 && stepVoicing.length > 1) { 
                     const keep = Math.random() < 0.5 ? 1 : 2;
                     stepVoicing = stepVoicing.slice(-keep); 
                 }
 
-                stepVoicing.forEach((f, i) => playNote(f, time, dur, { vol: 0.32, index: i })); // Increased vol from 0.22
+                stepVoicing.forEach((f, i) => playNote(f, time, dur, { vol: 0.32, index: i })); 
             } else {
-                // Ghost note scratches (percolation)
-                if (compingState.currentVibe === 'active' && Math.random() < 0.1) {
+                // Ghost note scratches (percolation) - Only at higher complexity
+                if (complexity > 0.4 && compingState.currentVibe === 'active' && Math.random() < 0.1) {
                     playChordScratch(time, spb * 0.05);
                 }
             }
@@ -211,28 +246,27 @@ export const chordPatterns = {
             const cellStep = measureStep % 16;
             let isHit = compingState.currentCell[cellStep] === 1;
 
-            // Mutation: 10% chance to flip
-            // Mutation: Asymmetric (Favors space over clutter)
-            if (isHit) {
-                if (Math.random() < 0.1) isHit = false; // 10% chance to ghost/skip
-            } else {
-                if (Math.random() < 0.03) isHit = true; // Only 3% chance to add a random hit
+            // Mutation (Only if complexity is high enough)
+            if (complexity > 0.4) {
+                if (isHit) {
+                    if (Math.random() < 0.1) isHit = false; 
+                } else {
+                    if (Math.random() < 0.03) isHit = true; 
+                }
+                // Anticipation: Classic Jazz Push on the 'and' of 4 (step 14)
+                if (cellStep === 14 && Math.random() < 0.3) isHit = true;
             }
-
-            // Anticipation: Classic Jazz Push on the 'and' of 4 (step 14)
-            if (cellStep === 14 && Math.random() < 0.3) isHit = true;
 
             if (isHit) {
                 // Velocity nuance: "and" of beats are often accented in jazz (Charleston feel)
                 const isUpbeat = (measureStep % 4) !== 0; 
-                const vol = isUpbeat ? 0.32 : 0.24; // Increased from 0.22/0.16
-                const dur = isUpbeat ? spb * 0.4 : spb * 0.8; // Short stabs vs long pads
+                const vol = isUpbeat ? 0.32 : 0.24; 
+                const dur = isUpbeat ? spb * 0.4 : spb * 0.8; 
 
                 // Texture: Vary density (Shell vs Full)
                 let stepVoicing = voicing;
                 if (Math.random() < 0.4 && stepVoicing.length > 2) {
                      // Shell Voicing: Play outer voices (Bottom + Top)
-                     // Creates a more open, modern sound on quick hits
                      stepVoicing = [stepVoicing[0], stepVoicing[stepVoicing.length - 1]];
                 }
 

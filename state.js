@@ -22,6 +22,9 @@
  * @property {boolean} isDrawing - Whether the visualizer loop is active.
  * @property {string} theme - The current UI theme ('auto', 'light', 'dark').
  * @property {WakeLockSentinel|null} wakeLock - The screen wake lock object.
+ * @property {number} bandIntensity - Global band intensity/energy level (0.0 - 1.0).
+ * @property {number} complexity - Global complexity level (0.0 - 1.0).
+ * @property {boolean} autoIntensity - Whether the intensity automatically drifts over time.
  */
 export const ctx = {
     audio: null,
@@ -45,7 +48,10 @@ export const ctx = {
     countInBeat: 0,
     isDrawing: false,
     theme: 'auto',
-    wakeLock: null
+    wakeLock: null,
+    bandIntensity: 0.5, // The 'Conductor' signal for global energy
+    complexity: 0.3,
+    autoIntensity: false
 };
 
 /**
@@ -137,6 +143,9 @@ export const cb = {
  * @property {string} lastDrumPreset - Name of the last loaded drum preset.
  * @property {Object} audioBuffers - Cache for decoded drum samples.
  * @property {Array<Array<HTMLElement>>} cachedSteps - DOM cache for sequencer grid.
+ * @property {string} genreFeel - Active genre for procedural nuances ('Rock', 'Jazz', 'Funk').
+ * @property {boolean} fillActive - Whether a drum fill is currently being played.
+ * @property {Object} fillSteps - Transient storage for the generated fill pattern.
  */
 export const gb = {
     enabled: true,
@@ -156,7 +165,11 @@ export const gb = {
     swingSub: '8th',
     lastDrumPreset: 'Standard',
     audioBuffers: {},
-    cachedSteps: [] 
+    cachedSteps: [],
+    genreFeel: 'Rock',
+    fillActive: false,
+    fillSteps: {},
+    activeTab: 'classic'
 };
 
 /**

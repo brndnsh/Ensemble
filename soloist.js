@@ -1,5 +1,5 @@
 import { getFrequency, getMidi } from './utils.js';
-import { sb, cb, ctx, arranger } from './state.js';
+import { sb, cb, ctx, arranger, gb } from './state.js';
 import { KEY_ORDER, TIME_SIGNATURES } from './config.js';
 
 /**
@@ -129,6 +129,11 @@ function getScaleForChord(chord, style) {
 
 export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 72, style = 'scalar', stepInChord = 0, bassFreq = null) {
     if (!currentChord) return null;
+
+    if (style === 'smart') {
+        const mapping = { 'Rock': 'shred', 'Jazz': 'bird', 'Funk': 'blues', 'Blues': 'blues', 'Neo-Soul': 'neo' };
+        style = mapping[gb.genreFeel] || 'scalar';
+    }
     
     const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;
     const tsConfig = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
@@ -138,6 +143,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const measureStep = step % stepsPerMeasure;
     const stepInBeat = measureStep % stepsPerBeat;
     const beatInMeasure = Math.floor(measureStep / stepsPerBeat);
+    const intensity = ctx.bandIntensity || 0.5;
     
     // --- 1. Cycle & Tension Tracking ---
     
@@ -172,14 +178,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // Tempo Scaling: Faster tempo = measures fly by = need to breathe "sooner" in bar count
     const tempoBreathFactor = Math.max(0, (ctx.bpm - 120) * 0.003); 
     
-    let restProb = config.restBase + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
+    // Intensity Scaling: High intensity = fewer rests (more aggressive playing)
+    let restProb = (config.restBase * (1.5 - intensity)) + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
+    restProb = Math.max(0.05, restProb);
     
     // Force resolve/breath at end of cycle?
     if (cycleStep > stepsPerCycle - 4) restProb += 0.5;
 
     // If we are currently resting
     if (sb.isResting) {
-        if (Math.random() < 0.4) { // Chance to start phrase
+        if (Math.random() < 0.4 + (intensity * 0.3)) { // Higher chance to restart phrase at high intensity
             sb.isResting = false;
             sb.currentPhraseSteps = 0;
             
@@ -299,8 +307,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         const scaleIntervals = getScaleForChord(currentChord, style);
         const scaleTones = scaleIntervals.map(i => rootMidi + i);
         
-        // Use the style-specific 'registerSoar' value instead of hardcoded 5
-        const dynamicCenter = centerMidi + Math.floor(sb.tension * config.registerSoar);
+        // Use the style-specific 'registerSoar' value scaled by Intensity
+        const soarAmount = config.registerSoar * (0.5 + intensity); // e.g. 5 * 1.5 = 7.5
+        const dynamicCenter = centerMidi + Math.floor(sb.tension * soarAmount);
         
         const minMidi = dynamicCenter - 15; // Reduced range
         const maxMidi = dynamicCenter + 15;

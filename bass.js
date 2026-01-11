@@ -1,5 +1,5 @@
 import { getFrequency, getMidi } from './utils.js';
-import { arranger, cb, bb, sb, ctx } from './state.js';
+import { arranger, cb, bb, sb, ctx, gb } from './state.js';
 import { KEY_ORDER, TIME_SIGNATURES } from './config.js';
 
 /**
@@ -33,7 +33,10 @@ function getScaleForBass(chord, nextChord, isMinor = false) {
  * Generates a frequency for a bass line.
  */
 export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 41, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0, isMinor = false) {
-    if (!currentChord) return null;
+    if (style === 'smart') {
+        const mapping = { 'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo' };
+        style = mapping[gb.genreFeel] || 'rock';
+    }
 
     // --- Structural Energy Mapping (Intensity) ---
     const loopStep = step % (arranger.totalSteps || 1);
@@ -467,6 +470,10 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
  * Determines if the bass should play at a specific step.
  */
 export function isBassActive(style, step, stepInChord) {
+    if (style === 'smart') {
+        const mapping = { 'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo' };
+        style = mapping[gb.genreFeel] || 'rock';
+    }
     if (style === 'whole') return stepInChord === 0;
     if (style === 'half') return stepInChord % 8 === 0;
     if (style === 'arp') return stepInChord % 4 === 0;
