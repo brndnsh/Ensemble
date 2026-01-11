@@ -24,6 +24,7 @@ function createReverbImpulse(audioCtx, duration = 2.0, decay = 2.0) {
 
 /**
  * Creates a soft-clipping curve for the WaveShaperNode.
+ * Currently set to linear for troubleshooting.
  * @returns {Float32Array}
  */
 function createSoftClipCurve() {
@@ -31,8 +32,9 @@ function createSoftClipCurve() {
     const curve = new Float32Array(n_samples);
     for (let i = 0; i < n_samples; ++i) {
         const x = (i * 2) / n_samples - 1;
-        // Cubic soft saturation curve
-        curve[i] = (3 * x - x * x * x) / 2;
+        // Restore professional "Analog Glue" curve (normalized cubic)
+        // f(x) = x - x^3/3
+        curve[i] = x - (Math.pow(x, 3) / 3);
     }
     return curve;
 }
@@ -51,25 +53,30 @@ export function initAudio() {
         ctx.audio = new (window.AudioContext || window.webkitAudioContext)();
 
         ctx.masterGain = ctx.audio.createGain();
-        ctx.masterGain.gain.value = parseFloat(ui.masterVol.value);
+        // Use smooth ramping instead of direct assignment to prevent clicks
+        const initMasterVol = parseFloat(ui.masterVol.value) || 0.5;
+        ctx.masterGain.gain.setValueAtTime(0.0001, ctx.audio.currentTime);
+        ctx.masterGain.gain.exponentialRampToValueAtTime(initMasterVol, ctx.audio.currentTime + 0.04);
         
-        // 1. Master Soft-Clipper (Analog Glue & Safety)
-        ctx.limiter = ctx.audio.createWaveShaper();
-        ctx.limiter.curve = createSoftClipCurve();
-        ctx.limiter.oversample = '4x';
+        // 1. Master Soft-Clipper (Analog Glue)
+        ctx.saturator = ctx.audio.createWaveShaper();
+        ctx.saturator.curve = createSoftClipCurve();
+        ctx.saturator.oversample = '4x';
 
-        ctx.compressor = ctx.audio.createDynamicsCompressor();
-        // Relaxed settings: higher threshold, lower ratio, faster release
-        ctx.compressor.threshold.setValueAtTime(-15, ctx.audio.currentTime);
-        ctx.compressor.knee.setValueAtTime(30, ctx.audio.currentTime);
-        ctx.compressor.ratio.setValueAtTime(4, ctx.audio.currentTime);
-        ctx.compressor.attack.setValueAtTime(0.003, ctx.audio.currentTime); 
-        ctx.compressor.release.setValueAtTime(0.1, ctx.audio.currentTime); 
+        // 2. Master Limiter (Professional Mastering Standard)
+        ctx.masterLimiter = ctx.audio.createDynamicsCompressor();
+        ctx.masterLimiter.threshold.setValueAtTime(-0.5, ctx.audio.currentTime);
+        // Soft knee (30dB) to prevent "snapping" into compression
+        ctx.masterLimiter.knee.setValueAtTime(30, ctx.audio.currentTime);
+        ctx.masterLimiter.ratio.setValueAtTime(20, ctx.audio.currentTime);
+        ctx.masterLimiter.attack.setValueAtTime(0.005, ctx.audio.currentTime); 
+        // Release increased to 500ms to ensure gain recovery is transparent and non-rhythmic
+        ctx.masterLimiter.release.setValueAtTime(0.5, ctx.audio.currentTime); 
         
-        // Signal Chain: MasterGain -> Limiter -> Compressor -> Destination
-        ctx.masterGain.connect(ctx.limiter);
-        ctx.limiter.connect(ctx.compressor);
-        ctx.compressor.connect(ctx.audio.destination);
+        // Signal Chain: MasterGain -> Saturator -> Limiter -> Destination
+        ctx.masterGain.connect(ctx.saturator);
+        ctx.saturator.connect(ctx.masterLimiter);
+        ctx.masterLimiter.connect(ctx.audio.destination);
 
         // Reverb setup
         ctx.reverbNode = ctx.audio.createConvolver();
@@ -86,24 +93,51 @@ export function initAudio() {
 
         modules.forEach(m => {
             const gainNode = ctx.audio.createGain();
-            gainNode.gain.value = m.state.volume * m.mult;
+            // Start silent and ramp up to initial volume
+            const targetGain = Math.max(0.0001, m.state.volume * m.mult);
+            gainNode.gain.setValueAtTime(0.0001, ctx.audio.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(targetGain, ctx.audio.currentTime + 0.04);
             
-            // 3. Mix Glue: EQ for Chords
+            // Mix Glue: EQ for Chords
             if (m.name === 'chords') {
                 const hp = ctx.audio.createBiquadFilter();
                 hp.type = 'highpass';
-                hp.frequency.value = 180; // Clear room for Bass
+                hp.frequency.setValueAtTime(180, ctx.audio.currentTime); // Clear room for Bass
                 
                 const notch = ctx.audio.createBiquadFilter();
                 notch.type = 'peaking';
-                notch.frequency.value = 2500;
-                notch.Q.value = 0.7;
-                notch.gain.value = -4; // Clear room for Soloist bite
+                notch.frequency.setValueAtTime(2500, ctx.audio.currentTime);
+                notch.Q.setValueAtTime(0.7, ctx.audio.currentTime);
+                notch.gain.setValueAtTime(-4, ctx.audio.currentTime); // Clear room for Soloist bite
                 
                 gainNode.connect(hp);
                 hp.connect(notch);
                 notch.connect(ctx.masterGain);
-                ctx.chordsEQ = hp; // Reference if needed
+                ctx.chordsEQ = hp;
+            } else if (m.name === 'bass') {
+                // Global Bass EQ Chain (Optimized: only create once)
+                const weight = ctx.audio.createBiquadFilter();
+                weight.type = 'lowshelf';
+                weight.frequency.setValueAtTime(100, ctx.audio.currentTime);
+                weight.gain.setValueAtTime(2, ctx.audio.currentTime);
+
+                const scoop = ctx.audio.createBiquadFilter();
+                scoop.type = 'peaking';
+                scoop.frequency.setValueAtTime(500, ctx.audio.currentTime);
+                scoop.Q.setValueAtTime(0.8, ctx.audio.currentTime);
+                scoop.gain.setValueAtTime(-10, ctx.audio.currentTime);
+
+                const definition = ctx.audio.createBiquadFilter();
+                definition.type = 'peaking';
+                definition.frequency.setValueAtTime(2500, ctx.audio.currentTime);
+                definition.Q.setValueAtTime(1.2, ctx.audio.currentTime);
+                definition.gain.setValueAtTime(3, ctx.audio.currentTime);
+
+                gainNode.connect(weight);
+                weight.connect(scoop);
+                scoop.connect(definition);
+                definition.connect(ctx.masterGain);
+                ctx.bassEQ = weight; // Reference start of chain
             } else {
                 gainNode.connect(ctx.masterGain);
             }
@@ -111,7 +145,9 @@ export function initAudio() {
             ctx[`${m.name}Gain`] = gainNode;
 
             const reverbGain = ctx.audio.createGain();
-            reverbGain.gain.value = m.state.reverb;
+            const targetReverb = Math.max(0.0001, m.state.reverb);
+            reverbGain.gain.setValueAtTime(0.0001, ctx.audio.currentTime);
+            reverbGain.gain.exponentialRampToValueAtTime(targetReverb, ctx.audio.currentTime + 0.04);
             gainNode.connect(reverbGain);
             reverbGain.connect(ctx.reverbNode);
             ctx[`${m.name}Reverb`] = reverbGain;
@@ -122,9 +158,44 @@ export function initAudio() {
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
         gb.audioBuffers.noise = buffer;
+
+        // Diagnostic log
+        console.log(`[DSP] Audio Context Initialized: SampleRate=${ctx.audio.sampleRate}, Latency=${(ctx.audio.baseLatency * 1000).toFixed(1)}ms`);
     }
     if (ctx.audio.state === 'suspended') ctx.audio.resume();
 }
+
+/**
+ * Diagnostic: Monitors the master limiter's gain reduction.
+ */
+export function monitorMasterLimiter() {
+    if (ctx.masterLimiter && ctx.masterLimiter.reduction.value < -0.1) {
+        console.log(`[DSP] Master Limiting: ${ctx.masterLimiter.reduction.value.toFixed(2)}dB`);
+    }
+}
+
+/**
+ * Diagnostic: Bypasses the visual updates to isolate UI-induced audio glitches.
+ */
+window.bypassVisuals = (shouldBypass) => {
+    ctx.isDrawing = !shouldBypass;
+    console.log(`[DSP] Visual Updates ${shouldBypass ? 'DISABLED' : 'ENABLED'}`);
+};
+
+/**
+ * Diagnostic: Bypasses the mastering chain (Saturator + Limiter).
+ */
+window.bypassMaster = (shouldBypass) => {
+    if (!ctx.audio || !ctx.masterGain) return;
+    ctx.masterGain.disconnect();
+    if (shouldBypass) {
+        ctx.masterGain.connect(ctx.audio.destination);
+        console.log("[DSP] Master Chain BYPASSED");
+    } else {
+        ctx.masterGain.connect(ctx.saturator);
+        console.log("[DSP] Master Chain ACTIVE");
+    }
+};
 
 /**
  * Safely disconnects multiple Web Audio nodes.
@@ -227,6 +298,10 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         // Scale base volume by instrument-specific multiplier
         const baseVol = vol * (preset.gainMult || 1.0);
         const randomizedVol = baseVol * (0.95 + Math.random() * 0.1);
+
+        // Volume safety threshold: don't trigger DSP for near-silent notes
+        if (randomizedVol < 0.005) return;
+
         const gainNode = ctx.audio.createGain();
         
         // 2. Stereophony: Frequency-based panning (Lows Left, Highs Right)
@@ -277,10 +352,10 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         }
 
         // Envelopes: Attack -> Sustain -> Decay
+        gainNode.gain.value = 0;
         gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(randomizedVol, attackEnd);
-        gainNode.gain.setValueAtTime(randomizedVol, sustainEnd);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, releaseTime);
+        gainNode.gain.setTargetAtTime(randomizedVol, startTime, 0.005);
+        gainNode.gain.setTargetAtTime(0, sustainEnd, 0.1); 
 
         // Connections
         oscs.forEach(o => o.gain.connect(filter));
@@ -308,16 +383,18 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
             const click = ctx.audio.createOscillator();
             const clickGain = ctx.audio.createGain();
             click.type = 'sine';
-            // Lowered frequency multiplier (from 4.1 to 3.2) for a more "wooden" feel
             click.frequency.setValueAtTime(freq * (muted ? 1.2 : 3.2), startTime);
-            clickGain.gain.setValueAtTime(0, startTime);
-            // Lowered click volume (from 0.4 to 0.25)
-            clickGain.gain.linearRampToValueAtTime(randomizedVol * 0.25, startTime + 0.002);
-            clickGain.gain.exponentialRampToValueAtTime(0.001, startTime + (muted ? 0.03 : 0.08));
+            
+            const clickVol = randomizedVol * 0.25;
+            clickGain.gain.value = 0;
+            clickGain.gain.setTargetAtTime(clickVol, startTime, 0.002);
+            // Smoothly decay to silence by 150ms
+            clickGain.gain.setTargetAtTime(0, startTime + 0.02, 0.03);
+            
             click.connect(clickGain);
             clickGain.connect(panNode);
             click.start(startTime);
-            click.stop(startTime + 0.15);
+            click.stop(startTime + 0.5); // Ring out
             click.onended = () => safeDisconnect([click, clickGain]);
         }
 
@@ -356,16 +433,17 @@ export function playChordScratch(time, vol = 0.1) {
         filter.frequency.setValueAtTime(1200 + Math.random() * 400, time);
         filter.Q.setValueAtTime(1.5, time);
         
+        gain.gain.value = 0;
         gain.gain.setValueAtTime(0, time);
-        gain.gain.linearRampToValueAtTime(randomizedVol, time + 0.005);
-        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+        gain.gain.setTargetAtTime(randomizedVol, time, 0.005);
+        gain.gain.setTargetAtTime(0, time + 0.02, 0.02);
         
         noise.connect(filter);
         filter.connect(gain);
         gain.connect(ctx.chordsGain);
         
         noise.start(time);
-        noise.stop(time + 0.05);
+        noise.stop(time + 0.2);
         
         noise.onended = () => safeDisconnect([gain, filter, noise]);
     } catch (e) { console.error("playChordScratch error:", e); }
@@ -375,115 +453,110 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
     if (!Number.isFinite(freq) || !Number.isFinite(time) || !Number.isFinite(duration)) return;
     if (freq < 10 || freq > 24000) return;
     try {
-            // Boosted volume multiplier for better mix presence, mixed with input velocity
-            const vol = 1.1 * velocity * (0.95 + Math.random() * 0.1);
-            // Allow slight tonal bleed for muted notes for realism
-            const tonalVol = muted ? vol * 0.2 : vol;
+        const now = ctx.audio.currentTime;
+        const startTime = Math.max(time, now);
         
-            // Body (Fundamental + warmth)
-    const oscBody = ctx.audio.createOscillator();
-    oscBody.type = 'triangle';
-    oscBody.frequency.setValueAtTime(freq, time);
+        // Boosted volume multiplier for better mix presence, mixed with input velocity
+        const vol = 1.1 * velocity * (0.95 + Math.random() * 0.1);
+        
+        // Volume safety threshold: don't trigger DSP for near-silent notes
+        if (vol < 0.005) return;
 
-    // Growl/String character (Harmonics)
-    const oscGrowl = ctx.audio.createOscillator();
-    oscGrowl.type = 'sawtooth';
-    oscGrowl.frequency.setValueAtTime(freq, time);
-    const growlGain = ctx.audio.createGain();
-    growlGain.gain.setValueAtTime(tonalVol * 0.4, time);
-    growlGain.gain.exponentialRampToValueAtTime(0.001, time + duration * 1.2);
-
-    const growlFilter = ctx.audio.createBiquadFilter();
-    growlFilter.type = 'lowpass';
-    // Dynamic brightness based on velocity
-    const dynamicCutoff = 800 + (vol * 1500); 
-    growlFilter.frequency.setValueAtTime(dynamicCutoff, time);
-    growlFilter.Q.setValueAtTime(2, time);
-
-    // Percussive Thump (Finger/Pick noise)
-    const thump = ctx.audio.createBufferSource();
-    thump.buffer = gb.audioBuffers.noise;
-    const thumpFilter = ctx.audio.createBiquadFilter();
-    thumpFilter.type = 'lowpass';
-    thumpFilter.frequency.setValueAtTime(1500, time);
-    const thumpGain = ctx.audio.createGain();
-    const thumpTargetVol = vol * (muted ? 0.4 : 0.2);
-    thumpGain.gain.setValueAtTime(0, time);
-    thumpGain.gain.linearRampToValueAtTime(thumpTargetVol, time + 0.002);
-    thumpGain.gain.exponentialRampToValueAtTime(0.001, time + (muted ? 0.03 : 0.04));
-    thump.connect(thumpFilter);
-    thumpFilter.connect(thumpGain);
+        // Allow slight tonal bleed for muted notes for realism
+        const tonalVol = muted ? vol * 0.2 : vol;
     
-    // EQ Chain
-    const weight = ctx.audio.createBiquadFilter();
-    weight.type = 'lowshelf';
-    weight.frequency.setValueAtTime(100, time);
-    weight.gain.setValueAtTime(2, time);
+        // Body (Fundamental + warmth)
+        const oscBody = ctx.audio.createOscillator();
+        oscBody.type = 'triangle';
+        oscBody.frequency.setValueAtTime(freq, startTime);
 
-    const scoop = ctx.audio.createBiquadFilter();
-    scoop.type = 'peaking';
-    scoop.frequency.setValueAtTime(500, time);
-    scoop.Q.setValueAtTime(0.8, time);
-    scoop.gain.setValueAtTime(-10, time);
+        // Growl/String character (Harmonics)
+        const oscGrowl = ctx.audio.createOscillator();
+        oscGrowl.type = 'sawtooth';
+        oscGrowl.frequency.setValueAtTime(freq, startTime);
+        const growlGain = ctx.audio.createGain();
+        growlGain.gain.setTargetAtTime(tonalVol * 0.4, startTime, 0.005);
+        growlGain.gain.setTargetAtTime(0, startTime + duration * 0.5, 0.1);
 
-    const definition = ctx.audio.createBiquadFilter();
-    definition.type = 'peaking';
-    definition.frequency.setValueAtTime(2500, time);
-    definition.Q.setValueAtTime(1.2, time);
-    definition.gain.setValueAtTime(3, time);
+        const growlFilter = ctx.audio.createBiquadFilter();
+        growlFilter.type = 'lowpass';
+        // Dynamic brightness based on velocity
+        const dynamicCutoff = 800 + (vol * 1500); 
+        growlFilter.frequency.setTargetAtTime(dynamicCutoff, startTime, 0.01);
+        growlFilter.Q.setValueAtTime(2, startTime);
 
-    const mainFilter = ctx.audio.createBiquadFilter();
-    mainFilter.type = 'lowpass';
-    // Dynamic filter envelope for punch
-    mainFilter.frequency.setValueAtTime(1000 + (tonalVol * 2000), time);
-    mainFilter.frequency.exponentialRampToValueAtTime(600, time + duration);
+        // Percussive Thump (Finger/Pick noise)
+        const thump = ctx.audio.createBufferSource();
+        thump.buffer = gb.audioBuffers.noise;
+        const thumpFilter = ctx.audio.createBiquadFilter();
+        thumpFilter.type = 'lowpass';
+        // Lowered to 600Hz to prevent audible high-frequency clicks
+        thumpFilter.frequency.setValueAtTime(600, startTime);
+        const thumpGain = ctx.audio.createGain();
+        const thumpTargetVol = vol * (muted ? 0.4 : 0.2);
+        
+        // Use smooth curves for the thump too
+        thumpGain.gain.value = 0;
+        thumpGain.gain.setTargetAtTime(thumpTargetVol, startTime, 0.002);
+        thumpGain.gain.setTargetAtTime(0, startTime + 0.02, 0.01);
+        
+        thump.connect(thumpFilter);
+        thumpFilter.connect(thumpGain);
+        
+        const mainFilter = ctx.audio.createBiquadFilter();
+        mainFilter.type = 'lowpass';
+        // Continuous Curve for Filter Sweep
+        const targetCutoff = 1000 + (tonalVol * 2000);
+        mainFilter.frequency.setValueAtTime(targetCutoff, startTime);
+        mainFilter.frequency.setTargetAtTime(600, startTime + 0.02, duration * 0.5);
 
-    const gain = ctx.audio.createGain();
-    gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(tonalVol, time + 0.005);
-    const tonalDecay = muted ? 0.08 : (duration * 1.5);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + tonalDecay);
+        const gain = ctx.audio.createGain();
+        // Initialize to 0 to prevent snap from default 1.0
+        gain.gain.value = 0;
+        gain.gain.setValueAtTime(0, startTime);
+        // Smooth 10ms attack
+        gain.gain.setTargetAtTime(tonalVol, startTime, 0.01);
+        
+        const sustainDuration = (muted ? 0.02 : duration * 0.2);
+        const sustainEnd = startTime + sustainDuration;
+        
+        // Single smooth exponential decay. 
+        // 50ms time constant means it's effectively silent (-60dB) after 250ms.
+        // This avoids any "corners" caused by mixing ramp types.
+        gain.gain.setTargetAtTime(0, sustainEnd, 0.05);
 
-    oscBody.connect(mainFilter);
-    oscGrowl.connect(growlFilter);
-    growlFilter.connect(growlGain);
-    growlGain.connect(mainFilter);
-    
-    thumpGain.connect(gain);
-    mainFilter.connect(weight);
-    weight.connect(scoop);
-    scoop.connect(definition);
-    definition.connect(gain);
-    gain.connect(ctx.bassGain);
+        oscBody.connect(mainFilter);
+        oscGrowl.connect(growlFilter);
+        growlFilter.connect(growlGain);
+        growlGain.connect(mainFilter);
+        
+        thumpGain.connect(gain);
+        mainFilter.connect(gain);
+        gain.connect(ctx.bassGain);
 
-    // Monophonic Cutoff: Stop previous bass note if it's still ringing
-    if (bb.lastBassGain) {
-        try {
-            const t = time;
-            const g = bb.lastBassGain.gain;
-            // Use cancelAndHoldAtTime to avoid volume jumps (clicks) by starting fade from current computed value
-            if (g.cancelAndHoldAtTime) {
-                g.cancelAndHoldAtTime(t);
-            } else {
-                g.cancelScheduledValues(t);
-            }
-            // Linear fade out over 5ms to match the attack of the new note (symmetrical crossfade)
-            g.linearRampToValueAtTime(0, t + 0.005);
-        } catch (e) {
-            // Ignore errors if previous node is already gone/disconnected
+        // Monophonic Cutoff: Stop previous bass note if it's still ringing
+        if (bb.lastBassGain && bb.lastBassGain !== gain) {
+            try {
+                const g = bb.lastBassGain.gain;
+                const fadeOutStart = startTime;
+                g.cancelScheduledValues(fadeOutStart);
+                // Exponentially fade current note to zero
+                g.setTargetAtTime(0, fadeOutStart, 0.005);
+            } catch (e) {}
         }
-    }
-    bb.lastBassGain = gain;
+        bb.lastBassGain = gain;
 
-    oscBody.start(time);
-    oscGrowl.start(time);
-    thump.start(time);
-    
-    oscBody.stop(time + duration * 1.5 + 0.1);
-    oscGrowl.stop(time + duration * 1.5 + 0.1);
-    thump.stop(time + 0.05);
-    
-    oscBody.onended = () => safeDisconnect([gain, definition, scoop, weight, mainFilter, growlFilter, growlGain, thumpGain, thumpFilter, oscBody, oscGrowl, thump]);
+        oscBody.start(startTime);
+        oscGrowl.start(startTime);
+        thump.start(startTime);
+        
+        // Stop time is generous to allow for exponential decay tails
+        const stopTime = startTime + duration + 1.0;
+        oscBody.stop(stopTime);
+        oscGrowl.stop(stopTime);
+        thump.stop(startTime + 0.1);
+        
+        oscBody.onended = () => safeDisconnect([gain, mainFilter, growlFilter, growlGain, thumpGain, thumpFilter, oscBody, oscGrowl, thump]);
     } catch (e) {
         console.error("playBassNote error:", e, { freq, time, duration });
     }
@@ -573,12 +646,12 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     const baseAttack = style === 'shred' ? 0.005 : 0.015;
     const attack = Math.min(baseAttack, duration * 0.25);
     
+    gain.gain.value = 0;
     gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(randomizedVol, time + attack); 
-    gain.gain.exponentialRampToValueAtTime(randomizedVol * 0.8, time + duration * 0.5);
+    gain.gain.setTargetAtTime(randomizedVol, time, attack); 
     
     const releaseTime = duration * (style === 'minimal' ? 1.5 : 1.1);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + releaseTime);
+    gain.gain.setTargetAtTime(0, time + duration * 0.5, 0.1);
 
     osc1.connect(filter);
     osc2.connect(filter);
@@ -637,8 +710,9 @@ export function playDrumSound(name, time, velocity = 1.0) {
         beater.type = 'sine';
         beater.frequency.setValueAtTime(4000 * rr(), time);
         beater.frequency.exponentialRampToValueAtTime(200, time + 0.005);
-        beaterGain.gain.setValueAtTime(vol * 0.4, time);
-        beaterGain.gain.exponentialRampToValueAtTime(0.001, time + 0.01);
+        beaterGain.gain.value = 0;
+        beaterGain.gain.setTargetAtTime(vol * 0.4, time, 0.001);
+        beaterGain.gain.setTargetAtTime(0, time + 0.005, 0.005);
         beater.connect(beaterGain);
         beaterGain.connect(ctx.drumsGain);
 
@@ -648,15 +722,16 @@ export function playDrumSound(name, time, velocity = 1.0) {
         body.type = 'triangle';
         body.frequency.setValueAtTime(150 * rr(), time);
         body.frequency.exponentialRampToValueAtTime(50, time + 0.05);
-        bodyGain.gain.setValueAtTime(vol, time);
-        bodyGain.gain.exponentialRampToValueAtTime(0.001, time + kickDecay);
+        bodyGain.gain.value = 0;
+        bodyGain.gain.setTargetAtTime(vol, time, 0.002);
+        bodyGain.gain.setTargetAtTime(0, time + 0.02, 0.1); 
         body.connect(bodyGain);
         bodyGain.connect(ctx.drumsGain);
 
         beater.start(time);
-        beater.stop(time + 0.01);
+        beater.stop(time + 0.1);
         body.start(time);
-        body.stop(time + kickDecay);
+        body.stop(time + 1.0);
         
         body.onended = () => safeDisconnect([beater, beaterGain, body, bodyGain]);
 
@@ -673,8 +748,9 @@ export function playDrumSound(name, time, velocity = 1.0) {
         tone2.type = 'sine';
         tone1.frequency.setValueAtTime(180 * rr(), time);
         tone2.frequency.setValueAtTime(330 * rr(), time);
-        toneGain.gain.setValueAtTime(vol * 0.5, time);
-        toneGain.gain.exponentialRampToValueAtTime(0.01, time + toneDecay);
+        toneGain.gain.value = 0;
+        toneGain.gain.setTargetAtTime(vol * 0.5, time, 0.001);
+        toneGain.gain.setTargetAtTime(0, time + 0.01, 0.05);
         tone1.connect(toneGain);
         tone2.connect(toneGain);
         toneGain.connect(ctx.drumsGain);
@@ -689,15 +765,12 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const centerFreq = 1500 + (velocity * 1000);
         const finalFreq = centerFreq * rr();
         
-        // Firefox Fix: Explicitly set .value to ensure filter state is correct
-        noiseFilter.frequency.value = finalFreq;
         noiseFilter.frequency.setValueAtTime(finalFreq, time);
-        
-        noiseFilter.Q.value = 1.2;
         noiseFilter.Q.setValueAtTime(1.2, time);
         
-        noiseGain.gain.setValueAtTime(vol, time);
-        noiseGain.gain.exponentialRampToValueAtTime(0.01, time + wireDecay);
+        noiseGain.gain.value = 0;
+        noiseGain.gain.setTargetAtTime(vol, time, 0.001);
+        noiseGain.gain.setTargetAtTime(0, time + 0.01, 0.08);
         noise.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(ctx.drumsGain);
@@ -705,9 +778,11 @@ export function playDrumSound(name, time, velocity = 1.0) {
         tone1.start(time);
         tone2.start(time);
         noise.start(time);
-        tone1.stop(time + toneDecay);
-        tone2.stop(time + toneDecay);
-        noise.stop(time + wireDecay);
+        tone1.stop(time + 0.5);
+        tone2.stop(time + 0.5);
+        noise.stop(time + 0.5);
+        
+        noise.onended = () => safeDisconnect([tone1, tone2, toneGain, noise, noiseFilter, noiseGain]);
         
         noise.onended = () => safeDisconnect([tone1, tone2, toneGain, noise, noiseFilter, noiseGain]);
 
@@ -732,9 +807,6 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const cutoff = (7000 + velocity * 3000) * rr();
         
         // Firefox Fix: Explicitly set .value to ensure filter state is correct 
-        // even if setValueAtTime is processed with slight scheduling latency.
-        // Without this, Firefox may momentarily use the default LowPass filter,
-        // letting the low square waves through as a "kick" sound.
         hpFilter.frequency.value = cutoff;
         hpFilter.frequency.setValueAtTime(cutoff, time);
         
@@ -744,11 +816,12 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const gain = ctx.audio.createGain();
         gain.gain.setValueAtTime(vol, time);
         gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
+        gain.gain.linearRampToValueAtTime(0, time + duration + 0.04);
 
         oscs.forEach(o => {
             o.connect(hpFilter);
             o.start(time);
-            o.stop(time + duration);
+            o.stop(time + duration + 0.05);
         });
         hpFilter.connect(gain);
         gain.connect(ctx.drumsGain);
@@ -773,11 +846,12 @@ export function playDrumSound(name, time, velocity = 1.0) {
         metalGain.gain.setValueAtTime(0, time);
         metalGain.gain.linearRampToValueAtTime(vol * 0.4, time + 0.03); // Softer attack
         metalGain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.6);
+        metalGain.gain.linearRampToValueAtTime(0, time + duration + 0.04);
 
         const metalFilter = ctx.audio.createBiquadFilter();
         metalFilter.type = 'highpass';
         metalFilter.frequency.setValueAtTime(4000, time); // Remove tonal "gong" sound
-        metalFilter.Q.value = 0.5;
+        metalFilter.Q.setValueAtTime(0.5, time);
 
         // Noise Wash (The "Swish")
         const noise = ctx.audio.createBufferSource();
@@ -787,18 +861,19 @@ export function playDrumSound(name, time, velocity = 1.0) {
         noiseGain.gain.setValueAtTime(0, time);
         noiseGain.gain.linearRampToValueAtTime(vol * 0.8, time + 0.02);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+        noiseGain.gain.linearRampToValueAtTime(0, time + duration + 0.04);
         
         const noiseFilter = ctx.audio.createBiquadFilter();
         noiseFilter.type = 'bandpass';
         noiseFilter.frequency.setValueAtTime(8000, time);
         noiseFilter.frequency.exponentialRampToValueAtTime(4000, time + duration * 0.5); // Sweep down
-        noiseFilter.Q.value = 0.8;
+        noiseFilter.Q.setValueAtTime(0.8, time);
 
         // Connections
         oscs.forEach(o => {
             o.connect(metalFilter);
             o.start(time);
-            o.stop(time + duration);
+            o.stop(time + duration + 0.05);
         });
         metalFilter.connect(metalGain);
         metalGain.connect(ctx.drumsGain);
@@ -807,7 +882,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         noiseFilter.connect(noiseGain);
         noiseGain.connect(ctx.drumsGain);
         noise.start(time);
-        noise.stop(time + duration);
+        noise.stop(time + duration + 0.05);
         
         oscs[0].onended = () => safeDisconnect([...oscs, metalGain, metalFilter, noise, noiseGain, noiseFilter]);
     }

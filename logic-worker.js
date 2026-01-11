@@ -10,8 +10,6 @@ let bbBufferHead = 0;
 let sbBufferHead = 0;
 const LOOKAHEAD = 32;
 
-let pendingBassEvent = null;
-
 /**
  * Finds the active chord for a given global step using the worker's local state.
  */
@@ -42,7 +40,6 @@ function fillBuffers(currentStep) {
     if (bbBufferHead < currentStep) bbBufferHead = currentStep;
     if (sbBufferHead < currentStep) sbBufferHead = currentStep;
 
-    // Use a single loop to synchronize generation across instruments
     let head = Math.min(bbBufferHead, sbBufferHead);
 
     while (head < targetStep) {
@@ -53,37 +50,22 @@ function fillBuffers(currentStep) {
             const { chord, stepInChord } = chordData;
             const nextChordData = getChordAtStep(step + 4);
 
-            // 1. Bass Generation (if this step hasn't been processed for bass yet)
+            // 1. Bass Generation
             if (bb.enabled && step >= bbBufferHead) {
                 if (isBassActive(bb.style, step, stepInChord)) {
                     const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / 4, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord, arranger.isMinor);
                     if (bassResult) {
                         bb.lastFreq = typeof bassResult === 'object' ? bassResult.freq : bassResult;
-                        const newNote = { ...bassResult, step, module: 'bb' };
-                        
-                        // Monophony enforcement: If we have a pending note, emit it now, 
-                        // effectively truncating its duration to the start of this new note.
-                        if (pendingBassEvent) {
-                            const gap = step - pendingBassEvent.step;
-                            // Ensure we don't accidentally extend a short note (like a staccato 16th),
-                            // but definitely shorten a long one if it overlaps.
-                            const currentDur = pendingBassEvent.durationMultiplier || 4; 
-                            if (gap < currentDur) {
-                                pendingBassEvent.durationMultiplier = gap;
-                            }
-                            notesToMain.push(pendingBassEvent);
-                        }
-                        pendingBassEvent = newNote;
+                        // Emit immediately to prevent scheduling latency
+                        notesToMain.push({ ...bassResult, step, module: 'bb' });
                     }
                 }
                 bbBufferHead++;
             }
 
-            // 2. Soloist Generation (if this step hasn't been processed for soloist yet)
+            // 2. Soloist Generation
             if (sb.enabled && step >= sbBufferHead) {
-                // Pass the current bass note for interval safety checks
                 const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
-                
                 if (soloResult?.freq) {
                     sb.lastFreq = soloResult.freq;
                     notesToMain.push({ ...soloResult, step, module: 'sb' });
@@ -92,14 +74,6 @@ function fillBuffers(currentStep) {
             }
         }
         head++;
-    }
-
-    // If the pending note is very old (e.g. > 3 measures passed), emit it.
-    // We hold it this long to ensure we can truncate it if a new note appears 
-    // in the next batch. 48 steps = 3 bars.
-    if (pendingBassEvent && head - pendingBassEvent.step > 48) {
-        notesToMain.push(pendingBassEvent);
-        pendingBassEvent = null;
     }
 
     if (notesToMain.length > 0) {
@@ -139,7 +113,6 @@ self.onmessage = (e) => {
                 }
                 break;
             case 'syncState':
-                // Update local state objects for generation
                 if (data.arranger) {
                     Object.assign(arranger, data.arranger);
                     arranger.totalSteps = data.arranger.totalSteps;
@@ -155,8 +128,6 @@ self.onmessage = (e) => {
                 bbBufferHead = data.step;
                 sbBufferHead = data.step;
                 lastMainStep = data.step;
-                pendingBassEvent = null;
-                // Reset soloist stateful tracking in the worker
                 sb.phraseSteps = 0;
                 sb.isResting = false; 
                 sb.busySteps = 0;

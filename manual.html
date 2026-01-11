@@ -182,6 +182,7 @@
                 <li><a href="#visualizer">Unified Visualizer</a></li>
                 <li><a href="#midi">MIDI Export</a></li>
                 <li><a href="#shortcuts">Shortcuts</a></li>
+                <li><a href="#advanced">Diagnostics & Advanced</a></li>
             </ul>
         </nav>
 
@@ -192,7 +193,7 @@
                 <li><strong>Arranger:</strong> Where you define the "what" of your song — the sections, chords, and harmonic structure.</li>
                 <li><strong>Accompanist:</strong> Where you define the "how" — the performance styles, instrumentation, and rhythmic feel of your virtual band.</li>
             </ul>
-            <p>The application works entirely in your browser using the Web Audio API. Your arrangements are <strong>automatically saved</strong> as you work, so you can pick up right where you left off after a refresh.</p>
+            <p>The application works entirely in your browser using the Web Audio API. Your arrangements, <strong>active instrument tabs</strong>, and <strong>genre selections</strong> are <strong>automatically saved</strong> as you work, ensuring a seamless experience across refreshes.</p>
             
             <h3>Solarized Themes</h3>
             <p>Ensemble includes professional <strong>Solarized Dark</strong> and <strong>Solarized Light</strong> themes. You can choose your preferred theme in the Settings menu or set it to <strong>Auto</strong> to automatically sync with your operating system's dark/light mode preference.</p>
@@ -587,6 +588,29 @@
 
                 <span class="shortcut-key">⚙️</span>
                 <span>Open Settings</span>
+            </div>
+        </section>
+
+        <section id="advanced">
+            <h2>Diagnostics & Advanced</h2>
+            <p>Ensemble includes professional-grade diagnostic tools for troubleshooting performance issues on various devices. These commands can be run directly in your browser's <strong>Developer Console</strong> (F12 or Cmd+Opt+J).</p>
+            
+            <div class="feature-card">
+                <h4>Master Chain Bypass</h4>
+                <code>window.bypassMaster(true)</code>
+                <p style="font-size: 0.9rem; margin-top: 0.5rem;">Bypasses the master saturator and safety limiter. Use this to determine if audio "clipping" or "pumping" is caused by the mastering chain or the instruments themselves.</p>
+            </div>
+
+            <div class="feature-card">
+                <h4>Visual Bypass</h4>
+                <code>window.bypassVisuals(true)</code>
+                <p style="font-size: 0.9rem; margin-top: 0.5rem;">Completely disables all UI and Canvas rendering while keeping the audio engine active. This is the ultimate test to see if <strong>Main-Thread Jank</strong> (slow UI updates) is causing audio glitches or pops.</p>
+            </div>
+
+            <div class="feature-card">
+                <h4>Limiter Monitoring</h4>
+                <code>monitorMasterLimiter()</code>
+                <p style="font-size: 0.9rem; margin-top: 0.5rem;">Prints real-time gain reduction values to the console if the master limiter is actively compressing peaks. Helpful for balancing your mix intensity.</p>
             </div>
         </section>
 

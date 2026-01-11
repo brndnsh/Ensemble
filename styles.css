@@ -746,12 +746,23 @@ h2 {
     background: var(--card-bg-hover);
 }
 
+.genre-btn[data-genre="Rock"] { border-color: var(--blue); }
+.genre-btn[data-genre="Jazz"] { border-color: var(--green); }
+.genre-btn[data-genre="Funk"] { border-color: var(--magenta); }
+.genre-btn[data-genre="Blues"] { border-color: var(--cyan); }
+.genre-btn[data-genre="Neo-Soul"] { border-color: var(--magenta); }
+
 .genre-btn.active {
-    background: var(--accent-color);
     color: white;
-    border-color: var(--accent-color);
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transform: translateY(-1px);
 }
+
+.genre-btn.active[data-genre="Rock"] { background: var(--blue); border-color: var(--blue); }
+.genre-btn.active[data-genre="Jazz"] { background: var(--green); border-color: var(--green); }
+.genre-btn.active[data-genre="Funk"] { background: var(--magenta); border-color: var(--magenta); }
+.genre-btn.active[data-genre="Blues"] { background: var(--cyan); border-color: var(--cyan); }
+.genre-btn.active[data-genre="Neo-Soul"] { background: var(--magenta); border-color: var(--magenta); }
 
 /* --- Desktop / Tablet Grid Layout --- */
 @media (min-width: 900px) {

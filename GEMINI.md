@@ -33,7 +33,9 @@ This project uses vanilla JavaScript with ES Modules and requires no build step.
 *   **Data-Driven UI**: `ui.js` programmatically builds the section list and sequencer grid from state.
 *   **Visual Synchronization**: Visual events are synchronized using `getVisualTime()` in `engine.js`, which interpolates between the AudioContext time and `performance.now()` while compensating for output latency to ensuring smooth, jitter-free animations.
 *   **Singleton UI Patterns**: Heavy UI components like the symbol insertion menu are implemented as singletons in `ui.js` (`getSymbolMenu`) to minimize DOM node creation and event listener overhead.
-*   **Auto-Persistence**: The `saveCurrentState()` function ensures every arrangement change is captured.
+*   **Auto-Persistence**: The `saveCurrentState()` function ensures every arrangement change is captured, including active tabs and genre selections for seamless session recovery.
+*   **Audio Engine Integrity**: All instrument envelopes utilize `setTargetAtTime` for mathematically smooth, transient-free transitions. A specialized mastering chain (WaveShaper saturator and DynamicsCompressor limiter) provides analog-style warmth and peak protection.
+*   **Low-Latency Worker Dispatch**: `logic-worker.js` utilizes an immediate dispatch pattern for algorithmic notes, ensuring zero buffering latency and preventing rhythmic jitter or popping in the audio thread.
 *   **Update Mechanism**: Service Worker updates are handled via a manual 'SKIP_WAITING' message triggered by the user from a banner.
 
 ## Gemini Added Memories

@@ -2,7 +2,8 @@
  * @typedef {Object} GlobalContext
  * @property {AudioContext|null} audio - The Web Audio API context.
  * @property {GainNode|null} masterGain - The master volume gain node.
- * @property {WaveShaperNode|null} limiter - The master soft-clipper.
+ * @property {WaveShaperNode|null} saturator - The master soft-clipper/saturator.
+ * @property {DynamicsCompressorNode|null} limiter - The master safety limiter.
  * @property {ConvolverNode|null} reverbNode - The global reverb node.
  * @property {GainNode|null} chordsGain - The gain node for chords.
  * @property {GainNode|null} chordsReverb - Reverb send for chords.
@@ -29,6 +30,7 @@
 export const ctx = {
     audio: null,
     masterGain: null,
+    saturator: null,
     limiter: null,
     reverbNode: null,
     chordsGain: null,
@@ -41,7 +43,7 @@ export const ctx = {
     bpm: 100,
     nextNoteTime: 0.0,
     unswungNextNoteTime: 0.0,
-    scheduleAheadTime: 0.15,
+    scheduleAheadTime: 0.2,
     step: 0, 
     drawQueue: [],
     isCountingIn: false,

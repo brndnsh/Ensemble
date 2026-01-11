@@ -1,5 +1,5 @@
 // Note: Keep APP_VERSION in sync with CACHE_NAME in sw.js
-export const APP_VERSION = '1.58';
+export const APP_VERSION = '1.59';
 export const KEY_ORDER = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 export const ENHARMONIC_MAP = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
 export const ROMAN_VALS = { 'I': 0, 'II': 2, 'III': 4, 'IV': 5, 'V': 7, 'VI': 9, 'VII': 11 };
@@ -20,8 +20,8 @@ export const TIME_SIGNATURES = {
 
 export const MIXER_GAIN_MULTIPLIERS = {
     master: 1.0,
-    chords: 0.8,
-    bass: 1.2,
-    soloist: 0.9,
-    drums: 1.0
+    chords: 0.35,
+    bass: 0.7,
+    soloist: 0.5,
+    drums: 0.65
 };
