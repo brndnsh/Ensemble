@@ -105,7 +105,7 @@ export const arranger = {
  */
 export const cb = {
     enabled: true,
-    style: 'pad',
+    style: 'smart',
     instrument: 'Clean',
     volume: 0.5,
     reverb: 0.3,

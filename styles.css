@@ -1332,9 +1332,10 @@ h2 {
 }
 
 .preset-chip.active {
-    outline: 2px solid var(--text-color);
-    outline-offset: 1px;
-    color: var(--text-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border-color: transparent !important;
+    z-index: 1;
 }
 
 /* Genre Color Assignments - Slightly adjusted for Solarized palette harmony */
@@ -1351,6 +1352,7 @@ h2 {
 .preset-chip[data-category="Keys"] { border-color: var(--blue); }
 .preset-chip[data-category="Synth"] { border-color: var(--violet); }
 .preset-chip[data-category="String"] { border-color: var(--orange); }
+.preset-chip[data-category="Experimental"] { border-color: var(--violet); }
 .preset-chip[data-category="User"] { border-color: var(--text-color); opacity: 0.8; }
 
 .preset-chip.active[data-category="Basic"] { background: var(--base01); color: white; }
@@ -1366,6 +1368,7 @@ h2 {
 .preset-chip.active[data-category="Keys"] { background: var(--blue); color: white; }
 .preset-chip.active[data-category="Synth"] { background: var(--violet); color: white; }
 .preset-chip.active[data-category="String"] { background: var(--orange); color: white; }
+.preset-chip.active[data-category="Experimental"] { background: var(--violet); color: white; }
 
 .user-preset-chip {
     border-color: var(--border-color);
