@@ -1,10 +1,19 @@
 // Note: Keep CACHE_NAME version in sync with APP_VERSION in config.js
-const CACHE_NAME = 'ensemble-v1.62';
+const CACHE_NAME = 'ensemble-v1.65';
 const ASSETS = [
     './',
     './index.html',
     './manual.html',
     './main.js',
+    './app-controller.js',
+    './arranger-controller.js',
+    './instrument-controller.js',
+    './ui-controller.js',
+    './pwa.js',
+    './conductor.js',
+    './persistence.js',
+    './history.js',
+    './sharing.js',
     './engine.js',
     './state.js',
     './ui.js',

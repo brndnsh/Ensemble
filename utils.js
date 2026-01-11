@@ -55,7 +55,6 @@ export function generateId() {
 export function compressSections(sections) {
     const minified = sections.map(s => ({ l: s.label, v: s.value }));
     const json = JSON.stringify(minified);
-    // Handle Unicode for btoa
     const bytes = new TextEncoder().encode(json);
     const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
     return btoa(binString);
@@ -81,4 +80,18 @@ export function decompressSections(str) {
         console.error("Failed to decompress sections", e);
         return [{ id: generateId(), label: 'Intro', value: 'I | IV' }];
     }
+}
+
+/**
+ * Calculates the number of 16th-note (or equivalent) steps per measure for a given time signature.
+ * @param {string} ts - Time signature (e.g. "4/4", "3/4", "6/8").
+ * @returns {number}
+ */
+export function getStepsPerMeasure(ts) {
+    if (ts === '3/4') return 12;
+    if (ts === '6/8') return 12;
+    if (ts === '7/4') return 28;
+    if (ts === '12/8') return 24;
+    if (ts === '5/4') return 20;
+    return 16;
 }

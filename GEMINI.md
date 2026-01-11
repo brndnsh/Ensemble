@@ -4,39 +4,42 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ## Project Structure
 
-This project uses vanilla JavaScript with ES Modules and requires no build step.
+This project uses a modular ES architecture with domain-specific controllers.
 
-### Key Files
+### Core Controllers
 
-*   **`index.html`**: The main entry point defining the application structure and loading the module graph.
-*   **`manual.html`**: Comprehensive user documentation and interactive examples.
-*   **`main.js`**: Orchestrates the application initialization, event listeners, connects the UI with the audio engine, and registers the Service Worker.
-*   **`engine.js`**: Handles all Web Audio API operations, including the scheduler loop, sound synthesis (oscillators for chords), and drum sample playback. Now includes `getVisualTime()` for synchronized visuals.
-*   **`state.js`**: Manages the global application state (playback status, BPM, active instruments, user presets). **Contains JSDoc type definitions for the entire state schema.**
-*   **`chords.js`**: Core logic for parsing chord symbols, optimizing voicings (`getBestInversion`), generating random progressions, and handling intelligent relative key transformations.
-*   **`accompaniment.js`**: Defines the rhythmic playback patterns for all chord styles (e.g., Funk, Reggae, Bossa Nova).
-*   **`bass.js`**: Generates walking bass lines and patterns based on chord progressions and desired register.
-*   **`soloist.js`**: Implements "Expressive Musicality" logic for the algorithmic soloist, featuring phrasing ("breath"), motif retention, dynamic velocity arcs, and micro-timing.
-*   **`visualizer.js`**: Implements the `UnifiedVisualizer` class for multi-track, time-based harmonic and melodic visualization.
-*   **`midi-export.js`**: Handles offline generation of Standard MIDI Files (SMF) including track assembly and timing calculations.
-*   **`ui.js`**: Centralizes DOM element creation and UI manipulation. Implements singleton patterns for reusable UI components like the symbol menu.
-*   **`config.js`**: Stores static configuration, such as default drum presets, chord styles, and musical constants.
-*   **`utils.js`**: Contains common utility functions for frequency calculation and formatting.
-*   **`sw.js`**: A Service Worker that caches key assets to enable offline functionality.
+*   **`app-controller.js`**: Orchestrates global application state transitions (Play/Stop, BPM changes).
+*   **`arranger-controller.js`**: Manages song structure, transposition, and section editing.
+*   **`instrument-controller.js`**: Handles instrument-specific state (Volume, Power, Presets, Measures).
+*   **`ui-controller.js`**: Centralizes DOM event listeners and bridges the UI with backend controllers.
+
+### Musical Engines & Logic
+
+*   **`main.js`**: The orchestrator. Manages the high-precision audio scheduler and the visual animation loop.
+*   **`engine.js`**: Low-level Web Audio API operations, sound synthesis, and `getVisualTime()` synchronization.
+*   **`chords.js`**: Chord parsing, voicing optimization (`getBestInversion`), and notation formatting.
+*   **`accompaniment.js`**: Rhythmic patterns for chord styles.
+*   **`bass.js`**: Algorithmic walking bass and pattern generation.
+*   **`soloist.js`**: "Expressive Musicality" logic for the algorithmic soloist (phrasing, motifs, micro-timing).
+*   **`logic-worker.js`**: Background worker for off-main-thread musical calculations.
+
+### Data & UI Support
+
+*   **`state.js`**: The single source of truth for the application state schema (with comprehensive JSDoc).
+*   **`ui.js`**: Centralized DOM rendering logic and hierarchical layout management.
+*   **`config.js`**: Static musical constants, drum presets, and versioning.
+*   **`persistence.js`**: Handles `localStorage` synchronization.
+*   **`history.js`**: Implements Undo/Redo functionality for arranger changes.
+*   **`utils.js`**: Shared math and formatting utilities.
+*   **`sw.js`**: Service Worker for offline PWA functionality.
 
 ## Architecture Notes
 
-*   **State Separation**: State is divided into `arranger` (structural data) and performance contexts (`cb` for Chords, `gb` for Grooves, `bb` for Bassist, `sb` for Soloist).
-*   **State Schema**: `state.js` is the single source of truth for the application state structure. It includes comprehensive JSDoc typedefs (`GlobalContext`, `ArrangerState`, `ChordState`, etc.) which should be consulted when modifying state properties.
-*   **Audio Scheduling**: The `scheduler()` in `main.js` syncs performance engines with the flattened `arranger.progression`.
-*   **Off-Main-Thread Logic**: Algorithmic generation for the Bassist and Soloist is handled in `logic-worker.js` via `worker-client.js`. This prevents UI or complex rendering tasks from causing audio stutters by moving heavy musical calculations to a background worker.
-*   **Data-Driven UI**: `ui.js` programmatically builds the section list and sequencer grid from state.
-*   **Visual Synchronization**: Visual events are synchronized using `getVisualTime()` in `engine.js`, which interpolates between the AudioContext time and `performance.now()` while compensating for output latency to ensuring smooth, jitter-free animations.
-*   **Singleton UI Patterns**: Heavy UI components like the symbol insertion menu are implemented as singletons in `ui.js` (`getSymbolMenu`) to minimize DOM node creation and event listener overhead.
-*   **Auto-Persistence**: The `saveCurrentState()` function ensures every arrangement change is captured, including active tabs and genre selections for seamless session recovery.
-*   **Audio Engine Integrity**: All instrument envelopes utilize `setTargetAtTime` for mathematically smooth, transient-free transitions. A specialized mastering chain (WaveShaper saturator and DynamicsCompressor limiter) provides analog-style warmth and peak protection.
-*   **Low-Latency Worker Dispatch**: `logic-worker.js` utilizes an immediate dispatch pattern for algorithmic notes, ensuring zero buffering latency and preventing rhythmic jitter or popping in the audio thread.
-*   **Update Mechanism**: Service Worker updates are handled via a manual 'SKIP_WAITING' message triggered by the user from a banner.
+*   **Modular Decoupling**: Logic is separated into controllers to prevent monolithic file growth and improve maintainability.
+*   **Firefox Stability**: Audio synthesis utilizes explicit `BiquadFilterNode` value initialization and a 2ms scheduling buffer to ensure pop-free performance in Firefox.
+*   **Visual Synchronization**: Visual events are interpolated using `getVisualTime()` to ensure jitter-free animations that stay in sync with the Web Audio clock.
+*   **Worker Dispatch**: Algorithmic notes are calculated in a background worker to prevent UI lag from causing audio dropouts.
+*   **Mastering Chain**: A dedicated mastering chain with saturation and limiting provides analog-style warmth and peak protection.
 
 ## Gemini Added Memories
 - The user prioritizes performance on mobile devices over complex visual effects and prefers simplified visuals if it prevents glitches/lag.
