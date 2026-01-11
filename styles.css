@@ -730,7 +730,7 @@ h2 {
 }
 
 .genre-btn {
-    flex: 1;
+    flex: 1 1 100px; /* Allow shrinking but set a reasonable base width to prevent single-item stretching */
     padding: 0.75rem;
     background: var(--input-bg);
     border: 1px solid var(--border-color);
@@ -739,6 +739,8 @@ h2 {
     cursor: pointer;
     font-weight: 600;
     transition: all 0.2s;
+    font-size: 0.85rem;
+    white-space: nowrap;
 }
 
 .genre-btn:hover {
@@ -751,6 +753,8 @@ h2 {
 .genre-btn[data-genre="Funk"] { border-color: var(--magenta); }
 .genre-btn[data-genre="Blues"] { border-color: var(--cyan); }
 .genre-btn[data-genre="Neo-Soul"] { border-color: var(--magenta); }
+.genre-btn[data-genre="Reggae"] { border-color: var(--orange); }
+.genre-btn[data-genre="Bossa"] { border-color: var(--green); }
 
 .genre-btn.active {
     color: white;
@@ -763,6 +767,8 @@ h2 {
 .genre-btn.active[data-genre="Funk"] { background: var(--magenta); border-color: var(--magenta); }
 .genre-btn.active[data-genre="Blues"] { background: var(--cyan); border-color: var(--cyan); }
 .genre-btn.active[data-genre="Neo-Soul"] { background: var(--magenta); border-color: var(--magenta); }
+.genre-btn.active[data-genre="Reggae"] { background: var(--orange); border-color: var(--orange); }
+.genre-btn.active[data-genre="Bossa"] { background: var(--green); border-color: var(--green); }
 
 /* --- Desktop / Tablet Grid Layout --- */
 @media (min-width: 900px) {
