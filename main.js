@@ -1081,9 +1081,12 @@ function setupUIHandlers() {
             refreshArrangerUI();
         }],
         [ui.saveBtn, 'click', () => {
-            ui.arrangerActionMenu.classList.remove('open');
-            ui.arrangerActionTrigger.classList.remove('active');
-            saveProgression();
+            saveCurrentState();
+            // Show some feedback?
+            ui.saveBtn.innerHTML = '✅ Saved';
+            setTimeout(() => {
+                ui.saveBtn.innerHTML = '<span>💾 Save Arrangement</span>';
+            }, 2000);
         }],
         [ui.saveDrumBtn, 'click', saveDrumPattern],
         [ui.shareBtn, 'click', () => {
