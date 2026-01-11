@@ -26,6 +26,8 @@
  * @property {number} bandIntensity - Global band intensity/energy level (0.0 - 1.0).
  * @property {number} complexity - Global complexity level (0.0 - 1.0).
  * @property {boolean} autoIntensity - Whether the intensity automatically drifts over time.
+ * @property {boolean} metronome - Whether the metronome is active.
+ * @property {boolean} applyPresetSettings - Whether to apply BPM/Style from presets.
  */
 export const ctx = {
     audio: null,
@@ -53,7 +55,9 @@ export const ctx = {
     wakeLock: null,
     bandIntensity: 0.5, // The 'Conductor' signal for global energy
     complexity: 0.3,
-    autoIntensity: false
+    autoIntensity: false,
+    metronome: false,
+    applyPresetSettings: false
 };
 
 /**
@@ -169,6 +173,7 @@ export const gb = {
     audioBuffers: {},
     cachedSteps: [],
     genreFeel: 'Rock',
+    lastSmartGenre: 'Rock',
     fillActive: false,
     fillSteps: {},
     activeTab: 'classic'

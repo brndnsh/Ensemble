@@ -415,7 +415,7 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
     return {
         abs: { root: rootName, suffix: absSuffix },
         nns: { root: rootNNS, suffix: nnsSuffix },
-        rom: { root: romanName, suffix: romSuffix }
+        roman: { root: romanName, suffix: romSuffix }
     };
 }
 
@@ -506,7 +506,7 @@ function parseProgressionPart(input, key, initialMidis) {
 
                 let finalAbsName = formatted.abs.root + formatted.abs.suffix;
                 let finalNNSName = formatted.nns.root + formatted.nns.suffix;
-                let finalRomName = formatted.rom.root + formatted.rom.suffix;
+                let finalRomName = formatted.roman.root + formatted.roman.suffix;
 
                 if (bassPart && bassNameAbs) {
                     finalAbsName += `/${bassNameAbs}`;
@@ -514,7 +514,7 @@ function parseProgressionPart(input, key, initialMidis) {
                     finalRomName += `/${bassNameRom}`;
                     formatted.abs.bass = bassNameAbs;
                     formatted.nns.bass = bassNameNNS;
-                    formatted.rom.bass = bassNameRom;
+                    formatted.roman.bass = bassNameRom;
                 }
 
                 const isMinor = quality === 'minor' || quality === 'dim' || quality === 'halfdim';

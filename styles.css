@@ -923,8 +923,8 @@ h2 {
 .chord-card {
     flex: 1;
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    flex-direction: row;
+    align-items: baseline;
     justify-content: center;
     background: transparent; /* Match maximized view */
     padding: 0.2rem;
@@ -949,6 +949,17 @@ h2 {
     vertical-align: super;
     margin-left: 1px;
     opacity: 0.8;
+}
+
+.root {
+    display: inline-block;
+}
+
+.bass-note {
+    font-size: 0.7em;
+    opacity: 0.7;
+    margin-left: 1px;
+    font-weight: 400;
 }
 
 /* Dynamic sizing for short progressions */
@@ -1146,7 +1157,7 @@ h2 {
     border: none;
     box-shadow: none;
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: center;
 }
 
@@ -1350,12 +1361,12 @@ h2 {
 }
 
 .step {
-    aspect-ratio: 1;
+    height: 1.5rem;
     background: var(--step-bg);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.1s;
-    min-width: 18px; /* Slightly larger for easier tapping */
+    min-width: 18px;
     border: 1px solid transparent;
     box-sizing: border-box;
 }
@@ -1852,7 +1863,7 @@ select option {
     padding: 1rem;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .section-card:hover {
@@ -1898,6 +1909,10 @@ select option {
     background: rgba(38, 139, 210, 0.05);
 }
 
+.section-card.menu-active {
+    z-index: 1000;
+}
+
 .section-progress-container {
     position: absolute;
     bottom: 0;
@@ -1928,10 +1943,12 @@ select option {
     margin-bottom: 0.5rem;
 }
 /* This is the 'actions' container in ui.js */
+.section-actions,
 .section-header > div:last-child {
     position: relative;
     display: flex;
     gap: 0.5rem;
+    flex-shrink: 0;
 }
 .section-label-input {
     background: transparent;
@@ -1939,7 +1956,8 @@ select option {
     color: var(--accent-color);
     font-weight: bold;
     font-size: 0.9rem;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: 0;
 }
 .section-label-input:focus {
@@ -2013,7 +2031,7 @@ select option {
     grid-template-columns: repeat(4, 1fr);
     gap: 0.4rem;
     box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-    z-index: 100;
+    z-index: 200;
     min-width: 180px;
 }
 
