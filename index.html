@@ -575,33 +575,41 @@
 
 <!-- Editor Modal -->
 <div id="editorOverlay" class="settings-overlay">
-    <div class="settings-content">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center;">
+    <div class="settings-content editor-modal">
+        <div class="modal-header">
             <h2>Arrangement Editor</h2>
-            <button id="closeEditorBtn" class="primary-btn" style="padding: 0.4rem 1rem; font-size: 0.9rem;">Done</button>
+            <button id="closeEditorBtn" class="primary-btn">Done</button>
         </div>
         
         <div class="editor-scroll-area">
-            <div id="sectionList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;"></div>
-            
-            <div style="margin-bottom: 1rem;">
-                <button id="arrangerActionTrigger" class="action-trigger-btn" style="width: 100%; justify-content: center;">🪄 Actions</button>
-            </div>
+            <div id="sectionList" class="section-list"></div>
             
             <div id="templatesContainer" class="templates-container">
-                <div style="width: 100%; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">Select a structure template (replaces current):</div>
-                <div id="templateChips" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
+                <div class="templates-label">Select a structure template (replaces current):</div>
+                <div id="templateChips" class="template-chips"></div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <div class="footer-primary-actions">
+                <button id="addSectionBtn" class="primary-btn footer-main-btn" title="Add Section">
+                    <span>➕ Add Section</span>
+                </button>
+                <button id="saveBtn" class="primary-btn footer-main-btn" title="Save Arrangement">
+                    <span>💾 Save Arrangement</span>
+                </button>
+                <button id="arrangerActionTrigger" class="action-trigger-btn" style="justify-content: center;">
+                    <span>🪄 Actions</span>
+                </button>
             </div>
             
             <div class="arranger-action-container">
                 <div id="arrangerActionMenu" class="action-menu-content">
-                    <button id="addSectionBtn" title="Add Section">➕ <span>Add Section</span></button>
                     <button id="templatesBtn" title="Song Templates">📋 <span>Templates</span></button>
                     <button id="randomizeBtn" title="Randomize Progression" aria-label="Randomize Progression">🎲 <span>Random</span></button>
                     <button id="mutateBtn" title="Mutate Progression" aria-label="Mutate Progression">✨ <span>Mutate</span></button>
                     <button id="undoBtn" title="Undo Last Change" aria-label="Undo Last Change">↩️ <span>Undo</span></button>
                     <button id="clearProgBtn" title="Clear Progression" aria-label="Clear Progression">🗑️ <span>Clear</span></button>
-                    <button id="saveBtn" title="Save Progression" aria-label="Save Progression">💾 <span>Save</span></button>
                     <button id="shareBtn" title="Share Progression" aria-label="Share Progression">🔗 <span>Share</span></button>
                 </div>
             </div>
