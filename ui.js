@@ -209,6 +209,7 @@ export function initGrooveTabs() {
                     c.style.display = 'none';
                 }
             });
+            window.dispatchEvent(new CustomEvent('ensemble_state_change'));
         });
     });
 }
@@ -233,13 +234,21 @@ let flashTimeout = null;
 export function triggerFlash(intensity = 0.2) {
     if (ui.visualFlash.checked) {
         if (flashTimeout) clearTimeout(flashTimeout);
+        
+        // Use requestAnimationFrame to reset and restart transition without offsetHeight reflow
         ui.flashOverlay.style.transition = 'none';
         ui.flashOverlay.style.opacity = intensity;
+        
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                ui.flashOverlay.style.transition = 'opacity 0.15s ease-out';
+                ui.flashOverlay.style.opacity = 0;
+            });
+        });
+
         flashTimeout = setTimeout(() => {
-            ui.flashOverlay.style.transition = 'opacity 0.15s ease-out';
-            ui.flashOverlay.style.opacity = 0;
             flashTimeout = null;
-        }, 50);
+        }, 200);
     }
     if (ui.haptic.checked && navigator.vibrate) {
         navigator.vibrate(intensity > 0.15 ? 20 : 10);

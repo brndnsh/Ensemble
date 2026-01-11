@@ -185,8 +185,8 @@ function togglePlay() {
         ui.playBtn.textContent = 'STOP';
         ui.playBtn.classList.add('playing');
         
-        // Add a small 50ms padding to the start time to prevent scheduling in the "past"
-        const startTime = ctx.audio.currentTime + 0.05;
+        // Add a small 100ms padding to the start time to prevent scheduling in the "past"
+        const startTime = ctx.audio.currentTime + 0.1;
         ctx.nextNoteTime = startTime;
         ctx.unswungNextNoteTime = startTime;
         
@@ -261,7 +261,14 @@ export function flushBuffers() {
     flushWorker(ctx.step);
 }
 
+let saveTimeout;
+function debounceSaveState() {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveCurrentState, 1000);
+}
+
 function saveCurrentState() {
+    if (saveTimeout) clearTimeout(saveTimeout);
     const data = {
         sections: arranger.sections,
         key: arranger.key,
@@ -288,6 +295,8 @@ function saveCurrentState() {
             humanize: gb.humanize, 
             autoFollow: gb.autoFollow, 
             lastDrumPreset: gb.lastDrumPreset,
+            genreFeel: gb.genreFeel,
+            activeTab: gb.activeTab,
             pattern: gb.instruments.map(inst => ({ name: inst.name, steps: [...inst.steps] }))
         }
     };
@@ -962,7 +971,7 @@ function draw() {
         if (ev.type === 'drum_vis') updateDrumVis(ev);
         else if (ev.type === 'chord_vis') {
             updateChordVis(ev);
-            if (viz && vizState.enabled) viz.pushChord({ 
+            if (viz && vizState.enabled && ctx.isDrawing) viz.pushChord({ 
                 time: ev.time, 
                 notes: ev.chordNotes, 
                 rootMidi: ev.rootMidi, 
@@ -971,15 +980,15 @@ function draw() {
             });
         }
         else if (ev.type === 'bass_vis') {
-            if (viz && vizState.enabled) viz.pushNote('bass', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+            if (viz && vizState.enabled && ctx.isDrawing) viz.pushNote('bass', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
         }
         else if (ev.type === 'soloist_vis') {
-            if (viz && vizState.enabled) viz.pushNote('soloist', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+            if (viz && vizState.enabled && ctx.isDrawing) viz.pushNote('soloist', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
         }
         else if (ev.type === 'flash') triggerFlash(ev.intensity);
     }
     
-    if (viz && vizState.enabled) {
+    if (viz && vizState.enabled && ctx.isDrawing) {
         viz.setRegister('bass', bb.octave);
         viz.setRegister('soloist', sb.octave);
         viz.setRegister('chords', cb.octave);
@@ -1326,7 +1335,7 @@ function applyConductor() {
     sb.hookRetentionProb = 0.2 + (complexity * 0.6);
 
     // Save changes so audio engine picks them up
-    saveCurrentState();
+    debounceSaveState();
 }
 
 function setupUIHandlers() {
@@ -1637,7 +1646,11 @@ function setupUIHandlers() {
         el.addEventListener('input', e => {
             const val = parseFloat(e.target.value);
             if (state !== ctx) state.volume = val;
-            if (ctx[gain]) ctx[gain].gain.setTargetAtTime(val * mult, ctx.audio.currentTime, 0.02);
+            if (ctx[gain]) {
+                const target = Math.max(0.0001, val * mult);
+                ctx[gain].gain.setValueAtTime(ctx[gain].gain.value, ctx.audio.currentTime);
+                ctx[gain].gain.exponentialRampToValueAtTime(target, ctx.audio.currentTime + 0.04);
+            }
         });
         el.addEventListener('change', () => saveCurrentState());
     });
@@ -1651,7 +1664,11 @@ function setupUIHandlers() {
     reverbNodes.forEach(({ el, state, gain }) => {
         el.addEventListener('input', e => {
             state.reverb = parseFloat(e.target.value);
-            if (ctx[gain]) ctx[gain].gain.setTargetAtTime(state.reverb, ctx.audio.currentTime, 0.02);
+            if (ctx[gain]) {
+                const target = Math.max(0.0001, state.reverb);
+                ctx[gain].gain.setValueAtTime(ctx[gain].gain.value, ctx.audio.currentTime);
+                ctx[gain].gain.exponentialRampToValueAtTime(target, ctx.audio.currentTime + 0.04);
+            }
         });
         el.addEventListener('change', () => saveCurrentState());
     });
@@ -1955,6 +1972,7 @@ function init() {
                 }
                 
                 gb.genreFeel = savedState.gb.genreFeel || 'Rock';
+                gb.activeTab = savedState.gb.activeTab || 'classic';
                 gb.currentMeasure = 0;
             }
 
@@ -2197,6 +2215,7 @@ function resetToDefaults() {
     gb.swing = 0;
     gb.swingSub = '8th';
     gb.genreFeel = 'Rock';
+    gb.activeTab = 'classic';
 
     ui.bpmInput.value = 100;
     ui.keySelect.value = 'C';
@@ -2221,11 +2240,25 @@ function resetToDefaults() {
     ui.metronome.checked = false;
     ui.visualFlash.checked = false;
     ui.haptic.checked = false;
-    if (ctx.masterGain) ctx.masterGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.master, ctx.audio.currentTime, 0.02);
-    if (ctx.chordsGain) ctx.chordsGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.chords, ctx.audio.currentTime, 0.02);
-    if (ctx.bassGain) ctx.bassGain.gain.setTargetAtTime(0.45 * MIXER_GAIN_MULTIPLIERS.bass, ctx.audio.currentTime, 0.02);
-    if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.soloist, ctx.audio.currentTime, 0.02);
-    if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.drums, ctx.audio.currentTime, 0.02);
+    if (ctx.audio) {
+        const time = ctx.audio.currentTime;
+        const rampTime = time + 0.04;
+        
+        const resetNodes = [
+            { node: ctx.masterGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.master },
+            { node: ctx.chordsGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.chords },
+            { node: ctx.bassGain, target: 0.45 * MIXER_GAIN_MULTIPLIERS.bass },
+            { node: ctx.soloistGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.soloist },
+            { node: ctx.drumsGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.drums }
+        ];
+
+        resetNodes.forEach(rn => {
+            if (rn.node) {
+                rn.node.gain.setValueAtTime(rn.node.gain.value, time);
+                rn.node.gain.exponentialRampToValueAtTime(Math.max(0.0001, rn.target), rampTime);
+            }
+        });
+    }
 
     // Reset Smart Controls
     ctx.bandIntensity = 0.5;
@@ -2257,6 +2290,7 @@ function resetToDefaults() {
     });
     loadDrumPreset('Standard');
     renderGrid(); 
+    initTabs();
 
     // Reset Genre Buttons
     document.querySelectorAll('.genre-btn').forEach(btn => {
