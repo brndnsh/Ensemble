@@ -1,4 +1,4 @@
-import { arranger, cb, bb, sb, ctx } from './state.js';
+import { arranger, cb, bb, sb, gb, ctx } from './state.js';
 
 let timerWorker = null;
 let onTickCallback = null;
@@ -53,6 +53,7 @@ export function syncWorker() {
             cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled },
             bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq },
             sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq },
+            gb: { genreFeel: gb.genreFeel },
             ctx: { bpm: ctx.bpm }
         }
     });

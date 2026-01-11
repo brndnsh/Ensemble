@@ -240,7 +240,7 @@ export const INSTRUMENT_PRESETS = {
         weights: [1.8, 0.4, 0.05], // Heavily weighted toward the fundamental
         hp: true,
         reverbMult: 0.65,
-        gainMult: 2.3 
+        gainMult: 2.5 
     },
     'Classic': {
         attack: 0.01,
