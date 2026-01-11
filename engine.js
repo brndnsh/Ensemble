@@ -783,8 +783,6 @@ export function playDrumSound(name, time, velocity = 1.0) {
         noise.stop(time + 0.5);
         
         noise.onended = () => safeDisconnect([tone1, tone2, toneGain, noise, noiseFilter, noiseGain]);
-        
-        noise.onended = () => safeDisconnect([tone1, tone2, toneGain, noise, noiseFilter, noiseGain]);
 
     } else if (name === 'HiHat' || name === 'Open') {
         const isOpen = name === 'Open';
