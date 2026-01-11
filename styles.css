@@ -725,13 +725,14 @@ h2 {
 }
 
 .genre-selector {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 0.5rem;
 }
 
 .genre-btn {
-    flex: 1 1 100px; /* Allow shrinking but set a reasonable base width to prevent single-item stretching */
-    padding: 0.75rem;
+    flex: none; /* Reset flex since we're using grid now */
+    padding: 0.75rem 0.25rem; /* Slightly narrower horizontal padding for 3-col fit */
     background: var(--input-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
