@@ -650,9 +650,7 @@ export function renderChordVisualizer() {
 
         // Cache dimensions
         setTimeout(() => {
-            const container = ui.chordVisualizer;
-            arranger.cardOffsets = arranger.cachedCards.map(card => card.offsetTop - container.offsetTop);
-            arranger.cardHeights = arranger.cachedCards.map(card => card.clientHeight);
+            recalculateScrollOffsets();
         }, 100);
     };
 
@@ -660,6 +658,25 @@ export function renderChordVisualizer() {
         animateHeight(panel, updateLogic);
     } else {
         updateLogic();
+    }
+}
+
+/**
+ * Recalculates the scroll offsets for all chord cards.
+ * useful for when the layout changes (e.g. resize) without a full re-render.
+ */
+export function recalculateScrollOffsets() {
+    const container = ui.chordVisualizer;
+    if (container && arranger.cachedCards.length > 0) {
+        const containerRect = container.getBoundingClientRect();
+        const currentScroll = container.scrollTop;
+        
+        arranger.cardOffsets = arranger.cachedCards.map(card => {
+            const rect = card.getBoundingClientRect();
+            // Calculate position relative to the container's scrollable content
+            return rect.top - containerRect.top + currentScroll;
+        });
+        arranger.cardHeights = arranger.cachedCards.map(card => card.clientHeight);
     }
 }
 

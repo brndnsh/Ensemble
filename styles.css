@@ -767,6 +767,7 @@ h2 {
     box-sizing: border-box;
     display: block; /* Allows natural scroll behavior */
     scroll-behavior: smooth;
+    overscroll-behavior: contain;
 }
 
 .section-block {
@@ -838,11 +839,11 @@ h2 {
 .measure-box {
     display: flex;
     flex-direction: row;
-    gap: 0; /* Tighten for iReal style */
-    background: rgba(0, 0, 0, 0.1);
+    gap: 0;
+    background: var(--panel-color); /* Match maximized view */
     border-radius: 4px;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color); /* Match maximized view */
     min-width: 0; 
     overflow: hidden;
     position: relative;
@@ -850,7 +851,7 @@ h2 {
 
 /* Vertical line between chords in a measure */
 .measure-box .chord-card:not(:last-child) {
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.05); /* Match maximized view */
 }
 
 .chord-card {
@@ -859,7 +860,7 @@ h2 {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--card-bg);
+    background: transparent; /* Match maximized view */
     padding: 0.2rem;
     border-radius: 0; /* Squared for measure block look */
     border: none;
@@ -871,6 +872,17 @@ h2 {
     text-align: center;
     color: var(--text-color);
     font-weight: 600;
+}
+
+.chord-card.minor {
+    color: var(--soloist-color);
+}
+
+.suffix {
+    font-size: 0.6em;
+    vertical-align: super;
+    margin-left: 1px;
+    opacity: 0.8;
 }
 
 /* Dynamic sizing for short progressions */
@@ -1009,6 +1021,7 @@ h2 {
     flex-direction: column;
     align-items: center; /* Center horizontally */
     justify-content: center; /* Center vertically when space is available */
+    overscroll-behavior: auto; /* Allow global scroll if needed in full screen? or keep contain? */
 }
 
 @media (max-width: 600px) {
@@ -1076,16 +1089,6 @@ h2 {
     color: white;
     animation: none;
     box-shadow: none;
-}
-
-.chord-maximized .chord-card.minor {
-    color: var(--soloist-color);
-}
-
-.chord-maximized .suffix {
-    font-size: 0.55em;
-    vertical-align: super;
-    margin-left: 1px;
 }
 
 #maximizeChordBtn {
