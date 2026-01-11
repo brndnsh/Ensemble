@@ -211,7 +211,8 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
             else if (inst.name === 'Snare') velocity *= isBackbeat ? 1.1 : 0.9;
             else if (inst.name === 'HiHat' || inst.name === 'Open') {
                 velocity *= isQuarter ? 1.1 : 0.85;
-                if (gb.genreFeel === 'Jazz') velocity *= (1.0 - (ctx.bandIntensity * 0.2));
+                // Tame the ride/hihat for Jazz at high intensity to prevent it from becoming wash-heavy
+                if (gb.genreFeel === 'Jazz') velocity *= (1.0 - (ctx.bandIntensity * 0.35));
                 if (ctx.bpm > 165) { velocity *= 0.7; if (!isQuarter) velocity *= 0.6; }
             }
             playDrumSound(soundName, time, velocity * conductorVel);
@@ -317,9 +318,13 @@ function scheduleGlobalEvent(step, swungTime) {
     const straightness = (sb.style === 'neo') ? 0.35 : ((sb.style === 'blues') ? 0.45 : 0.65);
     const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + (Math.random() - 0.5) * (gb.humanize / 100) * 0.025;
     if (gb.enabled) {
+        const isDownbeat = (drumStep % spm === 0);
+        const isQuarter = ts.pulse.includes(drumStep % spm);
+        const isBackbeat = (ts.beats === 4) ? (drumStep % spm === ts.stepsPerBeat || drumStep % spm === ts.stepsPerBeat * 3) : false;
+
         if (ts.pulse.includes(drumStep % spm) && ui.visualFlash.checked) ctx.drawQueue.push({ type: 'flash', time: swungTime, intensity: (drumStep % spm === 0 ? 0.2 : 0.1), beat: (drumStep % spm === 0 ? 1 : 0) });
         ctx.drawQueue.push({ type: 'drum_vis', step: drumStep, time: swungTime });
-        scheduleDrums(drumStep, t, drumStep % spm === 0, ts.pulse.includes(drumStep % spm), false, step);
+        scheduleDrums(drumStep, t, isDownbeat, isQuarter, isBackbeat, step);
     }
     const chordData = getChordAtStep(step);
     if (chordData) {
