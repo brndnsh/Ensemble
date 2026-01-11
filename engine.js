@@ -754,6 +754,62 @@ export function playDrumSound(name, time, velocity = 1.0) {
         gain.connect(ctx.drumsGain);
 
         oscs[0].onended = () => safeDisconnect([...oscs, hpFilter, gain]);
+
+    } else if (name === 'Crash') {
+        const vol = masterVol * 0.3 * rr(); // Reduced from 0.5 to 0.3
+        const duration = 2.5 * rr();
+        
+        // Metallic Bank (Inharmonic Ratios for shimmer)
+        const ratios = [1.0, 1.48, 1.9, 2.55, 3.1, 4.3];
+        const baseFreq = 280 * rr();
+        const oscs = ratios.map((r, i) => {
+            const o = ctx.audio.createOscillator();
+            o.type = i < 2 ? 'triangle' : 'square'; // Lower harmonics softer
+            o.frequency.setValueAtTime(baseFreq * r, time);
+            return o;
+        });
+
+        const metalGain = ctx.audio.createGain();
+        metalGain.gain.setValueAtTime(0, time);
+        metalGain.gain.linearRampToValueAtTime(vol * 0.4, time + 0.03); // Softer attack
+        metalGain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.6);
+
+        const metalFilter = ctx.audio.createBiquadFilter();
+        metalFilter.type = 'highpass';
+        metalFilter.frequency.setValueAtTime(4000, time); // Remove tonal "gong" sound
+        metalFilter.Q.value = 0.5;
+
+        // Noise Wash (The "Swish")
+        const noise = ctx.audio.createBufferSource();
+        noise.buffer = gb.audioBuffers.noise;
+        
+        const noiseGain = ctx.audio.createGain();
+        noiseGain.gain.setValueAtTime(0, time);
+        noiseGain.gain.linearRampToValueAtTime(vol * 0.8, time + 0.02);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+        
+        const noiseFilter = ctx.audio.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.setValueAtTime(8000, time);
+        noiseFilter.frequency.exponentialRampToValueAtTime(4000, time + duration * 0.5); // Sweep down
+        noiseFilter.Q.value = 0.8;
+
+        // Connections
+        oscs.forEach(o => {
+            o.connect(metalFilter);
+            o.start(time);
+            o.stop(time + duration);
+        });
+        metalFilter.connect(metalGain);
+        metalGain.connect(ctx.drumsGain);
+
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(ctx.drumsGain);
+        noise.start(time);
+        noise.stop(time + duration);
+        
+        oscs[0].onended = () => safeDisconnect([...oscs, metalGain, metalFilter, noise, noiseGain, noiseFilter]);
     }
 }
 

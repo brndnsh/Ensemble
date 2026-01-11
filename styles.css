@@ -673,6 +673,86 @@ h2 {
     color: var(--text-color);
 }
 
+
+/* --- Groove Panel Tabs --- */
+.groove-tabs {
+    display: inline-flex;
+    gap: 0.25rem;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1; /* Allow it to take available space */
+    justify-content: center; /* Center tabs in the available space */
+}
+
+.groove-tab-btn {
+    border: none;
+    background: transparent;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.groove-tab-btn:hover {
+    color: var(--text-color);
+    background: var(--card-bg-hover);
+}
+
+.groove-tab-btn.active {
+    background: rgba(181, 137, 0, 0.15); /* Yellow accent for Grooves */
+    color: var(--yellow);
+    border-color: rgba(181, 137, 0, 0.3);
+}
+
+.groove-tab-content {
+    display: none;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.groove-tab-content.active {
+    display: block;
+}
+
+/* --- Smart Controls --- */
+.smart-control-group {
+    margin-bottom: 1.5rem;
+}
+
+.genre-selector {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.genre-btn {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.genre-btn:hover {
+    border-color: var(--accent-color);
+    background: var(--card-bg-hover);
+}
+
+.genre-btn.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
 /* --- Desktop / Tablet Grid Layout --- */
 @media (min-width: 900px) {
     .app-main-layout {

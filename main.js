@@ -9,12 +9,21 @@ import { chordPatterns } from './accompaniment.js';
 import { exportToMidi } from './midi-export.js';
 import { UnifiedVisualizer } from './visualizer.js';
 import { initWorker, startWorker, stopWorker, flushWorker, requestBuffer, syncWorker } from './worker-client.js';
+import { generateProceduralFill } from './fills.js';
 
 let userPresets = storage.get('userPresets');
 let userDrumPresets = storage.get('userDrumPresets');
 let iosAudioUnlocked = false;
 let deferredPrompt;
 let viz;
+
+const conductorState = { 
+    target: 0.5, 
+    nextDecisionStep: 0, 
+    stepSize: 0.0005,
+    loopCount: 0,
+    form: null
+};
 
 /** @type {HTMLAudioElement} */
 // Use a slightly longer silent wav to ensure OS recognition as media playback
@@ -265,6 +274,7 @@ function saveCurrentState() {
         metronome: ui.metronome.checked,
         applyPresetSettings: ui.applyPresetSettings.checked,
         vizEnabled: vizState.enabled,
+        autoIntensity: ctx.autoIntensity,
         cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
         bb: { enabled: bb.enabled, style: bb.style, octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
         sb: { enabled: sb.enabled, style: sb.style, octave: sb.octave, volume: sb.volume, reverb: sb.reverb },
@@ -539,19 +549,81 @@ function getChordAtStep(step) {
     return null;
 }
 
-function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat) {
+function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteStep) {
+    const conductorVel = ctx.conductorVelocity || 1.0;
+
+    // Visual Debug for Fills
+    const header = document.querySelector('.groove-panel-header h2');
+    if (header) header.style.color = gb.fillActive ? 'var(--soloist-color)' : '';
+
+    // Check Fill Expiration & Crash
+    if (gb.fillActive) {
+        const fillStep = absoluteStep - gb.fillStartStep;
+        if (fillStep >= gb.fillLength) {
+            gb.fillActive = false;
+            // Fill just finished, we are at the next downbeat.
+            if (gb.pendingCrash) {
+                playDrumSound('Crash', time, 1.1 * conductorVel);
+                gb.pendingCrash = false;
+            }
+        }
+    }
+
+    // Play Fill (Overlay Mode)
+    if (gb.fillActive) {
+        const fillStep = absoluteStep - gb.fillStartStep;
+        // Check bounds again in case we just disabled it (though above block handles >= length)
+        if (fillStep >= 0 && fillStep < gb.fillLength) {
+            const notes = gb.fillSteps[fillStep];
+            if (notes && notes.length > 0) {
+                notes.forEach(note => {
+                    playDrumSound(note.name, time, note.vel * conductorVel);
+                });
+                return; // Mute standard groove elements for this step
+            }
+        }
+    }
+
     gb.instruments.forEach(inst => {
         const stepVal = inst.steps[step];
+        
         if (stepVal > 0 && !inst.muted) {
             let velocity = stepVal === 2 ? 1.25 : 0.9;
+            
+            // Genre Nuances
+            if (gb.genreFeel === 'Rock') {
+                if (inst.name === 'Kick' && isDownbeat) velocity *= 1.2;
+                if (inst.name === 'Snare' && isBackbeat) velocity *= 1.2;
+            } else if (gb.genreFeel === 'Funk') {
+                if (stepVal === 2) velocity *= 1.1; // Sharp accents
+            }
+
+            // Standard dynamics
             if (inst.name === 'Kick') {
                 velocity *= isDownbeat ? 1.15 : (isQuarter ? 1.05 : 0.9);
             } else if (inst.name === 'Snare') {
                 velocity *= isBackbeat ? 1.1 : 0.9;
             } else if (inst.name === 'HiHat' || inst.name === 'Open') {
                 velocity *= isQuarter ? 1.1 : 0.85;
+                
+                // High Tempo Adaptation: Tame the HiHats
+                if (ctx.bpm > 165) {
+                    velocity *= 0.7; // General reduction
+                    if (!isQuarter) velocity *= 0.6; // Heavy reduction on offbeats
+                }
             }
-            playDrumSound(inst.name, time, velocity);
+            
+            playDrumSound(inst.name, time, velocity * conductorVel);
+        } 
+        // Ghost Note Logic
+        else if (stepVal === 0 && !inst.muted && inst.name === 'Snare') {
+            if ((gb.genreFeel === 'Funk' || gb.genreFeel === 'Jazz') && ctx.complexity > 0.4) {
+                // Higher complexity = higher chance of ghost notes
+                if (Math.random() < (ctx.complexity * 0.35)) {
+                    // Very quiet ghost note
+                    playDrumSound('Snare', time, 0.15 * conductorVel);
+                }
+            }
         }
     });
 }
@@ -577,6 +649,9 @@ function scheduleBass(chordData, step, time) {
             duration = (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * spb;
         }
         
+        const conductorVel = ctx.conductorVelocity || 1.0;
+        const finalVel = (velocity || 1.0) * conductorVel;
+
         if (vizState.enabled) {
             ctx.drawQueue.push({ 
                 type: 'bass_vis', name, octave, midi, time: adjustedTime,
@@ -584,7 +659,7 @@ function scheduleBass(chordData, step, time) {
                 duration
             });
         }
-        playBassNote(freq, adjustedTime, duration, velocity || 1.0, noteEntry.muted);
+        playBassNote(freq, adjustedTime, duration, finalVel, noteEntry.muted);
     }
 }
 
@@ -605,7 +680,8 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
 
         const spb = 60.0 / ctx.bpm;
         const duration = 0.25 * spb * (durationMultiplier || 1);
-        const vel = velocity || 1.0;
+        const conductorVel = ctx.conductorVelocity || 1.0;
+        const vel = (velocity || 1.0) * conductorVel;
         
         // Neo-soul "Lazy" Lag: Additional variable delay for neo style
         const styleLag = style === 'neo' ? (0.01 + Math.random() * 0.035) : 0;
@@ -681,7 +757,38 @@ function scheduleChords(chordData, step, time) {
     }
 }
 
+function updateAutoConductor() {
+    if (!ctx.autoIntensity || !ctx.isPlaying) return;
+
+    // 1. Decision Logic (New Target)
+    if (ctx.step >= conductorState.nextDecisionStep) {
+        // Pick new intensity target (0.3 - 0.9)
+        conductorState.target = 0.3 + Math.random() * 0.6;
+        
+        // Randomize duration until next change (4 to 12 measures)
+        const stepsPerMeasure = getStepsPerMeasure();
+        const measures = 4 + Math.floor(Math.random() * 8);
+        conductorState.nextDecisionStep = ctx.step + (measures * stepsPerMeasure);
+        
+        // Calculate step size to reach target roughly by the middle of the duration
+        // This ensures smooth transitions rather than jumps
+        const durationSteps = measures * stepsPerMeasure;
+        const diff = conductorState.target - ctx.bandIntensity;
+        conductorState.stepSize = diff / (durationSteps * 0.5); // Reach it in half the time
+    }
+
+    // 2. Execution Logic (Ramp)
+    if (Math.abs(ctx.bandIntensity - conductorState.target) > 0.001) {
+        ctx.bandIntensity += conductorState.stepSize;
+        // Clamp
+        ctx.bandIntensity = Math.max(0, Math.min(1, ctx.bandIntensity));
+        applyConductor();
+    }
+}
+
 function scheduleGlobalEvent(step, swungTime) {
+    updateAutoConductor();
+    checkSectionTransition(step);
     const stepsPerMeasure = getStepsPerMeasure();
     const drumStep = step % (gb.measures * stepsPerMeasure);
     // Dynamic jitter based on humanize setting (0ms to ~25ms)
@@ -744,7 +851,7 @@ function scheduleGlobalEvent(step, swungTime) {
         // We pass the raw drumStep and rely on the fact that drum patterns are 128 long.
         // But for odd meters, we might want to truncate the pattern read.
         // For now, let's just pass the step.
-        scheduleDrums(drumStep, t, drumStep % stepsPerMeasure === 0, ts.pulse.includes(drumStep % stepsPerMeasure), false);
+        scheduleDrums(drumStep, t, drumStep % stepsPerMeasure === 0, ts.pulse.includes(drumStep % stepsPerMeasure), false, step);
     }
 
     const chordData = getChordAtStep(step);
@@ -811,6 +918,17 @@ function updateChordVis(ev) {
  */
 function draw() {
     if (!ctx.audio) return;
+    
+    // Auto-Conductor UI Update
+    if (ctx.autoIntensity && ui.intensitySlider) {
+        const val = Math.round(ctx.bandIntensity * 100);
+        // Only update DOM if value changed to avoid layout thrashing
+        if (parseInt(ui.intensitySlider.value) !== val) {
+            ui.intensitySlider.value = val;
+            if (ui.intensityValue) ui.intensityValue.textContent = `${val}%`;
+        }
+    }
+
     if (!ctx.isPlaying && ctx.drawQueue.length === 0) {
         ctx.isDrawing = false;
         clearActiveVisuals(viz);
@@ -899,7 +1017,7 @@ function renderUserPresets() {
             }
             arranger.lastChordPreset = p.name;
             renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-            validateProgression(renderChordVisualizer);
+            validateAndAnalyze();
             flushBuffers();
             document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
@@ -1003,6 +1121,214 @@ function undo() {
     showToast("Undo successful");
 }
 
+const SMART_GENRES = {
+    'Rock': { swing: 0, drum: 'Basic Rock', feel: 'Rock', bass: 'rock', soloist: 'shred' },
+    'Jazz': { swing: 60, sub: '8th', drum: 'Jazz', feel: 'Jazz', bass: 'quarter', soloist: 'bird' },
+    'Funk': { swing: 15, sub: '16th', drum: 'Funk', feel: 'Funk', bass: 'funk', soloist: 'blues' },
+    'Blues': { swing: 66, sub: '8th', drum: 'Blues Shuffle', feel: 'Blues', bass: 'quarter', soloist: 'blues' },
+    'Neo-Soul': { swing: 45, sub: '16th', drum: 'Neo-Soul', feel: 'Neo-Soul', bass: 'neo', soloist: 'neo' }
+};
+
+const SECTION_ENERGY_MAP = {
+    'intro': 0.4, 'verse': 0.5, 'pre-chorus': 0.6, 'build': 0.7,
+    'chorus': 0.9, 'drop': 1.0, 'bridge': 0.6, 'solo': 0.8,
+    'outro': 0.4, 'breakdown': 0.3
+};
+
+function getSectionEnergy(label) {
+    if (!label) return 0.5;
+    const lower = label.toLowerCase();
+    for (const [key, val] of Object.entries(SECTION_ENERGY_MAP)) {
+        if (lower.includes(key)) return val;
+    }
+    return 0.5; // Default
+}
+
+function analyzeForm() {
+    if (!arranger.stepMap.length) return;
+    
+    // 1. Simplify Labels to Abstract Sections (A, B, C...)
+    const labels = arranger.stepMap.map(s => {
+        const l = s.chord.sectionLabel.toLowerCase();
+        if (l.includes('verse') || l.includes('a section')) return 'A';
+        if (l.includes('chorus') || l.includes('b section')) return 'B';
+        if (l.includes('bridge') || l.includes('c section')) return 'C';
+        if (l.includes('intro')) return 'Intro';
+        if (l.includes('outro')) return 'Outro';
+        // Fallback: use first letter or simplified name
+        return l.charAt(0).toUpperCase();
+    });
+    
+    // 2. Detect Form
+    const sequence = labels.join('-');
+    let formType = 'Linear';
+    
+    if (sequence.includes('A-A-B-A')) formType = 'AABA';
+    else if (sequence.includes('A-A-B-C')) formType = 'AABC';
+    else if (sequence.includes('A-B-A-B')) formType = 'ABAB';
+    
+    // 3. Assign Roles
+    const roles = labels.map((label, i) => {
+        if (label === 'Intro') return 'Exposition';
+        if (label === 'Outro') return 'Resolution';
+        
+        // Context-aware roles
+        if (formType === 'AABA') {
+            if (i === 0) return 'Exposition';
+            if (i === 1) return 'Development'; // Second A
+            if (label === 'B') return 'Contrast';
+            if (i === 3) return 'Recapitulation'; // Final A
+        }
+        
+        if (formType === 'AABC') {
+            if (i === 0) return 'Exposition';
+            if (i === 1) return 'Development';
+            if (label === 'B') return 'Build';
+            if (label === 'C') return 'Climax';
+        }
+
+        // Generic Fallbacks
+        if (label === 'B' || label === 'Chorus') return 'Climax';
+        if (label === 'C' || label === 'Bridge') return 'Contrast';
+        
+        return 'Standard';
+    });
+
+    conductorState.form = { type: formType, sequence, roles };
+    console.log(`Analyzed Form: ${formType}`, roles);
+}
+
+function validateAndAnalyze() {
+    validateProgression(() => {
+        renderChordVisualizer();
+        analyzeForm();
+    });
+}
+
+function checkSectionTransition(currentStep) {
+    if (arranger.stepMap.length === 0) return;
+    
+    // Find where we are
+    const total = arranger.totalSteps;
+    const modStep = currentStep % total;
+    
+    // Find current section entry
+    const entry = arranger.stepMap.find(e => modStep >= e.start && modStep < e.end);
+    if (!entry) return;
+    
+    // Check if we are approaching the end of this section OR the end of the loop
+    const stepsPerMeasure = getStepsPerMeasure();
+    const sectionEnd = entry.end;
+    
+    // Fill Trigger Points:
+    // 1. End of current section (if it's changing)
+    // 2. End of the entire loop (Turnaround)
+    const fillStart = sectionEnd - stepsPerMeasure;
+    
+    if (modStep === fillStart) {
+        // Determine Next Section
+        const currentIndex = arranger.stepMap.indexOf(entry);
+        let nextEntry = arranger.stepMap[currentIndex + 1];
+        let isLoopEnd = false;
+        let nextIndex = currentIndex + 1;
+        
+        if (!nextEntry) {
+            nextEntry = arranger.stepMap[0]; // Loop back to start
+            isLoopEnd = true;
+            nextIndex = 0;
+        }
+        
+        // Trigger if: Section ID changes OR it's the Loop Turnaround
+        if (nextEntry.chord.sectionId !== entry.chord.sectionId || isLoopEnd) {
+            
+            // Smart Loop Management: Throttle fills on short loops
+            let shouldFill = true;
+            if (isLoopEnd) {
+                conductorState.loopCount++;
+                // If loop is <= 4 bars (64 steps), throttle based on intensity
+                if (arranger.totalSteps <= 64) {
+                    // High: Every loop. Med: Every 2. Low: Every 4.
+                    const freq = ctx.bandIntensity > 0.75 ? 1 : (ctx.bandIntensity > 0.4 ? 2 : 4);
+                    shouldFill = (conductorState.loopCount % freq === 0);
+                }
+            }
+
+            if (shouldFill) {
+                // 1. Determine Target Energy based on Form Role
+                let targetEnergy = 0.5;
+                if (conductorState.form && conductorState.form.roles[nextIndex]) {
+                    const role = conductorState.form.roles[nextIndex];
+                    const currentInt = ctx.bandIntensity;
+                    
+                    switch (role) {
+                        case 'Exposition': targetEnergy = 0.45; break;
+                        case 'Development': targetEnergy = Math.min(0.7, currentInt + 0.15); break; // Slight boost
+                        case 'Contrast': targetEnergy = (currentInt > 0.6) ? 0.4 : 0.8; break; // Flip it
+                        case 'Build': targetEnergy = 0.75; break;
+                        case 'Climax': targetEnergy = 0.95; break;
+                        case 'Recapitulation': targetEnergy = 0.6; break; // Solid groove
+                        case 'Resolution': targetEnergy = 0.3; break;
+                        default: targetEnergy = getSectionEnergy(nextEntry.chord.sectionLabel);
+                    }
+                } else {
+                    targetEnergy = getSectionEnergy(nextEntry.chord.sectionLabel);
+                }
+
+                // Loop variation (if enabled)
+                if (isLoopEnd && ctx.autoIntensity) {
+                    targetEnergy = Math.max(0.3, Math.min(0.9, targetEnergy + (Math.random() * 0.2 - 0.1)));
+                }
+
+                // Trigger Fill
+                gb.fillSteps = generateProceduralFill(gb.genreFeel, ctx.bandIntensity, stepsPerMeasure);
+                gb.fillActive = true;
+                gb.fillStartStep = currentStep;
+                gb.fillLength = stepsPerMeasure;
+                gb.pendingCrash = true;
+                
+                // Visual Cue (Flash)
+                triggerFlash(0.25);
+                
+                // Auto-Conductor Transition
+                if (ctx.autoIntensity) {
+                    conductorState.target = targetEnergy;
+                    // Ramp fast to hit target by start of next section
+                    const rampSteps = stepsPerMeasure;
+                    const diff = conductorState.target - ctx.bandIntensity;
+                    conductorState.stepSize = diff / rampSteps; 
+                    conductorState.nextDecisionStep = currentStep + stepsPerMeasure * 4; 
+                }
+            }
+        }
+    }
+}
+
+function applyConductor() {
+    const intensity = ctx.bandIntensity; // 0.0 - 1.0
+    const complexity = ctx.complexity;   // 0.0 - 1.0
+
+    // --- 1. Master Dynamics ---
+    // Voicing Density (Chords)
+    if (intensity < 0.4) cb.density = 'thin';
+    else if (intensity > 0.85) cb.density = 'rich';
+    else cb.density = 'standard';
+    if (ui.densitySelect) ui.densitySelect.value = cb.density;
+
+    // Dynamics (Volumes) - subtle scaling
+    // We'll store a "conductorVelocity" factor in ctx to scale playback velocity
+    ctx.conductorVelocity = 0.8 + (intensity * 0.3); // 0.8x to 1.1x
+
+    // --- 2. Complexity / Busyness ---
+    // Map Complexity to Drum Fill probability or similar?
+    // For now, let's map it to Humanize (Low complexity = tighter, High = looser? Or inverse?)
+    // Usually "Complex" might mean more notes.
+    // Let's use it for the Soloist activity if enabled.
+    sb.hookRetentionProb = 0.2 + (complexity * 0.6);
+
+    // Save changes so audio engine picks them up
+    saveCurrentState();
+}
+
 function setupUIHandlers() {
     const openExportModal = () => {
         ui.arrangerActionMenu.classList.remove('open');
@@ -1017,6 +1343,74 @@ function setupUIHandlers() {
         
         ui.exportOverlay.classList.add('active');
     };
+
+    // Smart Controls Listeners
+    if (ui.intensitySlider) {
+        ui.intensitySlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            ctx.bandIntensity = val / 100;
+            if (ui.intensityValue) ui.intensityValue.textContent = `${val}%`;
+            applyConductor();
+        });
+    }
+
+    if (ui.complexitySlider) {
+        ui.complexitySlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            ctx.complexity = val / 100;
+            if (ui.complexityValue) {
+                let label = 'Low';
+                if (val > 33) label = 'Medium';
+                if (val > 66) label = 'High';
+                ui.complexityValue.textContent = label;
+            }
+            applyConductor();
+        });
+    }
+
+    if (ui.autoIntensityCheck) {
+        ui.autoIntensityCheck.addEventListener('change', (e) => {
+            ctx.autoIntensity = e.target.checked;
+            ui.intensitySlider.disabled = ctx.autoIntensity;
+            if (ctx.autoIntensity) {
+                ui.intensitySlider.style.opacity = 0.5;
+                conductorState.nextDecisionStep = ctx.step; // Force immediate decision
+            } else {
+                ui.intensitySlider.style.opacity = 1;
+            }
+            saveCurrentState();
+        });
+    }
+
+    document.querySelectorAll('.genre-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const genre = btn.dataset.genre;
+            const config = SMART_GENRES[genre];
+            if (config) {
+                // Apply Genre Config
+                gb.genreFeel = config.feel;
+                
+                gb.swing = config.swing;
+                ui.swingSlider.value = config.swing;
+                if (config.sub) {
+                    gb.swingSub = config.sub;
+                    ui.swingBase.value = config.sub;
+                }
+                
+                // Load Drum Preset
+                loadDrumPreset(config.drum);
+                
+                // Apply Cross-Instrument Styles (Removed to respect user selection)
+                // If user wants auto-adaptation, they select 'Smart' style on the instrument.
+                
+                saveCurrentState();
+                showToast(`Switched to ${genre} feel`);
+            }
+        });
+    });
 
     const listeners = [
         [ui.playBtn, 'click', togglePlay],
@@ -1194,27 +1588,22 @@ function setupUIHandlers() {
     }
 
     ui.settingsOverlay.addEventListener('click', e => e.target === ui.settingsOverlay && ui.settingsOverlay.classList.remove('active'));
-    ui.keySelect.addEventListener('change', e => { 
-        arranger.key = e.target.value; 
-        arranger.isMinor = false;
+    ui.keySelect.addEventListener('change', () => {
+        arranger.key = ui.keySelect.value;
         updateRelKeyButton();
-        updateKeySelectLabels();
-        validateProgression(renderChordVisualizer); 
-        flushBuffers(); 
+        validateAndAnalyze();
         saveCurrentState();
     });
 
-    ui.timeSigSelect.addEventListener('change', e => {
-        arranger.timeSignature = e.target.value;
-        loadDrumPreset(gb.lastDrumPreset);
-        validateProgression(renderChordVisualizer);
-        flushBuffers();
+    ui.timeSigSelect.addEventListener('change', () => {
+        arranger.timeSignature = ui.timeSigSelect.value;
+        validateAndAnalyze();
         saveCurrentState();
     });
-    
-    ui.notationSelect.addEventListener('change', e => { 
-        arranger.notation = e.target.value; 
-        renderChordVisualizer(); 
+
+    ui.notationSelect.addEventListener('change', () => {
+        arranger.notation = ui.notationSelect.value;
+        validateAndAnalyze();
         saveCurrentState();
     });
 
@@ -1232,7 +1621,7 @@ function setupUIHandlers() {
 
     ui.densitySelect.addEventListener('change', e => { 
         cb.density = e.target.value; 
-        validateProgression(renderChordVisualizer); 
+        validateAndAnalyze(); 
         flushBuffers(); 
         saveCurrentState();
     });
@@ -1268,7 +1657,7 @@ function setupUIHandlers() {
     });
 
     const octaveSliders = [
-        { el: ui.octave, state: cb, label: ui.octaveLabel, callback: () => validateProgression(renderChordVisualizer) },
+        { el: ui.octave, state: cb, label: ui.octaveLabel, callback: validateAndAnalyze },
         { el: ui.bassOctave, state: bb, label: ui.bassOctaveLabel, header: ui.bassHeaderReg },
         { el: ui.soloistOctave, state: sb, label: ui.soloistOctaveLabel, header: ui.soloistHeaderReg }
     ];
@@ -1438,10 +1827,21 @@ function setupPresets() {
     renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item, chip) => {
         loadDrumPreset(item.name);
         document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
+        // We need to highlight chips in BOTH containers
+        document.querySelectorAll(`.drum-preset-chip[data-id="${item.name}"]`).forEach(c => c.classList.add('active'));
         gb.lastDrumPreset = item.name;
         saveCurrentState();
     });
+
+    if (ui.smartDrumPresets) {
+        renderCategorized(ui.smartDrumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item, chip) => {
+            loadDrumPreset(item.name);
+            document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll(`.drum-preset-chip[data-id="${item.name}"]`).forEach(c => c.classList.add('active'));
+            gb.lastDrumPreset = item.name;
+            saveCurrentState();
+        });
+    }
 
     // Chord Progression Presets
     renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', arranger.lastChordPreset, (item, chip) => {
@@ -1474,7 +1874,7 @@ function setupPresets() {
         updateKeySelectLabels();
         arranger.lastChordPreset = item.name;
         renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-        validateProgression(renderChordVisualizer);
+        validateAndAnalyze();
         flushBuffers();
         document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
@@ -1494,6 +1894,9 @@ function init() {
             arranger.lastChordPreset = savedState.lastChordPreset || 'Pop (Standard)';
             ctx.theme = savedState.theme || 'auto';
             ctx.bpm = savedState.bpm || 100;
+            ctx.bandIntensity = savedState.bandIntensity !== undefined ? savedState.bandIntensity : 0.5;
+            ctx.complexity = savedState.complexity !== undefined ? savedState.complexity : 0.3;
+            ctx.autoIntensity = savedState.autoIntensity || false;
             vizState.enabled = savedState.vizEnabled !== undefined ? savedState.vizEnabled : false;
             
             // Restore Accompanist Settings
@@ -1550,7 +1953,8 @@ function init() {
                         }
                     });
                 }
-
+                
+                gb.genreFeel = savedState.gb.genreFeel || 'Rock';
                 gb.currentMeasure = 0;
             }
 
@@ -1558,6 +1962,29 @@ function init() {
             ui.keySelect.value = arranger.key;
             ui.timeSigSelect.value = arranger.timeSignature;
             ui.bpmInput.value = ctx.bpm;
+            
+            // Smart Controls UI Sync
+            if (ui.intensitySlider) {
+                ui.intensitySlider.value = Math.round(ctx.bandIntensity * 100);
+                if (ui.intensityValue) ui.intensityValue.textContent = `${ui.intensitySlider.value}%`;
+                ui.intensitySlider.disabled = ctx.autoIntensity;
+                ui.intensitySlider.style.opacity = ctx.autoIntensity ? 0.5 : 1;
+            }
+            if (ui.complexitySlider) {
+                ui.complexitySlider.value = Math.round(ctx.complexity * 100);
+                // Update label logic duplicated from listener... simplified:
+                let label = 'Low';
+                if (ctx.complexity > 0.33) label = 'Medium';
+                if (ctx.complexity > 0.66) label = 'High';
+                if (ui.complexityValue) ui.complexityValue.textContent = label;
+            }
+            if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = ctx.autoIntensity;
+            
+            // Highlight active genre button
+            document.querySelectorAll('.genre-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.genre === gb.genreFeel);
+            });
+
             ui.notationSelect.value = arranger.notation;
             ui.densitySelect.value = cb.density;
             ui.octave.value = cb.octave;
@@ -1611,7 +2038,10 @@ function init() {
         renderUserDrumPresets();
         loadFromUrl();
         renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-        validateProgression(renderChordVisualizer);
+        validateProgression(() => {
+            renderChordVisualizer();
+            analyzeForm();
+        });
         updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
         updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
 
@@ -1766,6 +2196,7 @@ function resetToDefaults() {
     gb.reverb = 0.2;
     gb.swing = 0;
     gb.swingSub = '8th';
+    gb.genreFeel = 'Rock';
 
     ui.bpmInput.value = 100;
     ui.keySelect.value = 'C';
@@ -1796,12 +2227,28 @@ function resetToDefaults() {
     if (ctx.soloistGain) ctx.soloistGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.soloist, ctx.audio.currentTime, 0.02);
     if (ctx.drumsGain) ctx.drumsGain.gain.setTargetAtTime(0.5 * MIXER_GAIN_MULTIPLIERS.drums, ctx.audio.currentTime, 0.02);
 
+    // Reset Smart Controls
+    ctx.bandIntensity = 0.5;
+    ctx.complexity = 0.3;
+    ctx.conductorVelocity = 1.0;
+    if (ui.intensitySlider) {
+        ui.intensitySlider.value = 50;
+        if (ui.intensityValue) ui.intensityValue.textContent = '50%';
+    }
+    if (ui.complexitySlider) {
+        ui.complexitySlider.value = 30;
+        if (ui.complexityValue) ui.complexityValue.textContent = 'Low';
+    }
+
     updateOctaveLabel(ui.octaveLabel, cb.octave);
     updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
     updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
     
     renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-    validateProgression(renderChordVisualizer);
+    validateProgression(() => {
+        renderChordVisualizer();
+        analyzeForm();
+    });
     flushBuffers();
     
     gb.instruments.forEach(inst => {
@@ -1810,6 +2257,11 @@ function resetToDefaults() {
     });
     loadDrumPreset('Standard');
     renderGrid(); 
+
+    // Reset Genre Buttons
+    document.querySelectorAll('.genre-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.genre === gb.genreFeel);
+    });
 
     saveCurrentState();
     showToast("Settings reset");
