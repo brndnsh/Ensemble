@@ -858,7 +858,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
 
     } else if (name === 'HiHat' || name === 'Open') {
         const isOpen = name === 'Open';
-        const vol = masterVol * 0.6 * rr();
+        // Reduced volume for open hihat (0.4) to sit back in the mix, kept tight (0.6) for closed
+        const vol = masterVol * (isOpen ? 0.4 : 0.6) * rr();
         const duration = (isOpen ? 0.35 : 0.06) * rr();
 
         // 0. Choking (Monophonic Cutoff for Hi-Hats)
@@ -874,10 +875,16 @@ export function playDrumSound(name, time, velocity = 1.0) {
         // 1. Metallic Bank (The "Ring")
         const ratios = [2.0, 3.0, 4.16, 5.43, 6.79, 8.21];
         const baseFreq = 42 * rr();
-        const oscs = ratios.map(r => {
+        const metallicGain = ctx.audio.createGain();
+        // Reduce metallic component for Open hihats to emphasize the noise sizzle
+        metallicGain.gain.setValueAtTime(isOpen ? 0.25 : 0.5, playTime);
+        const oscs = ratios.map((r, i) => {
             const o = ctx.audio.createOscillator();
-            o.type = 'square';
+            // Mix square and triangle waves for a more complex metallic spectrum
+            o.type = (i % 3 === 0) ? 'square' : 'triangle';
             o.frequency.setValueAtTime(baseFreq * r, playTime);
+            // Slight detuning to add natural inharmonicity and thickness
+            o.detune.setValueAtTime((Math.random() - 0.5) * 15, playTime);
             return o;
         });
 
@@ -887,11 +894,14 @@ export function playDrumSound(name, time, velocity = 1.0) {
 
         const hpFilter = ctx.audio.createBiquadFilter();
         hpFilter.type = 'highpass';
-        const cutoff = (8000 + velocity * 3000) * rr();
+        // Warmer, less harsh filter for open hihats (6000Hz base)
+        const baseCutoff = isOpen ? 6000 : 8000;
+        const cutoff = (baseCutoff + velocity * 3000) * rr();
         
         hpFilter.frequency.value = cutoff; // FF FIX
         hpFilter.frequency.setValueAtTime(cutoff, playTime);
-        hpFilter.frequency.setTargetAtTime(cutoff * 0.5, playTime, duration);
+        // Relaxed sweep (to 75% instead of 50%) to maintain crispness
+        hpFilter.frequency.setTargetAtTime(cutoff * 0.75, playTime, duration);
         hpFilter.Q.value = 1.2;
         hpFilter.Q.setValueAtTime(1.2, playTime);
         
@@ -906,10 +916,11 @@ export function playDrumSound(name, time, velocity = 1.0) {
         gb.lastHatGain = gain;
 
         oscs.forEach(o => {
-            o.connect(hpFilter);
+            o.connect(metallicGain);
             o.start(playTime);
             o.stop(playTime + duration + 0.2);
         });
+        metallicGain.connect(hpFilter);
         noise.connect(hpFilter);
         noise.start(playTime);
         noise.stop(playTime + duration + 0.2);
@@ -919,7 +930,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
 
         oscs[0].onended = () => {
             if (gb.lastHatGain === gain) gb.lastHatGain = null;
-            safeDisconnect([...oscs, noise, hpFilter, gain]);
+            safeDisconnect([...oscs, noise, hpFilter, gain, metallicGain]);
         };
 
     } else if (name === 'Crash') {

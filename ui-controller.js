@@ -39,6 +39,7 @@ const SMART_GENRES = {
     'Rock': { swing: 0, drum: 'Basic Rock', feel: 'Rock', bass: 'rock', soloist: 'shred' },
     'Jazz': { swing: 60, sub: '8th', drum: 'Jazz', feel: 'Jazz', bass: 'quarter', soloist: 'bird' },
     'Funk': { swing: 15, sub: '16th', drum: 'Funk', feel: 'Funk', bass: 'funk', soloist: 'blues' },
+    'Blues': { swing: 100, sub: '8th', drum: 'Blues Shuffle', feel: 'Blues', bass: 'quarter', soloist: 'blues' },
     'Neo-Soul': { swing: 30, sub: '16th', drum: 'Neo-Soul', feel: 'Funk', bass: 'neo', soloist: 'neo' },
     'Reggae': { swing: 20, sub: '8th', drum: 'Reggae', feel: 'Rock', bass: 'dub', soloist: 'blues' },
     'Bossa': { swing: 0, drum: 'Bossa Nova', feel: 'Rock', bass: 'bossa', soloist: 'scalar' }
