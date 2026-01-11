@@ -647,18 +647,19 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
     }
 }
 
-function scheduleChordVisuals(chordData, time) {
-    const { chord, stepInChord, chordIndex } = chordData;
-    const spb = 60.0 / ctx.bpm;
-    
-    if (stepInChord === 0) {
+function scheduleChordVisuals(chordData, t) {
+    if (chordData.stepInChord === 0) {
         ctx.drawQueue.push({ 
-            type: 'chord_vis', index: chordIndex, time,
-            chordNotes: [...chord.freqs.map(f => getMidi(f))],
-            rootMidi: chord.rootMidi,
-            intervals: [...chord.intervals],
-            duration: chord.beats * spb
+            type: 'chord_vis', 
+            time: t, 
+            index: chordData.chordIndex,
+            chordNotes: chordData.chord.freqs.map(f => getMidi(f)),
+            rootMidi: chordData.chord.rootMidi,
+            intervals: chordData.chord.intervals,
+            duration: chordData.chord.beats * (60/ctx.bpm)
         });
+        // Chord change pulse
+        ctx.drawQueue.push({ type: 'flash', time: t, intensity: 0.15, beat: 0 });
     }
 }
 

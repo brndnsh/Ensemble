@@ -128,7 +128,7 @@ export const cb = {
  * @property {Array<Instrument>} instruments - List of drum instruments.
  * @property {number} volume - Volume level.
  * @property {number} reverb - Reverb level.
- * @property {number} measures - Number of measures in the loop (1-4).
+ * @property {number} measures - Number of measures in the loop (1-8).
  * @property {number} currentMeasure - Currently visible measure for editing.
  * @property {boolean} autoFollow - Whether to scroll grid during playback.
  * @property {number} humanize - Humanization percentage (0-100).

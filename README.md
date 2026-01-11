@@ -35,8 +35,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   **Algorithmic Bass Lines**: Automatically generates melodic lines that follow your arranger data. The engine uses sophisticated targeting logic to land on the Root at measure boundaries.
 *   **Slash Chord Support**: Fully respects slash notation (e.g., `C/G`), prioritizing specified bass notes for a professional harmonic foundation.
 *   **Intensity-Aware**: Dynamically builds energy alongside the soloist, adding more fills and register jumps as sections progress.
-*   **Rhythmic Styles**: Choose between Whole Note, Half Note, Arpeggio, Walking (Quarter Note), Rock (Driving 8ths), Funk (Syncopated), Rocco (16th-note Finger Funk), Neo-Soul (Deep register with micro-lag), and Bossa Nova patterns.
-
+    *   **Rhythmic Styles**: Choose between Whole Note, Half Note, Arpeggio, Walking (Quarter Note), Rock (Driving 8ths), Funk (Syncopated), Rocco (16th-note Finger Funk), Disco (Octaves), Dub (Deep Reggae), Neo-Soul (Deep register with micro-lag), and Bossa Nova patterns.
 ### 🎸 Soloist
 *   **Algorithmic Improvisation**: Generates melodic lines in real-time, thinking in phrases and rhythmic cells rather than random notes.
 *   **Soloing Styles**: Choose from Scalar, Shreddy, Blues, Minimal (Gilmour-inspired), Bird (Bebop), and Neo-Soul.

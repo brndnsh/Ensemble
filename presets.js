@@ -533,6 +533,7 @@ export const CHORD_STYLES = [
     { id: 'strum8', name: 'Strum', category: 'Pop/Rock' },
     { id: 'pop', name: 'Pop', category: 'Pop/Rock' },
     { id: 'rock', name: 'Pop-Rock', category: 'Pop/Rock' },
+    { id: 'blues', name: 'Blues Shuffle', category: 'Blues' },
     { id: 'skank', name: 'Reggae', category: 'World/Latin' },
     { id: 'double_skank', name: 'Double Skank', category: 'World/Latin' },
     { id: 'funk', name: 'Funk', category: 'Soul/Funk' },

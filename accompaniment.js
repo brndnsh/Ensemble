@@ -389,6 +389,41 @@ export const chordPatterns = {
             chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.4, { vol: (measureStep % (ts.stepsPerBeat * 2) === ts.stepsPerBeat ? 0.22 : 0.18), index: i }));
         }
     },
+    blues: (chord, time, spb, measureStep) => {
+        const ts = (TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4']);
+        // Shuffle pattern (on the beat and the 'and' of the shuffle)
+        // In our 16th-note grid, if swing is high, we mostly care about steps 0, 2, 4, 6...
+        // But for a shuffle, it's often better to just hit the 8th notes (0, 2, 4, 6...)
+        // and let the engine's swing handle the timing.
+        
+        // Pattern: 1, 1-and, 2, 2-and...
+        // We alternate R+5 on beats 1&3, R+6 on beats 2&4? 
+        // Or more common: 1 (R+5), 1-and (R+5), 2 (R+6), 2-and (R+6)
+        
+        if (measureStep % 2 === 0) {
+            const beat = Math.floor(measureStep / 4);
+            const isSecondHalfOfBeat = (measureStep % 4) === 2;
+            
+            // Alternating 5th and 6th
+            // Beat 0, 1 -> 5th. Beat 2, 3 -> 6th.
+            const useSixth = (beat % 2 === 1);
+            
+            const root = chord.freqs[0];
+            const intervals = chord.intervals;
+            const hasFlat5 = intervals.includes(6);
+            
+            // Construct the "Power Chord" pair
+            const fifth = root * Math.pow(2, (hasFlat5 ? 6 : 7) / 12);
+            const sixth = root * Math.pow(2, 9 / 12);
+            
+            const pair = [root, useSixth ? sixth : fifth];
+            
+            const vol = isSecondHalfOfBeat ? 0.15 : 0.2;
+            const dur = spb * 0.3;
+            
+            pair.forEach((f, i) => playNote(f, time, dur, { vol, index: i }));
+        }
+    },
     bossa: (chord, time, spb, measureStep, step) => {
         const ts = arranger.timeSignature;
         const tsObj = (TIME_SIGNATURES[ts] || TIME_SIGNATURES['4/4']);
