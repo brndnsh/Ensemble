@@ -3,6 +3,7 @@ import { ctx, arranger, gb, bb, sb } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
 import { DRUM_PRESETS } from './presets.js';
 import { isBassActive } from './bass.js';
+import { getFrequency, getMidi } from './utils.js';
 
 // --- COMPING STATE ENGINE ---
 // Tracks the "improviser's intent" across function calls
@@ -94,7 +95,7 @@ export const chordPatterns = {
      * SMART MODE: The "AI Conductor"
      * Analyzes Drum, Bass, and Soloist state to choose the best strategy.
      */
-    smart: (chord, time, spb, measureStep, step) => {
+    smart: (chord, time, spb, stepInChord, measureStep, step) => {
         // 1. Identify Context
         const drumPresetName = gb.lastDrumPreset || 'Standard';
         const drumConfig = DRUM_PRESETS[drumPresetName] || DRUM_PRESETS['Standard'];
@@ -140,15 +141,20 @@ export const chordPatterns = {
         if (drumCategory === 'World/Latin' || bb.style === 'bossa' || bb.style === 'dub') {
             const latinChord = { ...chord, freqs: voicing }; // Use filtered voicing
             if (drumPresetName.includes('Bossa') || bb.style === 'bossa') {
-                return chordPatterns.bossa(latinChord, time, spb, measureStep, step);
+                return chordPatterns.bossa(latinChord, time, spb, stepInChord, measureStep, step);
             }
             if (drumPresetName.includes('Reggae') || bb.style === 'skank' || bb.style === 'dub') {
-                return chordPatterns.skank(latinChord, time, spb, measureStep);
+                return chordPatterns.skank(latinChord, time, spb, stepInChord, measureStep, step);
             }
-            return chordPatterns.clave(latinChord, time, spb, measureStep);
+            return chordPatterns.clave(latinChord, time, spb, stepInChord, measureStep, step);
         }
 
-        // B. FUNK / SOUL -> Interlocking Comping
+        // B. BLUES -> specialized shuffle
+        if (drumCategory === 'Blues' || bb.style === 'arp') {
+            return chordPatterns.blues(chord, time, spb, stepInChord, measureStep, step);
+        }
+
+        // C. FUNK / SOUL -> Interlocking Comping
         if (drumCategory === 'Soul/Funk' || bb.style === 'funk' || bb.style === 'rocco' || bb.style === 'disco') {
             updateCompingState(step, 'funk', soloistBusy);
             
@@ -188,7 +194,7 @@ export const chordPatterns = {
                     stepVoicing = stepVoicing.slice(-keep); 
                 }
 
-                stepVoicing.forEach((f, i) => playNote(f, time, dur, { vol: 0.22, index: i })); // Increased vol from 0.18
+                stepVoicing.forEach((f, i) => playNote(f, time, dur, { vol: 0.32, index: i })); // Increased vol from 0.22
             } else {
                 // Ghost note scratches (percolation)
                 if (compingState.currentVibe === 'active' && Math.random() < 0.1) {
@@ -198,7 +204,7 @@ export const chordPatterns = {
             return;
         }
 
-        // C. JAZZ -> Generative Comping
+        // D. JAZZ -> Generative Comping
         if (drumCategory === 'Jazz' || bb.style === 'quarter') {
             updateCompingState(step, 'jazz', soloistBusy);
             
@@ -219,7 +225,7 @@ export const chordPatterns = {
             if (isHit) {
                 // Velocity nuance: "and" of beats are often accented in jazz (Charleston feel)
                 const isUpbeat = (measureStep % 4) !== 0; 
-                const vol = isUpbeat ? 0.22 : 0.16;
+                const vol = isUpbeat ? 0.32 : 0.24; // Increased from 0.22/0.16
                 const dur = isUpbeat ? spb * 0.4 : spb * 0.8; // Short stabs vs long pads
 
                 // Texture: Vary density (Shell vs Full)
@@ -235,23 +241,23 @@ export const chordPatterns = {
             return;
         }
 
-        // D. POP/ROCK -> Fallback to intelligent Pad/Strum mix
+        // E. POP/ROCK -> Fallback to intelligent Pad/Strum mix
         // If slow tempo -> Pad
         if (ctx.bpm < 100) {
              const padChord = { ...chord, freqs: voicing };
-             return chordPatterns.pad(padChord, time, spb, measureStep);
+             return chordPatterns.pad(padChord, time, spb, stepInChord, measureStep, step);
         } else {
              const popChord = { ...chord, freqs: voicing };
-             return chordPatterns.pop(popChord, time, spb, measureStep);
+             return chordPatterns.pop(popChord, time, spb, stepInChord, measureStep, step);
         }
     },
 
-    pad: (chord, time, spb, stepInChord) => {
+    pad: (chord, time, spb, stepInChord, measureStep, step) => {
         if (stepInChord === 0) {
             chord.freqs.forEach((f, i) => playNote(f, time, chord.beats * spb, { vol: 0.2, index: i }));
         }
     },
-    strum8: (chord, time, spb, measureStep) => {
+    strum8: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         
         // Classic "Down Down Up Down" (1, 2, 2-and, 3, 4)
@@ -275,7 +281,7 @@ export const chordPatterns = {
             });
         }
     },
-    pop: (chord, time, spb, measureStep) => {
+    pop: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = arranger.timeSignature;
         let pattern = [0, 3, 6, 10, 12, 14]; // 4/4
         if (ts === '3/4') pattern = [0, 3, 6, 9];
@@ -288,12 +294,12 @@ export const chordPatterns = {
             chord.freqs.forEach((f, i) => playNote(f, time, spb * 1.5, { vol: (measureStep % 4 === 0 ? 0.2 : 0.15), index: i }));
         }
     },
-    rock: (chord, time, spb, measureStep) => {
+    rock: (chord, time, spb, stepInChord, measureStep, step) => {
         if (measureStep % 2 === 0) {
             chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.5, { vol: (measureStep % 4 === 0 ? 0.2 : 0.16), index: i }));
         }
     },
-    skank: (chord, time, spb, measureStep) => {
+    skank: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         // Skank is on the "and": step 4, 12 in 4/4.
         if (measureStep % ts.stepsPerBeat === (ts.stepsPerBeat / 2)) {
@@ -303,7 +309,7 @@ export const chordPatterns = {
             chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.1, { vol: 0.1, index: i, muted: true }));
         }
     },
-    double_skank: (chord, time, spb, measureStep) => {
+    double_skank: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         const off = ts.stepsPerBeat / 2;
         if ([off, off + 2].includes(measureStep % ts.stepsPerBeat)) {
@@ -312,7 +318,7 @@ export const chordPatterns = {
             chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.1, { vol: 0.1, index: i, muted: true }));
         }
     },
-    funk: (chord, time, spb, measureStep) => {
+    funk: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = arranger.timeSignature;
         let pattern = [0, 3, 4, 7, 8, 11, 12, 15]; // 4/4
         if (ts === '3/4') pattern = [0, 3, 4, 7, 8, 11];
@@ -322,20 +328,20 @@ export const chordPatterns = {
         if (pattern.includes(measureStep)) {
             const isAccent = measureStep % 4 === 0;
             // Shortened duration (0.25 spb) for more "staccato" definition
-            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.25, { vol: (isAccent ? 0.22 : 0.18), index: i }));
+            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.25, { vol: (isAccent ? 0.32 : 0.26), index: i }));
         } else {
             // Use muted tonal hits instead of just noise for "scratches"
-            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.05, { vol: 0.08, index: i, muted: true }));
+            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.05, { vol: 0.12, index: i, muted: true }));
             if (Math.random() < 0.3) playChordScratch(time, 0.05);
         }
     },
-    arpeggio: (chord, time, spb, stepInChord, measureStep) => {
+    arpeggio: (chord, time, spb, stepInChord, measureStep, step) => {
         if (measureStep % 2 === 0) {
             const idx = Math.floor(stepInChord / 2) % chord.freqs.length;
-            playNote(chord.freqs[idx], time, spb * 2.0, { vol: 0.2, index: 0 });
+            playNote(chord.freqs[idx], time, spb * 2.0, { vol: 0.4, index: 0 }); // Increased from 0.2
         }
     },
-    tresillo: (chord, time, spb, measureStep) => {
+    tresillo: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = arranger.timeSignature;
         let pattern = [0, 3, 6, 8, 11, 14]; // 4/4
         if (ts === '3/4') pattern = [0, 3, 6, 9];
@@ -343,10 +349,10 @@ export const chordPatterns = {
         
         if (pattern.includes(measureStep)) {
             // Shortened duration (0.4 spb) for better separation
-            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.4, { vol: 0.2, index: i }));
+            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.4, { vol: 0.25, index: i })); // Increased from 0.2
         }
     },
-    clave: (chord, time, spb, measureStep) => {
+    clave: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = arranger.timeSignature;
         let pattern = [0, 3, 6, 10, 13]; // 3-2 Son Clave
         if (ts === '3/4') pattern = [0, 3, 6, 9];
@@ -354,20 +360,20 @@ export const chordPatterns = {
         
         if (pattern.includes(measureStep)) {
             // Shortened duration (0.3 spb) for sharper clave hits
-            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.3, { vol: 0.2, index: i }));
+            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.3, { vol: 0.25, index: i })); // Increased from 0.2
         }
     },
-    afrobeat: (chord, time, spb, measureStep) => {
+    afrobeat: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = arranger.timeSignature;
         let pattern = [0, 3, 6, 7, 10, 12, 13, 15];
         if (ts === '3/4') pattern = [0, 3, 6, 7, 10];
         else if (ts === '7/4') pattern = [0, 3, 6, 7, 10, 12, 13, 15, 16, 19, 22, 25];
         
         if (pattern.includes(measureStep)) {
-            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.3, { vol: 0.18, index: i }));
+            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.3, { vol: 0.28, index: i })); // Increased from 0.18
         }
     },
-    jazz: (chord, time, spb, measureStep) => {
+    jazz: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = arranger.timeSignature;
         let pattern = [0, 6, 14]; // 4/4
         if (ts === '3/4') pattern = [0, 4, 10];
@@ -376,52 +382,70 @@ export const chordPatterns = {
         else if (ts === '12/8') pattern = [0, 6, 12, 18];
         
         if (pattern.includes(measureStep)) {
-            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.8, { vol: 0.18, index: i }));
+            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.8, { vol: 0.3, index: i })); // Increased from 0.18
         } else if (measureStep % 4 === 0) {
             // Muted "ghost" notes for jazz feel
-            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.05, { vol: 0.06, index: i, muted: true }));
+            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.05, { vol: 0.1, index: i, muted: true })); // Increased from 0.06
             if (Math.random() < 0.1) playChordScratch(time, 0.02);
         }
     },
-    green: (chord, time, spb, measureStep) => {
+    green: (chord, time, spb, stepInChord, measureStep, step) => {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         if (measureStep % ts.stepsPerBeat === 0) {
             chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.4, { vol: (measureStep % (ts.stepsPerBeat * 2) === ts.stepsPerBeat ? 0.22 : 0.18), index: i }));
         }
     },
-    blues: (chord, time, spb, measureStep) => {
-        const ts = (TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4']);
-        // Shuffle pattern (on the beat and the 'and' of the shuffle)
-        // In our 16th-note grid, if swing is high, we mostly care about steps 0, 2, 4, 6...
-        // But for a shuffle, it's often better to just hit the 8th notes (0, 2, 4, 6...)
-        // and let the engine's swing handle the timing.
+    blues: (chord, time, spb, stepInChord, measureStep, step) => {
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const spb4 = ts.stepsPerBeat;
+
+        // Use the actual root MIDI, but force it into a "chunky" register for the shuffle
+        // Typically MIDI 36-52 (C2-E3) is the sweet spot for blues shuffles.
+        let rootMidi = chord.rootMidi;
+        while (rootMidi > 52) rootMidi -= 12;
+        while (rootMidi < 36) rootMidi += 12;
         
-        // Pattern: 1, 1-and, 2, 2-and...
-        // We alternate R+5 on beats 1&3, R+6 on beats 2&4? 
-        // Or more common: 1 (R+5), 1-and (R+5), 2 (R+6), 2-and (R+6)
+        const root = getFrequency(rootMidi);
         
-        if (measureStep % 2 === 0) {
-            const beat = Math.floor(measureStep / 4);
-            const isSecondHalfOfBeat = (measureStep % 4) === 2;
+        // Shuffle logic
+        // Use global 'step' for consistency across chord changes
+        if (step % 2 === 0) {
+            const beat = Math.floor(step / spb4);
+            const isSecondHalfOfBeat = (step % spb4) >= (spb4 / 2);
             
-            // Alternating 5th and 6th
-            // Beat 0, 1 -> 5th. Beat 2, 3 -> 6th.
-            const useSixth = (beat % 2 === 1);
+            // 4-beat cycle: 5 -> 6 -> b7 -> 6
+            const cycleStep = beat % 4;
+            let interval;
+            if (cycleStep === 0) interval = 7; // 5th
+            else if (cycleStep === 1) interval = 9; // 6th
+            else if (cycleStep === 2) {
+                // Use b7 if it's a 7th chord, otherwise stick to 6th or 5th
+                interval = (chord.intervals.includes(10) || chord.is7th) ? 10 : 9;
+            }
+            else interval = 9; // 6th
             
-            const root = chord.freqs[0];
-            const intervals = chord.intervals;
-            const hasFlat5 = intervals.includes(6);
+            const topNote = getFrequency(rootMidi + interval);
+            const pair = [root, topNote];
             
-            // Construct the "Power Chord" pair
-            const fifth = root * Math.pow(2, (hasFlat5 ? 6 : 7) / 12);
-            const sixth = root * Math.pow(2, 9 / 12);
-            
-            const pair = [root, useSixth ? sixth : fifth];
-            
-            const vol = isSecondHalfOfBeat ? 0.15 : 0.2;
-            const dur = spb * 0.3;
+            // Dynamics: Heavy downbeat, lighter shuffle-and
+            const vol = isSecondHalfOfBeat ? 0.22 : 0.32; // Increased from 0.12/0.18
+            const dur = spb * 0.2;
             
             pair.forEach((f, i) => playNote(f, time, dur, { vol, index: i }));
+
+            // Add harmonic "grit" - light stabs of the 3rd and 7th on downbeats
+            if (!isSecondHalfOfBeat && (beat % 2 === 0)) {
+                // We pick the 3rd and 7th from the chord's voicing to maintain voice leading
+                const shell = chord.freqs.filter(f => {
+                    const m = getMidi(f) % 12;
+                    const rootPC = rootMidi % 12;
+                    const diff = (m - rootPC + 12) % 12;
+                    // Look for 3rd (3,4) or 7th (10,11)
+                    return diff === 3 || diff === 4 || diff === 10 || diff === 11;
+                });
+                
+                shell.forEach(f => playNote(f, time, spb * 0.1, { vol: 0.15, index: 5 })); // Increased from 0.08
+            }
         }
     },
     bossa: (chord, time, spb, measureStep, step) => {

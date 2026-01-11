@@ -499,11 +499,17 @@ function advanceGlobalStep() {
     let duration = sixteenth;
     
     if (gb.swing > 0) {
-        const shift = (sixteenth / 3) * (gb.swing / 100);
-        if (gb.swingSub === '16th') {
-            duration += (ctx.step % 2 === 0) ? shift : -shift;
-        } else { 
-            duration += ((ctx.step % 4) < 2) ? shift : -shift;
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const spb = ts.stepsPerBeat;
+        // Only swing if we are in a 4-step-per-beat context (like 4/4, 3/4, 7/4)
+        // 12/8 or 6/8 are already "swung" (triplet-based) and shouldn't use this math.
+        if (spb === 4) {
+            const shift = (sixteenth / 3) * (gb.swing / 100);
+            if (gb.swingSub === '16th') {
+                duration += (ctx.step % 2 === 0) ? shift : -shift;
+            } else { 
+                duration += ((ctx.step % 4) < 2) ? shift : -shift;
+            }
         }
     }
     ctx.nextNoteTime += duration;

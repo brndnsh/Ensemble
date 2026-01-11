@@ -152,6 +152,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- ARP STYLE ---
     if (style === 'arp') {
+        if (!isDownbeat) return null;
         const beatInPattern = Math.floor(beatIndex) % 4;
         if (beatInPattern === 0) return result(getFrequency(baseRoot));
         const intervals = currentChord.intervals; 
