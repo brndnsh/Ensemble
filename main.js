@@ -1,5 +1,5 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
-import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels } from './ui.js';
+import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { SONG_TEMPLATES, DRUM_PRESETS, CHORD_PRESETS } from './presets.js';
@@ -468,8 +468,9 @@ function init() {
             ui.notationSelect.value = arranger.notation; ui.densitySelect.value = cb.density; 
             if (ui.practiceModeCheck) ui.practiceModeCheck.checked = cb.practiceMode;
             ui.octave.value = cb.octave; ui.bassOctave.value = bb.octave; ui.soloistOctave.value = sb.octave; ui.chordVol.value = cb.volume; ui.chordReverb.value = cb.reverb; ui.bassVol.value = bb.volume; ui.bassReverb.value = bb.reverb; ui.soloistVol.value = sb.volume; ui.soloistReverb.value = sb.reverb; ui.drumVol.value = gb.volume; ui.drumReverb.value = gb.reverb; ui.swingSlider.value = gb.swing; ui.swingBase.value = gb.swingSub; ui.humanizeSlider.value = gb.humanize; ui.autoFollowCheck.checked = gb.autoFollow; ui.drumBarsSelect.value = gb.measures; ui.metronome.checked = ctx.metronome; ui.applyPresetSettings.checked = ctx.applyPresetSettings;
-            applyTheme(ctx.theme); updateRelKeyButton(); updateKeySelectLabels(); updateOctaveLabel(ui.octaveLabel, cb.octave); updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg); updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
+            applyTheme(ctx.theme); updateOctaveLabel(ui.octaveLabel, cb.octave); updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg); updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
         } else { applyTheme('auto'); }
+        updateRelKeyButton(); updateKeySelectLabels();
         viz = new UnifiedVisualizer('unifiedVizContainer'); viz.addTrack('bass', 'var(--success-color)'); viz.addTrack('soloist', 'var(--soloist-color)');
         setInstrumentControllerRefs(() => scheduler(), viz);
         initTabs(); setupPanelMenus(); renderGrid(); renderMeasurePagination(switchMeasure);
@@ -533,10 +534,6 @@ function loadFromUrl() {
     if (params.get('bpm')) { setBpm(params.get('bpm'), viz); }
     if (params.get('style')) updateStyle('chord', params.get('style'));
     if (params.get('notation')) { arranger.notation = params.get('notation'); ui.notationSelect.value = arranger.notation; }
-}
-
-function updateRelKeyButton() {
-    if (ui.relKeyBtn) ui.relKeyBtn.textContent = arranger.isMinor ? 'min' : 'maj';
 }
 
 window.addEventListener('load', () => { init(); initPWA(); });

@@ -565,15 +565,28 @@ export function updateActiveChordUI(index) {
 }
 
 export function updateKeySelectLabels() {
-    if (!ui.keySelect) return;
+    if (!ui.keySelect) {
+        console.warn("[UI] keySelect not found");
+        return;
+    }
+    console.log("[UI] Updating key labels, isMinor:", arranger.isMinor);
+    const currentValue = ui.keySelect.value;
     Array.from(ui.keySelect.options).forEach(opt => {
         const root = opt.value;
         opt.textContent = `Key: ${root}${arranger.isMinor ? 'm' : ''}`;
     });
+    // Force browser to update the displayed label of the select
+    ui.keySelect.value = currentValue;
 }
 
 export function updateRelKeyButton() {
-    if (ui.relKeyBtn) ui.relKeyBtn.textContent = arranger.isMinor ? 'min' : 'maj';
+    if (!ui.relKeyBtn) {
+        console.warn("[UI] relKeyBtn not found");
+        return;
+    }
+    const label = arranger.isMinor ? 'min' : 'maj';
+    console.log("[UI] updateRelKeyButton: isMinor =", arranger.isMinor, "-> label =", label);
+    ui.relKeyBtn.textContent = label;
 }
 
 
