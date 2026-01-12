@@ -86,7 +86,12 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16) {
 
     const intensity = ctx.bandIntensity;
     const complexity = ctx.complexity;
-    const genre = gb.genreFeel;
+    let genre = gb.genreFeel;
+
+    // --- Style Override ---
+    if (cb.style === 'jazz') genre = 'Jazz';
+    else if (cb.style === 'funk') genre = 'Funk';
+    else if (cb.style === 'strum8') genre = 'Rock';
 
     if (soloistBusy) {
         compingState.currentVibe = 'sparse';

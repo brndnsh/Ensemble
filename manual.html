@@ -199,7 +199,7 @@
             <p>Ensemble includes professional <strong>Solarized Dark</strong> and <strong>Solarized Light</strong> themes. You can choose your preferred theme in the Settings menu or set it to <strong>Auto</strong> to automatically sync with your operating system's dark/light mode preference.</p>
 
             <h3>Color-Coded Library</h3>
-            <p>Ensemble uses a <strong>color-coded categorization system</strong> for presets. Each genre is assigned a unique color, shown as a border on the chips (e.g., Purple for Jazz, Blue for Pop, Pink for Soul). User-created presets are marked with a distinct white border.</p>
+            <p>Ensemble uses a <strong>color-coded categorization system</strong> for presets. Each genre is assigned a unique color, shown as a border on the chips (e.g., Purple for Jazz, Blue for Pop, Pink for Soul, Violet for Disco). User-created presets are marked with a distinct white border.</p>
         </section>
 
         <section id="examples">
@@ -348,17 +348,13 @@
             <p>You can save your current progression as a custom preset. Click the <strong>Save</strong> button, name your progression, and it will appear in your User Presets list.</p>
 
             <h3>Performance Styles</h3>
-            <p>The Accompanist features several specialized playback patterns for chords:</p>
+            <p>The Accompanist features specialized playback patterns for chords. You can switch between these using the style chips in the Chords tab.</p>
             <ul class="list-detailed">
-                <li><strong>Smart (Auto):</strong> The "AI Conductor" mode. This style intelligently analyzes your selected drum groove, bass line, and soloist activity to automatically choose the most appropriate comping patterns and voicings.</li>
-                <li><strong>Blues Shuffle:</strong> A classic root-5 to root-6 alternating pattern, essential for blues and early rock.</li>
-                <li><strong>Funk:</strong> Syncopated rhythms with percussive "scratches" between hits.</li>
-                <li><strong>Jazz Comp:</strong> Sophisticated, sparse rhythms with occasional ghost notes.</li>
-                <li><strong>Strum:</strong> A classic 8th-note acoustic-style strumming pattern (Down Down Up Down).</li>
-                <li><strong>Pop:</strong> A versatile, driving rhythm suitable for most pop and rock songs.</li>
-                <li><strong>Reggae (Skank):</strong> The essential "offbeat" skank rhythm. Also includes a <strong>Double Skank</strong> variation.</li>
-                <li><strong>Bossa Nova:</strong> An authentic Brazilian syncopated comping pattern that follows the traditional 2-bar bossa clave.</li>
-                <li><strong>Pad:</strong> Sustained, ambient chords with subtle modulation.</li>
+                <li><strong>Smart (Rhythmic):</strong> The default "Intelligent" mode. This style automatically adapts its rhythmic patterns and voicing density based on your selected <strong>Genre Feel</strong> (e.g., Funk, Jazz, Disco) and the current <strong>Band Intensity</strong>.</li>
+                <li><strong>Pad (Sustain):</strong> Provides long, ambient, sustained chords. Ideal for ballads, atmospheric sections, or as a bed for complex soloing.</li>
+                <li><strong>Jazz Comp:</strong> Specialized jazz rhythms that prioritize syncopation and "Charleston" patterns.</li>
+                <li><strong>Strum (8th):</strong> A driving 8th-note pattern suitable for pop and rock.</li>
+                <li><strong>Funk Scratch:</strong> Highly syncopated rhythms with percussive "scratches" for a tight, groovy feel.</li>
             </ul>
 
             <h3>Arranger & Song Form</h3>
@@ -426,6 +422,11 @@
                 <li><strong>Swing:</strong> Use the slider to move away from a "robotic" feel. You can choose between 1/8 and 1/16 note swing bases. Higher swing percentages create a "shuffled" or "triplet" feel typical of Jazz, Blues, and Hip-Hop.</li>
                 <li><strong>Humanize:</strong> Adds subtle, random timing offsets (jitter) to every drum hit, simulating the natural imperfections of a real drummer.</li>
             </ul>
+
+            <div class="feature-card">
+                <h4>Smart Fills</h4>
+                <p style="font-size: 0.9rem; margin-bottom: 0;">Ensemble features a <strong>procedural fill engine</strong> that automatically generates drum fills during section transitions. The complexity and intensity of these fills are dynamically calculated based on the current <strong>Band Intensity</strong>, ensuring the drummer "reacts" to the musical energy of the song.</p>
+            </div>
         </section>
 
         <section id="bassist">
@@ -450,8 +451,14 @@
                 <li><strong>Dub:</strong> A deep, sub-heavy reggae style with sparse, syncopated rhythms and long, sustained roots.</li>
                 <li><strong>Neo-Soul:</strong> A deep, "laid-back" style using a lower register, characteristic 10th intervals, and "Dilla-style" micro-timing lag.</li>
                 <li><strong>Bossa Nova:</strong> An authentic Brazilian syncopated rhythm (1, 2&, 3, 4&) that alternates between the root and fifth.</li>
+                <li><strong>Acoustic:</strong> A versatile style for acoustic guitar or piano settings. At low intensity, it stays sparse with half-notes; at high intensity, it adds rhythmic movement and leading tones.</li>
             </ul>
             
+            <div class="feature-card">
+                <h4>Smart Instrument Switching</h4>
+                <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">In <strong>Acoustic</strong> mode, the drum engine automatically switches the Snare to a <strong>Sidestick</strong> timbre at low intensity to maintain an intimate feel, transitioning to a full Snare as the band intensity increases.</p>
+            </div>
+
             <div class="feature-card">
                 <h4>Slash Chord Support</h4>
                 <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">The bassist fully respects slash notation (e.g., <code>C/G</code> or <code>I/V</code>). When a slash note is specified, the bassist will prioritize landing on that note as the harmonic foundation of the chord.</p>
@@ -475,6 +482,7 @@
                     <li><strong>Neo-Soul:</strong> Features laid-back timing, "lazy" lag, quartal double-stops, and ghost notes.</li>
                     <li><strong>Bird:</strong> A sophisticated Bebop style featuring chromatic enclosures, bebop scales, and high-density 8th-note streams.</li>
                     <li><strong>Shreddy:</strong> High-energy, constant rhythms, legato-style attacks, and wide arpeggio sweeps.</li>
+                    <li><strong>Disco:</strong> High-register, tight rhythmic phrases inspired by 70s synth and string leads.</li>
                     <li><strong>Minimal:</strong> A sparse, thoughtful style inspired by David Gilmour. Emphasizes space, soulful vibrato, and expressive full-step bends.</li>
                 </ul>
             </div>

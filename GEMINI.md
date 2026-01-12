@@ -5,7 +5,7 @@ Ensemble is a high-performance Progressive Web App (PWA) designed for generative
 ## Project Overview
 
 *   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `fills`).
-*   **Core Logic**: Orchestrated by `main.js` (scheduling/timing) and `conductor.js` (global dynamics/intensity management).
+*   **Core Logic**: Orchestrated by `main.js` (scheduling/timing) and `conductor.js` (global dynamics/intensity management). Includes the **Smart Grooves** system, a multi-module architecture where `gb.genreFeel` and `ctx.bandIntensity` drive procedural behaviors across drums (`main.js`, `fills.js`), piano (`accompaniment.js`), bass (`bass.js`), and soloist (`soloist.js`).
 *   **Audio Engine**: Built on the **Web Audio API**. Synthesis logic is decentralized within individual engine files and orchestrated by `engine.js`.
 *   **State Management**: Centralized reactive state defined in `state.js` with comprehensive JSDoc typing.
 *   **Performance**: Off-main-thread musical calculations are handled by `logic-worker.js` via `worker-client.js` to ensure jitter-free audio and UI responsiveness.

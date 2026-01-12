@@ -5,8 +5,8 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 ## Key Features
 
 *   🖋️ **Advanced Arranger**: Build complex song structures using Roman Numerals, Nashville Numbers, or Absolute chord names. Features include song templates, drag-and-drop reordering, and a specialized symbol palette.
-*   🎸 **Generative Virtual Band**: Intelligent **Bassist** and **Soloist** engines that utilize "Expressive Musicality" logic to generate human-like, intensity-aware accompaniment in real-time.
-*   🥁 **Smart Drum Machine**: A multi-level velocity step sequencer with built-in genre presets (Rock, Jazz, Funk, etc.) and adjustable swing/humanization.
+*   🎸 **Generative Virtual Band**: Intelligent **Bassist** and **Soloist** engines that utilize "Expressive Musicality" logic to generate human-like, intensity-aware accompaniment in real-time. Features a **Smart Genres** system (Disco, Jazz, Funk, Acoustic, etc.) that coordinates all instruments for a cohesive feel.
+*   🥁 **Smart Drum Machine**: A multi-level velocity step sequencer with built-in genre presets and adjustable swing/humanization. Integrated with a procedural fill engine.
 *   📊 **Unified Visualizer**: A multi-track harmonic monitor that superimposes instrumental performance over chord data, with real-time interval analysis and retractable UI.
 *   🎹 **Pro Accompaniment**: Highly optimized voicing engine with adjustable density, styles (Pad, Funk, Reggae), and intelligent relative key transposition.
 *   📁 **Workflow Tools**: MIDI export, auto-save persistence, URL-based sharing, and a comprehensive user library for custom presets.

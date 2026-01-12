@@ -589,7 +589,8 @@ export const SOLOIST_STYLES = [
     { id: 'blues', name: 'Blues', category: 'Blues' },
     { id: 'neo', name: 'Neo-Soul', category: 'Soul/R&B' },
     { id: 'minimal', name: 'Minimal', category: 'Basic' },
-    { id: 'bird', name: 'Bird', category: 'Jazz' }
+    { id: 'bird', name: 'Bird', category: 'Jazz' },
+    { id: 'disco', name: 'Disco', category: 'Soul/Funk' }
 ];
 
 export const CHORD_PRESETS = [

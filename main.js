@@ -452,7 +452,7 @@ function init() {
             
             if (savedState.cb) { 
                 cb.enabled = savedState.cb.enabled !== undefined ? savedState.cb.enabled : true; 
-                cb.style = (savedState.cb.style && savedState.cb.style !== 'smart') ? 'smart' : 'smart'; 
+                cb.style = savedState.cb.style || 'smart'; 
                 cb.instrument = 'Piano'; // Always force Piano
                 cb.octave = savedState.cb.octave; cb.density = savedState.cb.density; cb.volume = savedState.cb.volume; cb.reverb = savedState.cb.reverb; 
                 cb.practiceMode = savedState.cb.practiceMode || false;
