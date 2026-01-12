@@ -13,7 +13,7 @@ import { getFrequency, getMidi } from './utils.js';
  * rhythmic intent (anticipation, syncopation, laying back).
  */
 
-const compingState = {
+export const compingState = {
     currentVibe: 'balanced',
     currentCell: new Array(16).fill(0),
     lockedUntil: 0,
@@ -21,7 +21,7 @@ const compingState = {
     lastChordIndex: -1
 };
 
-const PIANO_CELLS = {
+export const PIANO_CELLS = {
     balanced: [
         [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // The "Charleston"
         [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Downbeats 1 & 2

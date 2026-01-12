@@ -7,6 +7,7 @@ import { TIME_SIGNATURES } from './config.js';
 import { DRUM_PRESETS } from './presets.js';
 import { generateProceduralFill } from './fills.js';
 import { analyzeForm, getSectionEnergy } from './form-analysis.js';
+import { PIANO_CELLS, compingState as liveCompingState } from './accompaniment.js';
 
 /**
  * Minimal MIDI file generator (Standard MIDI File Format 1)
@@ -14,80 +15,43 @@ import { analyzeForm, getSectionEnergy } from './form-analysis.js';
 
 // --- COMPING STATE ENGINE (Adapted for MIDI Export) ---
 const compingState = {
-    lastChangeStep: -1,
     currentVibe: 'balanced',
-    currentCell: [0, 0, 0, 0], 
-    density: 0.5,
-    lockedUntil: 0
+    currentCell: new Array(16).fill(0),
+    lockedUntil: 0,
+    soloistActivity: 0,
+    lastChordIndex: -1
 };
 
-const COMPING_CELLS = {
-    jazz: [
-        { name: 'Charleston',  pattern: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 4 },
-        { name: 'Red Garland', pattern: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0], weight: 3 },
-        { name: 'Bill Evans',  pattern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 2 },
-        { name: 'Anticipation',pattern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], weight: 2 },
-        { name: 'Quarter',     pattern: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], weight: 1 }
-    ],
-    funk: [
-        { name: 'The One',     pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 3 },
-        { name: 'Backbeat',    pattern: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], weight: 3 },
-        { name: 'Syncopated',  pattern: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 2 },
-        { name: 'Offbeat',     pattern: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], weight: 2 }
-    ],
-    neo: [
-        { name: 'The One',     pattern: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 4 },
-        { name: 'Pushed',      pattern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], weight: 3 }, 
-        { name: 'Lazy',        pattern: [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 1 }, 
-        { name: 'Dilla',       pattern: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0], weight: 3 }, 
-        { name: 'Space',       pattern: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], weight: 1 }
-    ]
-};
-
-function updateCompingState(step, style, soloistBusy) {
+function updateCompingState(step, soloistBusy) {
     if (step < compingState.lockedUntil) return;
 
+    const intensity = ctx.bandIntensity;
+    const complexity = ctx.complexity;
+    const genre = gb.genreFeel;
+
+    // 1. Determine Vibe
     if (soloistBusy) {
         compingState.currentVibe = 'sparse';
-        compingState.density = 0.2;
-    } else if (style === 'funk' || style === 'neo') {
-        const r = Math.random();
-        if (r < 0.5) compingState.currentVibe = 'active';
-        else if (r < 0.85) compingState.currentVibe = 'syncopated';
-        else compingState.currentVibe = 'balanced';
-        compingState.density = Math.random() * 0.4 + 0.5;
+    } else if (intensity > 0.75 || complexity > 0.7) {
+        compingState.currentVibe = 'active';
+    } else if (intensity < 0.3) {
+        compingState.currentVibe = 'sparse';
     } else {
-        const r = Math.random();
-        if (r < 0.3) compingState.currentVibe = 'active';
-        else if (r < 0.6) compingState.currentVibe = 'syncopated';
-        else compingState.currentVibe = 'balanced';
-        compingState.density = Math.random() * 0.5 + 0.3;
+        compingState.currentVibe = 'balanced';
     }
 
-    const pool = COMPING_CELLS[style] || COMPING_CELLS.jazz;
-    let candidates = pool;
+    // 2. Select Pool
+    let pool = PIANO_CELLS[genre] || PIANO_CELLS[compingState.currentVibe];
     
-    if (compingState.currentVibe === 'sparse') {
-        candidates = pool.filter(c => c.name === 'Bill Evans' || c.name === 'Anticipation' || c.name === 'Space');
-    } else if (compingState.currentVibe === 'active') {
-        candidates = pool.filter(c => c.name !== 'Bill Evans' && c.name !== 'Space');
-    }
-    if (candidates.length === 0) candidates = pool;
-
-    let totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
-    let randomVal = Math.random() * totalWeight;
-    let selected = candidates[0];
-    for (const c of candidates) {
-        randomVal -= c.weight;
-        if (randomVal <= 0) { selected = c; break; }
+    if (PIANO_CELLS[genre]) {
+        if (compingState.currentVibe === 'sparse' && Math.random() < 0.5) {
+            pool = PIANO_CELLS.sparse;
+        } else if (compingState.currentVibe === 'active' && Math.random() < 0.3) {
+            pool = PIANO_CELLS.active;
+        }
     }
 
-    compingState.currentCell = [...selected.pattern];
-
-    if ((compingState.currentVibe === 'sparse' || compingState.currentVibe === 'balanced') && Math.random() < 0.15) {
-        compingState.currentCell = new Array(16).fill(0);
-    }
-    
+    compingState.currentCell = [...pool[Math.floor(Math.random() * pool.length)]];
     compingState.lockedUntil = step + 16;
 }
 
@@ -137,6 +101,10 @@ class MidiTrack {
 
     programChange(deltaTime, channel, program) {
         this.addEvent(deltaTime, [0xC0 | channel, program]);
+    }
+
+    controlChange(deltaTime, channel, controller, value) {
+        this.addEvent(deltaTime, [0xB0 | channel, controller, value]);
     }
 
     pitchBend(deltaTime, channel, value) {
@@ -208,117 +176,80 @@ class MidiTrack {
 }
 
 const midiChordPatterns = {
+    handleSustain: (track, step, measureStep, chordIndex, channel, timeInPulses) => {
+        const isNewChord = chordIndex !== compingState.lastChordIndex;
+        const isNewMeasure = measureStep === 0;
+        const genre = gb.genreFeel;
+
+        if (genre === 'Reggae' || genre === 'Funk') {
+            if (compingState.sustainActive) {
+                track.controlChange(0, channel, 64, 0);
+                compingState.sustainActive = false;
+            }
+            return;
+        }
+
+        if (isNewMeasure || isNewChord) {
+            const delta = Math.max(0, timeInPulses - track.currentTime);
+            track.controlChange(delta, channel, 64, 0);
+            track.controlChange(0, channel, 64, 127);
+            track.currentTime = timeInPulses;
+            compingState.lastChordIndex = chordIndex;
+            compingState.sustainActive = true;
+            return;
+        }
+
+        const cellStep = measureStep % 16;
+        if (cellStep % 4 === 0 && Math.random() < (ctx.bandIntensity * 0.4)) {
+            const delta = Math.max(0, timeInPulses - track.currentTime);
+            track.controlChange(delta, channel, 64, 0);
+            track.controlChange(0, channel, 64, 127);
+            track.currentTime = timeInPulses;
+            compingState.sustainActive = true;
+        }
+
+        if (genre === 'Jazz' && cellStep % 4 !== 0 && compingState.sustainActive) {
+            const releaseTime = timeInPulses + Math.round(PPQ * 0.1); 
+            // We can't easily schedule future CC in this loop without a queue, 
+            // but for MIDI export we can just do it at the next step or here.
+            // Let's just do it here for simplicity.
+            const delta = Math.max(0, timeInPulses - track.currentTime);
+            track.controlChange(delta, channel, 64, 0);
+            track.currentTime = timeInPulses;
+            compingState.sustainActive = false;
+        }
+    },
     smart: (chord, stepInChord, measureStep, globalStep) => {
-        // 1. Context
-        const drumPresetName = gb.lastDrumPreset || 'Standard';
-        const drumConfig = DRUM_PRESETS[drumPresetName] || DRUM_PRESETS['Standard'];
-        const drumCategory = drumConfig.category || 'Basic';
-        const soloistBusy = sb.enabled && (sb.busySteps > 0 || sb.tension > 0.7);
-
-        // Voicing Logic
-        let voicing = [...chord.freqs];
+        const soloistBusy = sb.enabled && sb.busySteps > 0;
+        const genre = gb.genreFeel;
         
-        // Rootless Logic
-        if (['Soul/Funk', 'Jazz', 'Soul/R&B'].includes(drumCategory) || bb.style === 'quarter' || bb.style === 'funk') {
-            if (voicing.length > 3) voicing.shift(); 
-        }
-        // Funk Scratch Logic
-        if (drumCategory === 'Soul/Funk' || bb.style === 'funk') {
-            if (voicing.length > 3) voicing = voicing.slice(-3);
-        }
-        // Soloist Space Logic
-        if (soloistBusy && voicing.length > 2) {
-            voicing.pop();
-        }
-        if (voicing.length === 0) voicing = [chord.freqs[0]];
+        updateCompingState(globalStep, soloistBusy);
 
-        const smartChord = { ...chord, freqs: voicing };
+        const cellStep = measureStep % 16;
+        let isHit = compingState.currentCell[cellStep] === 1;
 
-        // 2. Priority Logic
-        
-        // A. LATIN / WORLD
-        if (drumCategory === 'World/Latin' || bb.style === 'bossa' || bb.style === 'dub') {
-            if (drumPresetName.includes('Bossa') || bb.style === 'bossa') {
-                return midiChordPatterns.bossa(smartChord, stepInChord, measureStep, globalStep);
-            }
-            if (drumPresetName.includes('Reggae') || bb.style === 'skank' || bb.style === 'dub') {
-                return midiChordPatterns.skank(smartChord, stepInChord, measureStep);
-            }
-            return midiChordPatterns.clave(smartChord, stepInChord, measureStep);
-        }
+        if (isHit) {
+            let duration = 8.0; // Default long
+            if (genre === 'Reggae' || genre === 'Funk') duration = 0.4;
+            else if (genre === 'Jazz') duration = 1.0;
+            else if (genre === 'Rock' || genre === 'Bossa') duration = 1.8;
 
-        // B. FUNK / SOUL / NEO
-        if (drumCategory === 'Soul/Funk' || drumCategory === 'Soul/R&B' || bb.style === 'funk' || bb.style === 'rocco' || bb.style === 'disco' || bb.style === 'neo') {
-            const isNeo = drumCategory === 'Soul/R&B' || bb.style === 'neo';
-            updateCompingState(globalStep, isNeo ? 'neo' : 'funk', soloistBusy);
-            
-            const cellStep = measureStep % 16;
-            let isHit = compingState.currentCell[cellStep] === 1;
+            const isDownbeat = cellStep % 4 === 0;
+            const velocity = (isDownbeat ? 0.7 : 0.45) * (0.8 + ctx.bandIntensity * 0.4);
 
-            if (isHit) {
-                if (Math.random() < 0.1) isHit = false;
-            } else {
-                if (Math.random() < 0.03) isHit = true;
-            }
-            if (cellStep === 14 && Math.random() < 0.2) isHit = true;
-
-            if (isHit) {
-                if (measureStep === 0 && isBassActive('funk', globalStep, 0) && compingState.currentVibe === 'sparse') {
-                    // Scratch (Ignore for MIDI export for now or map to a short muted note)
-                    return [];
-                }
-
-                const dur = Math.random() < 0.5 ? 0.8 : 1.6;
-                
-                let stepVoicing = voicing;
-                if (Math.random() < 0.3 && stepVoicing.length > 1) {
-                    const keep = Math.random() < 0.5 ? 1 : 2;
-                    stepVoicing = stepVoicing.slice(-keep); 
-                }
-                
-                return [{ midi: stepVoicing.map(getMidi), dur: dur, vel: 0.65 }]; 
-            } else {
-                if (compingState.currentVibe === 'active' && Math.random() < 0.1) {
-                    return [{ midi: smartChord.freqs.map(getMidi), dur: 0.2, vel: 0.2 }]; 
+            let voicing = [...chord.freqs];
+            if (bb.enabled && voicing.length > 3) {
+                voicing.shift();
+                if ((chord.is7th || chord.quality.includes('9')) && voicing.length > 3) {
+                    const rootPC = chord.rootMidi % 12;
+                    const fifthPC = (rootPC + 7) % 12;
+                    voicing = voicing.filter(f => (getMidi(f) % 12) !== fifthPC);
                 }
             }
-            return [];
+
+            return [{ midi: voicing.map(getMidi), dur: duration, vel: velocity }];
         }
-
-        // C. JAZZ
-        if (drumCategory === 'Jazz' || bb.style === 'quarter') {
-            updateCompingState(globalStep, 'jazz', soloistBusy);
-            const cellStep = measureStep % 16;
-            let isHit = compingState.currentCell[cellStep] === 1;
-            
-            if (isHit) {
-                if (Math.random() < 0.1) isHit = false;
-            } else {
-                if (Math.random() < 0.03) isHit = true;
-            }
-            if (cellStep === 14 && Math.random() < 0.3) isHit = true;
-
-            if (isHit) {
-                const isUpbeat = (measureStep % 4) !== 0; 
-                // vol 0.22 (accent) vs 0.16. 
-                const vel = isUpbeat ? 0.7 : 0.5; 
-                const dur = isUpbeat ? 1.6 : 3.2; // 0.4 * 4, 0.8 * 4
-
-                let stepVoicing = voicing;
-                if (Math.random() < 0.4 && stepVoicing.length > 2) {
-                     stepVoicing = [stepVoicing[0], stepVoicing[stepVoicing.length - 1]];
-                }
-                return [{ midi: stepVoicing.map(getMidi), dur: dur, vel: vel }];
-            }
-            return [];
-        }
-
-        // D. POP/ROCK Fallback
-        if (ctx.bpm < 100) {
-             return midiChordPatterns.pad(smartChord, stepInChord);
-        } else {
-             return midiChordPatterns.pop(smartChord, stepInChord, measureStep);
-        }
+        return [];
     },
     pad: (chord, stepInChord) => stepInChord === 0 ? [{ midi: chord.freqs.map(getMidi), dur: chord.beats * 4 }] : [],
     strum8: (chord, stepInChord, measureStep) => measureStep % 2 === 0 ? [{ midi: chord.freqs.map(getMidi), dur: 1 }] : [],
@@ -351,11 +282,14 @@ export function exportToMidi(options = {}) {
     let sbBackup;
     try {
         // Reset Comping State
-        compingState.lastChangeStep = -1;
-        compingState.currentVibe = 'balanced';
-        compingState.currentCell = [0, 0, 0, 0];
-        compingState.density = 0.5;
-        compingState.lockedUntil = 0;
+        Object.assign(compingState, {
+            currentVibe: 'balanced',
+            currentCell: new Array(16).fill(0),
+            lockedUntil: 0,
+            soloistActivity: 0,
+            lastChordIndex: -1,
+            sustainActive: false
+        });
 
         const { includedTracks = ['chords', 'bass', 'soloist', 'drums'], loopMode = 'time', targetDuration = 3, filename } = options;
 
@@ -620,6 +554,8 @@ export function exportToMidi(options = {}) {
 
                 // Chords
                 if (activeChord && includedTracks.includes('chords')) {
+                    midiChordPatterns.handleSustain(chordTrack, globalStep, measureStep, activeChordIndex, 0, currentTimeInPulses);
+                    
                     const patternFunc = midiChordPatterns[cb.style] || midiChordPatterns.pad;
                     const events = patternFunc(activeChord, stepInChord, measureStep, globalStep);
                     events.forEach(ev => {
