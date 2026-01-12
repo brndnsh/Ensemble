@@ -1,6 +1,6 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
 import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels } from './ui.js';
-import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime, updateSustain, restoreGains } from './engine.js';
+import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { SONG_TEMPLATES, DRUM_PRESETS, CHORD_PRESETS } from './presets.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections, getStepsPerMeasure, getStepInfo } from './utils.js';
@@ -52,6 +52,7 @@ function togglePlay() {
         ctx.lastActiveDrumElements = null;
         cb.lastActiveChordIndex = null;
         clearActiveVisuals(viz);
+        killAllNotes();
         flushBuffers();
         ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
         if (ctx.audio) {

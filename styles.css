@@ -28,6 +28,7 @@
     --accent-hover: var(--cyan);
     --success-color: var(--green);
     --soloist-color: var(--magenta);
+    --smart-color: var(--violet);
     --error-color: var(--red);
     --card-bg: #0a404e; /* Slightly lighter than base02 for contrast */
     --card-bg-hover: var(--base01);
@@ -1478,6 +1479,34 @@ h2 {
 .preset-chip[data-category="String"] { border-color: var(--orange); }
 .preset-chip[data-category="Experimental"] { border-color: var(--violet); }
 .preset-chip[data-category="User"] { border-color: var(--text-color); opacity: 0.8; }
+
+/* Special Smart/Auto Styling */
+.preset-chip[data-id="smart"] {
+    border-color: var(--smart-color) !important;
+    color: var(--smart-color);
+    background: rgba(108, 113, 196, 0.08);
+    font-weight: 600;
+}
+
+.preset-chip[data-id="smart"]:hover {
+    background: rgba(108, 113, 196, 0.15);
+}
+
+.preset-chip.active[data-id="smart"] {
+    background: var(--smart-color) !important;
+    color: white !important;
+    box-shadow: 0 0 12px rgba(108, 113, 196, 0.5);
+}
+
+.groove-tab-btn[data-tab="smart"].active {
+    color: var(--smart-color);
+    border-bottom-color: var(--smart-color);
+}
+
+/* Auto-checkboxes and Smart elements */
+#autoIntensityCheck, #autoFollowCheck, #applyPresetSettingsCheck {
+    accent-color: var(--smart-color);
+}
 
 .preset-chip.active[data-category="Basic"] { background: var(--base01); color: white; }
 .preset-chip.active[data-category="Pop/Rock"] { background: var(--blue); color: white; }

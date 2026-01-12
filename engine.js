@@ -313,6 +313,25 @@ export function killSoloistBus() {
     }
 }
 
+export function killDrumNote() {
+    if (gb.lastHatGain) {
+        try {
+            const g = gb.lastHatGain.gain;
+            g.cancelScheduledValues(ctx.audio.currentTime);
+            g.setTargetAtTime(0, ctx.audio.currentTime, 0.01);
+        } catch(e) {}
+        gb.lastHatGain = null;
+    }
+}
+
+export function killDrumBus() {
+    if (ctx.audio && ctx.drumsGain) {
+        const t = ctx.audio.currentTime;
+        ctx.drumsGain.gain.cancelScheduledValues(t);
+        ctx.drumsGain.gain.setTargetAtTime(0, t, 0.02);
+    }
+}
+
 /**
  * Ramps instrument buses to zero for instant silence.
  */
@@ -320,10 +339,12 @@ export function killAllNotes() {
     killAllPianoNotes();
     killSoloistNote();
     killBassNote();
+    killDrumNote();
     
     killChordBus();
     killBassBus();
     killSoloistBus();
+    killDrumBus();
 }
 
 /**
