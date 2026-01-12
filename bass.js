@@ -36,7 +36,8 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     if (style === 'smart') {
         const mapping = { 
             'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo',
-            'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk'
+            'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk',
+            'Disco': 'disco'
         };
         style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
     }
@@ -519,7 +520,8 @@ export function isBassActive(style, step, stepInChord) {
     if (style === 'smart') {
         const mapping = { 
             'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo',
-            'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk'
+            'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk',
+            'Disco': 'disco'
         };
         style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
     }

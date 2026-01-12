@@ -78,6 +78,14 @@ const STYLE_CONFIG = {
         registerSoar: 5,
         tensionScale: 0.7,
         timingJitter: 15
+    },
+    disco: {
+        restBase: 0.12,
+        restGrowth: 0.03,
+        cells: [0, 2, 5, 10], // 8ths, Quarters, Offbeats
+        registerSoar: 12, // High register strings/synth leads
+        tensionScale: 0.5,
+        timingJitter: 5 // Tight timing
     }
 };
 
@@ -93,7 +101,7 @@ function getScaleForChord(chord, style) {
     }
 
     // 2. Style Specifics
-    if (style === 'blues') {
+    if (style === 'blues' || style === 'disco') {
         if (['minor', 'halfdim', 'dim'].includes(chord.quality)) return [0, 3, 5, 6, 7, 10]; // Minor Blues
         return [0, 3, 4, 5, 7, 9, 10]; // Major Blues + b3
     }
@@ -134,7 +142,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (arranger.lastChordPreset === 'Minor Blues') {
             style = 'blues';
         } else {
-            const mapping = { 'Rock': 'shred', 'Jazz': 'bird', 'Funk': 'blues', 'Blues': 'blues', 'Neo-Soul': 'neo' };
+            const mapping = { 'Rock': 'shred', 'Jazz': 'bird', 'Funk': 'blues', 'Blues': 'blues', 'Neo-Soul': 'neo', 'Disco': 'disco' };
             style = mapping[gb.genreFeel] || 'scalar';
         }
     }

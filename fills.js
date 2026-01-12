@@ -71,6 +71,22 @@ export const FILL_TEMPLATES = {
             // Snare roll (8th notes only)
             { steps: [8, 10, 12, 14], instruments: ['Snare', 'Snare', 'Snare', 'Snare'], velocities: [0.7, 0.8, 0.9, 1.0] }
         ]
+    },
+    'Disco': {
+        low: [
+            // Open Hi-hat bark
+            { steps: [14], instruments: ['Open'], velocities: [0.9] },
+            // Snare pickup
+            { steps: [12, 14], instruments: ['Snare', 'Snare'], velocities: [0.7, 0.8] }
+        ],
+        medium: [
+            // Classic Disco roll (Snare build)
+            { steps: [8, 10, 12, 13, 14, 15], instruments: ['Snare', 'Snare', 'Snare', 'Snare', 'Snare', 'Snare'], velocities: [0.6, 0.7, 0.8, 0.9, 0.9, 1.0] }
+        ],
+        high: [
+            // 16th note chaos with open hats
+            { steps: [8, 9, 10, 11, 12, 13, 14, 15], instruments: ['Snare', 'Kick', 'Snare', 'Kick', 'Snare', 'Open', 'Snare', 'Crash'], velocities: [0.8, 0.9, 0.9, 1.0, 1.0, 1.1, 1.1, 1.2] }
+        ]
     }
 };
 
