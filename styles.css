@@ -768,6 +768,7 @@ h2 {
 .genre-btn[data-genre="Rock"] { border-color: var(--blue); }
 .genre-btn[data-genre="Jazz"] { border-color: var(--green); }
 .genre-btn[data-genre="Funk"] { border-color: var(--magenta); }
+.genre-btn[data-genre="Disco"] { border-color: var(--violet); }
 .genre-btn[data-genre="Blues"] { border-color: var(--cyan); }
 .genre-btn[data-genre="Neo-Soul"] { border-color: var(--magenta); }
 .genre-btn[data-genre="Reggae"] { border-color: var(--orange); }
@@ -782,6 +783,7 @@ h2 {
 .genre-btn.active[data-genre="Rock"] { background: var(--blue); border-color: var(--blue); }
 .genre-btn.active[data-genre="Jazz"] { background: var(--green); border-color: var(--green); }
 .genre-btn.active[data-genre="Funk"] { background: var(--magenta); border-color: var(--magenta); }
+.genre-btn.active[data-genre="Disco"] { background: var(--violet); border-color: var(--violet); }
 .genre-btn.active[data-genre="Blues"] { background: var(--cyan); border-color: var(--cyan); }
 .genre-btn.active[data-genre="Neo-Soul"] { background: var(--magenta); border-color: var(--magenta); }
 .genre-btn.active[data-genre="Reggae"] { background: var(--orange); border-color: var(--orange); }
@@ -1467,6 +1469,7 @@ h2 {
 .preset-chip[data-category="Basic"] { border-color: var(--base01); }
 .preset-chip[data-category="Pop/Rock"] { border-color: var(--blue); }
 .preset-chip[data-category="Electronic"] { border-color: var(--violet); }
+.preset-chip[data-id="Disco"] { border-color: var(--violet); }
 .preset-chip[data-category="Soul/R&B"], .preset-chip[data-category="Soul/Funk"] { border-color: var(--magenta); }
 .preset-chip[data-category="Blues"] { border-color: var(--cyan); }
 .preset-chip[data-category="World/Latin"] { border-color: var(--orange); }
@@ -1511,6 +1514,7 @@ h2 {
 .preset-chip.active[data-category="Basic"] { background: var(--base01); color: white; }
 .preset-chip.active[data-category="Pop/Rock"] { background: var(--blue); color: white; }
 .preset-chip.active[data-category="Electronic"] { background: var(--violet); color: white; }
+.preset-chip.active[data-id="Disco"] { background: var(--violet); color: white; }
 .preset-chip.active[data-category="Soul/R&B"], .preset-chip.active[data-category="Soul/Funk"] { background: var(--magenta); color: white; }
 .preset-chip.active[data-category="Blues"] { background: var(--cyan); color: white; }
 .preset-chip.active[data-category="World/Latin"] { background: var(--orange); color: white; }

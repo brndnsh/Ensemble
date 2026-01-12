@@ -229,6 +229,10 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                 if (inst.name === 'Kick' && isDownbeat) velocity *= 1.2;
                 if (inst.name === 'Snare' && isBackbeat) velocity *= 1.2;
             } else if (gb.genreFeel === 'Funk' && stepVal === 2) velocity *= 1.1;
+
+            if (gb.genreFeel === 'Disco' && inst.name === 'Open') {
+                velocity *= 1.15; // Accentuate the "Pea-Soup" open hat
+            }
             
             // --- Timbre Shifting ---
             if (inst.name === 'Snare' && ctx.bandIntensity < 0.35 && gb.genreFeel !== 'Rock') {

@@ -1,6 +1,7 @@
 import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
 import { ctx, cb, bb, sb, gb, arranger, vizState, storage } from './state.js';
 import { saveCurrentState, renderUserPresets, renderUserDrumPresets } from './persistence.js';
+import { restoreGains } from './engine.js';
 import { syncWorker } from './worker-client.js';
 import { generateId, compressSections, normalizeKey, decompressSections, getStepsPerMeasure } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
@@ -31,6 +32,7 @@ export function updateStyle(type, styleId) {
 
     syncWorker();
     flushBuffers();
+    restoreGains();
     saveCurrentState();
 }
 
@@ -38,6 +40,7 @@ const SMART_GENRES = {
     'Rock': { swing: 0, drum: 'Basic Rock', feel: 'Rock', bass: 'rock', soloist: 'shred' },
     'Jazz': { swing: 60, sub: '8th', drum: 'Jazz', feel: 'Jazz', bass: 'quarter', soloist: 'bird' },
     'Funk': { swing: 15, sub: '16th', drum: 'Funk', feel: 'Funk', bass: 'funk', soloist: 'blues' },
+    'Disco': { swing: 0, sub: '16th', drum: 'Disco', feel: 'Disco', bass: 'disco', soloist: 'disco' },
     'Blues': { swing: 100, sub: '8th', drum: 'Blues Shuffle', feel: 'Blues', bass: 'quarter', soloist: 'blues' },
     'Neo-Soul': { swing: 30, sub: '16th', drum: 'Neo-Soul', feel: 'Neo-Soul', bass: 'neo', soloist: 'neo' },
     'Reggae': { swing: 20, sub: '8th', drum: 'Reggae', feel: 'Reggae', bass: 'dub', soloist: 'blues' },

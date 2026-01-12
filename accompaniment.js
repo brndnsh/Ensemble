@@ -49,6 +49,11 @@ export const PIANO_CELLS = {
         [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1], // Interlocking 16ths
         [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0]  // The "e" of the beat
     ],
+    'Disco': [
+        [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Offbeat stabs (on the 'and')
+        [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0], // Sparse stabs
+        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]  // Charleston with driving end
+    ],
     'Blues': [
         [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1], // Triplet-esque shuffle
         [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // Stabs on 1 & 3
@@ -120,7 +125,7 @@ function handleSustainEvents(step, measureStep, chordIndex, intensity, genre, st
     const isNewChord = chordIndex !== compingState.lastChordIndex;
     const isNewMeasure = measureStep === 0;
 
-    if (genre === 'Reggae' || genre === 'Funk') {
+    if (genre === 'Reggae' || genre === 'Funk' || genre === 'Disco') {
         events.push({ type: 'cc', controller: 64, value: 0, timingOffset: 0 }); // Sustain Off
         return events; 
     }
@@ -202,7 +207,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         }
 
         let durationSteps = ts.stepsPerBeat * 2; // Default 2 beats
-        if (genre === 'Reggae' || genre === 'Funk') durationSteps = ts.stepsPerBeat * 0.25; // 16th
+        if (genre === 'Reggae' || genre === 'Funk' || genre === 'Disco') durationSteps = ts.stepsPerBeat * 0.25; // 16th
         else if (genre === 'Jazz') durationSteps = ts.stepsPerBeat * 1; // Quarter
         else if (genre === 'Rock' || genre === 'Bossa') durationSteps = ts.stepsPerBeat * 1.5;
         
@@ -241,7 +246,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
                 timingOffset: timingOffset + stagger,
                 instrument: 'Piano',
                 muted: false,
-                dry: (genre === 'Reggae' || genre === 'Funk')
+                dry: (genre === 'Reggae' || genre === 'Funk' || genre === 'Disco')
             });
         });
     } else if (ccEvents.length > 0) {
