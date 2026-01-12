@@ -1,5 +1,5 @@
 import { gb, arranger, ctx, cb, bb, sb, vizState } from './state.js';
-import { ui, renderGrid, renderMeasurePagination, renderGridState, showToast, updateOctaveLabel, renderSections, renderChordVisualizer } from './ui.js';
+import { ui, renderGrid, renderMeasurePagination, renderGridState, showToast, updateOctaveLabel, renderSections, renderChordVisualizer, initTabs } from './ui.js';
 import { DRUM_PRESETS } from './presets.js';
 import { saveCurrentState } from './persistence.js';
 import { syncWorker, flushWorker } from './worker-client.js';

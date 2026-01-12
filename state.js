@@ -184,7 +184,8 @@ export const gb = {
     lastSmartGenre: 'Rock',
     fillActive: false,
     fillSteps: {},
-    activeTab: 'classic'
+    activeTab: 'classic',
+    mobileTab: 'chords'
 };
 
 /**

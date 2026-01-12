@@ -409,47 +409,55 @@ export function recalculateScrollOffsets() {
     });
 }
 
-export function initTabs(initialTab = null) {
-    const tabs = document.querySelectorAll('.tab-btn, .groove-tab-btn');
-    tabs.forEach(tab => {
-        tab.onclick = () => {
-            const target = tab.dataset.tab;
-            const isGroove = tab.classList.contains('groove-tab-btn');
-            const selector = isGroove ? '.groove-tab-btn' : '.tab-btn';
-            
-            document.querySelectorAll(selector).forEach(b => b.classList.remove('active'));
-            if (!isGroove) {
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                const content = document.getElementById(`tab-${target}`);
-                if (content) content.classList.add('active');
-            } else {
-                document.querySelectorAll('.groove-tab-content').forEach(c => c.classList.remove('active'));
-                const content = document.getElementById(`groove-tab-${target}`);
-                if (content) content.classList.add('active');
-            }
-            
-            tab.classList.add('active');
-            gb.activeTab = target;
+export function initTabs() {
+    const mobileTabItems = document.querySelectorAll('.tab-item');
+    const grooveTabBtns = document.querySelectorAll('.groove-tab-btn');
+    
+    const activateMobileTab = (item) => {
+        const btn = item.querySelector('.tab-btn');
+        if (!btn) return;
+        const target = btn.dataset.tab;
+        
+        document.querySelectorAll('.tab-item .tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.instrument-panel').forEach(c => c.classList.remove('active-mobile'));
+        
+        const content = document.getElementById(`panel-${target}`);
+        if (content) content.classList.add('active-mobile');
+        btn.classList.add('active');
+        gb.mobileTab = target;
+    };
+
+    const activateGrooveTab = (btn) => {
+        const target = btn.dataset.tab;
+        document.querySelectorAll('.groove-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.groove-tab-content').forEach(c => c.classList.remove('active'));
+        
+        const content = document.getElementById(`groove-tab-${target}`);
+        if (content) content.classList.add('active');
+        btn.classList.add('active');
+        gb.activeTab = target;
+    };
+
+    mobileTabItems.forEach(item => {
+        item.onclick = () => {
+            activateMobileTab(item);
             saveCurrentState();
         };
         
-        // If this tab matches our initial state, trigger its view (without saving)
-        if (initialTab && tab.dataset.tab === initialTab) {
-            const target = tab.dataset.tab;
-            const isGroove = tab.classList.contains('groove-tab-btn');
-            const selector = isGroove ? '.groove-tab-btn' : '.tab-btn';
-            
-            document.querySelectorAll(selector).forEach(b => b.classList.remove('active'));
-            if (!isGroove) {
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                const content = document.getElementById(`tab-${target}`);
-                if (content) content.classList.add('active');
-            } else {
-                document.querySelectorAll('.groove-tab-content').forEach(c => c.classList.remove('active'));
-                const content = document.getElementById(`groove-tab-${target}`);
-                if (content) content.classList.add('active');
-            }
-            tab.classList.add('active');
+        const btn = item.querySelector('.tab-btn');
+        if (btn && btn.dataset.tab === gb.mobileTab) {
+            activateMobileTab(item);
+        }
+    });
+
+    grooveTabBtns.forEach(btn => {
+        btn.onclick = () => {
+            activateGrooveTab(btn);
+            saveCurrentState();
+        };
+        
+        if (btn.dataset.tab === gb.activeTab) {
+            activateGrooveTab(btn);
         }
     });
 }

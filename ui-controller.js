@@ -1,4 +1,4 @@
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip } from './ui.js';
 import { ctx, cb, bb, sb, gb, arranger, vizState, storage } from './state.js';
 import { saveCurrentState, renderUserPresets, renderUserDrumPresets } from './persistence.js';
 import { syncWorker } from './worker-client.js';
@@ -518,7 +518,7 @@ export function setupUIHandlers(refs) {
         const isTyping = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
         if (e.key === ' ' && !isTyping) { e.preventDefault(); togglePlay(); }
         if (e.key.toLowerCase() === 'e' && !isTyping && !e.metaKey && !e.ctrlKey) { e.preventDefault(); if (ui.editorOverlay.classList.contains('active')) ui.editorOverlay.classList.remove('active'); else ui.editorOverlay.classList.add('active'); }
-        if (['1', '2', '3', '4'].includes(e.key) && !isTyping) { const index = parseInt(e.key) - 1; const tabItem = document.querySelectorAll('.tab-item')[index]; if (tabItem) { const btn = tabItem.querySelector('.tab-btn'); if (btn) btn.click(); } }
+        if (['1', '2', '3', '4'].includes(e.key) && !isTyping) { const index = parseInt(e.key) - 1; const tabItem = document.querySelectorAll('.tab-item')[index]; if (tabItem) tabItem.click(); }
         if (e.key === '[' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (gb.currentMeasure - 1 + gb.measures) % gb.measures; switchMeasure(next); }
         if (e.key === ']' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (gb.currentMeasure + 1) % gb.measures; switchMeasure(next); }
         if (e.key === 'Escape') {
