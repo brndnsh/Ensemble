@@ -386,12 +386,12 @@ export const INSTRUMENT_PRESETS = {
         gainMult: 1.0
     },
     'Piano': {
-        attack: 0.002, // Ultra-fast transient
-        decay: 5.0, // Long natural ring
-        filterBase: 450, // Increased for slightly more 'air' on soft notes
-        filterDepth: 4200, 
-        resonance: 1.6,
-        gainMult: 1.25 
+        attack: 0.001, // Faster transient for more immediate "hit"
+        decay: 5.0, 
+        filterBase: 400, // Lower base for a warmer tone
+        filterDepth: 2400, // Reduced from 4200 to significantly cut harsh high-end
+        resonance: 1.2, // Smoother resonance
+        gainMult: 1.1 // Reduced from 1.25 to prevent overpowering the mix
     }
 };
 
@@ -435,7 +435,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
             strikeFilter.Q.setValueAtTime(1.5, startTime);
             
             strikeGain.gain.setValueAtTime(0, startTime);
-            strikeGain.gain.setTargetAtTime(vol * 0.4, startTime, 0.001);
+            strikeGain.gain.setTargetAtTime(vol * 0.25, startTime, 0.001); // Reduced from 0.4
             strikeGain.gain.setTargetAtTime(0, startTime + 0.01, 0.01);
             
             strike.connect(strikeFilter);
@@ -462,7 +462,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
 
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(velocityCutoff, startTime);
-        filter.frequency.setTargetAtTime(preset.filterBase, startTime, isPiano ? 0.8 : 0.1);
+        filter.frequency.setTargetAtTime(preset.filterBase, startTime, isPiano ? 0.35 : 0.1); // Reduced from 0.8 for faster tonal decay
         filter.Q.setValueAtTime(preset.resonance, startTime);
 
         mainGain.gain.setValueAtTime(0, startTime);
