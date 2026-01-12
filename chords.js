@@ -36,17 +36,17 @@ const NOTE_REGEX = /^([A-G][#b]?)/i;
  */
 export function getChordDetails(symbol) {
     let quality = 'major', is7th = symbol.includes('7') || symbol.includes('9');
-    const suffixMatch = symbol.match(/(maj7|maj9|maj|M7|m9|m7b5|m7|m6|min|m|dim|o7|o|aug|\+|-|ø|h7|sus4|sus2|add9|7b9|7#9|7|9|6|5)/);
+    const suffixMatch = symbol.match(/(maj7|maj9|maj|M7|m9|m7b5|m7|m6|min|m|dim|o7|o|°7|°|aug|\+|-|ø7|ø|h7|7b5|sus4|sus2|add9|7b9|7#9|7|9|6|5)/);
     const suffix = suffixMatch ? suffixMatch[1] : "";
 
     if (suffix === 'maj9') quality = 'maj9';
     else if (suffix.includes('maj') || suffix === 'M7') quality = 'maj7';
     else if (suffix === 'm9') quality = 'm9';
-    else if (suffix === 'm7b5' || suffix === 'ø' || suffix === 'h7') quality = 'halfdim';
+    else if (suffix === 'm7b5' || suffix === 'ø7' || suffix === 'ø' || suffix === 'h7' || symbol.includes('7b5')) quality = 'halfdim';
     else if (suffix === 'm6') quality = 'm6';
     else if (suffix.includes('min') || suffix === 'm' || suffix === '-') quality = 'minor';
-    else if (suffix === 'o7' || (suffix === 'o' && is7th) || suffix === 'dim7') { quality = 'dim'; is7th = true; }
-    else if (suffix === 'o' || suffix === 'dim') quality = 'dim';
+    else if (suffix === 'o7' || (suffix === 'o' && is7th) || suffix === 'dim7' || suffix === '°7' || (suffix === '°' && is7th)) { quality = 'dim'; is7th = true; }
+    else if (suffix === 'o' || suffix === 'dim' || suffix === '°') quality = 'dim';
     else if (suffix.includes('aug') || suffix === '+') quality = 'aug';
     else if (suffix === 'sus4') quality = 'sus4';
     else if (suffix === 'sus2') quality = 'sus2';
@@ -269,6 +269,7 @@ export function transformRelativeProgression(input, semitoneShift, targetIsMinor
         
         const romanMatch = part.match(ROMAN_REGEX);
         const nnsMatch = part.match(NNS_REGEX);
+        const noteMatch = part.match(NOTE_REGEX);
         
         if (romanMatch) {
             const accidental = romanMatch[1] || "";
@@ -303,6 +304,14 @@ export function transformRelativeProgression(input, semitoneShift, targetIsMinor
             const newNNS = INTERVAL_TO_NNS[newOffset];
             
             return newNNS + suffix;
+        } else if (noteMatch) {
+            const root = normalizeKey(noteMatch[1].charAt(0).toUpperCase() + noteMatch[1].slice(1).toLowerCase());
+            const suffix = part.slice(noteMatch[0].length);
+            const originalIndex = KEY_ORDER.indexOf(root);
+            if (originalIndex !== -1) {
+                const newIndex = (originalIndex + semitoneShift + 12) % 12;
+                return KEY_ORDER[newIndex] + suffix;
+            }
         }
         
         return part;
@@ -349,17 +358,16 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
 
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
     if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
-        if (quality === 'maj7' || quality === 'maj9') return [4, 7, 11, 14]; // 3, 5, 7, 9
+        if (quality === 'maj7' || quality === 'maj9') return isRich ? [4, 7, 11, 14, 18] : [4, 7, 11, 14]; // 3, 5, 7, 9, (#11 if rich)
         
-        if (quality === 'dim') return [3, 6, 9];      // b3, b5, bb7
-        if (quality === 'halfdim') return [3, 6, 10]; // b3, b5, b7
+        if (quality === 'dim') return isRich ? [3, 6, 9, 14] : [3, 6, 9];      // b3, b5, bb7, (9 if rich)
+        if (quality === 'halfdim') return isRich ? [3, 6, 10, 17] : [3, 6, 10]; // b3, b5, b7, (11 if rich)
         
         const isMinor = quality === 'minor';
         const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && is7th && quality !== 'maj7';
         
-        if (isMinor) return [3, 7, 10, 14];           // b3, 5, b7, 9
+        if (isMinor) return isRich ? [3, 7, 10, 14, 17] : [3, 7, 10, 14];      // b3, 5, b7, 9, (11 if rich)
         if (isDominant) {
-
              // Use 13th only if explicitly requested or rich density
              return (isRich || quality === '13') ? [4, 10, 14, 21] : [4, 10, 14]; 
         }
@@ -488,7 +496,9 @@ function parseProgressionPart(input, key, initialMidis) {
                     const numeral = romanMatch[2];
                     if (numeral === numeral.toLowerCase() && quality === 'major') quality = 'minor';
                     // Only auto-diminished if it's a natural vii (no b or # prefix)
-                    if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|aug|\+|ø|h)/)) quality = 'dim';
+                    if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|°|aug|\+|ø|h|7b5)/)) {
+                        quality = is7th ? 'halfdim' : 'dim';
+                    }
                 }
 
                 let intervals = getIntervals(quality, is7th, cb.density, gb.genreFeel, bb.enabled || cb.practiceMode);

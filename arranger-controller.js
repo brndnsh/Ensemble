@@ -1,6 +1,6 @@
 import { arranger, cb, ctx, gb } from './state.js';
 import { ui, renderSections, renderChordVisualizer, showToast, updateKeySelectLabels } from './ui.js';
-import { validateProgression } from './chords.js';
+import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
 import { syncWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
@@ -100,8 +100,13 @@ export function addSection() {
 }
 
 export function transposeKey(delta, updateRelKeyButton) {
+    if (!ui.keySelect) {
+        console.warn("[Arranger] ui.keySelect not found in transposeKey");
+        return;
+    }
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(ui.keySelect.value));
     const newKey = KEY_ORDER[(currentIndex + delta + 12) % 12];
+    console.log("[Arranger] Transposing key by", delta, ":", ui.keySelect.value, "->", newKey);
     ui.keySelect.value = newKey;
     arranger.key = newKey;
     
@@ -132,21 +137,32 @@ export function transposeKey(delta, updateRelKeyButton) {
 }
 
 export function switchToRelativeKey(updateRelKeyButton) {
+    const wasMinor = !!arranger.isMinor;
+    console.log("[Arranger] Toggling relative key. Current:", arranger.key, wasMinor ? 'Minor' : 'Major');
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(arranger.key));
-    const wasMinor = arranger.isMinor;
     const shift = wasMinor ? 3 : -3;
     const newKey = KEY_ORDER[(currentIndex + shift + 12) % 12];
     
     arranger.key = newKey;
     arranger.isMinor = !wasMinor;
-    ui.keySelect.value = newKey;
+    console.log("[Arranger] New state:", arranger.key, arranger.isMinor ? 'Minor' : 'Major');
+    
+    if (ui.keySelect) {
+        ui.keySelect.value = newKey;
+    } else {
+        console.warn("[Arranger] ui.keySelect not found in switchToRelativeKey");
+    }
     
     pushHistory();
     arranger.sections.forEach(section => {
         section.value = transformRelativeProgression(section.value, shift, arranger.isMinor);
     });
     
-    if (updateRelKeyButton) updateRelKeyButton();
+    if (typeof updateRelKeyButton === 'function') {
+        updateRelKeyButton();
+    } else {
+        console.warn("[Arranger] updateRelKeyButton is not a function", updateRelKeyButton);
+    }
     updateKeySelectLabels();
     refreshArrangerUI();
     syncWorker();

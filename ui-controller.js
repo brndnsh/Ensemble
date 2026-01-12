@@ -371,6 +371,7 @@ export function setupUIHandlers(refs) {
     ui.keySelect.addEventListener('change', () => {
         arranger.key = ui.keySelect.value;
         updateRelKeyButton();
+        updateKeySelectLabels();
         validateAndAnalyze();
         saveCurrentState();
     });
