@@ -7,7 +7,7 @@ import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { onSectionUpdate, onSectionDelete, onSectionDuplicate, analyzeFormUI } from './arranger-controller.js';
 import { getStepsPerMeasure } from './utils.js';
-import { killAllNotes, restoreGains, killChordBus, killBassBus, killSoloistBus, killAllPianoNotes, killSoloistNote, killBassNote } from './engine.js';
+import { killAllNotes, restoreGains, killChordBus, killBassBus, killSoloistBus, killDrumBus, killAllPianoNotes, killSoloistNote, killBassNote, killDrumNote } from './engine.js';
 
 let schedulerRef = null;
 let vizRef = null;
@@ -117,6 +117,10 @@ export function flushBuffer(type) {
         cb.buffer.clear();
         killAllPianoNotes();
         killChordBus();
+    }
+    if (type === 'groove' || type === 'all') {
+        killDrumNote();
+        killDrumBus();
     }
     
     flushWorker(ctx.step);

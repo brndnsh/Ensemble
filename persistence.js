@@ -19,7 +19,7 @@ export function saveCurrentState() {
         applyPresetSettings: ctx.applyPresetSettings,
         vizEnabled: vizState.enabled,
         autoIntensity: ctx.autoIntensity,
-        cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb },
+        cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb, practiceMode: cb.practiceMode },
         bb: { enabled: bb.enabled, style: bb.style, octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
         sb: { enabled: sb.enabled, style: sb.style, octave: sb.octave, volume: sb.volume, reverb: sb.reverb },
         gb: { 
