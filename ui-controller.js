@@ -211,7 +211,7 @@ export function setupUIHandlers(refs) {
 
     const listeners = [
         [ui.playBtn, 'click', togglePlay],
-        [ui.bpmInput, 'change', e => setBpm(e.target.value, refs.viz)],
+        [ui.bpmInput, 'input', e => setBpm(e.target.value, refs.viz)],
         [ui.tapBtn, 'click', () => handleTap((val) => setBpm(val, refs.viz))],
         [ui.addSectionBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');

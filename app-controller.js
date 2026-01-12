@@ -28,7 +28,7 @@ export function setBpm(val, viz) {
         if (noteTimeRemaining > 0) ctx.nextNoteTime = now + (noteTimeRemaining * ratio);
         
         const unswungNoteTimeRemaining = ctx.unswungNextNoteTime - now;
-        if (unswungNoteTimeRemaining > 0) ctx.unswungNextNoteTime = now + (unswungNextNoteTime * ratio);
+        if (unswungNoteTimeRemaining > 0) ctx.unswungNextNoteTime = now + (unswungNoteTimeRemaining * ratio);
     }
     ctx.bpm = newBpm; ui.bpmInput.value = newBpm;
     syncWorker();

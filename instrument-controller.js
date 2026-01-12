@@ -78,14 +78,19 @@ export function clearDrumPresetHighlight() {
 
 let tapTimes = [];
 export function handleTap(setBpmRef) {
-    const now = Date.now();
+    const now = performance.now();
     if (tapTimes.length > 0 && now - tapTimes[tapTimes.length-1] > 2000) tapTimes = [];
     tapTimes.push(now);
-    if (tapTimes.length > 2) {
+    
+    if (tapTimes.length > 8) tapTimes.shift();
+
+    if (tapTimes.length >= 2) {
         const intervals = [];
-        for (let i=1; i<tapTimes.length; i++) intervals.push(tapTimes[i] - tapTimes[i-1]);
-        const avg = intervals.reduce((a,b)=>a+b)/intervals.length;
-        setBpmRef(Math.round(60000/avg));
+        for (let i = 1; i < tapTimes.length; i++) {
+            intervals.push(tapTimes[i] - tapTimes[i-1]);
+        }
+        const avg = intervals.reduce((a, b) => a + b) / intervals.length;
+        setBpmRef(Math.round(60000 / avg));
     }
 }
 
