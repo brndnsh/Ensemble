@@ -3,7 +3,7 @@ import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisu
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime } from './engine.js';
 import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { SONG_TEMPLATES, DRUM_PRESETS, CHORD_PRESETS } from './presets.js';
-import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections, getStepsPerMeasure } from './utils.js';
+import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections, getStepsPerMeasure, getStepInfo } from './utils.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { chordPatterns } from './accompaniment.js';
 import { exportToMidi } from './midi-export.js';
@@ -126,10 +126,9 @@ function scheduleCountIn(beat, time) {
      const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
      let freq = 440;
      if (beat === 0) freq = 1000;
-     else if (ts.grouping) {
-         const groups = ts.grouping.split('+').map(Number);
+     else if (ts.grouping && ts.grouping.length > 1) {
          let accumulated = 0;
-         for (let g of groups) {
+         for (let g of ts.grouping) {
              if (beat === accumulated && beat !== 0) { freq = 800; break; }
              accumulated += g;
          }
@@ -174,7 +173,7 @@ function getChordAtStep(step) {
     return null;
 }
 
-function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteStep) {
+function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteStep, isGroupStart) {
     const conductorVel = ctx.conductorVelocity || 1.0;
     const header = document.querySelector('.groove-panel-header h2');
     if (header) header.style.color = gb.fillActive ? 'var(--soloist-color)' : '';
@@ -207,11 +206,10 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                 if (inst.name === 'Snare' && isBackbeat) velocity *= 1.2;
             } else if (gb.genreFeel === 'Funk' && stepVal === 2) velocity *= 1.1;
             if (inst.name === 'HiHat' && gb.genreFeel !== 'Jazz' && ctx.bandIntensity > 0.8 && isQuarter) { soundName = 'Open'; velocity *= 1.1; }
-            if (inst.name === 'Kick') velocity *= isDownbeat ? 1.15 : (isQuarter ? 1.05 : 0.9);
+            if (inst.name === 'Kick') velocity *= isDownbeat ? 1.15 : (isGroupStart ? 1.1 : (isQuarter ? 1.05 : 0.9));
             else if (inst.name === 'Snare') velocity *= isBackbeat ? 1.1 : 0.9;
             else if (inst.name === 'HiHat' || inst.name === 'Open') {
                 velocity *= isQuarter ? 1.1 : 0.85;
-                // Tame the ride/hihat for Jazz at high intensity to prevent it from becoming wash-heavy
                 if (gb.genreFeel === 'Jazz') velocity *= (1.0 - (ctx.bandIntensity * 0.35));
                 if (ctx.bpm > 165) { velocity *= 0.7; if (!isQuarter) velocity *= 0.6; }
             }
@@ -281,31 +279,30 @@ function scheduleChordVisuals(chordData, t) {
     }
 }
 
-function scheduleChords(chordData, step, time) {
+function scheduleChords(chordData, step, time, stepInfo) {
     const { chord, stepInChord } = chordData;
     const pattern = chordPatterns[cb.style];
-    if (pattern) pattern(chord, time, 60.0 / ctx.bpm, stepInChord, step % getStepsPerMeasure(arranger.timeSignature), step);
+    if (pattern) pattern(chord, time, 60.0 / ctx.bpm, stepInChord, step % getStepsPerMeasure(arranger.timeSignature), step, stepInfo);
 }
 
 function scheduleGlobalEvent(step, swungTime) {
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const spm = getStepsPerMeasure(arranger.timeSignature);
+    const stepInfo = getStepInfo(step, ts);
+    
     updateAutoConductor();
     checkSectionTransition(step, spm);
+    
     const drumStep = step % (gb.measures * spm);
     const t = swungTime + (Math.random() - 0.5) * (gb.humanize / 100) * 0.025;
-    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-    if (ui.metronome.checked && ts.pulse.includes(step % spm)) {
-        const beatIndex = (step % spm) / ts.stepsPerBeat;
-        let freq = (step % spm === 0) ? 1000 : 600;
-        if (ts.grouping && step % spm !== 0) {
-            const groups = ts.grouping.split('+').map(Number);
-            let acc = 0;
-            for (let g of groups) { if (Math.abs(beatIndex - acc) < 0.01 && beatIndex !== 0) { freq = 800; break; } acc += g; }
-        } else if (step % spm !== 0) {
-            if (arranger.timeSignature === '4/4' && Math.abs(beatIndex - 2) < 0.01) freq = 800;
-            else if (arranger.timeSignature === '6/8' && Math.abs(beatIndex - 3) < 0.01) freq = 800;
-            else if (arranger.timeSignature === '12/8' && (Math.abs(beatIndex - 3) < 0.01 || Math.abs(beatIndex - 6) < 0.01 || Math.abs(beatIndex - 9) < 0.01)) freq = 800;
-        }
+
+    // --- 1. Metronome / Pulse ---
+    if (ui.metronome.checked && stepInfo.isBeatStart) {
+        let freq = stepInfo.isMeasureStart ? 1000 : (stepInfo.isGroupStart ? 800 : 600);
+        
+        // Fallback for standard meters without complex groupings
+        if (ts.beats === 4 && stepInfo.beatIndex === 2 && !stepInfo.isGroupStart) freq = 800;
+
         const osc = ctx.audio.createOscillator();
         const g = ctx.audio.createGain();
         osc.connect(g); g.connect(ctx.masterGain);
@@ -315,23 +312,33 @@ function scheduleGlobalEvent(step, swungTime) {
         osc.start(swungTime); osc.stop(swungTime + 0.05);
         osc.onended = () => { g.disconnect(); osc.disconnect(); };
     }
+
     const straightness = (sb.style === 'neo') ? 0.35 : ((sb.style === 'blues') ? 0.45 : 0.65);
     const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + (Math.random() - 0.5) * (gb.humanize / 100) * 0.025;
+    
     if (gb.enabled) {
-        const isDownbeat = (drumStep % spm === 0);
-        const isQuarter = ts.pulse.includes(drumStep % spm);
-        const isBackbeat = (ts.beats === 4) ? (drumStep % spm === ts.stepsPerBeat || drumStep % spm === ts.stepsPerBeat * 3) : false;
+        const isQuarter = stepInfo.isBeatStart;
+        const isBackbeat = (ts.beats === 4) ? (stepInfo.beatIndex === 1 || stepInfo.beatIndex === 3) : false;
 
-        if (ts.pulse.includes(drumStep % spm) && ui.visualFlash.checked) ctx.drawQueue.push({ type: 'flash', time: swungTime, intensity: (drumStep % spm === 0 ? 0.2 : 0.1), beat: (drumStep % spm === 0 ? 1 : 0) });
+        if (stepInfo.isBeatStart && ui.visualFlash.checked) {
+            ctx.drawQueue.push({ 
+                type: 'flash', 
+                time: swungTime, 
+                intensity: (stepInfo.isMeasureStart ? 0.2 : (stepInfo.isGroupStart ? 0.15 : 0.1)), 
+                beat: (stepInfo.isMeasureStart ? 1 : 0) 
+            });
+        }
+        
         ctx.drawQueue.push({ type: 'drum_vis', step: drumStep, time: swungTime });
-        scheduleDrums(drumStep, t, isDownbeat, isQuarter, isBackbeat, step);
+        scheduleDrums(drumStep, t, stepInfo.isMeasureStart, isQuarter, isBackbeat, step, stepInfo.isGroupStart);
     }
+
     const chordData = getChordAtStep(step);
     if (chordData) {
         scheduleChordVisuals(chordData, t);
         if (bb.enabled) scheduleBass(chordData, step, t);
         if (sb.enabled) scheduleSoloist(chordData, step, t, soloistTime);
-        if (cb.enabled) scheduleChords(chordData, step, t);
+        if (cb.enabled) scheduleChords(chordData, step, t, stepInfo);
     }
 }
 
@@ -375,7 +382,8 @@ function draw() {
     }
     if (viz && vizState.enabled && ctx.isDrawing) {
         viz.setRegister('bass', bb.octave); viz.setRegister('soloist', sb.octave); viz.setRegister('chords', cb.octave);
-        viz.render(now, ctx.bpm);
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        viz.render(now, ctx.bpm, ts.beats);
     }
     requestAnimationFrame(draw);
 }

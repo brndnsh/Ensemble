@@ -48,7 +48,9 @@ export function syncWorker() {
                 stepMap: arranger.stepMap, 
                 totalSteps: arranger.totalSteps,
                 key: arranger.key,
-                isMinor: arranger.isMinor
+                isMinor: arranger.isMinor,
+                timeSignature: arranger.timeSignature,
+                grouping: arranger.grouping
             },
             cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled },
             bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq },

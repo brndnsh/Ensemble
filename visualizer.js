@@ -103,7 +103,7 @@ export class UnifiedVisualizer {
         }
     }
 
-    render(currentTime, bpm) {
+    render(currentTime, bpm, beatsPerMeasure = 4) {
         const ctx = this.ctx;
         const w = this.width;
         const h = this.height;
@@ -251,13 +251,9 @@ export class UnifiedVisualizer {
                 if (t > currentTime + 0.1) break;
                 
                 const x = getX(t);
-                if (x < this.pianoRollWidth) continue; // Should not happen with reversed logic as t increases, x decreases? 
-                // Wait. t increases (future). currentTime - t decreases. x decreases.
-                // startBeat is minTime. currentTime - minTime = windowSize. x = width.
-                // t = currentTime. currentTime - t = 0. x = pianoRollWidth.
-                // So as i increases, x decreases.
+                if (x < this.pianoRollWidth) continue; 
                 
-                const isMeasure = i % 4 === 0;
+                const isMeasure = i % beatsPerMeasure === 0;
                 ctx.strokeStyle = isMeasure ? gridColorMeasure : gridColorBeat;
                 ctx.beginPath();
                 ctx.moveTo(x, 0);

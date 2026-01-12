@@ -99,6 +99,7 @@ export const arranger = {
     progression: [],
     key: 'C',
     timeSignature: '4/4',
+    grouping: null, // Custom grouping array (e.g. [3, 2])
     isMinor: false,
     notation: 'roman',
     valid: false,

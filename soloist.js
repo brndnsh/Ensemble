@@ -161,11 +161,21 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const measureIndex = Math.floor(cycleStep / stepsPerMeasure);
     let baseTension = (measureIndex / CYCLE_BARS) * (0.5 + intensity * 0.5); 
     
-    // Beat Strength: Strong on 1 & 3 (4/4)
-    const isStrongBeat = (beatInMeasure === 0 || beatInMeasure === 2) && stepInBeat === 0;
+    // Beat Strength & Structural Anchors
+    const grouping = arranger.grouping || tsConfig.grouping || [tsConfig.beats];
+    const isGroupStart = (() => {
+        let accumulated = 0;
+        for (let g of grouping) {
+            if (measureStep === accumulated) return true;
+            accumulated += g * stepsPerBeat;
+        }
+        return false;
+    })();
+
+    const isStrongBeat = isGroupStart || (beatInMeasure === 0 && stepInBeat === 0);
     const isOffbeat = stepInBeat !== 0;
 
-    if (isStrongBeat) baseTension -= (0.1 * intensity);
+    if (isStrongBeat) baseTension -= (0.15 * intensity);
     if (isOffbeat) baseTension += (0.1 * intensity);
     
     sb.tension = Math.max(0, Math.min(1, baseTension));
@@ -185,10 +195,14 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // Intensity Scaling: High intensity = fewer rests (more aggressive playing)
     // We use a steeper curve (2.0 - intensity * 1.5) to force more space at low energy
     let restProb = (config.restBase * (2.0 - intensity * 1.5)) + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
-    restProb = Math.max(0.1, restProb);
+    
+    // Rests are less likely to start on a group start (don't breathe on the "One" or structural anchors)
+    if (isGroupStart) restProb *= 0.3;
+    
+    restProb = Math.max(0.05, restProb);
     
     // Force resolve/breath at end of cycle?
-    if (cycleStep > stepsPerCycle - 4) restProb += (0.5 * (1.1 - intensity));
+    if (cycleStep > stepsPerCycle - (stepsPerBeat * 2)) restProb += (0.5 * (1.1 - intensity));
 
     // If we are currently resting
     if (sb.isResting) {

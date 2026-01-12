@@ -1,5 +1,5 @@
 // Note: Keep APP_VERSION in sync with CACHE_NAME in sw.js
-export const APP_VERSION = '1.71';
+export const APP_VERSION = '1.72';
 export const KEY_ORDER = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 export const ENHARMONIC_MAP = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
 export const ROMAN_VALS = { 'I': 0, 'II': 2, 'III': 4, 'IV': 5, 'V': 7, 'VI': 9, 'VII': 11 };
@@ -8,14 +8,14 @@ export const INTERVAL_TO_NNS = { 0: '1', 1: 'b2', 2: '2', 3: 'b3', 4: '3', 5: '4
 export const INTERVAL_TO_ROMAN = { 0: 'I', 1: 'bII', 2: 'II', 3: 'bIII', 4: 'III', 5: 'IV', 6: 'bV', 7: 'V', 8: 'bVI', 9: 'VI', 10: 'bVII', 11: 'VII' };
 
 export const TIME_SIGNATURES = {
-    '2/4': { beats: 2, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4] },
-    '3/4': { beats: 3, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4, 8] },
-    '4/4': { beats: 4, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4, 8, 12] },
-    '5/4': { beats: 5, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4, 8, 12, 16], grouping: '3+2' }, // Pulse on 1, 2, 3, 4, 5
-    '6/8': { beats: 6, stepsPerBeat: 2, subdivision: '8th', pulse: [0, 6], grouping: '3+3' }, // Pulse on 1 and 4 (dotted quarter feels)
-    '7/8': { beats: 7, stepsPerBeat: 2, subdivision: '8th', pulse: [0, 4, 8], grouping: '2+2+3' }, // Pulse on 1, 3, 5
-    '7/4': { beats: 7, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4, 8, 12, 16, 20, 24], grouping: '4+3' }, // Pulse on all beats, group 4+3
-    '12/8': { beats: 12, stepsPerBeat: 2, subdivision: '8th', pulse: [0, 6, 12, 18], grouping: '3+3+3+3' } // Pulse on 1, 4, 7, 10
+    '2/4': { beats: 2, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4], grouping: [2] },
+    '3/4': { beats: 3, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4, 8], grouping: [3] },
+    '4/4': { beats: 4, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4, 8, 12], grouping: [2, 2] },
+    '5/4': { beats: 5, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4, 8, 12, 16], grouping: [3, 2] }, 
+    '6/8': { beats: 6, stepsPerBeat: 2, subdivision: '8th', pulse: [0, 6], grouping: [3, 3] }, 
+    '7/8': { beats: 7, stepsPerBeat: 2, subdivision: '8th', pulse: [0, 4, 8], grouping: [2, 2, 3] }, 
+    '7/4': { beats: 7, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4, 8, 12, 16, 20, 24], grouping: [4, 3] }, 
+    '12/8': { beats: 12, stepsPerBeat: 2, subdivision: '8th', pulse: [0, 6, 12, 18], grouping: [3, 3, 3, 3] } 
 };
 
 export const MIXER_GAIN_MULTIPLIERS = {

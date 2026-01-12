@@ -391,8 +391,22 @@ button {
 
 .key-controls {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.25rem;
+}
+
+.time-sig-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+
+.time-sig-group select {
+    width: 100%;
+    padding: 0.2rem 0.4rem;
+    height: 32px;
+    font-size: 0.85rem;
 }
 
 @media (max-width: 600px) {
@@ -427,8 +441,9 @@ button {
     .key-controls {
         flex-grow: 1;
         display: grid;
-        grid-template-columns: 1fr 1.2fr 0.8fr 0.8fr 0.8fr;
+        grid-template-columns: 40px 1fr 1.2fr 0.8fr 0.8fr 0.8fr;
         gap: 0.35rem;
+        align-items: start;
     }
 
     #keySelect {
@@ -1382,15 +1397,11 @@ h2 {
     background: var(--step-bg-hover);
 }
 
-.step.beat-marker {
-    background: var(--step-bg-marker);
-    box-shadow: inset 2px 0 0 var(--step-border-marker); /* Use shadow instead of border to avoid drift */
-}
+.step.beat-marker { border-left: 1px solid rgba(255,255,255,0.15); }
+.step.group-marker { border-left: 1px solid var(--accent-color); border-left-opacity: 0.4; }
 
-.step-label.beat-start {
-    color: var(--accent-color);
-    font-weight: bold;
-}
+.step-label.beat-start { color: var(--text-secondary); font-weight: bold; }
+.step-label.group-start { color: var(--accent-color); }
 
 .step.active { background: var(--accent-color) !important; box-shadow: 0 0 8px var(--accent-color); } 
 .step.accented { background: var(--soloist-color) !important; box-shadow: 0 0 12px var(--soloist-color); } 
