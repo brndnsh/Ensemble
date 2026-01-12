@@ -7,6 +7,7 @@ import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { onSectionUpdate, onSectionDelete, onSectionDuplicate, analyzeFormUI } from './arranger-controller.js';
 import { getStepsPerMeasure } from './utils.js';
+import { killAllPianoNotes } from './engine.js';
 
 let schedulerRef = null;
 let vizRef = null;
@@ -95,6 +96,7 @@ export function flushBuffers() {
     if (sb.lastPlayedFreq !== null) sb.lastFreq = sb.lastPlayedFreq;
     sb.buffer.clear();
     
+    killAllPianoNotes();
     flushWorker(ctx.step);
 }
 

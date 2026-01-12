@@ -28,6 +28,8 @@
  * @property {boolean} autoIntensity - Whether the intensity automatically drifts over time.
  * @property {boolean} metronome - Whether the metronome is active.
  * @property {boolean} applyPresetSettings - Whether to apply BPM/Style from presets.
+ * @property {boolean} sustainActive - Whether the global sustain pedal is "pressed".
+ * @property {Object} intent - Current rhythmic intent (syncopation, anticipation, etc).
  */
 export const ctx = {
     audio: null,
@@ -57,7 +59,14 @@ export const ctx = {
     complexity: 0.3,
     autoIntensity: false,
     metronome: false,
-    applyPresetSettings: false
+    applyPresetSettings: false,
+    sustainActive: false,
+    intent: {
+        syncopation: 0.2,
+        anticipation: 0.1,
+        layBack: 0.0,
+        density: 0.5
+    }
 };
 
 /**
@@ -105,24 +114,23 @@ export const arranger = {
 };
 
 /**
- * @typedef {Object} ChordState
- * @property {boolean} enabled - Whether the chord engine is active.
- * @property {string} style - The accompaniment style ID (e.g., 'pad', 'strum8').
- * @property {string} instrument - The instrument preset ID (e.g., 'Warm EP').
- * @property {number} volume - Volume level (0.0 - 1.0).
- * @property {number} reverb - Reverb send level (0.0 - 1.0).
+ * @property {boolean} enabled - Whether the accompanist is active.
+ * @property {string} style - The comping style ('smart', 'pad', etc).
+ * @property {number} volume - Output gain multiplier.
+ * @property {number} reverb - Reverb send amount.
  * @property {number} octave - Base MIDI octave for voicing.
  * @property {string} density - Voicing density ('thin', 'standard', 'rich').
+ * @property {boolean} practiceMode - Whether to use rootless voicings even if bass is off.
  * @property {number|null} lastActiveChordIndex - Index of the currently playing chord.
  */
 export const cb = {
     enabled: true,
     style: 'smart',
-    instrument: 'Clean',
     volume: 0.5,
     reverb: 0.3,
     octave: 65,
-    density: 'standard', // Voicing parameter
+    density: 'standard', 
+    practiceMode: false,
     lastActiveChordIndex: null
 };
 

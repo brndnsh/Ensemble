@@ -27,9 +27,17 @@ export function applyConductor() {
     // --- 2. Complexity / Busyness ---
     sb.hookRetentionProb = 0.2 + (complexity * 0.6);
 
+    // --- 3. Musical Conversation (Soloist Density) ---
+    // If soloist is active, the accompanist should "listen" and back off.
+    const isSoloistBusy = sb.enabled && sb.busySteps > 0;
+    ctx.intent.density = isSoloistBusy ? (0.3 * (1 - complexity)) : (0.5 + intensity * 0.4);
+
     debounceSaveState();
 }
 
+/**
+ * Updates auto-intensity and monitors the band's "conversation".
+ */
 export function updateAutoConductor() {
     if (!ctx.autoIntensity || !ctx.isPlaying) return;
 

@@ -3,7 +3,7 @@ import { ctx, cb, bb, sb, gb, arranger, vizState, storage } from './state.js';
 import { saveCurrentState, renderUserPresets, renderUserDrumPresets } from './persistence.js';
 import { syncWorker } from './worker-client.js';
 import { generateId, compressSections, normalizeKey, decompressSections, getStepsPerMeasure } from './utils.js';
-import { CHORD_STYLES, CHORD_INSTRUMENTS, SOLOIST_STYLES, BASS_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
+import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
 import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES, KEY_ORDER } from './config.js';
 import { generateRandomProgression, mutateProgression, transformRelativeProgression } from './chords.js';
 import { applyTheme, setBpm } from './app-controller.js';
@@ -18,7 +18,6 @@ import { applyConductor } from './conductor.js';
 export function updateStyle(type, styleId) {
     const UPDATE_STYLE_CONFIG = {
         chord: { state: cb, selector: '.chord-style-chip', field: 'style' },
-        chordInstrument: { state: cb, selector: '.chord-instrument-chip', field: 'instrument' },
         bass: { state: bb, selector: '.bass-style-chip', field: 'style' },
         soloist: { state: sb, selector: '.soloist-style-chip', field: 'style' }
     };
@@ -77,7 +76,6 @@ export function setupPresets() {
     };
 
     renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', cb.style, (item) => updateStyle('chord', item.id));
-    renderCategorized(ui.chordInstrumentPresets, CHORD_INSTRUMENTS, 'chord-instrument', cb.instrument, (item) => updateStyle('chordInstrument', item.id));
     renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', sb.style, (item) => updateStyle('soloist', item.id));
     renderCategorized(ui.bassStylePresets, BASS_STYLES, 'bass-style', bb.style, (item) => updateStyle('bass', item.id));
 
@@ -389,6 +387,12 @@ export function setupUIHandlers(refs) {
 
     ui.notationSelect.addEventListener('change', () => {
         arranger.notation = ui.notationSelect.value;
+        validateAndAnalyze();
+        saveCurrentState();
+    });
+
+    ui.practiceModeCheck.addEventListener('change', e => {
+        cb.practiceMode = e.target.checked;
         validateAndAnalyze();
         saveCurrentState();
     });
