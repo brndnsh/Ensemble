@@ -488,7 +488,7 @@ function parseProgressionPart(input, key, initialMidis) {
                     const numeral = romanMatch[2];
                     if (numeral === numeral.toLowerCase() && quality === 'major') quality = 'minor';
                     // Only auto-diminished if it's a natural vii (no b or # prefix)
-                    if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|aug|\+)/)) quality = 'dim';
+                    if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|aug|\+|ø|h)/)) quality = 'dim';
                 }
 
                 let intervals = getIntervals(quality, is7th, cb.density, gb.genreFeel, bb.enabled || cb.practiceMode);

@@ -356,7 +356,8 @@ export function restoreGains() {
     const modules = [
         { node: ctx.chordsGain, state: cb, mult: MIXER_GAIN_MULTIPLIERS.chords },
         { node: ctx.bassGain, state: bb, mult: MIXER_GAIN_MULTIPLIERS.bass },
-        { node: ctx.soloistGain, state: sb, mult: MIXER_GAIN_MULTIPLIERS.soloist }
+        { node: ctx.soloistGain, state: sb, mult: MIXER_GAIN_MULTIPLIERS.soloist },
+        { node: ctx.drumsGain, state: gb, mult: MIXER_GAIN_MULTIPLIERS.drums }
     ];
     modules.forEach(m => {
         if (m.node) {
@@ -886,21 +887,19 @@ export function playDrumSound(name, time, velocity = 1.0) {
             // --- Sidestick (Rim Click) - 3-Layer Model ---
             
             // 1. The "Click" (Transient Impact)
-            // High frequency sine for the immediate stick-on-metal/wood contact
             const click = ctx.audio.createOscillator();
             const clickGain = ctx.audio.createGain();
             click.type = 'sine';
             click.frequency.setValueAtTime(6500 * rr(), playTime);
             
             clickGain.gain.setValueAtTime(0, playTime);
-            clickGain.gain.setValueAtTime(vol * 0.4, playTime + 0.001);
-            clickGain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.02); // Ultra-fast 20ms decay
+            clickGain.gain.setTargetAtTime(vol * 0.4, playTime, 0.001);
+            clickGain.gain.setTargetAtTime(0, playTime + 0.005, 0.005); // Faster decay
             
             click.connect(clickGain);
             clickGain.connect(ctx.drumsGain);
             
             // 2. The "Body" (Woody Resonance)
-            // Triangle wave for the shell/rim resonance
             const body = ctx.audio.createOscillator();
             const bodyGain = ctx.audio.createGain();
             const bodyFilter = ctx.audio.createBiquadFilter();
@@ -908,22 +907,21 @@ export function playDrumSound(name, time, velocity = 1.0) {
             body.type = 'triangle';
             const bodyFreq = 330 * rr();
             body.frequency.setValueAtTime(bodyFreq, playTime);
-            body.frequency.exponentialRampToValueAtTime(bodyFreq * 0.9, playTime + 0.1); // Slight pitch drop
+            body.frequency.setTargetAtTime(bodyFreq * 0.9, playTime, 0.1); 
             
             bodyFilter.type = 'bandpass';
             bodyFilter.frequency.setValueAtTime(350, playTime);
-            bodyFilter.Q.value = 1.5;
+            bodyFilter.Q.setValueAtTime(1.5, playTime);
 
             bodyGain.gain.setValueAtTime(0, playTime);
-            bodyGain.gain.setValueAtTime(vol * 0.8, playTime + 0.002);
-            bodyGain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.15); // 150ms "ring"
+            bodyGain.gain.setTargetAtTime(vol * 0.8, playTime, 0.002);
+            bodyGain.gain.setTargetAtTime(0, playTime + 0.02, 0.04); 
             
             body.connect(bodyFilter);
             bodyFilter.connect(bodyGain);
             bodyGain.connect(ctx.drumsGain);
             
             // 3. The "Snap" (Noise Texture)
-            // Tighter and higher than a snare wire
             const noise = ctx.audio.createBufferSource();
             noise.buffer = gb.audioBuffers.noise;
             const noiseFilter = ctx.audio.createBiquadFilter();
@@ -931,11 +929,10 @@ export function playDrumSound(name, time, velocity = 1.0) {
             
             noiseFilter.type = 'highpass';
             noiseFilter.frequency.setValueAtTime(3500, playTime);
-            noiseFilter.Q.value = 1.0;
             
             noiseGain.gain.setValueAtTime(0, playTime);
-            noiseGain.gain.setValueAtTime(vol * 0.35, playTime + 0.002);
-            noiseGain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.06); // 60ms decay
+            noiseGain.gain.setTargetAtTime(vol * 0.35, playTime, 0.002);
+            noiseGain.gain.setTargetAtTime(0, playTime + 0.01, 0.02); 
             
             noise.connect(noiseFilter);
             noiseFilter.connect(noiseGain);
@@ -946,7 +943,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
             body.start(playTime);
             noise.start(playTime);
             
-            const stopTime = playTime + 0.2;
+            const stopTime = playTime + 0.5; // Generous stop
             click.stop(stopTime);
             body.stop(stopTime);
             noise.stop(stopTime);
