@@ -409,47 +409,42 @@ export function recalculateScrollOffsets() {
     });
 }
 
-export function initTabs(initialTab = null) {
+export function initTabs() {
     const tabs = document.querySelectorAll('.tab-btn, .groove-tab-btn');
+    
+    const activateTab = (tab) => {
+        const target = tab.dataset.tab;
+        const isGroove = tab.classList.contains('groove-tab-btn');
+        const selector = isGroove ? '.groove-tab-btn' : '.tab-btn';
+        
+        document.querySelectorAll(selector).forEach(b => b.classList.remove('active'));
+        if (!isGroove) {
+            document.querySelectorAll('.instrument-panel').forEach(c => c.classList.remove('active-mobile'));
+            const content = document.getElementById(`panel-${target}`);
+            if (content) content.classList.add('active-mobile');
+            gb.mobileTab = target;
+        } else {
+            document.querySelectorAll('.groove-tab-content').forEach(c => c.classList.remove('active'));
+            const content = document.getElementById(`groove-tab-${target}`);
+            if (content) content.classList.add('active');
+            gb.activeTab = target;
+        }
+        
+        tab.classList.add('active');
+    };
+
     tabs.forEach(tab => {
         tab.onclick = () => {
-            const target = tab.dataset.tab;
-            const isGroove = tab.classList.contains('groove-tab-btn');
-            const selector = isGroove ? '.groove-tab-btn' : '.tab-btn';
-            
-            document.querySelectorAll(selector).forEach(b => b.classList.remove('active'));
-            if (!isGroove) {
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                const content = document.getElementById(`tab-${target}`);
-                if (content) content.classList.add('active');
-            } else {
-                document.querySelectorAll('.groove-tab-content').forEach(c => c.classList.remove('active'));
-                const content = document.getElementById(`groove-tab-${target}`);
-                if (content) content.classList.add('active');
-            }
-            
-            tab.classList.add('active');
-            gb.activeTab = target;
+            activateTab(tab);
             saveCurrentState();
         };
         
-        // If this tab matches our initial state, trigger its view (without saving)
-        if (initialTab && tab.dataset.tab === initialTab) {
-            const target = tab.dataset.tab;
-            const isGroove = tab.classList.contains('groove-tab-btn');
-            const selector = isGroove ? '.groove-tab-btn' : '.tab-btn';
-            
-            document.querySelectorAll(selector).forEach(b => b.classList.remove('active'));
-            if (!isGroove) {
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                const content = document.getElementById(`tab-${target}`);
-                if (content) content.classList.add('active');
-            } else {
-                document.querySelectorAll('.groove-tab-content').forEach(c => c.classList.remove('active'));
-                const content = document.getElementById(`groove-tab-${target}`);
-                if (content) content.classList.add('active');
-            }
-            tab.classList.add('active');
+        const target = tab.dataset.tab;
+        const isGroove = tab.classList.contains('groove-tab-btn');
+        if (isGroove && target === gb.activeTab) {
+            activateTab(tab);
+        } else if (!isGroove && target === gb.mobileTab) {
+            activateTab(tab);
         }
     });
 }

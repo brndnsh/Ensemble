@@ -1,4 +1,4 @@
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, initTabs, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip } from './ui.js';
 import { ctx, cb, bb, sb, gb, arranger, vizState, storage } from './state.js';
 import { saveCurrentState, renderUserPresets, renderUserDrumPresets } from './persistence.js';
 import { syncWorker } from './worker-client.js';

@@ -35,6 +35,7 @@ export function saveCurrentState() {
             genreFeel: gb.genreFeel,
             lastSmartGenre: gb.lastSmartGenre,
             activeTab: gb.activeTab,
+            mobileTab: gb.mobileTab,
             pattern: gb.instruments.map(inst => ({ name: inst.name, steps: [...inst.steps] }))
         }
     };
