@@ -157,16 +157,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const stepsPerCycle = stepsPerMeasure * CYCLE_BARS;
     const cycleStep = step % stepsPerCycle;
     
-    // Ramp up tension towards the end of the cycle
+    // Ramp up tension towards the end of the cycle, but scale by overall band intensity
     const measureIndex = Math.floor(cycleStep / stepsPerMeasure);
-    let baseTension = (measureIndex / CYCLE_BARS); 
+    let baseTension = (measureIndex / CYCLE_BARS) * (0.5 + intensity * 0.5); 
     
     // Beat Strength: Strong on 1 & 3 (4/4)
     const isStrongBeat = (beatInMeasure === 0 || beatInMeasure === 2) && stepInBeat === 0;
     const isOffbeat = stepInBeat !== 0;
 
-    if (isStrongBeat) baseTension -= 0.1;
-    if (isOffbeat) baseTension += 0.1;
+    if (isStrongBeat) baseTension -= (0.1 * intensity);
+    if (isOffbeat) baseTension += (0.1 * intensity);
     
     sb.tension = Math.max(0, Math.min(1, baseTension));
 
@@ -183,11 +183,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const tempoBreathFactor = Math.max(0, (ctx.bpm - 120) * 0.003); 
     
     // Intensity Scaling: High intensity = fewer rests (more aggressive playing)
-    let restProb = (config.restBase * (1.5 - intensity)) + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
-    restProb = Math.max(0.05, restProb);
+    // We use a steeper curve (2.0 - intensity * 1.5) to force more space at low energy
+    let restProb = (config.restBase * (2.0 - intensity * 1.5)) + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
+    restProb = Math.max(0.1, restProb);
     
     // Force resolve/breath at end of cycle?
-    if (cycleStep > stepsPerCycle - 4) restProb += 0.5;
+    if (cycleStep > stepsPerCycle - 4) restProb += (0.5 * (1.1 - intensity));
 
     // If we are currently resting
     if (sb.isResting) {

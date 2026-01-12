@@ -21,55 +21,108 @@ export function getSectionEnergy(label) {
 }
 
 /**
- * Analyzes the arranger's progression to detect musical form and assign roles.
- * @returns {Object|null} The analyzed form data or null if no progression exists.
+ * Calculates the "Harmonic Flux" (rate of change) for a specific section.
+ * Higher flux implies higher energy/complexity.
+ */
+function calculateHarmonicFlux(sectionSteps) {
+    if (!sectionSteps.length) return 0;
+    
+    // Count distinct chord changes within the step range
+    let changes = 0;
+    let lastChordId = null;
+    
+    sectionSteps.forEach(entry => {
+        // Simple heuristic: if the chord symbol or root changes, it's a "move"
+        const chordId = `${entry.chord.value}_${entry.chord.rootMidi}`;
+        if (chordId !== lastChordId) {
+            changes++;
+            lastChordId = chordId;
+        }
+    });
+
+    // Flux = changes per bar (assuming 16 steps per bar)
+    const bars = sectionSteps.length / 16;
+    return bars > 0 ? (changes / bars) : 0;
+}
+
+/**
+ * Analyzes the arranger's progression to detect musical form and assign functional roles.
  */
 export function analyzeForm() {
     if (!arranger.stepMap.length) return null;
     
-    // 1. Simplify Labels to Abstract Sections (A, B, C...)
-    const labels = arranger.stepMap.map(s => {
-        const l = s.chord.sectionLabel.toLowerCase();
-        if (l.includes('verse') || l.includes('a section')) return 'A';
-        if (l.includes('chorus') || l.includes('b section')) return 'B';
-        if (l.includes('bridge') || l.includes('c section')) return 'C';
-        if (l.includes('intro')) return 'Intro';
-        if (l.includes('outro')) return 'Outro';
-        return l.charAt(0).toUpperCase();
-    });
-    
-    // 2. Detect Form
-    const sequence = labels.join('-');
-    let formType = 'Linear';
-    
-    if (sequence.includes('A-A-B-A')) formType = 'AABA';
-    else if (sequence.includes('A-A-B-C')) formType = 'AABC';
-    else if (sequence.includes('A-B-A-B')) formType = 'ABAB';
-    
-    // 3. Assign Roles
-    const roles = labels.map((label, i) => {
-        if (label === 'Intro') return 'Exposition';
-        if (label === 'Outro') return 'Resolution';
-        
-        if (formType === 'AABA') {
-            if (i === 0) return 'Exposition';
-            if (i === 1) return 'Development';
-            if (label === 'B') return 'Contrast';
-            if (i === 3) return 'Recapitulation';
-        }
-        
-        if (formType === 'AABC') {
-            if (i === 0) return 'Exposition';
-            if (i === 1) return 'Development';
-            if (label === 'B') return 'Build';
-            if (label === 'C') return 'Climax';
-        }
+    // 1. Group by Sections
+    const sections = [];
+    let currentSection = null;
 
-        if (label === 'B' || label === 'Chorus') return 'Climax';
-        if (label === 'C' || label === 'Bridge') return 'Contrast';
-        
-        return 'Standard';
+    arranger.stepMap.forEach(entry => {
+        if (!currentSection || entry.chord.sectionId !== currentSection.id) {
+            currentSection = {
+                id: entry.chord.sectionId,
+                label: entry.chord.sectionLabel,
+                steps: [],
+                chords: []
+            };
+            sections.push(currentSection);
+        }
+        currentSection.steps.push(entry);
+        // Track unique chord symbols in this section for similarity matching
+        const chordSym = entry.chord.value;
+        if (currentSection.chords[currentSection.chords.length - 1] !== chordSym) {
+            currentSection.chords.push(chordSym);
+        }
     });
 
-    return { type: formType, sequence, roles };
+    // 2. Identify Patterns (Saliency)
+    const sectionSignatures = sections.map(s => s.chords.join('|'));
+    const occurrenceCount = {};
+    
+    sections.forEach((s, i) => {
+        const sig = sectionSignatures[i];
+        occurrenceCount[sig] = (occurrenceCount[sig] || 0) + 1;
+        s.iteration = occurrenceCount[sig];
+        s.flux = calculateHarmonicFlux(s.steps);
+    });
+
+    // 3. Assign Functional Roles via Heuristics
+    const roles = sections.map((s, i) => {
+        const sig = sectionSignatures[i];
+        const isFirstOccurrence = s.iteration === 1;
+        const isLastSection = i === sections.length - 1;
+        const label = s.label.toLowerCase();
+
+        // Hard overrides based on common naming conventions
+        if (label.includes('intro')) return 'Exposition';
+        if (label.includes('outro')) return 'Resolution';
+        if (label.includes('solo')) return 'Climax';
+        
+        // Pattern-based roles
+        if (isFirstOccurrence) {
+            if (i === 0) return 'Exposition';
+            if (label === 'b' || label.includes('bridge')) return 'Contrast';
+            if (s.flux > 2.8) return 'Development';
+            return 'Contrast';
+        } else {
+            // Repeated sections
+            if (label === 'b' || label.includes('bridge')) return 'Contrast';
+            
+            // "Cool Down" heuristic: if we've shredded a section 3+ times, pull it back
+            if (s.iteration >= 3) return 'Recapitulation';
+            
+            if (s.flux > 2.2) return 'Build';
+            if (isLastSection) return 'Recapitulation';
+            return 'Development'; 
+        }
+    });
+
+    return { 
+        sections: sections.map((s, i) => ({
+            id: s.id,
+            label: s.label,
+            role: roles[i],
+            flux: s.flux,
+            iteration: s.iteration
+        })),
+        sequence: roles.join('-')
+    };
 }

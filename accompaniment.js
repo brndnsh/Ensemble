@@ -101,12 +101,15 @@ function updateRhythmicIntent(step, soloistBusy) {
     // Priority: Genre-specific pool if available, otherwise fallback to Vibe pool
     let pool = PIANO_CELLS[genre] || PIANO_CELLS[compingState.currentVibe];
     
-    // Mix in Vibe-specific filtering for genre pools
+    // Variety: Occasionally mix in vibe-specific cells even if genre is set
     if (PIANO_CELLS[genre]) {
-        if (compingState.currentVibe === 'sparse' && Math.random() < 0.5) {
+        if (compingState.currentVibe === 'sparse' && Math.random() < 0.3) {
             pool = PIANO_CELLS.sparse;
         } else if (compingState.currentVibe === 'active' && Math.random() < 0.3) {
             pool = PIANO_CELLS.active;
+        } else if (Math.random() < 0.2) {
+            // 20% chance to pull from balanced for generic variety
+            pool = PIANO_CELLS.balanced;
         }
     }
 
