@@ -422,7 +422,7 @@ export const DRUM_PRESETS = {
     'Bossa Nova': { 
         category: 'World/Latin', swing: 0, sub: '16th', measures: 2,
         'Kick':  "20000020200000202000002020000020", 
-        'Snare': "20020020002002002002002000200202", 
+        'Snare': "20000020000020000000200000200000", 
         'HiHat': "11111111111111111111111111111111", 
         'Open':  "00000000000000000000000000000000",
         '3/4': { // Bossa Waltz (adapted)

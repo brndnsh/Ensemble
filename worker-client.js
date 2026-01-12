@@ -55,7 +55,7 @@ export function syncWorker() {
             cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled },
             bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq },
             sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq },
-            gb: { genreFeel: gb.genreFeel },
+            gb: { genreFeel: gb.genreFeel, lastDrumPreset: gb.lastDrumPreset },
             ctx: { bpm: ctx.bpm }
         }
     });

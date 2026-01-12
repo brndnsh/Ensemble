@@ -175,13 +175,26 @@ function getChordAtStep(step) {
 
 function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteStep, isGroupStart) {
     const conductorVel = ctx.conductorVelocity || 1.0;
+    
+    // --- Intelligent Pocket ---
+    let pocketOffset = 0;
+    // Push slightly ahead during high intensity/climaxes
+    if (ctx.bandIntensity > 0.75) pocketOffset -= 0.008; 
+    // Lay back during low intensity/cool-downs
+    else if (ctx.bandIntensity < 0.3) pocketOffset += 0.010;
+    
+    // Genre-specific "Dilla" feel
+    if (gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Hip Hop') pocketOffset += 0.015;
+    
+    const finalTime = time + pocketOffset;
+
     const header = document.querySelector('.groove-panel-header h2');
     if (header) header.style.color = gb.fillActive ? 'var(--soloist-color)' : '';
     if (gb.fillActive) {
         const fillStep = absoluteStep - gb.fillStartStep;
         if (fillStep >= gb.fillLength) {
             gb.fillActive = false;
-            if (gb.pendingCrash) { playDrumSound('Crash', time, 1.1 * conductorVel); gb.pendingCrash = false; }
+            if (gb.pendingCrash) { playDrumSound('Crash', finalTime, 1.1 * conductorVel); gb.pendingCrash = false; }
         }
     }
     if (gb.fillActive) {
@@ -190,7 +203,7 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
             if (ctx.bandIntensity >= 0.5 || fillStep >= (gb.fillLength / 2)) {
                 const notes = gb.fillSteps[fillStep];
                 if (notes && notes.length > 0) {
-                    notes.forEach(note => playDrumSound(note.name, time, note.vel * conductorVel));
+                    notes.forEach(note => playDrumSound(note.name, finalTime, note.vel * conductorVel));
                     return;
                 }
             }
@@ -200,11 +213,27 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
         const stepVal = inst.steps[step];
         if (stepVal > 0 && !inst.muted) {
             let velocity = stepVal === 2 ? 1.25 : 0.9;
+            // Tame accents for Funk Hi-Hats at high intensity to prevent them from overpowering the mix
+            if (gb.genreFeel === 'Funk' && stepVal === 2 && ctx.bandIntensity > 0.6 && (inst.name === 'HiHat' || inst.name === 'Open')) {
+                velocity = 1.05;
+            }
             let soundName = inst.name;
+            
+            // Force Sidestick for Bossa Nova to ensure authenticity
+            if (gb.lastDrumPreset === 'Bossa Nova' && inst.name === 'Snare') {
+                soundName = 'Sidestick';
+            }
+
             if (gb.genreFeel === 'Rock') {
                 if (inst.name === 'Kick' && isDownbeat) velocity *= 1.2;
                 if (inst.name === 'Snare' && isBackbeat) velocity *= 1.2;
             } else if (gb.genreFeel === 'Funk' && stepVal === 2) velocity *= 1.1;
+            
+            // --- Timbre Shifting ---
+            if (inst.name === 'Snare' && ctx.bandIntensity < 0.35 && gb.genreFeel !== 'Rock') {
+                soundName = 'Sidestick';
+            }
+
             if (inst.name === 'HiHat' && gb.genreFeel !== 'Jazz' && ctx.bandIntensity > 0.8 && isQuarter) { soundName = 'Open'; velocity *= 1.1; }
             if (inst.name === 'Kick') velocity *= isDownbeat ? 1.15 : (isGroupStart ? 1.1 : (isQuarter ? 1.05 : 0.9));
             else if (inst.name === 'Snare') velocity *= isBackbeat ? 1.1 : 0.9;
@@ -213,9 +242,9 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                 if (gb.genreFeel === 'Jazz') velocity *= (1.0 - (ctx.bandIntensity * 0.35));
                 if (ctx.bpm > 165) { velocity *= 0.7; if (!isQuarter) velocity *= 0.6; }
             }
-            playDrumSound(soundName, time, velocity * conductorVel);
+            playDrumSound(soundName, finalTime, velocity * conductorVel);
         } else if (stepVal === 0 && !inst.muted && inst.name === 'Snare' && (gb.genreFeel === 'Funk' || gb.genreFeel === 'Jazz') && ctx.complexity > 0.4 && Math.random() < (ctx.complexity * 0.35)) {
-            playDrumSound('Snare', time, 0.15 * conductorVel);
+            playDrumSound('Snare', finalTime, 0.15 * conductorVel);
         }
     });
 }

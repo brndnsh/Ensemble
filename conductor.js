@@ -33,6 +33,16 @@ export function applyConductor() {
     const isSoloistBusy = sb.enabled && sb.busySteps > 0;
     ctx.intent.density = isSoloistBusy ? (0.3 * (1 - complexity)) : (0.5 + intensity * 0.4);
 
+    // --- 4. Intensity-Aware Mixing ---
+    if (ctx.masterLimiter && ctx.audio) {
+        // Dynamic Compression: Tighter at high intensity to glue the mix
+        const targetThreshold = -0.5 - (intensity * 1.5); // -0.5 to -2.0 dB
+        const targetRatio = 12 + (intensity * 8); // 12:1 to 20:1
+        
+        ctx.masterLimiter.threshold.setTargetAtTime(targetThreshold, ctx.audio.currentTime, 0.5);
+        ctx.masterLimiter.ratio.setTargetAtTime(targetRatio, ctx.audio.currentTime, 0.5);
+    }
+
     debounceSaveState();
 }
 
@@ -174,5 +184,31 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
                 }
             }
         }
+    }
+
+    // --- Harmonic Anticipation (Ghost Kick / Bark) ---
+    // Only apply if we are actually at a section transition boundary
+    const currentIndex = arranger.stepMap.indexOf(entry);
+    let nextEntry = arranger.stepMap[currentIndex + 1];
+    let isTransition = false;
+    
+    if (!nextEntry) {
+        isTransition = true; // End of song/loop
+    } else if (nextEntry.chord.sectionId !== entry.chord.sectionId) {
+        isTransition = true;
+    }
+
+    // If we missed the full fill window, or chose not to fill, insert a tiny transition cue at the very end.
+    if (isTransition && modStep === sectionEnd - 1 && !gb.fillActive && ctx.bandIntensity > 0.4) {
+        gb.fillSteps = {
+            0: [
+                { name: 'Kick', vel: 0.6 }, // Ghost Kick
+                { name: 'Open', vel: 0.9 }  // Bark
+            ]
+        };
+        gb.fillActive = true;
+        gb.fillStartStep = currentStep;
+        gb.fillLength = 1;
+        gb.pendingCrash = true;
     }
 }
