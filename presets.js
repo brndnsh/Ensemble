@@ -528,28 +528,11 @@ export const DRUM_PRESETS = {
 };
 
 export const CHORD_STYLES = [
-    { id: 'smart', name: 'Smart (Auto)', category: 'Experimental' },
-    { id: 'pad', name: 'Pad', category: 'Pop/Rock' },
-    { id: 'strum8', name: 'Strum', category: 'Pop/Rock' },
-    { id: 'pop', name: 'Pop', category: 'Pop/Rock' },
-    { id: 'rock', name: 'Pop-Rock', category: 'Pop/Rock' },
-    { id: 'blues', name: 'Blues Shuffle', category: 'Blues' },
-    { id: 'skank', name: 'Reggae', category: 'World/Latin' },
-    { id: 'double_skank', name: 'Double Skank', category: 'World/Latin' },
-    { id: 'funk', name: 'Funk', category: 'Soul/Funk' },
-    { id: 'arpeggio', name: 'Arpeggio', category: 'Pop/Rock' },
-    { id: 'tresillo', name: 'Tresillo', category: 'World/Latin' },
-    { id: 'clave', name: 'Clave', category: 'World/Latin' },
-    { id: 'afrobeat', name: 'Afrobeat', category: 'World/Latin' },
+    { id: 'smart', name: 'Smart (Rhythmic)', category: 'Modern' },
+    { id: 'pad', name: 'Pad (Sustain)', category: 'Modern' },
+    { id: 'strum8', name: 'Strum (8th)', category: 'Pop/Rock' },
     { id: 'jazz', name: 'Jazz Comp', category: 'Jazz' },
-    { id: 'green', name: 'Freddie Green', category: 'Jazz' },
-    { id: 'bossa', name: 'Bossa', category: 'World/Latin' }
-];
-
-export const CHORD_INSTRUMENTS = [
-    { id: 'Warm', name: 'Warm', category: 'Keys' },
-    { id: 'Clean', name: 'Clean', category: 'String' },
-    { id: 'Classic', name: 'Classic', category: 'Keys' }
+    { id: 'funk', name: 'Funk Scratch', category: 'Soul/Funk' }
 ];
 
 export const BASS_STYLES = [

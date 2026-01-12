@@ -386,7 +386,14 @@ function init() {
         const savedState = storage.get('currentState');
         if (savedState && savedState.sections) {
             arranger.sections = savedState.sections; arranger.key = savedState.key || 'C'; arranger.timeSignature = savedState.timeSignature || '4/4'; arranger.isMinor = savedState.isMinor || false; arranger.notation = savedState.notation || 'roman'; arranger.lastChordPreset = savedState.lastChordPreset || 'Pop (Standard)'; ctx.theme = savedState.theme || 'auto'; ctx.bpm = savedState.bpm || 100; ctx.bandIntensity = savedState.bandIntensity !== undefined ? savedState.bandIntensity : 0.5; ctx.complexity = savedState.complexity !== undefined ? savedState.complexity : 0.3; ctx.autoIntensity = savedState.autoIntensity || false; ctx.metronome = savedState.metronome || false; ctx.applyPresetSettings = savedState.applyPresetSettings !== undefined ? savedState.applyPresetSettings : false; vizState.enabled = savedState.vizEnabled !== undefined ? savedState.vizEnabled : false;
-            if (savedState.cb) { cb.enabled = savedState.cb.enabled !== undefined ? savedState.cb.enabled : true; cb.style = savedState.cb.style || 'pad'; cb.instrument = savedState.cb.instrument || 'Clean'; cb.octave = savedState.cb.octave; cb.density = savedState.cb.density; cb.volume = savedState.cb.volume; cb.reverb = savedState.cb.reverb; }
+            
+            if (savedState.cb) { 
+                cb.enabled = savedState.cb.enabled !== undefined ? savedState.cb.enabled : true; 
+                cb.style = (savedState.cb.style && savedState.cb.style !== 'smart') ? 'smart' : 'smart'; 
+                cb.instrument = 'Piano'; // Always force Piano
+                cb.octave = savedState.cb.octave; cb.density = savedState.cb.density; cb.volume = savedState.cb.volume; cb.reverb = savedState.cb.reverb; 
+                cb.practiceMode = savedState.cb.practiceMode || false;
+            }
             if (savedState.bb) { bb.enabled = savedState.bb.enabled !== undefined ? savedState.bb.enabled : false; bb.style = savedState.bb.style || 'arp'; bb.octave = savedState.bb.octave; bb.volume = savedState.bb.volume; bb.reverb = savedState.bb.reverb; }
             if (savedState.sb) { sb.enabled = savedState.sb.enabled !== undefined ? savedState.sb.enabled : false; sb.style = savedState.sb.style || 'scalar'; sb.octave = (savedState.sb.octave === 77 || savedState.sb.octave === 67 || savedState.sb.octave === undefined) ? 72 : savedState.sb.octave; sb.volume = savedState.sb.volume; sb.reverb = savedState.sb.reverb; }
             if (savedState.gb) { gb.enabled = savedState.gb.enabled !== undefined ? savedState.gb.enabled : true; gb.volume = savedState.gb.volume; gb.reverb = savedState.gb.reverb; gb.swing = savedState.gb.swing; gb.swingSub = savedState.gb.swingSub; gb.measures = savedState.gb.measures || 1; gb.humanize = savedState.gb.humanize !== undefined ? savedState.gb.humanize : 20; gb.autoFollow = savedState.gb.autoFollow !== undefined ? savedState.gb.autoFollow : true; gb.lastDrumPreset = savedState.gb.lastDrumPreset || 'Standard'; if (savedState.gb.pattern) { savedState.gb.pattern.forEach(savedInst => { const inst = gb.instruments.find(i => i.name === savedInst.name); if (inst) { inst.steps.fill(0); savedInst.steps.forEach((v, i) => { if (i < 128) inst.steps[i] = v; }); } }); } gb.genreFeel = savedState.gb.genreFeel || 'Rock'; gb.lastSmartGenre = savedState.gb.lastSmartGenre || 'Rock'; gb.activeTab = savedState.gb.activeTab || 'classic'; gb.currentMeasure = 0; }
@@ -395,7 +402,9 @@ function init() {
             if (ui.complexitySlider) { ui.complexitySlider.value = Math.round(ctx.complexity * 100); let label = 'Low'; if (ctx.complexity > 0.33) label = 'Medium'; if (ctx.complexity > 0.66) label = 'High'; if (ui.complexityValue) ui.complexityValue.textContent = label; }
             if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = ctx.autoIntensity;
             document.querySelectorAll('.genre-btn').forEach(btn => { btn.classList.toggle('active', btn.dataset.genre === gb.lastSmartGenre); });
-            ui.notationSelect.value = arranger.notation; ui.densitySelect.value = cb.density; ui.octave.value = cb.octave; ui.bassOctave.value = bb.octave; ui.soloistOctave.value = sb.octave; ui.chordVol.value = cb.volume; ui.chordReverb.value = cb.reverb; ui.bassVol.value = bb.volume; ui.bassReverb.value = bb.reverb; ui.soloistVol.value = sb.volume; ui.soloistReverb.value = sb.reverb; ui.drumVol.value = gb.volume; ui.drumReverb.value = gb.reverb; ui.swingSlider.value = gb.swing; ui.swingBase.value = gb.swingSub; ui.humanizeSlider.value = gb.humanize; ui.autoFollowCheck.checked = gb.autoFollow; ui.drumBarsSelect.value = gb.measures; ui.metronome.checked = ctx.metronome; ui.applyPresetSettings.checked = ctx.applyPresetSettings;
+            ui.notationSelect.value = arranger.notation; ui.densitySelect.value = cb.density; 
+            if (ui.practiceModeCheck) ui.practiceModeCheck.checked = cb.practiceMode;
+            ui.octave.value = cb.octave; ui.bassOctave.value = bb.octave; ui.soloistOctave.value = sb.octave; ui.chordVol.value = cb.volume; ui.chordReverb.value = cb.reverb; ui.bassVol.value = bb.volume; ui.bassReverb.value = bb.reverb; ui.soloistVol.value = sb.volume; ui.soloistReverb.value = sb.reverb; ui.drumVol.value = gb.volume; ui.drumReverb.value = gb.reverb; ui.swingSlider.value = gb.swing; ui.swingBase.value = gb.swingSub; ui.humanizeSlider.value = gb.humanize; ui.autoFollowCheck.checked = gb.autoFollow; ui.drumBarsSelect.value = gb.measures; ui.metronome.checked = ctx.metronome; ui.applyPresetSettings.checked = ctx.applyPresetSettings;
             applyTheme(ctx.theme); updateRelKeyButton(); updateKeySelectLabels(); updateOctaveLabel(ui.octaveLabel, cb.octave); updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg); updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
         } else { applyTheme('auto'); }
         viz = new UnifiedVisualizer('unifiedVizContainer'); viz.addTrack('bass', 'var(--success-color)'); viz.addTrack('soloist', 'var(--soloist-color)');
@@ -416,9 +425,26 @@ function init() {
 }
 
 window.previewChord = (index) => {
-    if (ctx.isPlaying) return; initAudio(); const chord = arranger.progression[index]; if (!chord) return;
-    const now = ctx.audio.currentTime; chord.freqs.forEach(f => playNote(f, now, 1.0, { vol: 0.15, att: 0.02 }));
-    const cards = document.querySelectorAll('.chord-card'); if (cards[index]) { cards[index].classList.add('active'); setTimeout(() => { if (!ctx.isPlaying) cards[index].classList.remove('active'); }, 300); }
+    if (ctx.isPlaying) return; 
+    initAudio(); 
+    const chord = arranger.progression[index]; 
+    if (!chord) return;
+    
+    // Disable sustain for auditioning
+    const wasSustainActive = ctx.sustainActive;
+    ctx.sustainActive = false;
+    
+    const now = ctx.audio.currentTime; 
+    chord.freqs.forEach(f => playNote(f, now, 1.0, { vol: 0.15, instrument: 'Piano' }));
+    
+    // Restore sustain state (though usually false when not playing)
+    ctx.sustainActive = wasSustainActive;
+
+    const cards = document.querySelectorAll('.chord-card'); 
+    if (cards[index]) { 
+        cards[index].classList.add('active'); 
+        setTimeout(() => { if (!ctx.isPlaying) cards[index].classList.remove('active'); }, 300); 
+    }
 };
 
 function loadFromUrl() {

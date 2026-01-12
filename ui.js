@@ -34,12 +34,12 @@ export function initUI() {
         'vizPowerBtn', 'sectionList', 'addSectionBtn', 'templatesBtn', 'templatesContainer', 'templateChips',
         'activeSectionLabel', 'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
         'clearProgBtn', 'saveBtn', 'shareBtn', 'chordVisualizer', 'chordPresets', 'userPresetsContainer',
-        'chordStylePresets', 'chordInstrumentPresets', 'bassStylePresets', 'soloistStylePresets',
+        'chordStylePresets', 'bassStylePresets', 'soloistStylePresets',
         'chordReverb', 'bassReverb', 'soloistReverb', 'drumPresets', 'userDrumPresetsContainer',
         'sequencerGrid', 'measurePagination', 'drumBarsSelect', 'cloneMeasureBtn', 'autoFollowCheck',
         'humanizeSlider', 'saveDrumBtn', 'drumReverb', 'smartDrumPresets', 'settingsOverlay', 'settingsBtn',
         'octaveLabel', 'bassOctaveLabel', 'soloistOctaveLabel', 'bassHeaderReg', 'soloistHeaderReg',
-        'themeSelect', 'notationSelect', 'densitySelect', 'swingSlider', 'exportMidiBtn',
+        'themeSelect', 'notationSelect', 'densitySelect', 'practiceModeCheck', 'swingSlider', 'exportMidiBtn',
         'settingsExportMidiBtn', 'exportOverlay', 'closeExportBtn', 'confirmExportBtn', 'exportChordsCheck',
         'exportBassCheck', 'exportSoloistCheck', 'exportDrumsCheck', 'exportDurationInput', 'exportDurationContainer',
         'exportFilenameInput', 'installAppBtn', 'flashOverlay', 'resetSettingsBtn', 'refreshAppBtn', 'editorOverlay',
@@ -468,17 +468,31 @@ export function renderMeasurePagination(onSwitch) {
 }
 
 export function setupPanelMenus() {
-    document.querySelectorAll('.panel-menu-trigger').forEach(trigger => {
+    document.querySelectorAll('.panel-menu-btn').forEach(trigger => {
         trigger.onclick = (e) => {
             e.stopPropagation();
-            const menu = trigger.nextElementSibling;
+            const panel = trigger.closest('.panel');
+            const menu = panel.querySelector('.panel-settings-menu');
+            if (!menu) return;
+
             const isOpen = menu.classList.contains('open');
-            document.querySelectorAll('.panel-menu').forEach(m => m.classList.remove('open'));
-            if (!isOpen) menu.classList.add('open');
+            
+            // Close all other menus
+            document.querySelectorAll('.panel-settings-menu').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.panel-menu-btn').forEach(b => b.classList.remove('active'));
+
+            if (!isOpen) {
+                menu.classList.add('open');
+                trigger.classList.add('active');
+            }
         };
     });
-    document.addEventListener('click', () => {
-        document.querySelectorAll('.panel-menu').forEach(m => m.classList.remove('open'));
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.panel-settings-menu')) {
+            document.querySelectorAll('.panel-settings-menu').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.panel-menu-btn').forEach(b => b.classList.remove('active'));
+        }
     });
 }
 

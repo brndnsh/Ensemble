@@ -1,6 +1,6 @@
 import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN, TIME_SIGNATURES } from './config.js';
 import { normalizeKey, getFrequency } from './utils.js';
-import { cb, arranger } from './state.js';
+import { cb, arranger, gb, bb } from './state.js';
 import { ui } from './ui.js';
 import { syncWorker } from './worker-client.js';
 
@@ -71,56 +71,55 @@ export function getChordDetails(symbol) {
  * @returns {number[]} - Optimized MIDI notes for the chord.
  */
 export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false) {
-    // 1. Home Register Anchor (C4 = 60)
     const homeAnchor = cb.octave || 60;
-    const registerPullWeight = 0.6; // Stronger pull to prevent drift
-    
-    // Hard Caps for Range Clamping (G2 to C6)
-    const RANGE_MIN = 43; // G2
-    const RANGE_MAX = 84; // C6
+    const registerPullWeight = 0.6;
+    const RANGE_MIN = 43;
+    const RANGE_MAX = 84;
 
-    // 2. Determine target center
     let targetCenter = homeAnchor;
-    
     if (previousMidis && previousMidis.length > 0) {
         const prevAvg = previousMidis.reduce((a, b) => a + b, 0) / previousMidis.length;
-        
-        // Dynamic Leap Logic (The "Rubber Band" Effect)
-        // If we've drifted > 5 semitones from center, we pull back strongly
         const drift = prevAvg - homeAnchor;
         const driftLimit = isPivot ? 3 : 5;   
-
-        if (Math.abs(drift) > driftLimit) {
-            // Apply "Register Pull": Interpolate between previous chord and anchor
-            // This pulls the center back toward the Home Register
-            targetCenter = prevAvg - (drift * registerPullWeight);
-        } else {
-            // Standard Smoothness (Stay near previous chord)
-            targetCenter = prevAvg;
-        }
+        targetCenter = (Math.abs(drift) > driftLimit) ? prevAvg - (drift * registerPullWeight) : prevAvg;
     }
 
-    // 3. Find optimal octave for each note in the chord
-    let result = intervals.map(inter => {
+    // VOICING PRESERVATION: If the intervals are spread (> 12 semitones), 
+    // shift the entire block as a unit to preserve the harmonic structure.
+    const isSpread = Math.max(...intervals) > 12;
+
+    if (isSpread) {
+        let bestShift = 0;
+        let minDistance = Infinity;
+        for (let shift = -24; shift <= 24; shift += 12) {
+            const currentAvg = (intervals.reduce((a, b) => a + b + rootMidi + shift, 0)) / intervals.length;
+            const dist = Math.abs(currentAvg - targetCenter);
+            if (dist < minDistance) {
+                minDistance = dist;
+                bestShift = shift;
+            }
+        }
+        return intervals.map(i => rootMidi + i + bestShift).sort((a, b) => a - b);
+    }
+
+    let result = intervals.map((inter, i) => {
         let note = rootMidi + inter;
         let pc = note % 12;
-        
-        // Find candidate in octaves closest to our targetCenter
         let octaves = [-24, -12, 0, 12, 24];
         let candidates = octaves.map(o => (Math.floor(targetCenter / 12) * 12) + o + pc);
-        
-        // Weighting proximity to targetCenter
         candidates.sort((a, b) => Math.abs(a - targetCenter) - Math.abs(b - targetCenter));
-        return candidates[0];
+        
+        let best = candidates[0];
+        if (i > 0 && best < 48) {
+            while (best - result[i-1] < 7) best += 12;
+        }
+        return best;
     });
 
-    // 4. Range Clamping / Safety Check
-    // If the whole chord is escaping the range, shift the entire block
     const avg = result.reduce((a, b) => a + b, 0) / result.length;
     if (avg < RANGE_MIN) result = result.map(n => n + 12);
     if (avg > RANGE_MAX) result = result.map(n => n - 12);
 
-    // Final sort to ensure notes are in ascending order
     return result.sort((a, b) => a - b);
 }
 
@@ -343,7 +342,31 @@ export function resolveChordRoot(part, keyRootMidi, baseOctave) {
     return { rootMidi, rootPart, romanMatch, nnsMatch, noteMatch };
 }
 
-export function getIntervals(quality, is7th, density) {
+export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnabled = false) {
+    const isPractice = cb.practiceMode;
+    const shouldBeRootless = bassEnabled || isPractice;
+    const isRich = density === 'rich';
+
+    // 1. JAZZ & SOUL: ROOTLESS VOICINGS
+    if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
+        const isMinor = quality === 'minor' || quality === 'dim' || quality === 'halfdim';
+        const isDominant = !isMinor && is7th && quality !== 'maj7';
+        
+        if (quality === 'maj7' || quality === 'maj9') return [4, 7, 11, 14]; // 3, 5, 7, 9
+        if (isMinor) return [3, 7, 10, 14];           // b3, 5, b7, 9
+        if (isDominant) {
+             // Use 13th only if explicitly requested or rich density
+             return (isRich || quality === '13') ? [4, 10, 14, 21] : [4, 10, 14]; 
+        }
+    }
+
+    // 2. POP & ROCK: SPREAD 10ths
+    if (genre === 'Rock' || (genre === 'Bossa' && !shouldBeRootless)) {
+        if (quality === 'major') return [0, 7, 16, 19]; // 1, 5, 10, 12
+        if (quality === 'minor') return [0, 7, 15, 19]; // 1, 5, b10, 12
+    }
+
+    // 3. FALLBACK: STANDARD TRIADS/EXTENSIONS
     let intervals = [0, 4, 7];
     if (quality === 'minor') intervals = [0, 3, 7];
     else if (quality === 'dim') intervals = [0, 3, 6];
@@ -365,18 +388,14 @@ export function getIntervals(quality, is7th, density) {
         if (quality === 'maj7' || quality === 'maj9') intervals.push(11);
         else if (quality === 'dim') intervals.push(9); 
         else if (quality === 'halfdim') intervals.push(10);
-        else intervals.push(10); 
+        else if (!intervals.includes(10)) intervals.push(10); 
     }
 
-    // Apply Voicing Density
     if (density === 'thin' && intervals.length >= 4) {
         if (intervals.includes(7)) intervals = intervals.filter(i => i !== 7);
-    } else if (density === 'rich' && intervals.length <= 4 && quality !== '5') {
+    } else if (isRich && intervals.length <= 4 && quality !== '5') {
         if (!intervals.includes(14) && !intervals.includes(13) && !intervals.includes(15) && quality !== 'sus2') {
             intervals.push(14);
-        }
-        if (is7th && quality === 'major' && !intervals.includes(21)) {
-            intervals.push(21);
         }
     }
     return intervals;
@@ -467,7 +486,7 @@ function parseProgressionPart(input, key, initialMidis) {
                     if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|aug|\+)/)) quality = 'dim';
                 }
 
-                let intervals = getIntervals(quality, is7th, cb.density);
+                let intervals = getIntervals(quality, is7th, cb.density, gb.genreFeel, bb.enabled || cb.practiceMode);
 
                 let bassMidi = null;
                 let bassNameAbs = "", bassNameNNS = "", bassNameRom = "";
