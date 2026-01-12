@@ -34,8 +34,11 @@ function getScaleForBass(chord, nextChord, isMinor = false) {
  */
 export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 41, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0, isMinor = false) {
     if (style === 'smart') {
-        const mapping = { 'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo' };
-        style = mapping[gb.genreFeel] || 'rock';
+        const mapping = { 
+            'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo',
+            'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk'
+        };
+        style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
     }
 
     // --- Structural Energy Mapping (Intensity) ---
@@ -213,8 +216,8 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         
         if (stepInMeasure === 0) return result(getFrequency(root));
         if (stepInMeasure === 6) return result(getFrequency(fifth), 2);
-        if (stepInMeasure === 8) return result(getFrequency(fifth));
-        if (stepInMeasure === 14) return result(getFrequency(root), 2);
+        if (stepInMeasure === 8) return result(getFrequency(root)); // Beat 3: Root
+        if (stepInMeasure === 14) return result(getFrequency(fifth), 2); // Beat 4.5: Fifth
         return null;
     }
 
@@ -461,8 +464,11 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
  */
 export function isBassActive(style, step, stepInChord) {
     if (style === 'smart') {
-        const mapping = { 'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo' };
-        style = mapping[gb.genreFeel] || 'rock';
+        const mapping = { 
+            'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo',
+            'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk'
+        };
+        style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
     }
     if (style === 'whole') return stepInChord === 0;
     if (style === 'half') return stepInChord % 8 === 0;

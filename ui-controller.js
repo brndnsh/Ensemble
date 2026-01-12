@@ -39,9 +39,9 @@ const SMART_GENRES = {
     'Jazz': { swing: 60, sub: '8th', drum: 'Jazz', feel: 'Jazz', bass: 'quarter', soloist: 'bird' },
     'Funk': { swing: 15, sub: '16th', drum: 'Funk', feel: 'Funk', bass: 'funk', soloist: 'blues' },
     'Blues': { swing: 100, sub: '8th', drum: 'Blues Shuffle', feel: 'Blues', bass: 'quarter', soloist: 'blues' },
-    'Neo-Soul': { swing: 30, sub: '16th', drum: 'Neo-Soul', feel: 'Funk', bass: 'neo', soloist: 'neo' },
-    'Reggae': { swing: 20, sub: '8th', drum: 'Reggae', feel: 'Rock', bass: 'dub', soloist: 'blues' },
-    'Bossa': { swing: 0, drum: 'Bossa Nova', feel: 'Rock', bass: 'bossa', soloist: 'scalar' }
+    'Neo-Soul': { swing: 30, sub: '16th', drum: 'Neo-Soul', feel: 'Neo-Soul', bass: 'neo', soloist: 'neo' },
+    'Reggae': { swing: 20, sub: '8th', drum: 'Reggae', feel: 'Reggae', bass: 'dub', soloist: 'blues' },
+    'Bossa': { swing: 0, drum: 'Bossa Nova', feel: 'Bossa Nova', bass: 'bossa', soloist: 'scalar' }
 };
 
 export function setupPresets() {
@@ -71,11 +71,13 @@ export function setupPresets() {
         name,
         ...DRUM_PRESETS[name]
     }));
+    
     renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item, chip) => {
         loadDrumPreset(item.name);
         document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
         document.querySelectorAll(`.drum-preset-chip[data-id="${item.name}"]`).forEach(c => c.classList.add('active'));
         gb.lastDrumPreset = item.name;
+        syncWorker();
         saveCurrentState();
     });
 
@@ -85,6 +87,7 @@ export function setupPresets() {
             document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
             document.querySelectorAll(`.drum-preset-chip[data-id="${item.name}"]`).forEach(c => c.classList.add('active'));
             gb.lastDrumPreset = item.name;
+            syncWorker();
             saveCurrentState();
         });
     }
@@ -191,6 +194,7 @@ export function setupUIHandlers(refs) {
                     ui.swingBase.value = config.sub;
                 }
                 loadDrumPreset(config.drum);
+                syncWorker();
                 saveCurrentState();
                 showToast(`Switched to ${genre} feel`);
             }

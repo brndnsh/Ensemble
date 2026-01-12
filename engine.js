@@ -779,8 +779,83 @@ export function playDrumSound(name, time, velocity = 1.0) {
         
         shell.onended = () => safeDisconnect([beater, beaterGain, skin, skinFilter, skinGain, knock, knockGain, shell, shellGain]);
 
-    } else if (name === 'Snare') {
-        const vol = masterVol * rr();
+    } else if (name === 'Snare' || name === 'Sidestick') {
+        const isSidestick = name === 'Sidestick';
+        const vol = masterVol * rr() * (isSidestick ? 0.8 : 1.0);
+
+        if (isSidestick) {
+            // --- Sidestick (Rim Click) - 3-Layer Model ---
+            
+            // 1. The "Click" (Transient Impact)
+            // High frequency sine for the immediate stick-on-metal/wood contact
+            const click = ctx.audio.createOscillator();
+            const clickGain = ctx.audio.createGain();
+            click.type = 'sine';
+            click.frequency.setValueAtTime(6500 * rr(), playTime);
+            
+            clickGain.gain.setValueAtTime(0, playTime);
+            clickGain.gain.setValueAtTime(vol * 0.4, playTime + 0.001);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.02); // Ultra-fast 20ms decay
+            
+            click.connect(clickGain);
+            clickGain.connect(ctx.drumsGain);
+            
+            // 2. The "Body" (Woody Resonance)
+            // Triangle wave for the shell/rim resonance
+            const body = ctx.audio.createOscillator();
+            const bodyGain = ctx.audio.createGain();
+            const bodyFilter = ctx.audio.createBiquadFilter();
+            
+            body.type = 'triangle';
+            const bodyFreq = 330 * rr();
+            body.frequency.setValueAtTime(bodyFreq, playTime);
+            body.frequency.exponentialRampToValueAtTime(bodyFreq * 0.9, playTime + 0.1); // Slight pitch drop
+            
+            bodyFilter.type = 'bandpass';
+            bodyFilter.frequency.setValueAtTime(350, playTime);
+            bodyFilter.Q.value = 1.5;
+
+            bodyGain.gain.setValueAtTime(0, playTime);
+            bodyGain.gain.setValueAtTime(vol * 0.8, playTime + 0.002);
+            bodyGain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.15); // 150ms "ring"
+            
+            body.connect(bodyFilter);
+            bodyFilter.connect(bodyGain);
+            bodyGain.connect(ctx.drumsGain);
+            
+            // 3. The "Snap" (Noise Texture)
+            // Tighter and higher than a snare wire
+            const noise = ctx.audio.createBufferSource();
+            noise.buffer = gb.audioBuffers.noise;
+            const noiseFilter = ctx.audio.createBiquadFilter();
+            const noiseGain = ctx.audio.createGain();
+            
+            noiseFilter.type = 'highpass';
+            noiseFilter.frequency.setValueAtTime(3500, playTime);
+            noiseFilter.Q.value = 1.0;
+            
+            noiseGain.gain.setValueAtTime(0, playTime);
+            noiseGain.gain.setValueAtTime(vol * 0.35, playTime + 0.002);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.06); // 60ms decay
+            
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(ctx.drumsGain);
+            
+            // Trigger
+            click.start(playTime);
+            body.start(playTime);
+            noise.start(playTime);
+            
+            const stopTime = playTime + 0.2;
+            click.stop(stopTime);
+            body.stop(stopTime);
+            noise.stop(stopTime);
+            
+            noise.onended = () => safeDisconnect([click, clickGain, body, bodyFilter, bodyGain, noise, noiseFilter, noiseGain]);
+            
+            return; // Exit early for Sidestick
+        }
 
         // 1. The Tone (Drum head resonance)
         const tone1 = ctx.audio.createOscillator();
@@ -909,7 +984,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         };
 
     } else if (name === 'Crash') {
-        const vol = masterVol * 0.6 * rr();
+        const vol = masterVol * 0.85 * rr();
         const duration = 2.0 * rr(); 
         
         // 1. Metallic Bank (Ring)

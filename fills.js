@@ -51,6 +51,26 @@ export const FILL_TEMPLATES = {
             // Busy snare/kick interaction
             { steps: [4, 7, 10, 13], instruments: ['Snare', 'Kick', 'Snare', 'Kick'], velocities: [0.7, 0.8, 0.8, 0.9] }
         ]
+    },
+    'Blues': {
+        low: [
+            // Simple shuffle pickup (the 'and' of 4)
+            { steps: [14], instruments: ['Snare'], velocities: [0.6] },
+            // Kick pickup
+            { steps: [14], instruments: ['Kick'], velocities: [0.8] }
+        ],
+        medium: [
+            // Standard shuffle fill (3... and-4-and)
+            { steps: [10, 12, 14], instruments: ['Snare', 'Snare', 'Snare'], velocities: [0.6, 0.7, 0.9] },
+            // Kick support on the beat
+            { steps: [12, 14], instruments: ['Kick', 'Snare'], velocities: [0.9, 0.8] }
+        ],
+        high: [
+            // Classic triplet-feel turnaround (on 8th grid: 3, 3&, 4, 4&)
+            { steps: [8, 10, 12, 14], instruments: ['Snare', 'Kick', 'Snare', 'Crash'], velocities: [0.8, 0.9, 0.9, 1.1] },
+            // Snare roll (8th notes only)
+            { steps: [8, 10, 12, 14], instruments: ['Snare', 'Snare', 'Snare', 'Snare'], velocities: [0.7, 0.8, 0.9, 1.0] }
+        ]
     }
 };
 
