@@ -410,41 +410,54 @@ export function recalculateScrollOffsets() {
 }
 
 export function initTabs() {
-    const tabs = document.querySelectorAll('.tab-btn, .groove-tab-btn');
+    const mobileTabItems = document.querySelectorAll('.tab-item');
+    const grooveTabBtns = document.querySelectorAll('.groove-tab-btn');
     
-    const activateTab = (tab) => {
-        const target = tab.dataset.tab;
-        const isGroove = tab.classList.contains('groove-tab-btn');
-        const selector = isGroove ? '.groove-tab-btn' : '.tab-btn';
+    const activateMobileTab = (item) => {
+        const btn = item.querySelector('.tab-btn');
+        if (!btn) return;
+        const target = btn.dataset.tab;
         
-        document.querySelectorAll(selector).forEach(b => b.classList.remove('active'));
-        if (!isGroove) {
-            document.querySelectorAll('.instrument-panel').forEach(c => c.classList.remove('active-mobile'));
-            const content = document.getElementById(`panel-${target}`);
-            if (content) content.classList.add('active-mobile');
-            gb.mobileTab = target;
-        } else {
-            document.querySelectorAll('.groove-tab-content').forEach(c => c.classList.remove('active'));
-            const content = document.getElementById(`groove-tab-${target}`);
-            if (content) content.classList.add('active');
-            gb.activeTab = target;
-        }
+        document.querySelectorAll('.tab-item .tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.instrument-panel').forEach(c => c.classList.remove('active-mobile'));
         
-        tab.classList.add('active');
+        const content = document.getElementById(`panel-${target}`);
+        if (content) content.classList.add('active-mobile');
+        btn.classList.add('active');
+        gb.mobileTab = target;
     };
 
-    tabs.forEach(tab => {
-        tab.onclick = () => {
-            activateTab(tab);
+    const activateGrooveTab = (btn) => {
+        const target = btn.dataset.tab;
+        document.querySelectorAll('.groove-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.groove-tab-content').forEach(c => c.classList.remove('active'));
+        
+        const content = document.getElementById(`groove-tab-${target}`);
+        if (content) content.classList.add('active');
+        btn.classList.add('active');
+        gb.activeTab = target;
+    };
+
+    mobileTabItems.forEach(item => {
+        item.onclick = () => {
+            activateMobileTab(item);
             saveCurrentState();
         };
         
-        const target = tab.dataset.tab;
-        const isGroove = tab.classList.contains('groove-tab-btn');
-        if (isGroove && target === gb.activeTab) {
-            activateTab(tab);
-        } else if (!isGroove && target === gb.mobileTab) {
-            activateTab(tab);
+        const btn = item.querySelector('.tab-btn');
+        if (btn && btn.dataset.tab === gb.mobileTab) {
+            activateMobileTab(item);
+        }
+    });
+
+    grooveTabBtns.forEach(btn => {
+        btn.onclick = () => {
+            activateGrooveTab(btn);
+            saveCurrentState();
+        };
+        
+        if (btn.dataset.tab === gb.activeTab) {
+            activateGrooveTab(btn);
         }
     });
 }
