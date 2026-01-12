@@ -1,6 +1,7 @@
 import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
 import { ctx, cb, bb, sb, gb, arranger, vizState, storage } from './state.js';
 import { saveCurrentState, renderUserPresets, renderUserDrumPresets } from './persistence.js';
+import { restoreGains } from './engine.js';
 import { syncWorker } from './worker-client.js';
 import { generateId, compressSections, normalizeKey, decompressSections, getStepsPerMeasure } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
@@ -31,6 +32,7 @@ export function updateStyle(type, styleId) {
 
     syncWorker();
     flushBuffers();
+    restoreGains();
     saveCurrentState();
 }
 
