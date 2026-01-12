@@ -349,12 +349,17 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
 
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
     if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
-        const isMinor = quality === 'minor' || quality === 'dim' || quality === 'halfdim';
-        const isDominant = !isMinor && is7th && quality !== 'maj7';
-        
         if (quality === 'maj7' || quality === 'maj9') return [4, 7, 11, 14]; // 3, 5, 7, 9
+        
+        if (quality === 'dim') return [3, 6, 9];      // b3, b5, bb7
+        if (quality === 'halfdim') return [3, 6, 10]; // b3, b5, b7
+        
+        const isMinor = quality === 'minor';
+        const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && is7th && quality !== 'maj7';
+        
         if (isMinor) return [3, 7, 10, 14];           // b3, 5, b7, 9
         if (isDominant) {
+
              // Use 13th only if explicitly requested or rich density
              return (isRich || quality === '13') ? [4, 10, 14, 21] : [4, 10, 14]; 
         }

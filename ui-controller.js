@@ -1,4 +1,4 @@
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip } from './ui.js';
+import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
 import { ctx, cb, bb, sb, gb, arranger, vizState, storage } from './state.js';
 import { saveCurrentState, renderUserPresets, renderUserDrumPresets } from './persistence.js';
 import { syncWorker } from './worker-client.js';
@@ -43,18 +43,6 @@ const SMART_GENRES = {
     'Reggae': { swing: 20, sub: '8th', drum: 'Reggae', feel: 'Rock', bass: 'dub', soloist: 'blues' },
     'Bossa': { swing: 0, drum: 'Bossa Nova', feel: 'Rock', bass: 'bossa', soloist: 'scalar' }
 };
-
-function updateRelKeyButton() {
-    if (ui.relKeyBtn) ui.relKeyBtn.textContent = arranger.isMinor ? 'min' : 'maj';
-}
-
-function updateKeySelectLabels() {
-    if (!ui.keySelect) return;
-    Array.from(ui.keySelect.options).forEach(opt => {
-        const root = opt.value;
-        opt.textContent = `Key: ${root}${arranger.isMinor ? 'm' : ''}`;
-    });
-}
 
 export function setupPresets() {
     const renderCategorized = (container, data, type, activeId, onSelect) => {

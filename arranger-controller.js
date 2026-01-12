@@ -1,6 +1,5 @@
 import { arranger, cb, ctx, gb } from './state.js';
-import { updateKeySelectLabels } from './main.js';
-import { ui, renderSections, renderChordVisualizer, showToast } from './ui.js';
+import { ui, renderSections, renderChordVisualizer, showToast, updateKeySelectLabels } from './ui.js';
 import { validateProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
 import { syncWorker } from './worker-client.js';

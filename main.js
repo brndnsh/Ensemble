@@ -1,5 +1,5 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
-import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI } from './ui.js';
+import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime } from './engine.js';
 import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { SONG_TEMPLATES, DRUM_PRESETS, CHORD_PRESETS } from './presets.js';
@@ -457,14 +457,6 @@ function loadFromUrl() {
     if (params.get('bpm')) { setBpm(params.get('bpm'), viz); }
     if (params.get('style')) updateStyle('chord', params.get('style'));
     if (params.get('notation')) { arranger.notation = params.get('notation'); ui.notationSelect.value = arranger.notation; }
-}
-
-export function updateKeySelectLabels() {
-    if (!ui.keySelect) return;
-    Array.from(ui.keySelect.options).forEach(opt => {
-        const root = opt.value;
-        opt.textContent = `Key: ${root}${arranger.isMinor ? 'm' : ''}`;
-    });
 }
 
 function updateRelKeyButton() {

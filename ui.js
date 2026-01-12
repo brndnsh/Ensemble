@@ -558,3 +558,17 @@ export function updateActiveChordUI(index) {
         }
     }
 }
+
+export function updateKeySelectLabels() {
+    if (!ui.keySelect) return;
+    Array.from(ui.keySelect.options).forEach(opt => {
+        const root = opt.value;
+        opt.textContent = `Key: ${root}${arranger.isMinor ? 'm' : ''}`;
+    });
+}
+
+export function updateRelKeyButton() {
+    if (ui.relKeyBtn) ui.relKeyBtn.textContent = arranger.isMinor ? 'min' : 'maj';
+}
+
+
