@@ -87,6 +87,19 @@ export const FILL_TEMPLATES = {
             // 16th note chaos with open hats
             { steps: [8, 9, 10, 11, 12, 13, 14, 15], instruments: ['Snare', 'Kick', 'Snare', 'Kick', 'Snare', 'Open', 'Snare', 'Crash'], velocities: [0.8, 0.9, 0.9, 1.0, 1.0, 1.1, 1.1, 1.2] }
         ]
+    },
+    'Acoustic': {
+        low: [
+            { steps: [14], instruments: ['Kick'], velocities: [0.6] },
+            { steps: [12, 14], instruments: ['Snare', 'Snare'], velocities: [0.4, 0.5] }
+        ],
+        medium: [
+            { steps: [12, 13, 14, 15], instruments: ['Snare', 'Snare', 'Snare', 'Snare'], velocities: [0.4, 0.5, 0.6, 0.5] },
+            { steps: [10, 12, 14], instruments: ['Kick', 'Snare', 'Kick'], velocities: [0.7, 0.6, 0.8] }
+        ],
+        high: [
+             { steps: [8, 10, 12, 14], instruments: ['Snare', 'Snare', 'Snare', 'Crash'], velocities: [0.6, 0.7, 0.8, 0.9] }
+        ]
     }
 };
 

@@ -33,11 +33,14 @@ function getScaleForBass(chord, nextChord, isMinor = false) {
  * Generates a frequency for a bass line.
  */
 export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 41, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0, isMinor = false) {
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+
     if (style === 'smart') {
         const mapping = { 
             'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo',
             'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk',
-            'Disco': 'disco'
+            'Disco': 'disco', 'Acoustic': 'half'
         };
         style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
     }
@@ -188,9 +191,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         };
     };
 
-    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const grouping = arranger.grouping || ts.grouping || [ts.beats];
-    const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
     const stepInMeasure = step % stepsPerMeasure;
     
     // Use the structural metadata to identify important anchors
@@ -521,7 +522,7 @@ export function isBassActive(style, step, stepInChord) {
         const mapping = { 
             'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo',
             'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk',
-            'Disco': 'disco'
+            'Disco': 'disco', 'Acoustic': 'half'
         };
         style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
     }

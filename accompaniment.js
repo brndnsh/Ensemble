@@ -64,6 +64,11 @@ export const PIANO_CELLS = {
         [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0], // Double Skank
         [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]  // Pushed Skank
     ],
+    'Acoustic': [
+        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight Quarters (Strum)
+        [1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0], // Folk Pick pattern
+        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]  // 1 and &2 (Pop/Folk)
+    ],
     'Bossa': [
         [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], // Standard Bossa
         [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0], // Sparse Bossa
@@ -209,6 +214,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         let durationSteps = ts.stepsPerBeat * 2; // Default 2 beats
         if (genre === 'Reggae' || genre === 'Funk' || genre === 'Disco') durationSteps = ts.stepsPerBeat * 0.25; // 16th
         else if (genre === 'Jazz') durationSteps = ts.stepsPerBeat * 1; // Quarter
+        else if (genre === 'Acoustic') durationSteps = ts.stepsPerBeat * 2.5; // Ring out
         else if (genre === 'Rock' || genre === 'Bossa') durationSteps = ts.stepsPerBeat * 1.5;
         
         if (cb.style === 'pad') durationSteps = chord.beats * ts.stepsPerBeat;
@@ -232,7 +238,11 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         voicing.forEach((f, i) => {
             const humanShift = (Math.random() * 0.006) - 0.003;
             const humanVol = 0.95 + (Math.random() * 0.1);
-            const stagger = (i * 0.008) + humanShift;
+            
+            let strumSpeed = 0.008;
+            if (genre === 'Acoustic') strumSpeed = 0.025; // Slower, audible strum
+            
+            const stagger = (i * strumSpeed) + humanShift;
             
             // Attach CC events to the first note of the chord
             const noteCC = (i === 0) ? ccEvents : [];

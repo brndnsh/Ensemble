@@ -44,6 +44,7 @@ const SMART_GENRES = {
     'Blues': { swing: 100, sub: '8th', drum: 'Blues Shuffle', feel: 'Blues', bass: 'quarter', soloist: 'blues' },
     'Neo-Soul': { swing: 30, sub: '16th', drum: 'Neo-Soul', feel: 'Neo-Soul', bass: 'neo', soloist: 'neo' },
     'Reggae': { swing: 20, sub: '8th', drum: 'Reggae', feel: 'Reggae', bass: 'dub', soloist: 'blues' },
+    'Acoustic': { swing: 15, sub: '8th', drum: 'Acoustic', feel: 'Acoustic', bass: 'half', soloist: 'minimal' },
     'Bossa': { swing: 0, drum: 'Bossa Nova', feel: 'Bossa Nova', bass: 'bossa', soloist: 'scalar' }
 };
 

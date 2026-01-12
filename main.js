@@ -220,9 +220,15 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
             }
             let soundName = inst.name;
             
-            // Force Sidestick for Bossa Nova to ensure authenticity
-            if (gb.lastDrumPreset === 'Bossa Nova' && inst.name === 'Snare') {
-                soundName = 'Sidestick';
+            // --- Snare Timbre Shifting ---
+            if (inst.name === 'Snare') {
+                if (gb.lastDrumPreset === 'Bossa Nova') {
+                    soundName = 'Sidestick';
+                } else if (gb.genreFeel === 'Acoustic') {
+                    soundName = (ctx.bandIntensity > 0.7) ? 'Snare' : 'Sidestick';
+                } else if (ctx.bandIntensity < 0.35 && gb.genreFeel !== 'Rock') {
+                    soundName = 'Sidestick';
+                }
             }
 
             if (gb.genreFeel === 'Rock') {
@@ -234,11 +240,6 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                 velocity *= 1.15; // Accentuate the "Pea-Soup" open hat
             }
             
-            // --- Timbre Shifting ---
-            if (inst.name === 'Snare' && ctx.bandIntensity < 0.35 && gb.genreFeel !== 'Rock') {
-                soundName = 'Sidestick';
-            }
-
             if (inst.name === 'HiHat' && gb.genreFeel !== 'Jazz' && ctx.bandIntensity > 0.8 && isQuarter) { soundName = 'Open'; velocity *= 1.1; }
             if (inst.name === 'Kick') velocity *= isDownbeat ? 1.15 : (isGroupStart ? 1.1 : (isQuarter ? 1.05 : 0.9));
             else if (inst.name === 'Snare') velocity *= isBackbeat ? 1.1 : 0.9;
