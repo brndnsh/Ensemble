@@ -1,16 +1,11 @@
-import { playNote, playChordScratch, updateSustain } from './engine.js';
-import { ctx, arranger, gb, bb, sb, cb } from './state.js';
+import { ctx, arranger, cb, bb, sb, gb } from './state.js';
+import { getMidi } from './utils.js';
 import { TIME_SIGNATURES } from './config.js';
-import { DRUM_PRESETS } from './presets.js';
-import { isBassActive } from './bass.js';
-import { getFrequency, getMidi } from './utils.js';
 
 /**
  * ACCOMPANIMENT.JS - Rhythmic Style Engine
  * 
- * This module handles the generative rhythmic logic for the "Gold Standard" Piano.
- * It monitors soloist density to create a "musical conversation" and applies
- * rhythmic intent (anticipation, syncopation, laying back).
+ * Standardized to return Note Objects for the Worker/Scheduler.
  */
 
 export const compingState = {
@@ -76,9 +71,6 @@ export const PIANO_CELLS = {
     ]
 };
 
-/**
- * Updates the rhythmic intent based on band intensity, genre, and soloist activity.
- */
 function updateRhythmicIntent(step, soloistBusy, spm = 16) {
     if (step < compingState.lockedUntil) return;
 
@@ -86,7 +78,6 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16) {
     const complexity = ctx.complexity;
     const genre = gb.genreFeel;
 
-    // 1. Determine Vibe
     if (soloistBusy) {
         compingState.currentVibe = 'sparse';
     } else if (intensity > 0.75 || complexity > 0.7) {
@@ -97,7 +88,6 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16) {
         compingState.currentVibe = 'balanced';
     }
 
-    // 2. Select Pool
     let pool = PIANO_CELLS[genre] || PIANO_CELLS[compingState.currentVibe];
     
     if (PIANO_CELLS[genre]) {
@@ -111,13 +101,8 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16) {
     }
 
     const rawCell = pool[Math.floor(Math.random() * pool.length)];
-    
-    // 3. Adapt Cell to SPM
-    // If the cell is 16 steps but we have 20 (5/4), we loop or stretch. 
-    // For now, we'll repeat the cell or truncate it to fit the measure.
     compingState.currentCell = new Array(spm).fill(0).map((_, i) => rawCell[i % rawCell.length]);
 
-    // 4. Apply Anticipation / Laying Back based on Genre
     ctx.intent.anticipation = (intensity * 0.2);
     if (genre === 'Jazz' || genre === 'Bossa') ctx.intent.anticipation += 0.15;
     
@@ -130,99 +115,105 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16) {
     compingState.lockedUntil = step + spm;
 }
 
-/**
- * Intelligent Sustain Controller.
- * Clears mud and manages resonance based on harmonic and rhythmic context.
- */
-function handleSustain(step, measureStep, chordIndex, intensity, time, genre, stepInfo) {
+function handleSustainEvents(step, measureStep, chordIndex, intensity, genre, stepInfo) {
+    const events = [];
     const isNewChord = chordIndex !== compingState.lastChordIndex;
     const isNewMeasure = measureStep === 0;
 
     if (genre === 'Reggae' || genre === 'Funk') {
-        updateSustain(false, time);
-        return; 
+        events.push({ type: 'cc', controller: 64, value: 0, timingOffset: 0 }); // Sustain Off
+        return events; 
     }
 
     if (isNewMeasure || isNewChord) {
-        updateSustain(false, time);
-        updateSustain(true, time);
+        events.push({ type: 'cc', controller: 64, value: 0, timingOffset: 0 }); // Off
+        events.push({ type: 'cc', controller: 64, value: 127, timingOffset: 0.01 }); // On
         compingState.lastChordIndex = chordIndex;
-        return;
+        return events;
     }
 
-    // Clear sustain on strong group beats to prevent mud in odd meters
     if (stepInfo && stepInfo.isGroupStart && Math.random() < (intensity * 0.5)) {
-        updateSustain(false, time - 0.01);
-        updateSustain(true, time);
-        return;
+        events.push({ type: 'cc', controller: 64, value: 0, timingOffset: -0.01 });
+        events.push({ type: 'cc', controller: 64, value: 127, timingOffset: 0 });
+        return events;
     }
 
     const isBeat = stepInfo ? stepInfo.isBeatStart : (measureStep % 4 === 0);
-    
     const flutterProb = (intensity * 0.4);
     if (isBeat && Math.random() < flutterProb) {
-        updateSustain(false, time - 0.015);
-        updateSustain(true, time);
+        events.push({ type: 'cc', controller: 64, value: 0, timingOffset: -0.015 });
+        events.push({ type: 'cc', controller: 64, value: 127, timingOffset: 0 });
     }
 
     if (genre === 'Jazz' && !isBeat) {
-        updateSustain(false, time + 0.1); 
+        events.push({ type: 'cc', controller: 64, value: 0, timingOffset: 0.1 }); 
     }
+    
+    return events;
 }
 
-export const chordPatterns = {
-    /**
-     * The new "Gold Standard" generative piano engine.
-     */
-    smart: (chord, time, spb, stepInChord, measureStep, step, stepInfo) => {
-        const soloistBusy = sb.enabled && sb.busySteps > 0;
-        const chordIndex = arranger.progression.findIndex(c => c === chord);
-        const genre = gb.genreFeel;
-        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-        const spm = ts.beats * ts.stepsPerBeat;
-        
-        updateRhythmicIntent(step, soloistBusy, spm);
-        handleSustain(step, measureStep, chordIndex, ctx.bandIntensity, time, genre, stepInfo);
+/**
+ * Main entry point for generating accompaniment notes.
+ * Returns an array of standardized Note Objects.
+ */
+export function getAccompanimentNotes(chord, step, stepInChord, measureStep, stepInfo) {
+    if (!cb.enabled || !chord) return [];
 
-        let isHit = compingState.currentCell[measureStep % spm] === 1;
+    const notes = [];
+    
+    // --- Sustain / CC Handling ---
+    const chordIndex = arranger.progression.indexOf(chord);
+    const genre = gb.genreFeel;
+    const ccEvents = handleSustainEvents(step, measureStep, chordIndex, ctx.bandIntensity, genre, stepInfo);
+    
+    // Create a dummy note for CC if needed, or attach to first note?
+    // The worker handles notes. We can return "CC-only" objects or attach to notes.
+    // Standard "Note Object" has ccEvents.
+    // If no notes are generated this step, we still need to send CC.
+    // We'll create a "silent" note object if only CC events exist, 
+    // or we can push a dedicated event type if the architecture supports it.
+    // For now, let's attach to the notes if they exist, or push a dummy object.
+    
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const spm = ts.beats * ts.stepsPerBeat;
+    
+    updateRhythmicIntent(step, (sb.enabled && sb.busySteps > 0), spm);
 
-        // Force a hit on the "One" if the current cell is empty there
-        if (measureStep === 0 && !isHit && Math.random() < 0.8) isHit = true;
-        
-        // Ensure group starts have a high probability of being played
-        if (stepInfo && stepInfo.isGroupStart && !isHit && Math.random() < (0.4 + ctx.bandIntensity * 0.4)) {
-            isHit = true;
-        }
+    // --- Smart Pattern Logic ---
+    let isHit = compingState.currentCell[measureStep % spm] === 1;
 
-        if (isHit) {
-            let timingOffset = 0;
-            const isDownbeat = stepInfo ? stepInfo.isBeatStart : (measureStep % 4 === 0);
-            const isStructural = stepInfo ? stepInfo.isGroupStart : (measureStep % 8 === 0);
+    // Force hit on "One" if empty
+    if (measureStep === 0 && !isHit && Math.random() < 0.8) isHit = true;
+    if (stepInfo && stepInfo.isGroupStart && !isHit && Math.random() < (0.4 + ctx.bandIntensity * 0.4)) isHit = true;
+    
+    // Pad Style Override
+    if (cb.style === 'pad') isHit = (stepInChord === 0);
 
+    if (isHit) {
+        let timingOffset = 0;
+        const isDownbeat = stepInfo ? stepInfo.isBeatStart : (measureStep % 4 === 0);
+        const isStructural = stepInfo ? stepInfo.isGroupStart : (measureStep % 8 === 0);
+
+        if (cb.style === 'smart') {
             const pushProb = 0.15 + (ctx.bandIntensity * 0.2);
-            if (!isDownbeat && Math.random() < pushProb) {
-                timingOffset = -0.025;
-            }
-
+            if (!isDownbeat && Math.random() < pushProb) timingOffset = -0.025;
             if (Math.random() < ctx.intent.anticipation) timingOffset -= 0.010;
             if (Math.random() < ctx.intent.layBack) timingOffset += 0.020;
+        }
 
-            const playTime = time + timingOffset;
-            
-            let duration = spb * 2.0; 
-            if (genre === 'Reggae' || genre === 'Funk') duration = 0.1;
-            else if (genre === 'Jazz') duration = 0.25;
-            else if (genre === 'Rock' || genre === 'Bossa') duration = 0.45;
+        let durationSteps = ts.stepsPerBeat * 2; // Default 2 beats
+        if (genre === 'Reggae' || genre === 'Funk') durationSteps = ts.stepsPerBeat * 0.25; // 16th
+        else if (genre === 'Jazz') durationSteps = ts.stepsPerBeat * 1; // Quarter
+        else if (genre === 'Rock' || genre === 'Bossa') durationSteps = ts.stepsPerBeat * 1.5;
+        
+        if (cb.style === 'pad') durationSteps = chord.beats * ts.stepsPerBeat;
 
-            const velocity = (isStructural ? 0.38 : (isDownbeat ? 0.32 : 0.22)) * (0.8 + ctx.bandIntensity * 0.4);
+        const velocity = (isStructural ? 0.6 : (isDownbeat ? 0.5 : 0.35)) * (0.8 + ctx.bandIntensity * 0.4);
 
-            let voicing = [...chord.freqs];
-            
-            // Grounded voicing: use more notes on structural anchors
-            if (!isStructural && voicing.length > 3 && Math.random() < 0.5) {
-                voicing = voicing.slice(0, 3); 
-            }
-
+        let voicing = [...chord.freqs];
+        
+        if (cb.style === 'smart') {
+            if (!isStructural && voicing.length > 3 && Math.random() < 0.5) voicing = voicing.slice(0, 3);
             if (bb.enabled && voicing.length > 3) {
                 voicing.shift();
                 if ((chord.is7th || chord.quality.includes('9')) && voicing.length > 3) {
@@ -231,57 +222,42 @@ export const chordPatterns = {
                     voicing = voicing.filter(f => (getMidi(f) % 12) !== fifthPC);
                 }
             }
+        }
 
-            voicing.forEach((f, i) => {
-                const humanShift = (Math.random() * 0.006) - 0.003;
-                const humanVol = 0.95 + (Math.random() * 0.1);
-                const stagger = (i * 0.008) + humanShift;
+        voicing.forEach((f, i) => {
+            const humanShift = (Math.random() * 0.006) - 0.003;
+            const humanVol = 0.95 + (Math.random() * 0.1);
+            const stagger = (i * 0.008) + humanShift;
+            
+            // Attach CC events to the first note of the chord
+            const noteCC = (i === 0) ? ccEvents : [];
 
-                playNote(f, playTime + stagger, duration, { 
-                    vol: velocity * humanVol, 
-                    index: i, 
-                    instrument: 'Piano',
-                    dry: (genre === 'Reggae' || genre === 'Funk') 
-                });
+            notes.push({
+                midi: getMidi(f),
+                velocity: Math.min(1.0, velocity * humanVol),
+                durationSteps,
+                bendStartInterval: 0,
+                ccEvents: noteCC,
+                timingOffset: timingOffset + stagger,
+                instrument: 'Piano',
+                muted: false,
+                dry: (genre === 'Reggae' || genre === 'Funk')
             });
-        }
-    },
-
-    // Legacy fallback support: all styles now route to the high-fidelity engine
-    // while maintaining their characteristic "frequency" of hits via cell selection.
-    pad: (chord, time, spb, stepInChord, measureStep, step) => {
-        // Clear sustain at measure boundaries or chord changes
-        if (measureStep === 0 || stepInChord === 0) {
-            updateSustain(false, time - 0.02);
-            updateSustain(true, time);
-        }
-
-        if (stepInChord === 0) {
-            chord.freqs.forEach((f, i) => {
-                const stagger = i * 0.015;
-                // Pads ring for the duration of the chord, but the sustain pedal handles the 'ring'
-                playNote(f, time + stagger, chord.beats * spb, { 
-                    vol: 0.22, 
-                    index: i, 
-                    instrument: 'Piano' 
-                });
-            });
-        }
-    },
-    
-    strum8: (chord, time, spb, stepInChord, measureStep, step) => {
-        const beats = [0, 4, 6, 8, 12];
-        if (beats.includes(measureStep % 16)) {
-            const vol = (measureStep % 8 === 0) ? 0.3 : 0.2;
-            chord.freqs.forEach((f, i) => playNote(f, time, spb * 0.5, { vol, index: i, instrument: 'Piano' }));
-        }
+        });
+    } else if (ccEvents.length > 0) {
+        // No notes played, but we have CC events (pedal changes)
+        // Send a dummy note with velocity 0
+        notes.push({
+            midi: 0,
+            velocity: 0,
+            durationSteps: 0,
+            bendStartInterval: 0,
+            ccEvents: ccEvents,
+            timingOffset: 0,
+            instrument: 'Piano',
+            muted: true
+        });
     }
-};
 
-// Map all old style names to the new smart engine or specific piano behaviors
-const legacyMap = ['pop', 'rock', 'funk', 'jazz', 'blues', 'bossa', 'skank', 'arpeggio', 'tresillo', 'clave', 'afrobeat'];
-legacyMap.forEach(style => {
-    if (!chordPatterns[style]) {
-        chordPatterns[style] = chordPatterns.smart;
-    }
-});
+    return notes;
+}

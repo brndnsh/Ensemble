@@ -29,8 +29,8 @@ export function updateStyle(type, styleId) {
         chip.classList.toggle('active', chip.dataset.id === styleId);
     });
 
-    flushBuffers();
     syncWorker();
+    flushBuffers();
     saveCurrentState();
 }
 
@@ -429,6 +429,7 @@ export function setupUIHandlers(refs) {
     ui.densitySelect.addEventListener('change', e => { 
         cb.density = e.target.value; 
         validateAndAnalyze(); 
+        syncWorker();
         flushBuffers(); 
         saveCurrentState();
     });
@@ -481,6 +482,7 @@ export function setupUIHandlers(refs) {
             state.octave = parseInt(e.target.value);
             updateOctaveLabel(label, state.octave, header);
             if (callback) callback();
+            syncWorker();
             flushBuffers();
         });
         el.addEventListener('change', () => saveCurrentState());

@@ -132,7 +132,8 @@ export const cb = {
     octave: 65,
     density: 'standard', 
     practiceMode: false,
-    lastActiveChordIndex: null
+    lastActiveChordIndex: null,
+    buffer: new Map()
 };
 
 /**
@@ -223,7 +224,6 @@ export const bb = {
  * @property {number} octave - Base MIDI octave.
  * @property {string} style - Soloing style ID (e.g., 'blues', 'shred').
  * @property {number} direction - Melodic direction (1 or -1).
- * @property {number} phraseSteps - Total steps in current phrase (or remaining, context dependent).
  * @property {number} currentPhraseSteps - Steps elapsed in current phrase.
  * @property {boolean} isResting - Whether the soloist is taking a breath.
  * @property {Array<number>} currentCell - Current rhythmic cell.
@@ -247,7 +247,6 @@ export const sb = {
     octave: 72, // C5
     style: 'scalar',
     direction: 1,
-    phraseSteps: 0,
     currentPhraseSteps: 0,
     isResting: false,
     currentCell: [1, 0, 1, 0],

@@ -487,12 +487,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
 
     // C. Micro-Timing
-    const timingOffset = (Math.random() - 0.5) * config.timingJitter;
+    let timingOffset = (Math.random() - 0.5) * config.timingJitter;
 
     // D. Duration
     if (style === 'minimal') {
         durationMultiplier = Math.random() < 0.3 ? 2 : 1;
     }
+    
+    // Safety: Ensure we never have 0 duration (machine gun effect)
+    durationMultiplier = Math.max(1, Math.round(durationMultiplier || 1));
     sb.busySteps = durationMultiplier - 1;
 
     // --- 6. Update State & Motif Buffer ---
@@ -511,15 +514,17 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     }
     
     sb.lastFreq = getFrequency(selectedMidi);
+    
+    // Incorporate style-based timing offsets (previously in main.js)
+    if (style === 'neo') timingOffset += (0.01 + Math.random() * 0.035) * 1000; // ms
 
     return {
-        freq: sb.lastFreq,
         midi: selectedMidi,
-        durationMultiplier,
         velocity,
-        timingOffset,
-        bendStartInterval, // Trigger the curl
-        style,
-        tension: sb.tension
+        durationSteps: durationMultiplier,
+        bendStartInterval, 
+        ccEvents: [],
+        timingOffset: timingOffset / 1000, // convert back to seconds
+        style // Keep style for articulation choice in engine
     };
 }

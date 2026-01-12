@@ -7,7 +7,7 @@ import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { onSectionUpdate, onSectionDelete, onSectionDuplicate, analyzeFormUI } from './arranger-controller.js';
 import { getStepsPerMeasure } from './utils.js';
-import { killAllPianoNotes } from './engine.js';
+import { killAllNotes, restoreGains, killChordBus, killBassBus, killSoloistBus, killAllPianoNotes, killSoloistNote, killBassNote } from './engine.js';
 
 let schedulerRef = null;
 let vizRef = null;
@@ -95,13 +95,30 @@ export function handleTap(setBpmRef) {
 }
 
 export function flushBuffers() {
-    if (bb.lastPlayedFreq !== null) bb.lastFreq = bb.lastPlayedFreq;
-    bb.buffer.clear();
+    flushBuffer('chord');
+    flushBuffer('bass');
+    flushBuffer('soloist');
+}
 
-    if (sb.lastPlayedFreq !== null) sb.lastFreq = sb.lastPlayedFreq;
-    sb.buffer.clear();
+export function flushBuffer(type) {
+    if (type === 'bass' || type === 'all') {
+        if (bb.lastPlayedFreq !== null) bb.lastFreq = bb.lastPlayedFreq;
+        bb.buffer.clear();
+        killBassNote();
+        killBassBus();
+    }
+    if (type === 'soloist' || type === 'all') {
+        if (sb.lastPlayedFreq !== null) sb.lastFreq = sb.lastPlayedFreq;
+        sb.buffer.clear();
+        killSoloistNote();
+        killSoloistBus();
+    }
+    if (type === 'chord' || type === 'all') {
+        cb.buffer.clear();
+        killAllPianoNotes();
+        killChordBus();
+    }
     
-    killAllPianoNotes();
     flushWorker(ctx.step);
 }
 
@@ -153,15 +170,20 @@ export function togglePower(type) {
     
     if (!c.state.enabled && c.cleanup) {
         c.cleanup();
-    } else if (c.state.enabled) {
-        if (c.onEnable) c.onEnable();
-        if (['chord', 'bass', 'soloist'].includes(type)) {
-            flushBuffers();
-        }
+    } 
+    
+    syncWorker(); // Essential: tell worker about state change BEFORE flushing/requesting new notes
+
+    if (['chord', 'bass', 'soloist'].includes(type)) {
+        flushBuffer(type);
+    } else {
+        restoreGains(); // Ensure newly enabled buses are audible
     }
-    syncWorker();
-    saveCurrentState();
-    if (ctx.isPlaying && c.state.enabled && schedulerRef) schedulerRef();
+
+    if (c.state.enabled) {
+        if (c.onEnable) c.onEnable();
+        restoreGains();
+    }
 }
 
 export function resetToDefaults() {
@@ -255,6 +277,7 @@ export function resetToDefaults() {
     renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     analyzeFormUI();
     renderChordVisualizer();
+    syncWorker();
     flushBuffers();
     
     gb.instruments.forEach(inst => {

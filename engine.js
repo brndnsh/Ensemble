@@ -267,6 +267,85 @@ export function killAllPianoNotes() {
     ctx.sustainActive = false;
 }
 
+export function killSoloistNote() {
+    if (sb.lastSoloistGain) {
+        try {
+            const g = sb.lastSoloistGain.gain;
+            g.cancelScheduledValues(ctx.audio.currentTime);
+            g.setTargetAtTime(0, ctx.audio.currentTime, 0.01);
+        } catch(e) {}
+        sb.lastSoloistGain = null;
+    }
+}
+
+export function killBassNote() {
+    if (bb.lastBassGain) {
+        try {
+            const g = bb.lastBassGain.gain;
+            g.cancelScheduledValues(ctx.audio.currentTime);
+            g.setTargetAtTime(0, ctx.audio.currentTime, 0.01);
+        } catch(e) {}
+        bb.lastBassGain = null;
+    }
+}
+
+export function killChordBus() {
+    if (ctx.audio && ctx.chordsGain) {
+        const t = ctx.audio.currentTime;
+        ctx.chordsGain.gain.cancelScheduledValues(t);
+        ctx.chordsGain.gain.setTargetAtTime(0, t, 0.02);
+    }
+}
+
+export function killBassBus() {
+    if (ctx.audio && ctx.bassGain) {
+        const t = ctx.audio.currentTime;
+        ctx.bassGain.gain.cancelScheduledValues(t);
+        ctx.bassGain.gain.setTargetAtTime(0, t, 0.02);
+    }
+}
+
+export function killSoloistBus() {
+    if (ctx.audio && ctx.soloistGain) {
+        const t = ctx.audio.currentTime;
+        ctx.soloistGain.gain.cancelScheduledValues(t);
+        ctx.soloistGain.gain.setTargetAtTime(0, t, 0.02);
+    }
+}
+
+/**
+ * Ramps instrument buses to zero for instant silence.
+ */
+export function killAllNotes() {
+    killAllPianoNotes();
+    killSoloistNote();
+    killBassNote();
+    
+    killChordBus();
+    killBassBus();
+    killSoloistBus();
+}
+
+/**
+ * Restores instrument buses to their state-defined volumes.
+ */
+export function restoreGains() {
+    if (!ctx.audio) return;
+    const t = ctx.audio.currentTime;
+    const modules = [
+        { node: ctx.chordsGain, state: cb, mult: MIXER_GAIN_MULTIPLIERS.chords },
+        { node: ctx.bassGain, state: bb, mult: MIXER_GAIN_MULTIPLIERS.bass },
+        { node: ctx.soloistGain, state: sb, mult: MIXER_GAIN_MULTIPLIERS.soloist }
+    ];
+    modules.forEach(m => {
+        if (m.node) {
+            const target = m.state.enabled ? (m.state.volume * m.mult) : 0.0001;
+            m.node.gain.cancelScheduledValues(t);
+            m.node.gain.setTargetAtTime(target, t, 0.04);
+        }
+    });
+}
+
 /**
  * Instrument definitions for the chord engine.
  */
@@ -667,14 +746,13 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     gain.connect(pan);
     pan.connect(ctx.soloistGain);
 
-    // Monophonic Cutoff: Only cutoff if this is a NEW time (allows double stops at same time)
-    if (sb.lastSoloistGain && playTime > (sb.lastNoteStartTime || 0)) {
+    // Monophonic Cutoff: Ensure only one note rings at a time per module.
+    // If a note arrives with an identical or past time, we still cutoff to prevent bunching.
+    if (sb.lastSoloistGain) {
         try {
-            const t = playTime;
             const g = sb.lastSoloistGain.gain;
-            g.cancelScheduledValues(t);
-            // Use smooth 5ms exponential fade for cutoff (matching Bassist stabilization)
-            g.setTargetAtTime(0, t, 0.005);
+            g.cancelScheduledValues(playTime);
+            g.setTargetAtTime(0, playTime, 0.005);
         } catch (e) {}
     }
     sb.lastSoloistGain = gain;
