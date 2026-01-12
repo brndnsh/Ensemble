@@ -1,11 +1,10 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
 import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels } from './ui.js';
-import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime } from './engine.js';
+import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime, updateSustain, restoreGains } from './engine.js';
 import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { SONG_TEMPLATES, DRUM_PRESETS, CHORD_PRESETS } from './presets.js';
 import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decompressSections, getStepsPerMeasure, getStepInfo } from './utils.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
-import { chordPatterns } from './accompaniment.js';
 import { exportToMidi } from './midi-export.js';
 import { UnifiedVisualizer } from './visualizer.js';
 import { initWorker, startWorker, stopWorker, flushWorker, requestBuffer, syncWorker } from './worker-client.js';
@@ -74,6 +73,7 @@ function togglePlay() {
             silentAudio.play().catch(e => {});
         }
         ctx.isPlaying = true;
+        restoreGains();
         ui.playBtn.textContent = 'STOP';
         ui.playBtn.classList.add('playing');
         const startTime = ctx.audio.currentTime + 0.1;
@@ -253,17 +253,17 @@ function scheduleBass(chordData, step, time) {
     const noteEntry = bb.buffer.get(step);
     bb.buffer.delete(step);
     if (noteEntry && noteEntry.freq) {
-        const { freq, chordData: cData, durationMultiplier, velocity, timingOffset } = noteEntry; 
-        const { chord } = cData || chordData;
+        const { freq, durationSteps, velocity, timingOffset, muted } = noteEntry; 
+        const { chord } = chordData;
         const adjustedTime = time + (timingOffset || 0);
         bb.lastPlayedFreq = freq;
         const midi = getMidi(freq);
         const { name, octave } = midiToNote(midi);
         const spb = 60.0 / ctx.bpm;
-        const duration = durationMultiplier ? 0.25 * spb * durationMultiplier : (bb.style === 'whole' ? chord.beats : (bb.style === 'half' ? 2 : 1)) * spb;
+        const duration = (durationSteps || 4) * 0.25 * spb;
         const finalVel = (velocity || 1.0) * (ctx.conductorVelocity || 1.0);
         if (vizState.enabled) ctx.drawQueue.push({ type: 'bass_vis', name, octave, midi, time: adjustedTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration });
-        playBassNote(freq, adjustedTime, duration, finalVel, noteEntry.muted);
+        playBassNote(freq, adjustedTime, duration, finalVel, muted);
     }
 }
 
@@ -271,29 +271,21 @@ function scheduleSoloist(chordData, step, time, unswungTime) {
     const noteEntry = sb.buffer.get(step);
     sb.buffer.delete(step);
     if (noteEntry && noteEntry.freq) {
-        const { freq, extraFreq, extraMidi, extraFreq2, extraMidi2, durationMultiplier, velocity, bendStartInterval, style, chordData: cData, timingOffset, noteType } = noteEntry;
-        const { chord } = cData || chordData;
-        const offsetS = (timingOffset || 0) / 1000;
+        const { freq, durationSteps, velocity, bendStartInterval, style, timingOffset, noteType } = noteEntry;
+        const { chord } = chordData;
+        const offsetS = (timingOffset || 0); // timingOffset is in seconds from standardized object
         sb.lastPlayedFreq = freq;
         const midi = noteEntry.midi || getMidi(freq);
         const { name, octave } = midiToNote(midi);
         const spb = 60.0 / ctx.bpm;
-        const duration = 0.25 * spb * (durationMultiplier || 1);
+        const duration = (durationSteps || 4) * 0.25 * spb;
         const vel = (velocity || 1.0) * (ctx.conductorVelocity || 1.0);
-        const playTime = unswungTime + (style === 'neo' ? (0.01 + Math.random() * 0.035) : 0) + offsetS;
+        const playTime = unswungTime + offsetS;
+        
         playSoloNote(freq, playTime, duration, vel, bendStartInterval || 0, style);
+        
         if (vizState.enabled) {
-            [ { f: extraFreq, m: extraMidi, v: 0.7 }, { f: extraFreq2, m: extraMidi2, v: 0.5 } ].forEach(extra => {
-                if (extra.f && extra.m) {
-                    playSoloNote(extra.f, playTime, duration, vel * extra.v, bendStartInterval || 0, style);
-                    const n = midiToNote(extra.m);
-                    ctx.drawQueue.push({ type: 'soloist_vis', name: n.name, octave: n.octave, midi: extra.m, time: playTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration, noteType });
-                }
-            });
             ctx.drawQueue.push({ type: 'soloist_vis', name, octave, midi, time: playTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration, noteType });
-        } else {
-            if (extraFreq) playSoloNote(extraFreq, playTime, duration, vel * 0.7, bendStartInterval || 0, style);
-            if (extraFreq2) playSoloNote(extraFreq2, playTime, duration, vel * 0.5, bendStartInterval || 0, style);
         }
         sb.lastNoteEnd = playTime + duration;
     }
@@ -309,9 +301,37 @@ function scheduleChordVisuals(chordData, t) {
 }
 
 function scheduleChords(chordData, step, time, stepInfo) {
-    const { chord, stepInChord } = chordData;
-    const pattern = chordPatterns[cb.style];
-    if (pattern) pattern(chord, time, 60.0 / ctx.bpm, stepInChord, step % getStepsPerMeasure(arranger.timeSignature), step, stepInfo);
+    const notes = cb.buffer.get(step);
+    cb.buffer.delete(step);
+    
+    if (notes && notes.length > 0) {
+        const spb = 60.0 / ctx.bpm;
+        notes.forEach(n => {
+            const { freq, velocity, timingOffset, durationSteps, muted, instrument, dry, ccEvents } = n;
+            const playTime = time + (timingOffset || 0);
+
+            // Handle Sustain Events
+            if (ccEvents && ccEvents.length > 0) {
+                ccEvents.forEach(cc => {
+                   if (cc.controller === 64) {
+                       const isSustain = cc.value >= 64;
+                       const ccTime = playTime + (cc.timingOffset || 0); 
+                       updateSustain(isSustain, ccTime);
+                   }
+               });
+            }
+
+            if (!muted && freq) {
+               const duration = (durationSteps || 1) * 0.25 * spb;
+               playNote(freq, playTime, duration, {
+                   vol: velocity, 
+                   index: 0, 
+                   instrument: instrument || 'Piano',
+                   dry: dry
+               });
+            }
+        });
+    }
 }
 
 function scheduleGlobalEvent(step, swungTime) {
@@ -455,7 +475,20 @@ function init() {
         initializePowerButtons();
         
         validateProgression(() => { renderChordVisualizer(); analyzeFormUI(); });
-        initWorker(() => scheduler(), (notes) => { notes.forEach(n => { if (n.module === 'bb') bb.buffer.set(n.step, n); else if (n.module === 'sb') sb.buffer.set(n.step, n); }); });
+        
+        // --- WORKER INIT ---
+        initWorker(() => scheduler(), (notes) => { 
+            notes.forEach(n => { 
+                if (n.module === 'bb') bb.buffer.set(n.step, n); 
+                else if (n.module === 'sb') sb.buffer.set(n.step, n); 
+                else if (n.module === 'cb') {
+                    if (!cb.buffer.has(n.step)) cb.buffer.set(n.step, []);
+                    cb.buffer.get(n.step).push(n);
+                }
+            }); 
+            if (ctx.isPlaying) scheduler(); // Run scheduler to consume new notes immediately
+        });
+        
         syncWorker(); document.querySelector('.app-main-layout').classList.add('loaded');
         const versionEl = document.getElementById('appVersion'); if (versionEl) versionEl.textContent = `Ensemble v${APP_VERSION}`;
     } catch (e) { console.error("Error during init:", e); }

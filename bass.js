@@ -131,7 +131,60 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     const result = (freq, durationMultiplier = null, velocity = 1.0, muted = false) => {
         let timingOffset = 0;
         if (style === 'neo') timingOffset = 0.015; // 15ms laid-back feel
-        return { freq, durationMultiplier, velocity, muted, timingOffset };
+        
+        // Convert freq to midi
+        const midi = getMidi(freq);
+        
+        // Calculate standard duration in steps if not provided
+        let durationSteps = durationMultiplier; // In this context, multiplier was often treated as steps or beats
+        
+        // If durationMultiplier is null, apply defaults based on style
+        if (durationSteps === null) {
+             if (style === 'whole') durationSteps = currentChord.beats * ts.stepsPerBeat;
+             else if (style === 'half') durationSteps = (stepsPerMeasure / 2);
+             else if (style === 'arp') durationSteps = (ts.stepsPerBeat); // Quarter note
+             else if (style === 'rock') durationSteps = (ts.stepsPerBeat * 0.75); // Dotted 8th-ish
+             else if (style === 'funk') durationSteps = (ts.stepsPerBeat * 0.5); // 8th
+             else durationSteps = ts.stepsPerBeat; // Quarter default
+        } else {
+             // If the legacy code passed a small multiplier (like 0.7 for rock), it was often relative to a beat
+             // But for 'bossa' it passed '2' which meant 2 steps? Or 2 beats?
+             // Looking at legacy: "durSteps = bassResult.durationMultiplier" vs "dur = 2"
+             // Let's standardize: The generator should return Steps.
+             // For rock/funk legacy passed "0.7" or "0.4" which were Seconds or Beats.
+             // Let's assume input was Beats if < 4, Steps if >= 4? 
+             // Actually, looking at the code:
+             // Rock: dur = 0.7 (Beats? Seconds?) -> "dur" was passed to result.
+             // Then in main.js: "duration = durationMultiplier ? 0.25 * spb * durationMultiplier : ..."
+             // So it was treating it as "Beats" (since 0.25 * spb * 4 = 1 beat). 
+             // Wait, spb = 60/bpm (1 beat duration). 
+             // main.js: "duration = durationMultiplier ? 0.25 * spb * durationMultiplier"
+             // If durationMultiplier is 1, duration = 0.25 beats. That seems wrong.
+             // Ah, spb in main.js "const spb = 60.0 / ctx.bpm" is Seconds Per Beat.
+             // So 0.25 * spb is a 16th note.
+             // So durationMultiplier was "Number of 16th notes" (Steps).
+             
+             // So if Rock passed 0.7... that's less than a step. 
+             // Let's fix this logic.
+             
+             if (style === 'rock') durationSteps = ts.stepsPerBeat * 0.7; // 70% of a beat
+             else if (style === 'funk') durationSteps = ts.stepsPerBeat * 0.4;
+             else if (style === 'bossa') durationSteps = durationMultiplier ? durationMultiplier * (ts.stepsPerBeat / 4) : ts.stepsPerBeat; // Legacy bossa passed '2' (steps?)
+             else durationSteps = durationMultiplier;
+        }
+
+        // Ensure we return steps (integers mostly, but floats ok for playback)
+        // For midi export, we'll round.
+        
+        return { 
+            midi, 
+            velocity, 
+            durationSteps: durationSteps || ts.stepsPerBeat, 
+            bendStartInterval: 0, 
+            ccEvents: [], 
+            muted, 
+            timingOffset 
+        };
     };
 
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
