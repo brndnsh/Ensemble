@@ -908,79 +908,74 @@ export function playDrumSound(name, time, velocity = 1.0) {
 
     } else if (name === 'HiHat' || name === 'Open') {
         const isOpen = name === 'Open';
-        // Reduced volume for open hihat (0.4) to sit back in the mix, kept tight (0.6) for closed
-        const vol = masterVol * (isOpen ? 0.4 : 0.6) * rr();
-        const duration = (isOpen ? 0.35 : 0.06) * rr();
+        const vol = masterVol * (isOpen ? 0.5 : 0.7) * rr();
 
-        // 0. Choking (Monophonic Cutoff for Hi-Hats)
+        // 1. Improved Choking Logic (Natural "Grab")
         if (gb.lastHatGain) {
             try {
                 const g = gb.lastHatGain.gain;
                 g.cancelScheduledValues(playTime);
-                // Sharp but smoothed kill to prevent clicks
-                g.setTargetAtTime(0, playTime, 0.002);
+                // Very fast exponential ramp (0.005s) to zero to prevent clicks
+                g.setTargetAtTime(0, playTime, 0.005);
             } catch (e) {}
         }
         
-        // 1. Metallic Bank (The "Ring")
-        const ratios = [2.0, 3.0, 4.16, 5.43, 6.79, 8.21];
-        const baseFreq = 42 * rr();
-        const metallicGain = ctx.audio.createGain();
-        // Reduce metallic component for Open hihats to emphasize the noise sizzle
-        metallicGain.gain.setValueAtTime(isOpen ? 0.25 : 0.5, playTime);
-        const oscs = ratios.map((r, i) => {
+        // 2. Metallic Bank (TR-808 Inharmonicity)
+        // 6 Square wave oscillators with specific non-integer ratios
+        const ratios = [2, 3, 4.16, 5.43, 6.79, 8.21];
+        const baseFreq = 40 * rr();
+        const oscs = ratios.map(r => {
             const o = ctx.audio.createOscillator();
-            // Mix square and triangle waves for a more complex metallic spectrum
-            o.type = (i % 3 === 0) ? 'square' : 'triangle';
+            o.type = 'square';
             o.frequency.setValueAtTime(baseFreq * r, playTime);
-            // Slight detuning to add natural inharmonicity and thickness
-            o.detune.setValueAtTime((Math.random() - 0.5) * 15, playTime);
             return o;
         });
 
-        // 2. Noise Layer (The "Sizzle")
-        const noise = ctx.audio.createBufferSource();
-        noise.buffer = gb.audioBuffers.noise;
+        // 3. Tone Shaping
+        // Bandpass (10kHz) followed by Highpass (7kHz) to remove low-frequency hiss
+        const bpFilter = ctx.audio.createBiquadFilter();
+        bpFilter.type = 'bandpass';
+        bpFilter.frequency.setValueAtTime(10000, playTime);
+        bpFilter.Q.value = 1.0;
 
         const hpFilter = ctx.audio.createBiquadFilter();
         hpFilter.type = 'highpass';
-        // Warmer, less harsh filter for open hihats (6000Hz base)
-        const baseCutoff = isOpen ? 6000 : 8000;
-        const cutoff = (baseCutoff + velocity * 3000) * rr();
-        
-        hpFilter.frequency.value = cutoff; // FF FIX
-        hpFilter.frequency.setValueAtTime(cutoff, playTime);
-        // Relaxed sweep (to 75% instead of 50%) to maintain crispness
-        hpFilter.frequency.setTargetAtTime(cutoff * 0.75, playTime, duration);
-        hpFilter.Q.value = 1.2;
-        hpFilter.Q.setValueAtTime(1.2, playTime);
-        
+        hpFilter.frequency.setValueAtTime(7000, playTime);
+
+        // 4. Envelope & Gain
         const gain = ctx.audio.createGain();
         gain.gain.value = 0;
         gain.gain.setValueAtTime(0, playTime);
-        // Use linear ramp for the initial snap to be more deterministic across browsers
-        gain.gain.linearRampToValueAtTime(vol, playTime + 0.003);
-        // Asymptotic decay for smooth tail
-        gain.gain.setTargetAtTime(0, playTime + 0.005, duration * 0.5);
+        
+        if (isOpen) {
+            // "Blooming" attack: slightly slower
+            gain.gain.setTargetAtTime(vol, playTime, 0.015);
+            // Longer decay (around 0.3s to 0.5s)
+            gain.gain.setTargetAtTime(0, playTime + 0.02, 0.35 * rr());
+        } else {
+            // Fast attack for closed hat
+            gain.gain.setTargetAtTime(vol, playTime, 0.002);
+            // Tight decay
+            gain.gain.setTargetAtTime(0, playTime + 0.005, 0.05 * rr());
+        }
 
         gb.lastHatGain = gain;
 
+        // Connections: Oscs -> BP -> HP -> Gain -> Master
         oscs.forEach(o => {
-            o.connect(metallicGain);
+            o.connect(bpFilter);
             o.start(playTime);
-            o.stop(playTime + duration + 0.2);
+            // Generous stop time to allow for decay tails
+            o.stop(playTime + (isOpen ? 2.0 : 0.4));
         });
-        metallicGain.connect(hpFilter);
-        noise.connect(hpFilter);
-        noise.start(playTime);
-        noise.stop(playTime + duration + 0.2);
 
+        bpFilter.connect(hpFilter);
         hpFilter.connect(gain);
         gain.connect(ctx.drumsGain);
 
         oscs[0].onended = () => {
             if (gb.lastHatGain === gain) gb.lastHatGain = null;
-            safeDisconnect([...oscs, noise, hpFilter, gain, metallicGain]);
+            safeDisconnect([...oscs, bpFilter, hpFilter, gain]);
         };
 
     } else if (name === 'Crash') {
