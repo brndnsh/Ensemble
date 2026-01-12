@@ -1,5 +1,5 @@
 import { arranger, cb, ctx, gb, bb, sb, vizState } from './state.js';
-import { getStepsPerMeasure, midiToNote } from './utils.js';
+import { getStepsPerMeasure, midiToNote, getStepInfo } from './utils.js';
 import { saveCurrentState } from './persistence.js';
 import { clearDrumPresetHighlight } from './instrument-controller.js';
 import { TIME_SIGNATURES } from './config.js';
@@ -34,7 +34,7 @@ export function initUI() {
         'vizPowerBtn', 'sectionList', 'addSectionBtn', 'templatesBtn', 'templatesContainer', 'templateChips',
         'activeSectionLabel', 'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
         'clearProgBtn', 'saveBtn', 'shareBtn', 'chordVisualizer', 'chordPresets', 'userPresetsContainer',
-        'chordStylePresets', 'bassStylePresets', 'soloistStylePresets',
+        'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'groupingToggle', 'groupingLabel',
         'chordReverb', 'bassReverb', 'soloistReverb', 'drumPresets', 'userDrumPresetsContainer',
         'sequencerGrid', 'measurePagination', 'drumBarsSelect', 'cloneMeasureBtn', 'autoFollowCheck',
         'humanizeSlider', 'saveDrumBtn', 'drumReverb', 'smartDrumPresets', 'settingsOverlay', 'settingsBtn',
@@ -296,6 +296,7 @@ export function renderGrid() {
     ui.sequencerGrid.innerHTML = '';
     const spm = getStepsPerMeasure(arranger.timeSignature);
     const totalSteps = gb.measures * spm;
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     
     gb.instruments.forEach(inst => {
         const row = document.createElement('div');
@@ -313,13 +314,15 @@ export function renderGrid() {
         
         const steps = document.createElement('div');
         steps.className = 'steps';
-        // Dynamically set columns based on total steps
         steps.style.gridTemplateColumns = `repeat(${totalSteps}, 1fr)`;
         
         for (let i = 0; i < totalSteps; i++) {
             const step = document.createElement('div');
             step.className = 'step';
-            if (i % 4 === 0) step.classList.add('beat-marker');
+            const stepInfo = getStepInfo(i, ts);
+            if (stepInfo.isGroupStart) step.classList.add('group-marker');
+            if (stepInfo.isBeatStart) step.classList.add('beat-marker');
+            
             if (inst.steps[i] === 1) step.classList.add('active');
             if (inst.steps[i] === 2) step.classList.add('accented');
             
@@ -354,11 +357,13 @@ export function renderGrid() {
     for (let i = 0; i < totalSteps; i++) {
         const lbl = document.createElement('div');
         lbl.className = 'step-label';
-        if (i % 4 === 0) {
-            lbl.textContent = (i / 4) + 1;
+        const stepInfo = getStepInfo(i, ts);
+        if (stepInfo.isBeatStart) {
+            lbl.textContent = stepInfo.beatIndex + 1;
             lbl.classList.add('beat-start');
+            if (stepInfo.isGroupStart) lbl.classList.add('group-start');
         } else {
-            lbl.textContent = (i % 4) + 1;
+            lbl.textContent = (i % ts.stepsPerBeat) + 1;
         }
         labelSteps.appendChild(lbl);
     }

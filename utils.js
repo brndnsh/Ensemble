@@ -88,10 +88,58 @@ export function decompressSections(str) {
  * @returns {number}
  */
 export function getStepsPerMeasure(ts) {
+    if (ts === '2/4') return 8;
     if (ts === '3/4') return 12;
     if (ts === '6/8') return 12;
+    if (ts === '7/8') return 14;
+    if (ts === '5/4') return 20;
     if (ts === '7/4') return 28;
     if (ts === '12/8') return 24;
-    if (ts === '5/4') return 20;
     return 16;
+}
+
+/**
+ * Returns detailed structural information about a specific step in a measure.
+ * @param {number} step - The global or measure-relative step.
+ * @param {Object} tsConfig - The time signature configuration from config.js.
+ * @returns {Object} { isMeasureStart, isGroupStart, isBeatStart, groupIndex, beatInGroup }
+ */
+export function getStepInfo(step, tsConfig) {
+    const spm = getStepsPerMeasure(`${tsConfig.beats}/${tsConfig.stepsPerBeat === 4 ? 4 : 8}`);
+    const mStep = step % spm;
+    const isMeasureStart = mStep === 0;
+    
+    const grouping = tsConfig.grouping || [tsConfig.beats];
+    const stepsPerBeat = tsConfig.stepsPerBeat;
+    
+    let accumulatedSteps = 0;
+    let isGroupStart = false;
+    let groupIndex = -1;
+    let stepInGroup = -1;
+
+    for (let i = 0; i < grouping.length; i++) {
+        const groupBeats = grouping[i];
+        const groupSteps = groupBeats * stepsPerBeat;
+        
+        if (mStep >= accumulatedSteps && mStep < accumulatedSteps + groupSteps) {
+            groupIndex = i;
+            stepInGroup = mStep - accumulatedSteps;
+            if (stepInGroup === 0) isGroupStart = true;
+            break;
+        }
+        accumulatedSteps += groupSteps;
+    }
+
+    const isBeatStart = (mStep % stepsPerBeat === 0);
+    const beatIndex = Math.floor(mStep / stepsPerBeat);
+
+    return {
+        isMeasureStart,
+        isGroupStart,
+        isBeatStart,
+        groupIndex,
+        stepInGroup,
+        beatIndex,
+        mStep
+    };
 }

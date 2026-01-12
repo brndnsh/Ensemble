@@ -1,6 +1,6 @@
 import { ctx, gb, cb, bb, sb, arranger } from './state.js';
 import { ui, showToast } from './ui.js';
-import { getMidi } from './utils.js';
+import { getMidi, getStepInfo } from './utils.js';
 import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 import { TIME_SIGNATURES } from './config.js';
@@ -22,7 +22,7 @@ const compingState = {
     lastChordIndex: -1
 };
 
-function updateCompingState(step, soloistBusy) {
+function updateCompingState(step, soloistBusy, spm = 16) {
     if (step < compingState.lockedUntil) return;
 
     const intensity = ctx.bandIntensity;
@@ -48,11 +48,15 @@ function updateCompingState(step, soloistBusy) {
             pool = PIANO_CELLS.sparse;
         } else if (compingState.currentVibe === 'active' && Math.random() < 0.3) {
             pool = PIANO_CELLS.active;
+        } else if (Math.random() < 0.2) {
+            pool = PIANO_CELLS.balanced;
         }
     }
 
-    compingState.currentCell = [...pool[Math.floor(Math.random() * pool.length)]];
-    compingState.lockedUntil = step + 16;
+    const rawCell = pool[Math.floor(Math.random() * pool.length)];
+    compingState.currentCell = new Array(spm).fill(0).map((_, i) => rawCell[i % rawCell.length]);
+
+    compingState.lockedUntil = step + spm;
 }
 
 const PPQ = 192; // Pulses per quarter note
@@ -222,11 +226,16 @@ const midiChordPatterns = {
     smart: (chord, stepInChord, measureStep, globalStep) => {
         const soloistBusy = sb.enabled && sb.busySteps > 0;
         const genre = gb.genreFeel;
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const spm = ts.beats * ts.stepsPerBeat;
+        const stepInfo = getStepInfo(globalStep, ts);
         
-        updateCompingState(globalStep, soloistBusy);
+        updateCompingState(globalStep, soloistBusy, spm);
 
-        const cellStep = measureStep % 16;
-        let isHit = compingState.currentCell[cellStep] === 1;
+        let isHit = compingState.currentCell[measureStep % spm] === 1;
+
+        if (measureStep === 0 && !isHit && Math.random() < 0.8) isHit = true;
+        if (stepInfo.isGroupStart && !isHit && Math.random() < (0.4 + ctx.bandIntensity * 0.4)) isHit = true;
 
         if (isHit) {
             let duration = 8.0; // Default long
@@ -234,10 +243,15 @@ const midiChordPatterns = {
             else if (genre === 'Jazz') duration = 1.0;
             else if (genre === 'Rock' || genre === 'Bossa') duration = 1.8;
 
-            const isDownbeat = cellStep % 4 === 0;
-            const velocity = (isDownbeat ? 0.7 : 0.45) * (0.8 + ctx.bandIntensity * 0.4);
+            const isDownbeat = stepInfo.isBeatStart;
+            const isStructural = stepInfo.isGroupStart;
+            const velocity = (isStructural ? 0.75 : (isDownbeat ? 0.7 : 0.45)) * (0.8 + ctx.bandIntensity * 0.4);
 
             let voicing = [...chord.freqs];
+            if (!isStructural && voicing.length > 3 && Math.random() < 0.5) {
+                voicing = voicing.slice(0, 3);
+            }
+
             if (bb.enabled && voicing.length > 3) {
                 voicing.shift();
                 if ((chord.is7th || chord.quality.includes('9')) && voicing.length > 3) {
@@ -251,7 +265,10 @@ const midiChordPatterns = {
         }
         return [];
     },
-    pad: (chord, stepInChord) => stepInChord === 0 ? [{ midi: chord.freqs.map(getMidi), dur: chord.beats * 4 }] : [],
+    pad: (chord, stepInChord) => {
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        return stepInChord === 0 ? [{ midi: chord.freqs.map(getMidi), dur: chord.beats * ts.stepsPerBeat }] : [];
+    },
     strum8: (chord, stepInChord, measureStep) => measureStep % 2 === 0 ? [{ midi: chord.freqs.map(getMidi), dur: 1 }] : [],
     pop: (chord, stepInChord, measureStep) => [0, 3, 6, 10, 12, 14].includes(measureStep) ? [{ midi: chord.freqs.map(getMidi), dur: 1.5 }] : [],
     rock: (chord, stepInChord, measureStep) => measureStep % 2 === 0 ? [{ midi: chord.freqs.map(getMidi), dur: 1 }] : [],
@@ -298,8 +315,9 @@ export function exportToMidi(options = {}) {
             return;
         }
 
-        const totalStepsOneLoop = arranger.progression.reduce((sum, c) => sum + Math.round(c.beats * 4), 0);
-        const loopSeconds = (totalStepsOneLoop / 4) * (60 / ctx.bpm);
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const totalStepsOneLoop = arranger.progression.reduce((sum, c) => sum + Math.round(c.beats * ts.stepsPerBeat), 0);
+        const loopSeconds = (totalStepsOneLoop / ts.stepsPerBeat) * (60 / ctx.bpm);
         
         let loopCount;
         if (loopMode === 'once') {
@@ -314,7 +332,6 @@ export function exportToMidi(options = {}) {
 
         const totalStepsExport = totalStepsOneLoop * loopCount;
 
-        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
         const drumLoopSteps = gb.measures * stepsPerMeasure;
         let soloistTimeInPulses = 0;
@@ -474,8 +491,11 @@ export function exportToMidi(options = {}) {
 
                                 if (shouldFill) {
                                     let targetEnergy = 0.5;
-                                    if (localConductor.form && localConductor.form.roles[nextIndex]) {
-                                        const role = localConductor.form.roles[nextIndex];
+                                    const nextSectionId = nextEntry.chord.sectionId;
+                                    const nextSection = localConductor.form && localConductor.form.sections.find(s => s.id === nextSectionId);
+
+                                    if (nextSection && nextSection.role) {
+                                        const role = nextSection.role;
                                         switch (role) {
                                             case 'Exposition': targetEnergy = 0.45; break;
                                             case 'Development': targetEnergy = Math.min(0.7, localCtx.bandIntensity + 0.15); break;
@@ -525,18 +545,17 @@ export function exportToMidi(options = {}) {
 
                 const drumStep = globalStep % drumLoopSteps;
 
-                // Find current chord
-                let current = 0, activeChord = null, stepInChord = 0, activeChordIndex = 0;
-                for (let i = 0; i < arranger.progression.length; i++) {
-                    const chord = arranger.progression[i];
-                    const chordSteps = Math.round(chord.beats * 4);
-                    if (step >= current && step < current + chordSteps) {
-                        activeChord = chord;
-                        stepInChord = step - current;
-                        activeChordIndex = i;
-                        break;
+                // Find current chord using the pre-calculated map
+                let activeChord = null, stepInChord = 0, activeChordIndex = 0;
+                const totalOneLoop = arranger.totalSteps;
+                if (totalOneLoop > 0) {
+                    const modStep = globalStep % totalOneLoop;
+                    const entry = arranger.stepMap.find(e => modStep >= e.start && modStep < e.end);
+                    if (entry) {
+                        activeChord = entry.chord;
+                        stepInChord = modStep - entry.start;
+                        activeChordIndex = arranger.stepMap.indexOf(entry);
                     }
-                    current += chordSteps;
                 }
 
                 // Add Chord Marker to Meta Track
@@ -580,11 +599,11 @@ export function exportToMidi(options = {}) {
                     if (isBassActive(bb.style, globalStep, stepInChord)) {
                         let nextChord = null, nextCurrent = 0;
                         for (const c of arranger.progression) {
-                            const cSteps = Math.round(c.beats * 4);
+                            const cSteps = Math.round(c.beats * ts.stepsPerBeat);
                             if (step + 4 >= nextCurrent && step + 4 < nextCurrent + cSteps) { nextChord = c; break; }
                             nextCurrent += cSteps;
                         }
-                        const bassResult = getBassNote(activeChord, nextChord, Math.floor(stepInChord / 4), lastBassFreq, bb.octave, bb.style, activeChordIndex, step, stepInChord, arranger.isMinor);
+                        const bassResult = getBassNote(activeChord, nextChord, stepInChord / ts.stepsPerBeat, lastBassFreq, bb.octave, bb.style, activeChordIndex, step, stepInChord, arranger.isMinor);
                         if (bassResult && bassResult.freq) {
                             // Enforce Monophony: Cut off previous bass note
                             for (let i = bassNotesOff.length - 1; i >= 0; i--) {
@@ -609,7 +628,7 @@ export function exportToMidi(options = {}) {
                             if (bassResult.durationMultiplier) {
                                 durSteps = bassResult.durationMultiplier;
                             } else {
-                                durSteps = (bb.style === 'whole' ? activeChord.beats : (bb.style === 'half' ? 2 : 1)) * 4;
+                                durSteps = (bb.style === 'whole' ? activeChord.beats : (bb.style === 'half' ? 2 : 1)) * ts.stepsPerBeat;
                             }
                             
                             // Use smaller gap for bass (5%) to keep it tighter/fuller, vs 10% for others
@@ -622,7 +641,7 @@ export function exportToMidi(options = {}) {
                 if (activeChord && includedTracks.includes('soloist')) {
                     let nextChord = null, nextCurrent = 0;
                     for (const c of arranger.progression) {
-                        const cSteps = Math.round(c.beats * 4);
+                        const cSteps = Math.round(c.beats * ts.stepsPerBeat);
                         if (step + 4 >= nextCurrent && step + 4 < nextCurrent + cSteps) { nextChord = c; break; }
                         nextCurrent += cSteps;
                     }
@@ -686,10 +705,9 @@ export function exportToMidi(options = {}) {
 
                 // Drums
                 if (includedTracks.includes('drums')) {
-                    const conductorVel = localCtx.conductorVelocity;
-                    const isDownbeat = measureStep === 0;
-                    const isQuarter = (measureStep % 4 === 0);
-                    const isBackbeat = (measureStep === 4 || measureStep === 12); 
+                    const isDownbeat = (drumStep % stepsPerMeasure === 0);
+                    const isQuarter = (measureStep % ts.stepsPerBeat === 0);
+                    const isBackbeat = (ts.beats === 4) ? (measureStep === ts.stepsPerBeat || measureStep === ts.stepsPerBeat * 3) : false;
                     
                     // Check Fill Expiration & Crash
                     if (localGB.fillActive) {
@@ -699,7 +717,7 @@ export function exportToMidi(options = {}) {
                             if (localGB.pendingCrash) {
                                 const midi = drumMap['Crash'];
                                 const delta = Math.max(0, currentTimeInPulses - drumTrack.currentTime);
-                                drumTrack.noteOn(delta, 9, midi, Math.min(127, Math.round(110 * conductorVel)));
+                                drumTrack.noteOn(delta, 9, midi, Math.min(127, Math.round(110 * localCtx.conductorVelocity)));
                                 drumTrack.currentTime = currentTimeInPulses;
                                 drumNotesOff.push({ time: currentTimeInPulses + Math.round(pulsesPerStep * 0.5), notes: [midi] });
                                 localGB.pendingCrash = false;
@@ -722,9 +740,9 @@ export function exportToMidi(options = {}) {
                                     notes.forEach(note => {
                                         const midi = drumMap[note.name];
                                         if (midi) {
+                                            const baseVel = Math.round(note.vel * 100 * localCtx.conductorVelocity);
+                                            const humanVel = Math.min(127, Math.max(40, Math.round(baseVel + (Math.random() * 10 - 5))));
                                             const delta = Math.max(0, currentTimeInPulses - drumTrack.currentTime);
-                                            const baseVel = Math.round(note.vel * 100 * conductorVel);
-                                            const humanVel = Math.min(127, Math.max(40, Math.round(baseVel + (Math.random() * 12 - 6))));
                                             drumTrack.noteOn(delta, 9, midi, humanVel);
                                             drumTrack.currentTime = currentTimeInPulses;
                                             drumNotesOff.push({ time: currentTimeInPulses + Math.round(pulsesPerStep * 0.5), notes: [midi] });
@@ -777,7 +795,7 @@ export function exportToMidi(options = {}) {
 
                                 const midi = drumMap[soundName];
                                 if (midi) {
-                                    const baseVel = velocity * 80 * conductorVel;
+                                    const baseVel = velocity * 80 * localCtx.conductorVelocity;
                                     const humanVel = Math.min(127, Math.max(40, Math.round(baseVel + (Math.random() * 12 - 6))));
                                     const delta = Math.max(0, currentTimeInPulses - drumTrack.currentTime);
                                     drumTrack.noteOn(delta, 9, midi, humanVel);
@@ -791,7 +809,7 @@ export function exportToMidi(options = {}) {
                                     if (Math.random() < (ctx.complexity * 0.35)) {
                                         const midi = drumMap['Snare'];
                                         const delta = Math.max(0, currentTimeInPulses - drumTrack.currentTime);
-                                        drumTrack.noteOn(delta, 9, midi, Math.round(15 * conductorVel));
+                                        drumTrack.noteOn(delta, 9, midi, Math.round(15 * localCtx.conductorVelocity));
                                         drumTrack.currentTime = currentTimeInPulses;
                                         drumNotesOff.push({ time: currentTimeInPulses + Math.round(pulsesPerStep * 0.5), notes: [midi] });
                                     }

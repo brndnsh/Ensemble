@@ -46,18 +46,23 @@
                     <h2>Arranger</h2>
                 </div>
                 <div class="panel-header-controls">
-                    <button id="maximizeChordBtn" title="Maximize" class="header-btn" aria-label="Maximize Chords">⛶</button>
                     <div class="key-controls">
-                        <select id="timeSigSelect" aria-label="Time Signature">
-                            <option value="4/4">4/4</option>
-                            <option value="3/4">3/4</option>
-                            <option value="2/4">2/4</option>
-                            <option value="5/4">5/4</option>
-                            <option value="6/8">6/8</option>
-                            <option value="7/8">7/8</option>
-                            <option value="7/4">7/4</option>
-                            <option value="12/8">12/8</option>
-                        </select>
+                        <button id="maximizeChordBtn" title="Maximize" class="header-btn" aria-label="Maximize Chords">⛶</button>
+                        <div class="time-sig-group">
+                            <select id="timeSigSelect" aria-label="Time Signature">
+                                <option value="4/4">4/4</option>
+                                <option value="3/4">3/4</option>
+                                <option value="2/4">2/4</option>
+                                <option value="5/4">5/4</option>
+                                <option value="6/8">6/8</option>
+                                <option value="7/8">7/8</option>
+                                <option value="7/4">7/4</option>
+                                <option value="12/8">12/8</option>
+                            </select>
+                            <div id="groupingToggle" style="display: none; align-items: center; justify-content: center;">
+                                <span id="groupingLabel" style="font-size: 0.65rem; color: var(--accent-color); font-weight: bold; cursor: pointer; padding: 1px 4px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 3px; min-width: 28px; text-align: center; margin-top: 2px;" title="Click to toggle grouping">3+2</span>
+                            </div>
+                        </div>
                         <select id="keySelect" aria-label="Select Key">
                             <option value="C">Key: C</option>
                             <option value="Db">Key: Db</option>

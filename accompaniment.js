@@ -79,7 +79,7 @@ export const PIANO_CELLS = {
 /**
  * Updates the rhythmic intent based on band intensity, genre, and soloist activity.
  */
-function updateRhythmicIntent(step, soloistBusy) {
+function updateRhythmicIntent(step, soloistBusy, spm = 16) {
     if (step < compingState.lockedUntil) return;
 
     const intensity = ctx.bandIntensity;
@@ -98,24 +98,26 @@ function updateRhythmicIntent(step, soloistBusy) {
     }
 
     // 2. Select Pool
-    // Priority: Genre-specific pool if available, otherwise fallback to Vibe pool
     let pool = PIANO_CELLS[genre] || PIANO_CELLS[compingState.currentVibe];
     
-    // Variety: Occasionally mix in vibe-specific cells even if genre is set
     if (PIANO_CELLS[genre]) {
         if (compingState.currentVibe === 'sparse' && Math.random() < 0.3) {
             pool = PIANO_CELLS.sparse;
         } else if (compingState.currentVibe === 'active' && Math.random() < 0.3) {
             pool = PIANO_CELLS.active;
         } else if (Math.random() < 0.2) {
-            // 20% chance to pull from balanced for generic variety
             pool = PIANO_CELLS.balanced;
         }
     }
 
-    compingState.currentCell = [...pool[Math.floor(Math.random() * pool.length)]];
+    const rawCell = pool[Math.floor(Math.random() * pool.length)];
+    
+    // 3. Adapt Cell to SPM
+    // If the cell is 16 steps but we have 20 (5/4), we loop or stretch. 
+    // For now, we'll repeat the cell or truncate it to fit the measure.
+    compingState.currentCell = new Array(spm).fill(0).map((_, i) => rawCell[i % rawCell.length]);
 
-    // 3. Apply Anticipation / Laying Back based on Genre
+    // 4. Apply Anticipation / Laying Back based on Genre
     ctx.intent.anticipation = (intensity * 0.2);
     if (genre === 'Jazz' || genre === 'Bossa') ctx.intent.anticipation += 0.15;
     
@@ -125,26 +127,22 @@ function updateRhythmicIntent(step, soloistBusy) {
     ctx.intent.layBack = (intensity < 0.4) ? 0.02 : 0; 
     if (genre === 'Neo-Soul') ctx.intent.layBack += 0.04;
 
-    compingState.lockedUntil = step + 16;
+    compingState.lockedUntil = step + spm;
 }
 
 /**
  * Intelligent Sustain Controller.
  * Clears mud and manages resonance based on harmonic and rhythmic context.
  */
-function handleSustain(step, measureStep, chordIndex, intensity, time, genre) {
+function handleSustain(step, measureStep, chordIndex, intensity, time, genre, stepInfo) {
     const isNewChord = chordIndex !== compingState.lastChordIndex;
     const isNewMeasure = measureStep === 0;
 
-    // GENRE PEDAL INHIBITION: 
-    // Reggae and Funk should be almost entirely dry. 
-    // Jazz should only pedal the downbeats.
     if (genre === 'Reggae' || genre === 'Funk') {
         updateSustain(false, time);
         return; 
     }
 
-    // 1. Force Clear on new measure or new chord
     if (isNewMeasure || isNewChord) {
         updateSustain(false, time);
         updateSustain(true, time);
@@ -152,17 +150,22 @@ function handleSustain(step, measureStep, chordIndex, intensity, time, genre) {
         return;
     }
 
-    const cellStep = measureStep % 16;
+    // Clear sustain on strong group beats to prevent mud in odd meters
+    if (stepInfo && stepInfo.isGroupStart && Math.random() < (intensity * 0.5)) {
+        updateSustain(false, time - 0.01);
+        updateSustain(true, time);
+        return;
+    }
+
+    const isBeat = stepInfo ? stepInfo.isBeatStart : (measureStep % 4 === 0);
     
-    // 2. Probabilistic Flutter
     const flutterProb = (intensity * 0.4);
-    if (cellStep % 4 === 0 && Math.random() < flutterProb) {
+    if (isBeat && Math.random() < flutterProb) {
         updateSustain(false, time - 0.015);
         updateSustain(true, time);
     }
 
-    // Jazz specific: Clear sustain after upbeats to prevent 'blurring' the stab
-    if (genre === 'Jazz' && cellStep % 4 !== 0) {
+    if (genre === 'Jazz' && !isBeat) {
         updateSustain(false, time + 0.1); 
     }
 }
@@ -171,22 +174,33 @@ export const chordPatterns = {
     /**
      * The new "Gold Standard" generative piano engine.
      */
-    smart: (chord, time, spb, stepInChord, measureStep, step) => {
+    smart: (chord, time, spb, stepInChord, measureStep, step, stepInfo) => {
         const soloistBusy = sb.enabled && sb.busySteps > 0;
         const chordIndex = arranger.progression.findIndex(c => c === chord);
         const genre = gb.genreFeel;
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const spm = ts.beats * ts.stepsPerBeat;
         
-        updateRhythmicIntent(step, soloistBusy);
-        handleSustain(step, measureStep, chordIndex, ctx.bandIntensity, time, genre);
+        updateRhythmicIntent(step, soloistBusy, spm);
+        handleSustain(step, measureStep, chordIndex, ctx.bandIntensity, time, genre, stepInfo);
 
-        const cellStep = measureStep % 16;
-        let isHit = compingState.currentCell[cellStep] === 1;
+        let isHit = compingState.currentCell[measureStep % spm] === 1;
+
+        // Force a hit on the "One" if the current cell is empty there
+        if (measureStep === 0 && !isHit && Math.random() < 0.8) isHit = true;
+        
+        // Ensure group starts have a high probability of being played
+        if (stepInfo && stepInfo.isGroupStart && !isHit && Math.random() < (0.4 + ctx.bandIntensity * 0.4)) {
+            isHit = true;
+        }
 
         if (isHit) {
-            // RHYTHMIC PUSH
             let timingOffset = 0;
+            const isDownbeat = stepInfo ? stepInfo.isBeatStart : (measureStep % 4 === 0);
+            const isStructural = stepInfo ? stepInfo.isGroupStart : (measureStep % 8 === 0);
+
             const pushProb = 0.15 + (ctx.bandIntensity * 0.2);
-            if (cellStep % 4 !== 0 && Math.random() < pushProb) {
+            if (!isDownbeat && Math.random() < pushProb) {
                 timingOffset = -0.025;
             }
 
@@ -195,20 +209,20 @@ export const chordPatterns = {
 
             const playTime = time + timingOffset;
             
-            // ARTICULATION SCALING
-            // Reggae/Funk: Very short (0.1s)
-            // Jazz: Short (0.2s)
-            // Rock/Bossa: Medium (0.4s)
-            // Neo-Soul/Default: Long (1.0s)
             let duration = spb * 2.0; 
             if (genre === 'Reggae' || genre === 'Funk') duration = 0.1;
             else if (genre === 'Jazz') duration = 0.25;
             else if (genre === 'Rock' || genre === 'Bossa') duration = 0.45;
 
-            const isDownbeat = cellStep % 4 === 0;
-            const velocity = (isDownbeat ? 0.35 : 0.22) * (0.8 + ctx.bandIntensity * 0.4);
+            const velocity = (isStructural ? 0.38 : (isDownbeat ? 0.32 : 0.22)) * (0.8 + ctx.bandIntensity * 0.4);
 
             let voicing = [...chord.freqs];
+            
+            // Grounded voicing: use more notes on structural anchors
+            if (!isStructural && voicing.length > 3 && Math.random() < 0.5) {
+                voicing = voicing.slice(0, 3); 
+            }
+
             if (bb.enabled && voicing.length > 3) {
                 voicing.shift();
                 if ((chord.is7th || chord.quality.includes('9')) && voicing.length > 3) {
@@ -219,7 +233,6 @@ export const chordPatterns = {
             }
 
             voicing.forEach((f, i) => {
-                // Micro-Humanization: Tiny random variations in timing and velocity
                 const humanShift = (Math.random() * 0.006) - 0.003;
                 const humanVol = 0.95 + (Math.random() * 0.1);
                 const stagger = (i * 0.008) + humanShift;

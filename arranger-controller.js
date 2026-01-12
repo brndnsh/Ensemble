@@ -14,7 +14,7 @@ export function analyzeFormUI() {
     const form = analyzeForm();
     if (form) {
         conductorState.form = form;
-        console.log(`Analyzed Form: ${form.type}`, form.roles);
+        console.log(`Analyzed Form: ${form.sequence}`, form.sections);
     }
 }
 

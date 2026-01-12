@@ -132,7 +132,20 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     };
 
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const grouping = arranger.grouping || ts.grouping || [ts.beats];
+    const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
+    const stepInMeasure = step % stepsPerMeasure;
+    
+    // Use the structural metadata to identify important anchors
     const isDownbeat = stepInChord % ts.stepsPerBeat === 0;
+    const isGroupStart = (() => {
+        let accumulated = 0;
+        for (let g of grouping) {
+            if (stepInMeasure === accumulated) return true;
+            accumulated += g * ts.stepsPerBeat;
+        }
+        return false;
+    })();
 
     // --- HARMONIC RESET ---
     // Beat 1 of a chord: Always land on Root or 5th
@@ -145,22 +158,22 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- HALF NOTE STYLE ---
     if (style === 'half') {
-        if (beatIndex === 0) return result(getFrequency(baseRoot));
-        const beatsInChord = Math.round(currentChord.beats);
-        if (beatIndex >= beatsInChord / 2 && nextChord && Math.random() < 0.5) {
-            let target = normalizeToRange(nextChord.rootMidi);
-            return result(getFrequency(target + (Math.random() < 0.5 ? 1 : -1)));
+        const halfStep = Math.floor(stepsPerMeasure / 2);
+        if (stepInChord % halfStep === 0) {
+            if (stepInChord === 0) return result(getFrequency(baseRoot));
+            const hasFlat5 = currentChord.quality === 'dim' || currentChord.quality === 'halfdim';
+            let fifth = baseRoot + (hasFlat5 ? 6 : 7);
+            return result(getFrequency(clampAndNormalize(fifth)));
         }
-        const hasFlat5 = currentChord.quality === 'dim' || currentChord.quality === 'halfdim';
-        let fifth = baseRoot + (hasFlat5 ? 6 : 7);
-        return result(getFrequency(clampAndNormalize(fifth)));
+        return null;
     }
 
     // --- ARP STYLE ---
     if (style === 'arp') {
         if (!isDownbeat) return null;
-        const beatInPattern = Math.floor(beatIndex) % 4;
-        if (beatInPattern === 0) return result(getFrequency(baseRoot));
+        const beatInMeasure = Math.floor(stepInMeasure / ts.stepsPerBeat);
+        const beatInPattern = beatInMeasure % 4;
+        if (beatInPattern === 0 || isGroupStart) return result(getFrequency(baseRoot));
         const intervals = currentChord.intervals; 
         let targetInterval = (beatInPattern === 1 || beatInPattern === 3) ? (intervals[1] || 4) : (intervals[2] || 7);
         return result(getFrequency(clampAndNormalize(baseRoot + targetInterval)));
@@ -168,43 +181,20 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- ROCK STYLE (8th Note Pedal) ---
     if (style === 'rock') {
-        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
-        const stepInMeasure = step % stepsPerMeasure;
+        const dur = 0.7; 
+        const isPulse = ts.pulse.includes(stepInMeasure);
+        const velocity = (isGroupStart || (isPulse && isDownbeat)) ? 1.25 : 1.1;
+
+        const lastBeatIndex = ts.beats - 1;
         const beat = Math.floor(stepInMeasure / ts.stepsPerBeat);
 
-        // Palm-muted feel (Cliff Williams / Nate Mendel tightness)
-        const dur = 0.7; 
-
-        // Driving 8ths, mostly Root
-        // Heavy accents on 1 and 3 (Michael Anthony thunder)
-        // 3rd beat index is 2
-        // Pulse accent based on meter config
-        const isPulse = ts.pulse.includes(stepInMeasure);
-        const velocity = isPulse && isDownbeat ? 1.25 : 1.1;
-
-        // Fills/Transitions (Nate Mendel melodic punch)
-        // Occurs on the last beat of the measure (Beat 4 in 4/4)
-        const lastBeatIndex = ts.beats - 1;
         if (beat === lastBeatIndex) {
-            // High energy fill probability
             if (Math.random() < 0.4) {
-                 // Mendel often uses higher register fills or drops 
-                 // Pattern: 8th notes on (Root -> 5th) or (Octave -> 5th)
-                 if (stepInMeasure === (lastBeatIndex * ts.stepsPerBeat)) { // 4
+                 if (stepInMeasure === (lastBeatIndex * ts.stepsPerBeat)) { 
                      const fillNote = Math.random() < 0.5 ? baseRoot + 12 : baseRoot + 7;
                      return result(getFrequency(clampAndNormalize(fillNote)), dur, 1.15);
                  }
-                 if (stepInMeasure === (lastBeatIndex * ts.stepsPerBeat) + (ts.stepsPerBeat / 2)) { // 4-and
-                     // Return to 5th or chromatic approach to next root
-                     const fillNote = Math.random() < 0.5 ? baseRoot + 7 : baseRoot + 5; 
-                     return result(getFrequency(clampAndNormalize(fillNote)), dur, 1.1);
-                 }
             }
-        }
-        
-        // Grit/Ghost notes (rarely, on the 'and' of weak beats)
-        if (!isDownbeat && !isPulse && Math.random() < 0.05) {
-             return result(getFrequency(baseRoot), dur, 0.8, true);
         }
         
         return result(getFrequency(baseRoot), dur, velocity);

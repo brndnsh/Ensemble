@@ -369,9 +369,35 @@ export function setupUIHandlers(refs) {
 
     ui.timeSigSelect.addEventListener('change', () => {
         arranger.timeSignature = ui.timeSigSelect.value;
+        arranger.grouping = null; // Reset to default for new time signature
+        
+        // Reload drum preset to adapt to new time signature (e.g. 4/4 -> 7/4)
+        if (gb.lastDrumPreset) {
+            loadDrumPreset(gb.lastDrumPreset);
+        }
+        
+        updateGroupingUI();
         validateAndAnalyze();
         saveCurrentState();
     });
+
+    if (ui.groupingLabel) {
+        ui.groupingLabel.addEventListener('click', () => {
+            const ts = arranger.timeSignature;
+            const options = GROUPING_OPTIONS[ts];
+            if (!options) return;
+
+            const current = arranger.grouping || TIME_SIGNATURES[ts].grouping;
+            const currentIndex = options.findIndex(opt => opt.join('+') === current.join('+'));
+            const nextIndex = (currentIndex + 1) % options.length;
+            
+            arranger.grouping = options[nextIndex];
+            updateGroupingUI();
+            flushBuffers();
+            syncWorker();
+            saveCurrentState();
+        });
+    }
 
     ui.notationSelect.addEventListener('change', () => {
         arranger.notation = ui.notationSelect.value;
@@ -518,4 +544,27 @@ export function setupUIHandlers(refs) {
 
     let resizeTimeout;
     window.addEventListener('resize', () => { if (resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = setTimeout(() => recalculateScrollOffsets(), 150); });
+
+    // Final UI Sync
+    updateGroupingUI();
+}
+
+const GROUPING_OPTIONS = {
+    '5/4': [[3, 2], [2, 3]],
+    '7/8': [[2, 2, 3], [3, 2, 2], [2, 3, 2]],
+    '7/4': [[4, 3], [3, 4]]
+};
+
+export function updateGroupingUI() {
+    if (!ui.groupingToggle || !ui.groupingLabel) return;
+    
+    const ts = arranger.timeSignature;
+    const hasOptions = GROUPING_OPTIONS[ts] !== undefined;
+    
+    ui.groupingToggle.style.display = hasOptions ? 'flex' : 'none';
+    
+    if (hasOptions) {
+        const current = arranger.grouping || TIME_SIGNATURES[ts].grouping;
+        ui.groupingLabel.textContent = current.join('+');
+    }
 }

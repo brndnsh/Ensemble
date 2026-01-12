@@ -76,21 +76,22 @@ export function generateProceduralFill(genre, intensity, stepsPerMeasure) {
     const template = options[Math.floor(Math.random() * options.length)];
     
     // Apply template to the LAST beat(s) of the measure
-    // Templates use steps 0-15 relative to a 1-bar measure.
-    // We assume the fill happens at the END of the measure.
-    
+    // Templates use steps relative to a standard 16-step measure (ending at 15).
+    // We shift them to align with the actual stepsPerMeasure.
+    const offset = stepsPerMeasure - 16;
+
     template.steps.forEach((stepIdx, i) => {
         const inst = template.instruments[i];
         const vel = template.velocities[i];
         
-        if (!fill[stepIdx]) fill[stepIdx] = [];
-        fill[stepIdx].push({ name: inst, vel });
+        const actualStep = stepIdx + offset;
+        
+        // Ensure we don't produce negative steps if the measure is super short
+        if (actualStep >= 0 && actualStep < stepsPerMeasure) {
+            if (!fill[actualStep]) fill[actualStep] = [];
+            fill[actualStep].push({ name: inst, vel });
+        }
     });
-    
-    // Crash on the '1' of the NEXT measure is handled by the caller or a separate flag?
-    // Usually fills end with a crash on the next downbeat.
-    // We can signal this by adding a special event at step 'stepsPerMeasure' (16) if we wanted,
-    // but the engine loops at 15. The Crash should be scheduled by the main loop on the next beat 0.
     
     return fill;
 }
