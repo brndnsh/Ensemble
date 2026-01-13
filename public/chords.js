@@ -44,7 +44,7 @@ export function getChordDetails(symbol) {
     else if (suffix === 'm9') quality = 'm9';
     else if (suffix === 'm7b5' || suffix === 'ø7' || suffix === 'ø' || suffix === 'h7' || symbol.includes('7b5')) quality = 'halfdim';
     else if (suffix === 'm6') quality = 'm6';
-    else if (suffix.includes('min') || suffix === 'm' || suffix === '-') quality = 'minor';
+    else if (suffix === 'm7' || suffix === 'min' || suffix === 'm' || suffix === '-') quality = 'minor';
     else if (suffix === 'o7' || (suffix === 'o' && is7th) || suffix === 'dim7' || suffix === '°7' || (suffix === '°' && is7th)) { quality = 'dim'; is7th = true; }
     else if (suffix === 'o' || suffix === 'dim' || suffix === '°') quality = 'dim';
     else if (suffix.includes('aug') || suffix === '+') quality = 'aug';

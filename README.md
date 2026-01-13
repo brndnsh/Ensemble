@@ -14,16 +14,16 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ## Usage
 
-Ensemble uses vanilla JavaScript with ES Modules and requires no build step. Serve the root directory with any local static file server:
+Ensemble uses vanilla JavaScript with ES Modules and requires no build step. Serve the **public** directory with any local static file server:
 
 ### Using Python
 ```bash
-python3 -m http.server 8000
+python3 -m http.server 8000 --directory public
 ```
 
 ### Using Node.js
 ```bash
-npx serve .
+npx serve public
 ```
 
 Navigate to `http://localhost:8000` to start playing.
