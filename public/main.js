@@ -232,6 +232,36 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
         let shouldPlay = stepVal > 0;
         let soundName = inst.name;
 
+                            // --- Funk Procedural Overrides ---
+                            if (gb.genreFeel === 'Funk' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                // 1. Intelligent Snare Ghosting
+                                if (inst.name === 'Snare' && stepVal === 0) {
+                                    // Target "e" (1) and "a" (3) subdivisions for syncopation
+                                    const isSubdivision = loopStep % 4 !== 0 && loopStep % 4 !== 2; 
+                                    if (isSubdivision) {
+                                        const kickInst = gb.instruments.find(i => i.name === 'Kick');
+                                        const kickPlaying = kickInst && kickInst.steps[step] > 0;
+                                        
+                                        // Avoid masking the kick; syncopate against it
+                                        if (!kickPlaying && Math.random() < (ctx.complexity * 0.5)) { 
+                                            shouldPlay = true;
+                                            velocity = 0.15 + (Math.random() * 0.1); 
+                                        }
+                                    }
+                                }
+                                
+                                // 2. Dynamic Hi-Hat Barks
+                                if (inst.name === 'HiHat' && shouldPlay) {
+                                    // Open high-hat on the "ah" (last 16th of a beat) creates a "lifting" feel
+                                    if (loopStep % 4 === 3 && Math.random() < (ctx.bandIntensity * 0.35)) {
+                                        soundName = 'Open';
+                                        velocity *= 1.1; // Accent the bark
+                                    }
+                                }
+                            }
+
                             // --- Jazz Procedural Overrides ---
 
                             if (gb.genreFeel === 'Jazz' && !inst.muted) {
@@ -361,8 +391,6 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                 }
             }
             playDrumSound(soundName, finalTime, velocity * conductorVel);
-        } else if (stepVal === 0 && !inst.muted && inst.name === 'Snare' && (gb.genreFeel === 'Funk' || gb.genreFeel === 'Jazz') && ctx.complexity > 0.4 && Math.random() < (ctx.complexity * 0.35)) {
-            playDrumSound('Snare', finalTime, 0.15 * conductorVel);
         }
     });
 }
