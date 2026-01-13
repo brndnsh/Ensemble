@@ -262,7 +262,11 @@ export function updateSustain(active, time = null) {
  */
 export function killAllPianoNotes() {
     const now = ctx.audio?.currentTime || 0;
-    heldNotes.forEach(note => note.stop(now));
+    heldNotes.forEach(note => {
+        if (typeof note.stop === 'function') {
+            note.stop(now, true);
+        }
+    });
     heldNotes.clear();
     ctx.sustainActive = false;
 }
@@ -272,7 +276,7 @@ export function killSoloistNote() {
         try {
             const g = sb.lastSoloistGain.gain;
             g.cancelScheduledValues(ctx.audio.currentTime);
-            g.setTargetAtTime(0, ctx.audio.currentTime, 0.01);
+            g.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
         } catch(e) {}
         sb.lastSoloistGain = null;
     }
@@ -283,7 +287,7 @@ export function killBassNote() {
         try {
             const g = bb.lastBassGain.gain;
             g.cancelScheduledValues(ctx.audio.currentTime);
-            g.setTargetAtTime(0, ctx.audio.currentTime, 0.01);
+            g.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
         } catch(e) {}
         bb.lastBassGain = null;
     }
@@ -293,7 +297,7 @@ export function killChordBus() {
     if (ctx.audio && ctx.chordsGain) {
         const t = ctx.audio.currentTime;
         ctx.chordsGain.gain.cancelScheduledValues(t);
-        ctx.chordsGain.gain.setTargetAtTime(0, t, 0.02);
+        ctx.chordsGain.gain.setTargetAtTime(0, t, 0.008);
     }
 }
 
@@ -301,7 +305,7 @@ export function killBassBus() {
     if (ctx.audio && ctx.bassGain) {
         const t = ctx.audio.currentTime;
         ctx.bassGain.gain.cancelScheduledValues(t);
-        ctx.bassGain.gain.setTargetAtTime(0, t, 0.02);
+        ctx.bassGain.gain.setTargetAtTime(0, t, 0.008);
     }
 }
 
@@ -309,7 +313,7 @@ export function killSoloistBus() {
     if (ctx.audio && ctx.soloistGain) {
         const t = ctx.audio.currentTime;
         ctx.soloistGain.gain.cancelScheduledValues(t);
-        ctx.soloistGain.gain.setTargetAtTime(0, t, 0.02);
+        ctx.soloistGain.gain.setTargetAtTime(0, t, 0.008);
     }
 }
 
@@ -318,7 +322,7 @@ export function killDrumNote() {
         try {
             const g = gb.lastHatGain.gain;
             g.cancelScheduledValues(ctx.audio.currentTime);
-            g.setTargetAtTime(0, ctx.audio.currentTime, 0.01);
+            g.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
         } catch(e) {}
         gb.lastHatGain = null;
     }
@@ -328,7 +332,7 @@ export function killDrumBus() {
     if (ctx.audio && ctx.drumsGain) {
         const t = ctx.audio.currentTime;
         ctx.drumsGain.gain.cancelScheduledValues(t);
-        ctx.drumsGain.gain.setTargetAtTime(0, t, 0.02);
+        ctx.drumsGain.gain.setTargetAtTime(0, t, 0.008);
     }
 }
 
@@ -469,10 +473,10 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         mainGain.gain.setValueAtTime(0, startTime);
         mainGain.gain.setTargetAtTime(vol * (preset.gainMult || 1.0), startTime, preset.attack);
 
-        const stopNote = (t) => {
+        const stopNote = (t, isPanic = false) => {
             mainGain.gain.cancelScheduledValues(t);
-            // Sharp damping for staccato, smoother for sustained
-            const dampingConstant = (duration < 0.2) ? 0.02 : 0.12;
+            // Sharp damping for staccato, smoother for sustained, very fast for panic
+            const dampingConstant = isPanic ? 0.005 : (duration < 0.2 ? 0.02 : 0.12);
             mainGain.gain.setTargetAtTime(0, t, dampingConstant); 
             try { osc.stop(t + 0.5); } catch(e) {}
         };
