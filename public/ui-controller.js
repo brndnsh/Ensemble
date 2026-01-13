@@ -1,5 +1,5 @@
 import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
-import { ctx, cb, bb, sb, gb, arranger, vizState, storage } from './state.js';
+import { ctx, cb, bb, sb, gb, arranger, vizState, storage, dispatch } from './state.js';
 import { saveCurrentState, renderUserPresets, renderUserDrumPresets } from './persistence.js';
 import { restoreGains } from './engine.js';
 import { syncWorker } from './worker-client.js';
@@ -18,19 +18,19 @@ import { applyConductor } from './conductor.js';
 
 export function updateStyle(type, styleId) {
     const UPDATE_STYLE_CONFIG = {
-        chord: { state: cb, selector: '.chord-style-chip', field: 'style' },
-        bass: { state: bb, selector: '.bass-style-chip', field: 'style' },
-        soloist: { state: sb, selector: '.soloist-style-chip', field: 'style' }
+        chord: { selector: '.chord-style-chip', module: 'cb' },
+        bass: { selector: '.bass-style-chip', module: 'bb' },
+        soloist: { selector: '.soloist-style-chip', module: 'sb' }
     };
     const c = UPDATE_STYLE_CONFIG[type];
     if (!c) return;
-    const field = c.field || 'style';
-    c.state[field] = styleId;
+    
+    dispatch('SET_STYLE', { module: c.module, style: styleId });
+
     document.querySelectorAll(c.selector).forEach(chip => {
         chip.classList.toggle('active', chip.dataset.id === styleId);
     });
 
-    syncWorker();
     flushBuffers();
     restoreGains();
     saveCurrentState();
@@ -150,7 +150,7 @@ export function setupUIHandlers(refs) {
     if (ui.intensitySlider) {
         ui.intensitySlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
-            ctx.bandIntensity = val / 100;
+            dispatch('SET_BAND_INTENSITY', val / 100);
             if (ui.intensityValue) ui.intensityValue.textContent = `${val}%`;
             applyConductor();
         });
@@ -159,7 +159,7 @@ export function setupUIHandlers(refs) {
     if (ui.complexitySlider) {
         ui.complexitySlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
-            ctx.complexity = val / 100;
+            dispatch('SET_COMPLEXITY', val / 100);
             if (ui.complexityValue) {
                 let label = 'Low';
                 if (val > 33) label = 'Medium';
@@ -172,7 +172,7 @@ export function setupUIHandlers(refs) {
 
     if (ui.autoIntensityCheck) {
         ui.autoIntensityCheck.addEventListener('change', (e) => {
-            ctx.autoIntensity = e.target.checked;
+            dispatch('SET_AUTO_INTENSITY', e.target.checked);
             ui.intensitySlider.disabled = ctx.autoIntensity;
             if (ctx.autoIntensity) {
                 ui.intensitySlider.style.opacity = 0.5;
@@ -193,15 +193,16 @@ export function setupUIHandlers(refs) {
             gb.lastSmartGenre = genre;
             const config = SMART_GENRES[genre];
             if (config) {
-                gb.genreFeel = config.feel;
-                gb.swing = config.swing;
+                dispatch('SET_GENRE_FEEL', {
+                    feel: config.feel,
+                    swing: config.swing,
+                    sub: config.sub
+                });
                 ui.swingSlider.value = config.swing;
                 if (config.sub) {
-                    gb.swingSub = config.sub;
                     ui.swingBase.value = config.sub;
                 }
                 loadDrumPreset(config.drum);
-                syncWorker();
                 saveCurrentState();
                 showToast(`Switched to ${genre} feel`);
             }
@@ -435,9 +436,8 @@ export function setupUIHandlers(refs) {
     });
 
     ui.densitySelect.addEventListener('change', e => { 
-        cb.density = e.target.value; 
+        dispatch('SET_DENSITY', e.target.value); 
         validateAndAnalyze(); 
-        syncWorker();
         flushBuffers(); 
         saveCurrentState();
     });

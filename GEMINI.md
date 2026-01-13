@@ -7,7 +7,7 @@ Ensemble is a high-performance Progressive Web App (PWA) designed for generative
 *   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `fills`).
 *   **Core Logic**: Orchestrated by `main.js` (scheduling/timing) and `conductor.js` (global dynamics/intensity management). Includes the **Smart Grooves** system, a multi-module architecture where `gb.genreFeel` and `ctx.bandIntensity` drive procedural behaviors across drums (`main.js`, `fills.js`), piano (`accompaniment.js`), bass (`bass.js`), and soloist (`soloist.js`).
 *   **Audio Engine**: Built on the **Web Audio API**. Synthesis logic is decentralized within individual engine files and orchestrated by `engine.js`.
-*   **State Management**: Centralized reactive state defined in `state.js` with comprehensive JSDoc typing.
+*   **State Management**: Centralized reactive state defined in `state.js` utilizing an Event Bus pattern. State objects (`ctx`, `arranger`, etc.) are exported for read access, but modifications MUST be performed via the `dispatch` function to ensure decoupling and worker synchronization.
 *   **Performance**: Off-main-thread musical calculations are handled by `logic-worker.js` via `worker-client.js` to ensure jitter-free audio and UI responsiveness.
 *   **UI/UX**: Vanilla CSS using Solarized color variables. Responsive design focused on mobile practice sessions.
 
@@ -40,7 +40,7 @@ Ensemble is a zero-dependency project and requires no build step.
 *   **Vanilla JS**: No external frameworks or libraries (except for PWA polyfills if needed).
 *   **ES Modules**: Use `import`/`export` for all logic. Maintain a flat or shallow directory structure.
 *   **Styling**: Use CSS variables defined in `:root` (Solarized theme). Avoid hardcoded hex values in component styles.
-*   **State Access**: Always prefer accessing state through the `ctx`, `arranger`, and instrument-specific objects (`gb`, `cb`, `bb`, `sb`) imported from `state.js`.
+*   **State Access**: Read state through the exported objects (`ctx`, `arranger`, `gb`, etc.). **NEVER** modify these objects directly. Use `dispatch(action, payload)` from `state.js` to trigger updates.
 *   **Precision Timing**: Use `ctx.audio.currentTime` for all audio scheduling. Visual events should be pushed to `ctx.drawQueue` for synchronization in the `requestAnimationFrame` loop.
 *   **Mobile First**: Prioritize performance and touch-target sizes for mobile devices. Prefer simplified visuals over complex effects if they cause lag on low-end hardware.
 
@@ -49,3 +49,4 @@ Ensemble is a zero-dependency project and requires no build step.
 *   When modifying musical logic, refer to `config.js` for constants regarding scales, intervals, and drum presets.
 *   Ensure all new features respect the `bandIntensity` and `complexity` signals from the conductor.
 *   Always maintain JSDoc comments in `state.js` when updating the state schema.
+*   **Worker Sync**: When refreshing the engine state, ensure `syncWorker()` (or `dispatch`) is called **before** `flushBuffers()` so the worker uses the latest state. Call `restoreGains()` **after** `flushBuffers()` to prevent audio bus silence.

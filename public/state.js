@@ -286,3 +286,111 @@ export const storage = {
         localStorage.setItem(`ensemble_${key}`, JSON.stringify(val));
     }
 };
+
+// --- Event Bus / State Manager ---
+
+const listeners = new Set();
+const stateMap = { ctx, cb, bb, sb, gb, arranger, vizState };
+
+/**
+ * Dispatch a state change action.
+ * @param {string} action - The action type (e.g., 'SET_INTENSITY', 'UPDATE_STYLE').
+ * @param {*} [payload] - The data associated with the action.
+ */
+export function dispatch(action, payload) {
+    switch (action) {
+        // --- Global / Conductor ---
+        case 'SET_BAND_INTENSITY':
+            ctx.bandIntensity = Math.max(0, Math.min(1, payload));
+            break;
+        case 'SET_PARAM':
+            if (stateMap[payload.module]) stateMap[payload.module][payload.param] = payload.value;
+            break;
+        case 'SET_COMPLEXITY':
+            ctx.complexity = Math.max(0, Math.min(1, payload));
+            break;
+        case 'SET_AUTO_INTENSITY':
+            ctx.autoIntensity = !!payload;
+            break;
+        case 'UPDATE_CONDUCTOR_DECISION': 
+            // Composite update from Conductor
+            if (payload.density) cb.density = payload.density;
+            if (payload.velocity) ctx.conductorVelocity = payload.velocity;
+            if (payload.hookProb) sb.hookRetentionProb = payload.hookProb;
+            if (payload.intent) Object.assign(ctx.intent, payload.intent);
+            break;
+
+        // --- Instrument Settings ---
+        case 'SET_STYLE':
+            // payload: { module: 'cb'|'bb'|'sb', style: 'smart' }
+            if (stateMap[payload.module]) stateMap[payload.module].style = payload.style;
+            break;
+        case 'SET_DENSITY':
+            cb.density = payload;
+            break;
+        case 'SET_VOLUME':
+            // payload: { module: 'cb', value: 0.5 }
+            if (stateMap[payload.module]) stateMap[payload.module].volume = payload.value;
+            break;
+        case 'SET_REVERB':
+            if (stateMap[payload.module]) stateMap[payload.module].reverb = payload.value;
+            break;
+        case 'SET_OCTAVE':
+            if (stateMap[payload.module]) stateMap[payload.module].octave = payload.value;
+            break;
+        
+        // --- Groove / Drums ---
+        case 'SET_SWING':
+            gb.swing = payload;
+            break;
+        case 'SET_SWING_SUB':
+            gb.swingSub = payload;
+            break;
+        case 'SET_HUMANIZE':
+            gb.humanize = payload;
+            break;
+        case 'SET_AUTO_FOLLOW':
+            gb.autoFollow = payload;
+            break;
+        case 'SET_GENRE_FEEL':
+            // payload: { feel: 'Rock', swing: 0, sub: '8th' }
+            gb.genreFeel = payload.feel;
+            if (payload.swing !== undefined) gb.swing = payload.swing;
+            if (payload.sub !== undefined) gb.swingSub = payload.sub;
+            break;
+        case 'TRIGGER_FILL':
+            gb.fillSteps = payload.steps;
+            gb.fillActive = true;
+            gb.fillStartStep = payload.startStep;
+            gb.fillLength = payload.length;
+            gb.pendingCrash = !!payload.crash;
+            break;
+        
+        // --- Options ---
+        case 'SET_METRONOME':
+            ctx.metronome = payload;
+            break;
+        case 'SET_PRESET_SETTINGS_MODE':
+            ctx.applyPresetSettings = payload;
+            break;
+        case 'SET_PRACTICE_MODE':
+            cb.practiceMode = payload;
+            break;
+        case 'SET_NOTATION':
+            arranger.notation = payload;
+            break;
+    }
+
+    // Notify listeners
+    listeners.forEach(listener => listener(action, payload, stateMap));
+}
+
+/**
+ * Subscribe to state changes.
+ * @param {Function} listener - Callback function receiving (action, payload, state).
+ * @returns {Function} Unsubscribe function.
+ */
+export function subscribe(listener) {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+}

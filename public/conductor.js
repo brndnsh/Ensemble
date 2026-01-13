@@ -1,4 +1,4 @@
-import { ctx, cb, sb, gb, arranger } from './state.js';
+import { ctx, cb, sb, gb, arranger, dispatch } from './state.js';
 import { ui, triggerFlash } from './ui.js';
 import { getSectionEnergy } from './form-analysis.js';
 import { debounceSaveState } from './persistence.js';
@@ -18,20 +18,30 @@ export function applyConductor() {
     const complexity = ctx.complexity;   // 0.0 - 1.0
 
     // --- 1. Master Dynamics ---
-    if (intensity < 0.4) cb.density = 'thin';
-    else if (intensity > 0.85) cb.density = 'rich';
-    else cb.density = 'standard';
-    if (ui.densitySelect) ui.densitySelect.value = cb.density;
+    let targetDensity = 'standard';
+    if (intensity < 0.4) targetDensity = 'thin';
+    else if (intensity > 0.85) targetDensity = 'rich';
+    
+    if (ui.densitySelect && ui.densitySelect.value !== targetDensity) {
+        ui.densitySelect.value = targetDensity;
+    }
 
-    ctx.conductorVelocity = 0.8 + (intensity * 0.3); // 0.8x to 1.1x
+    const targetVelocity = 0.8 + (intensity * 0.3); // 0.8x to 1.1x
 
     // --- 2. Complexity / Busyness ---
-    sb.hookRetentionProb = 0.2 + (complexity * 0.6);
+    const targetHookProb = 0.2 + (complexity * 0.6);
 
     // --- 3. Musical Conversation (Soloist Density) ---
     // If soloist is active, the accompanist should "listen" and back off.
     const isSoloistBusy = sb.enabled && sb.busySteps > 0;
-    ctx.intent.density = isSoloistBusy ? (0.3 * (1 - complexity)) : (0.5 + intensity * 0.4);
+    const targetIntentDensity = isSoloistBusy ? (0.3 * (1 - complexity)) : (0.5 + intensity * 0.4);
+
+    dispatch('UPDATE_CONDUCTOR_DECISION', {
+        density: targetDensity,
+        velocity: targetVelocity,
+        hookProb: targetHookProb,
+        intent: { density: targetIntentDensity }
+    });
 
     // --- 4. Intensity-Aware Mixing ---
     if (ctx.masterLimiter && ctx.audio) {
@@ -55,10 +65,12 @@ export function updateAutoConductor() {
     if (Math.abs(ctx.bandIntensity - conductorState.target) > 0.001) {
         // Asymmetric ramping: humans tend to build energy gradually but can stop/drop quickly
         const multiplier = (ctx.bandIntensity > conductorState.target) ? 2.5 : 1.0;
-        ctx.bandIntensity += ((ctx.bandIntensity < conductorState.target) ? Math.abs(conductorState.stepSize) : -Math.abs(conductorState.stepSize)) * multiplier;
-        ctx.bandIntensity = Math.max(0.01, Math.min(1.0, ctx.bandIntensity));
+        let newIntensity = ctx.bandIntensity + ((ctx.bandIntensity < conductorState.target) ? Math.abs(conductorState.stepSize) : -Math.abs(conductorState.stepSize)) * multiplier;
+        newIntensity = Math.max(0.01, Math.min(1.0, newIntensity));
         
-        const val = Math.round(ctx.bandIntensity * 100);
+        dispatch('SET_BAND_INTENSITY', newIntensity);
+        
+        const val = Math.round(newIntensity * 100);
         if (ui.intensitySlider) {
             if (parseInt(ui.intensitySlider.value) !== val) {
                 ui.intensitySlider.value = val;
@@ -166,11 +178,13 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
                     targetEnergy = Math.max(0.3, Math.min(0.95, targetEnergy + (Math.random() * 0.2 - 0.1)));
                 }
 
-                gb.fillSteps = generateProceduralFill(gb.genreFeel, ctx.bandIntensity, stepsPerMeasure);
-                gb.fillActive = true;
-                gb.fillStartStep = currentStep;
-                gb.fillLength = stepsPerMeasure;
-                gb.pendingCrash = true;
+                const fillSteps = generateProceduralFill(gb.genreFeel, ctx.bandIntensity, stepsPerMeasure);
+                dispatch('TRIGGER_FILL', {
+                    steps: fillSteps,
+                    startStep: currentStep,
+                    length: stepsPerMeasure,
+                    crash: true
+                });
                 
                 if (ui.visualFlash && ui.visualFlash.checked) {
                     triggerFlash(0.25);
@@ -200,15 +214,16 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
 
     // If we missed the full fill window, or chose not to fill, insert a tiny transition cue at the very end.
     if (isTransition && modStep === sectionEnd - 1 && !gb.fillActive && ctx.bandIntensity > 0.4) {
-        gb.fillSteps = {
-            0: [
-                { name: 'Kick', vel: 0.6 }, // Ghost Kick
-                { name: 'Open', vel: 0.9 }  // Bark
-            ]
-        };
-        gb.fillActive = true;
-        gb.fillStartStep = currentStep;
-        gb.fillLength = 1;
-        gb.pendingCrash = true;
+        dispatch('TRIGGER_FILL', {
+            steps: {
+                0: [
+                    { name: 'Kick', vel: 0.6 }, // Ghost Kick
+                    { name: 'Open', vel: 0.9 }  // Bark
+                ]
+            },
+            startStep: currentStep,
+            length: 1,
+            crash: true
+        });
     }
 }
