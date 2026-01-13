@@ -45,14 +45,14 @@ describe('Bass Engine', () => {
     describe('Note Generation', () => {
         it('should return a Root note frequency on the downbeat (step 0)', () => {
             for(let i=0; i<100; i++) {
-                const result = getBassNote(mockChord, null, 0, null, 41, 'rock', 0, 0, 0);
+                const result = getBassNote(mockChord, null, 0, null, 38, 'rock', 0, 0, 0);
                 expect(result).not.toBeNull();
                 expect(result.midi % 12).toBe(0); // Should be C
             }
         });
 
         it('should stay within a reasonable range of the center MIDI', () => {
-            const center = 41;
+            const center = 38;
             for(let i=0; i<100; i++) {
                 const result = getBassNote(mockChord, null, 0, null, center, 'rock', 0, 0, 0);
                 expect(result.midi).toBeGreaterThanOrEqual(center - 15);

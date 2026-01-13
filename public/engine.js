@@ -561,12 +561,13 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
         
         // Boosted volume multiplier for better mix presence, mixed with input velocity
         const vol = 1.1 * velocity * (0.95 + Math.random() * 0.1);
+        const isPop = velocity > 1.1 && !muted;
         
         // Volume safety threshold: don't trigger DSP for near-silent notes
         if (vol < 0.005) return;
 
         // Allow slight tonal bleed for muted notes for realism
-        const tonalVol = muted ? vol * 0.2 : vol;
+        const tonalVol = muted ? vol * 0.15 : vol;
     
         // Body (Fundamental + warmth)
         const oscBody = ctx.audio.createOscillator();
@@ -575,59 +576,64 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
 
         // Growl/String character (Harmonics)
         const oscGrowl = ctx.audio.createOscillator();
-        oscGrowl.type = 'sawtooth';
+        oscGrowl.type = isPop ? 'sawtooth' : 'sawtooth'; // Both use sawtooth but different filtering
         oscGrowl.frequency.setValueAtTime(freq, startTime);
         const growlGain = ctx.audio.createGain();
-        growlGain.gain.setTargetAtTime(tonalVol * 0.4, startTime, 0.005);
-        growlGain.gain.setTargetAtTime(0, startTime + duration * 0.5, 0.1);
+        growlGain.gain.setTargetAtTime(tonalVol * (isPop ? 0.6 : 0.4), startTime, 0.005);
+        growlGain.gain.setTargetAtTime(0, startTime + duration * (isPop ? 0.3 : 0.5), 0.1);
 
         const growlFilter = ctx.audio.createBiquadFilter();
         growlFilter.type = 'lowpass';
-        const dynamicCutoff = 800 + (vol * 1500); 
+        const dynamicCutoff = (isPop ? 3000 : 800) + (vol * 1500); 
         growlFilter.frequency.value = dynamicCutoff; // FF stability fix
         growlFilter.frequency.setTargetAtTime(dynamicCutoff, startTime, 0.01);
-        growlFilter.Q.value = 2;
-        growlFilter.Q.setValueAtTime(2, startTime);
+        growlFilter.Q.value = isPop ? 3 : 2;
+        growlFilter.Q.setValueAtTime(isPop ? 3 : 2, startTime);
 
-        // Percussive Thump (Finger/Pick noise)
+        // Percussive Thump (Finger/Pick noise / Slap)
         const thump = ctx.audio.createBufferSource();
         thump.buffer = gb.audioBuffers.noise;
         const thumpFilter = ctx.audio.createBiquadFilter();
-        thumpFilter.type = 'lowpass';
-        thumpFilter.frequency.value = 600;
-        thumpFilter.frequency.setValueAtTime(600, startTime);
+        thumpFilter.type = muted ? 'bandpass' : 'lowpass';
+        thumpFilter.frequency.value = muted ? 800 : 600;
+        thumpFilter.frequency.setValueAtTime(muted ? 800 : 600, startTime);
+        if (muted) thumpFilter.Q.value = 2.0;
+
         const thumpGain = ctx.audio.createGain();
-        const thumpTargetVol = vol * (muted ? 0.4 : 0.2);
+        const thumpTargetVol = vol * (muted ? 0.6 : (isPop ? 0.35 : 0.2));
         
-        // Use smooth curves for the thump too
         thumpGain.gain.value = 0;
-        thumpGain.gain.setTargetAtTime(thumpTargetVol, startTime, 0.002);
-        thumpGain.gain.setTargetAtTime(0, startTime + 0.02, 0.01);
+        thumpGain.gain.setTargetAtTime(thumpTargetVol, startTime, 0.001);
+        thumpGain.gain.setTargetAtTime(0, startTime + (muted ? 0.015 : 0.02), 0.01);
         
         thump.connect(thumpFilter);
         thumpFilter.connect(thumpGain);
         
         const mainFilter = ctx.audio.createBiquadFilter();
         mainFilter.type = 'lowpass';
-        const targetCutoff = 1000 + (tonalVol * 2000);
+        const targetCutoff = (isPop ? 4000 : 1000) + (tonalVol * 2000);
         mainFilter.frequency.value = targetCutoff;
         mainFilter.frequency.setValueAtTime(targetCutoff, startTime);
-        mainFilter.frequency.setTargetAtTime(600, startTime + 0.02, duration * 0.5);
+        mainFilter.frequency.setTargetAtTime(isPop ? 1000 : 600, startTime + 0.02, duration * 0.5);
+
+        // Slap/Pop Resonant Peak
+        const popPeak = ctx.audio.createBiquadFilter();
+        popPeak.type = 'peaking';
+        popPeak.frequency.value = 2200; // Lowered from 2500 to move away from nasal range
+        popPeak.Q.value = 2.5; // Lowered from 5 to reduce resonance
+        popPeak.gain.value = isPop ? 7 : 0; // Lowered from 12
+        if (isPop) popPeak.gain.setTargetAtTime(0, startTime + 0.05, 0.05);
 
         const gain = ctx.audio.createGain();
-        // Initialize to 0 to prevent snap from default 1.0
         gain.gain.value = 0;
         gain.gain.setValueAtTime(0, startTime);
-        // Smooth 10ms attack
-        gain.gain.setTargetAtTime(tonalVol, startTime, 0.01);
+        // Slightly softer attack for Pop (4ms instead of 2ms) to reduce "quack"
+        gain.gain.setTargetAtTime(tonalVol, startTime, isPop ? 0.004 : 0.01);
         
-        const sustainDuration = (muted ? 0.02 : duration * 0.2);
+        const sustainDuration = (muted ? 0.01 : (isPop ? duration * 0.1 : duration * 0.2));
         const sustainEnd = startTime + sustainDuration;
         
-        // Single smooth exponential decay. 
-        // 50ms time constant means it's effectively silent (-60dB) after 250ms.
-        // This avoids any "corners" caused by mixing ramp types.
-        gain.gain.setTargetAtTime(0, sustainEnd, 0.05);
+        gain.gain.setTargetAtTime(0, sustainEnd, isPop ? 0.03 : 0.05);
 
         oscBody.connect(mainFilter);
         oscGrowl.connect(growlFilter);
@@ -635,7 +641,8 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
         growlGain.connect(mainFilter);
         
         thumpGain.connect(gain);
-        mainFilter.connect(gain);
+        mainFilter.connect(popPeak);
+        popPeak.connect(gain);
         gain.connect(ctx.bassGain);
 
         // Monophonic Cutoff: Stop previous bass note if it's still ringing

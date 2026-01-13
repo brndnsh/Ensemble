@@ -58,6 +58,11 @@ const LICK_LIBRARY = {
         { name: '5th Enclosure', notes: [{o:0, i:8, d:1}, {o:1, i:6, d:1}, {o:2, i:7, d:2}] },
         { name: 'Bebop Run', notes: [{o:0, i:11, d:1}, {o:1, i:10, d:1}, {o:2, i:9, d:1}, {o:3, i:7, d:1}] },
         { name: 'Double Chromatic', notes: [{o:0, i:2, d:1}, {o:1, i:1, d:1}, {o:2, i:-1, d:1}, {o:3, i:0, d:1}] }
+    ],
+    bossa: [
+        { name: 'Lyrical 3rd', notes: [{o:0, i:4, d:4}, {o:6, i:3, d:2}, {o:8, i:2, d:4}] },
+        { name: 'Syncopated Triad', notes: [{o:0, i:0, d:2}, {o:3, i:4, d:2}, {o:6, i:7, d:4}] },
+        { name: 'Descending 9th', notes: [{o:0, i:14, d:2}, {o:2, i:11, d:2}, {o:4, i:7, d:4}] }
     ]
 };
 
@@ -124,14 +129,25 @@ const STYLE_CONFIG = {
         tensionScale: 0.5,
         timingJitter: 5,
         maxNotesPerPhrase: 14
+    },
+    bossa: {
+        restBase: 0.3,
+        restGrowth: 0.07,
+        cells: [0, 6, 8, 10, 2], 
+        registerSoar: 8,
+        tensionScale: 0.7,
+        timingJitter: 18,
+        maxNotesPerPhrase: 12
     }
 };
 
 // --- Helpers ---
 
-function getScaleForChord(chord, nextChord, style) {
+export function getScaleForChord(chord, nextChord, style) {
     const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;
-    const isDominant = chord.intervals.includes(10) && chord.intervals.includes(4);
+    const isDominant = chord.quality.startsWith('7') || 
+                       ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(chord.quality) ||
+                       (chord.intervals.includes(10) && chord.intervals.includes(4));
     const isV7toMinor = isDominant && nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
     
     // 1. Tension High? Altered/Diminished
@@ -147,6 +163,10 @@ function getScaleForChord(chord, nextChord, style) {
     
     if (style === 'neo') {
         if (['maj7', 'major'].includes(chord.quality)) return [0, 2, 4, 6, 7, 9, 11]; // Lydian
+    }
+
+    if (style === 'bossa' && chord.quality === 'maj7') {
+        return [0, 2, 4, 6, 7, 9, 11]; // Lydian (classic Bossa color)
     }
 
     // 3. Chord Scale Logic (Prioritize Chord Quality over Diatonic Key)
@@ -198,7 +218,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (arranger.lastChordPreset === 'Minor Blues') {
             style = 'blues';
         } else {
-            const mapping = { 'Rock': 'shred', 'Jazz': 'bird', 'Funk': 'blues', 'Blues': 'blues', 'Neo-Soul': 'neo', 'Disco': 'disco' };
+            const mapping = { 
+                'Rock': 'shred', 'Jazz': 'bird', 'Funk': 'blues', 'Blues': 'blues', 
+                'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 'Bossa Nova': 'bossa',
+                'Afrobeat': 'blues' // Afrobeat uses soulful/bluesy leads
+            };
             style = mapping[gb.genreFeel] || 'scalar';
         }
     }
@@ -467,8 +491,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                     // These are notes that are "in the scale" but clash horribly with chord tones
                     let isClash = false;
                     
-                    const isDominant = currentChord.intervals.includes(10) && currentChord.intervals.includes(4);
-                    const isMajorLike = ['major', 'maj7'].includes(currentChord.quality) || isDominant;
+                    const isDominant = currentChord.quality.startsWith('7') || 
+                                     ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(currentChord.quality) ||
+                                     (currentChord.intervals.includes(10) && currentChord.intervals.includes(4));
+                    
+                    const isMajorLike = ['major', 'maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(currentChord.quality) || isDominant;
                     
                     // 1. Avoid 4th (5 semitones) on Major/Dominant chords (Clashes with 3rd)
                     if (isMajorLike && interval === 5) isClash = true;
