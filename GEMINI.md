@@ -50,3 +50,12 @@ Ensemble is a zero-dependency project and requires no build step.
 *   Ensure all new features respect the `bandIntensity` and `complexity` signals from the conductor.
 *   Always maintain JSDoc comments in `state.js` when updating the state schema.
 *   **Worker Sync**: When refreshing the engine state, ensure `syncWorker()` (or `dispatch`) is called **before** `flushBuffers()` so the worker uses the latest state. Call `restoreGains()` **after** `flushBuffers()` to prevent audio bus silence.
+
+## Roadmap & Future Goals
+
+The project is currently transitioning from static loop-based accompaniment to "Smart Grooves"—generative, intensity-aware engines. Future work focuses on:
+
+1.  **Bass Engine**: Implementing chromatic walking logic for Jazz, "Slap & Pop" synthesis for Funk, and micro-timing (Dilla feel) for Neo-Soul.
+2.  **Accompaniment Engine**: Transitioning to rootless jazz voicings, implementing Reggae "Bubble/Skank" dual-lane logic, and quartal harmony for modern genres.
+3.  **Authenticity Verification**: Expanding the probabilistic testing suite (`*.test.js`) to ensure genre-specific rhythmic and harmonic anchors are maintained over long durations.
+4.  **Reference-Driven Tuning**: Calibrating velocity maps and timing offsets against classic genre recordings to achieve a "pro-level" musical feel.
