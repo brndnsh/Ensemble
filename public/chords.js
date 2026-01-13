@@ -64,6 +64,7 @@ export function getChordDetails(symbol) {
     else if (suffix === '13') quality = '13';
     else if (suffix === '11') quality = '11';
     else if (suffix === '9') quality = '9';
+    else if (suffix === '7') quality = '7';
     else if (suffix === '6') quality = '6';
     else if (suffix === '5') quality = '5';
 
@@ -440,10 +441,11 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     else if (quality === '5') intervals = [0, 7];
 
     if (is7th || quality === 'halfdim') {
-        if (quality.startsWith('maj')) intervals.push(11);
+        const isMajor7th = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
+        if (isMajor7th) intervals.push(11);
         else if (quality === 'dim') { if (!intervals.includes(9)) intervals.push(9); }
         else if (quality === 'halfdim') { if (!intervals.includes(10)) intervals.push(10); }
-        else if (!intervals.includes(10) && !quality.startsWith('maj') && quality !== '5' && quality !== '6' && quality !== 'm6') {
+        else if (!intervals.includes(10) && !isMajor7th && quality !== '5' && quality !== '6' && quality !== 'm6') {
             intervals.push(10); 
         }
     }
