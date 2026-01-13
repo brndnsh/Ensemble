@@ -262,6 +262,35 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                                 }
                             }
 
+                            // --- Reggae Procedural Overrides ---
+                            if (gb.genreFeel === 'Reggae' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                // Dynamic Style Switching based on Intensity
+                                if (inst.name === 'Kick') {
+                                    // 1. Steppers (High Intensity) - Four on the floor
+                                    if (ctx.bandIntensity > 0.7) {
+                                        shouldPlay = (loopStep % 4 === 0);
+                                        if (shouldPlay) velocity = 1.15;
+                                    } 
+                                    // 2. Rockers (Medium Intensity) - Kick on 1 and 3
+                                    // (Preset "One Drop" is on 3 only)
+                                    else if (ctx.bandIntensity > 0.45) {
+                                        // Add Kick on Beat 1 (Step 0)
+                                        if (loopStep === 0) {
+                                            shouldPlay = true;
+                                            velocity = 1.1;
+                                        }
+                                        // Ensure Beat 3 is playing
+                                        if (loopStep === 8) {
+                                            shouldPlay = true;
+                                            velocity = 1.15;
+                                        }
+                                    }
+                                    // Low intensity = Default "One Drop" (Kick on 3 only)
+                                }
+                            }
+
                             // --- Jazz Procedural Overrides ---
 
                             if (gb.genreFeel === 'Jazz' && !inst.muted) {
