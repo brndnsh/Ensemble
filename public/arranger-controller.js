@@ -2,6 +2,7 @@ import { arranger, cb, ctx, gb } from './state.js';
 import { ui, renderSections, renderChordVisualizer, showToast, updateKeySelectLabels } from './ui.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
+import { restoreGains } from './engine.js';
 import { syncWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
 import { generateId, normalizeKey } from './utils.js';
@@ -33,7 +34,9 @@ export function clearChordPresetHighlight() {
 export function refreshArrangerUI() {
     renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateAndAnalyze();
+    syncWorker();
     flushBuffers();
+    restoreGains();
     saveCurrentState();
 }
 
@@ -106,7 +109,6 @@ export function transposeKey(delta, updateRelKeyButton) {
     }
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(ui.keySelect.value));
     const newKey = KEY_ORDER[(currentIndex + delta + 12) % 12];
-    console.log("[Arranger] Transposing key by", delta, ":", ui.keySelect.value, "->", newKey);
     ui.keySelect.value = newKey;
     arranger.key = newKey;
     
@@ -133,19 +135,16 @@ export function transposeKey(delta, updateRelKeyButton) {
     refreshArrangerUI();
     if (updateRelKeyButton) updateRelKeyButton();
     updateKeySelectLabels();
-    syncWorker();
 }
 
 export function switchToRelativeKey(updateRelKeyButton) {
     const wasMinor = !!arranger.isMinor;
-    console.log("[Arranger] Toggling relative key. Current:", arranger.key, wasMinor ? 'Minor' : 'Major');
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(arranger.key));
     const shift = wasMinor ? 3 : -3;
     const newKey = KEY_ORDER[(currentIndex + shift + 12) % 12];
     
     arranger.key = newKey;
     arranger.isMinor = !wasMinor;
-    console.log("[Arranger] New state:", arranger.key, arranger.isMinor ? 'Minor' : 'Major');
     
     if (ui.keySelect) {
         ui.keySelect.value = newKey;
@@ -165,6 +164,5 @@ export function switchToRelativeKey(updateRelKeyButton) {
     }
     updateKeySelectLabels();
     refreshArrangerUI();
-    syncWorker();
     showToast(`Switched to Relative ${arranger.isMinor ? 'Minor' : 'Major'}: ${newKey}${arranger.isMinor ? 'm' : ''}`);
 }

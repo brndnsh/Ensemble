@@ -1,4 +1,4 @@
-import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
+import { ctx, gb, cb, bb, sb, vizState, storage, arranger, subscribe } from './state.js';
 import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
@@ -518,6 +518,9 @@ function init() {
             }); 
             if (ctx.isPlaying) scheduler(); // Run scheduler to consume new notes immediately
         });
+        
+        // Auto-sync worker on state changes
+        subscribe(() => syncWorker());
         
         syncWorker(); document.querySelector('.app-main-layout').classList.add('loaded');
         const versionEl = document.getElementById('appVersion'); if (versionEl) versionEl.textContent = `Ensemble v${APP_VERSION}`;

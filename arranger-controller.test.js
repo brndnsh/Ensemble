@@ -55,6 +55,10 @@ vi.mock('./public/form-analysis.js', () => ({
     analyzeForm: vi.fn()
 }));
 
+vi.mock('./public/engine.js', () => ({
+    restoreGains: vi.fn()
+}));
+
 vi.mock('./public/conductor.js', () => ({
     conductorState: {}
 }));
