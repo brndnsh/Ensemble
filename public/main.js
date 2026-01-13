@@ -596,7 +596,7 @@ function updateDrumVis(ev) {
     if (ctx.lastActiveDrumElements) ctx.lastActiveDrumElements.forEach(s => s.classList.remove('playing'));
     const spm = getStepsPerMeasure(arranger.timeSignature);
     const stepMeasure = Math.floor(ev.step / spm);
-    if (gb.autoFollow && stepMeasure !== gb.currentMeasure && ctx.isPlaying) switchMeasure(stepMeasure, true);
+    if (gb.followPlayback && stepMeasure !== gb.currentMeasure && ctx.isPlaying) switchMeasure(stepMeasure, true);
     const offset = gb.currentMeasure * spm;
     if (ev.step >= offset && ev.step < offset + spm) {
         const activeSteps = gb.cachedSteps[ev.step - offset];
@@ -654,7 +654,28 @@ function init() {
             }
             if (savedState.bb) { bb.enabled = savedState.bb.enabled !== undefined ? savedState.bb.enabled : false; bb.style = savedState.bb.style || 'smart'; bb.octave = savedState.bb.octave; bb.volume = savedState.bb.volume; bb.reverb = savedState.bb.reverb; }
             if (savedState.sb) { sb.enabled = savedState.sb.enabled !== undefined ? savedState.sb.enabled : false; sb.style = savedState.sb.style || 'smart'; sb.octave = (savedState.sb.octave === 77 || savedState.sb.octave === 67 || savedState.sb.octave === undefined) ? 72 : savedState.sb.octave; sb.volume = savedState.sb.volume; sb.reverb = savedState.sb.reverb; }
-            if (savedState.gb) { gb.enabled = savedState.gb.enabled !== undefined ? savedState.gb.enabled : true; gb.volume = savedState.gb.volume; gb.reverb = savedState.gb.reverb; gb.swing = savedState.gb.swing; gb.swingSub = savedState.gb.swingSub; gb.measures = savedState.gb.measures || 1; gb.humanize = savedState.gb.humanize !== undefined ? savedState.gb.humanize : 20; gb.autoFollow = savedState.gb.autoFollow !== undefined ? savedState.gb.autoFollow : true; gb.lastDrumPreset = savedState.gb.lastDrumPreset || 'Standard'; if (savedState.gb.pattern) { savedState.gb.pattern.forEach(savedInst => { const inst = gb.instruments.find(i => i.name === savedInst.name); if (inst) { inst.steps.fill(0); savedInst.steps.forEach((v, i) => { if (i < 128) inst.steps[i] = v; }); } }); } gb.genreFeel = savedState.gb.genreFeel || 'Rock'; gb.lastSmartGenre = savedState.gb.lastSmartGenre || 'Rock'; gb.activeTab = savedState.gb.activeTab || 'smart'; gb.mobileTab = savedState.gb.mobileTab || 'chords'; gb.currentMeasure = 0; }
+            if (savedState.gb) { 
+                gb.enabled = savedState.gb.enabled !== undefined ? savedState.gb.enabled : true; 
+                gb.volume = savedState.gb.volume; 
+                gb.reverb = savedState.gb.reverb; 
+                gb.swing = savedState.gb.swing; 
+                gb.swingSub = savedState.gb.swingSub; 
+                gb.measures = savedState.gb.measures || 1; 
+                gb.humanize = savedState.gb.humanize !== undefined ? savedState.gb.humanize : 20; 
+                gb.followPlayback = savedState.gb.followPlayback !== undefined ? savedState.gb.followPlayback : (savedState.gb.autoFollow !== undefined ? savedState.gb.autoFollow : true); 
+                gb.lastDrumPreset = savedState.gb.lastDrumPreset || 'Standard'; 
+                if (savedState.gb.pattern) { 
+                    savedState.gb.pattern.forEach(savedInst => { 
+                        const inst = gb.instruments.find(i => i.name === savedInst.name); 
+                        if (inst) { inst.steps.fill(0); savedInst.steps.forEach((v, i) => { if (i < 128) inst.steps[i] = v; }); } 
+                    }); 
+                } 
+                gb.genreFeel = savedState.gb.genreFeel || 'Rock'; 
+                gb.lastSmartGenre = savedState.gb.lastSmartGenre || 'Rock'; 
+                gb.activeTab = savedState.gb.activeTab || 'smart'; 
+                gb.mobileTab = savedState.gb.mobileTab || 'chords'; 
+                gb.currentMeasure = 0; 
+            }
             ui.keySelect.value = arranger.key; ui.timeSigSelect.value = arranger.timeSignature; ui.bpmInput.value = ctx.bpm;
             if (ui.intensitySlider) { ui.intensitySlider.value = Math.round(ctx.bandIntensity * 100); if (ui.intensityValue) ui.intensityValue.textContent = `${ui.intensitySlider.value}%`; ui.intensitySlider.disabled = ctx.autoIntensity; ui.intensitySlider.style.opacity = ctx.autoIntensity ? 0.5 : 1; }
             if (ui.complexitySlider) { ui.complexitySlider.value = Math.round(ctx.complexity * 100); let label = 'Low'; if (ctx.complexity > 0.33) label = 'Medium'; if (ctx.complexity > 0.66) label = 'High'; if (ui.complexityValue) ui.complexityValue.textContent = label; }
@@ -662,7 +683,7 @@ function init() {
             document.querySelectorAll('.genre-btn').forEach(btn => { btn.classList.toggle('active', btn.dataset.genre === gb.lastSmartGenre); });
             ui.notationSelect.value = arranger.notation; ui.densitySelect.value = cb.density; 
             if (ui.practiceModeCheck) ui.practiceModeCheck.checked = cb.practiceMode;
-            ui.octave.value = cb.octave; ui.bassOctave.value = bb.octave; ui.soloistOctave.value = sb.octave; ui.chordVol.value = cb.volume; ui.chordReverb.value = cb.reverb; ui.bassVol.value = bb.volume; ui.bassReverb.value = bb.reverb; ui.soloistVol.value = sb.volume; ui.soloistReverb.value = sb.reverb; ui.drumVol.value = gb.volume; ui.drumReverb.value = gb.reverb; ui.swingSlider.value = gb.swing; ui.swingBase.value = gb.swingSub; ui.humanizeSlider.value = gb.humanize; ui.autoFollowCheck.checked = gb.autoFollow; ui.drumBarsSelect.value = gb.measures; ui.metronome.checked = ctx.metronome; ui.applyPresetSettings.checked = ctx.applyPresetSettings;
+            ui.octave.value = cb.octave; ui.bassOctave.value = bb.octave; ui.soloistOctave.value = sb.octave; ui.chordVol.value = cb.volume; ui.chordReverb.value = cb.reverb; ui.bassVol.value = bb.volume; ui.bassReverb.value = bb.reverb; ui.soloistVol.value = sb.volume; ui.soloistReverb.value = sb.reverb; ui.drumVol.value = gb.volume; ui.drumReverb.value = gb.reverb; ui.swingSlider.value = gb.swing; ui.swingBase.value = gb.swingSub; ui.humanizeSlider.value = gb.humanize; ui.drumBarsSelect.value = gb.measures; ui.metronome.checked = ctx.metronome; ui.applyPresetSettings.checked = ctx.applyPresetSettings;
             applyTheme(ctx.theme); updateOctaveLabel(ui.octaveLabel, cb.octave); updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg); updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
         } else { 
             applyTheme('auto'); 

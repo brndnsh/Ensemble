@@ -203,16 +203,19 @@ export function resetToDefaults() {
     cb.instrument = 'Clean';
     cb.octave = 65;
     cb.density = 'standard';
+    cb.activeTab = 'smart';
     
     bb.volume = 0.45;
     bb.reverb = 0.05;
     bb.octave = 38;
     bb.style = 'smart';
+    bb.activeTab = 'smart';
     
     sb.volume = 0.5;
     sb.reverb = 0.6;
     sb.octave = 72;
     sb.style = 'smart';
+    sb.activeTab = 'smart';
     
     gb.volume = 0.5;
     gb.reverb = 0.2;
