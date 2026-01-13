@@ -393,7 +393,7 @@ function getRootlessVoicing(quality, is7th, isRich) {
 
     if (isDominant) {
         // Alt Dominants
-        if (quality === '7alt') return [4, 10, 13, 15, 20]; // 3, b7, b9, #9, b13
+        if (quality === '7alt') return [4, 10, 13, 15, 18, 20]; // 3, b7, b9, #9, #11, b13
         if (quality === '7b9') return [4, 10, 13, 20];      // 3, b7, b9, b13
         if (quality === '7#9') return [4, 10, 15, 20];      // 3, b7, #9, b13
         if (quality === '7b13') return [4, 10, 14, 20];     // 3, b7, 9, b13
@@ -407,7 +407,7 @@ function getRootlessVoicing(quality, is7th, isRich) {
     }
 
     if (quality === 'dim') return [3, 6, 9, 14];      // b3, b5, bb7, 9
-    if (quality === 'halfdim') return [3, 10, 14, 17]; // b3, b7, 9, 11
+    if (quality === 'halfdim') return [3, 6, 10];     // b3, b5, b7
 
     return null; // Fallback to standard triads
 }
@@ -437,7 +437,7 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     }
     
     if (quality === 'dim') intervals = [0, 3, 6];
-    else if (quality === 'halfdim') intervals = [0, 3, 6];
+    else if (quality === 'halfdim') intervals = [0, 3, 6, 10]; // 1, b3, b5, b7
     else if (quality === 'aug') intervals = [0, 4, 8];
     else if (quality === 'sus4') intervals = [0, 5, 7];
     else if (quality === 'sus2') intervals = [0, 2, 7];
@@ -465,7 +465,9 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
         const isMajor7th = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
         if (isMajor7th) intervals.push(11);
         else if (quality === 'dim') { if (!intervals.includes(9)) intervals.push(9); }
-        else if (quality === 'halfdim') { if (!intervals.includes(10)) intervals.push(10); }
+        else if (quality === 'halfdim') { 
+            // b7 already added above for halfdim
+        }
         else if (!intervals.includes(10) && !isMajor7th && quality !== '5' && quality !== '6' && quality !== 'm6') {
             intervals.push(10); 
         }
@@ -473,9 +475,26 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
 
     if (density === 'thin' && intervals.length >= 4) {
         if (intervals.includes(7)) intervals = intervals.filter(i => i !== 7);
-    } else if (isRich && intervals.length <= 4 && quality !== '5') {
-        if (!intervals.includes(14) && !intervals.includes(13) && !intervals.includes(15) && quality !== 'sus2') {
-            intervals.push(14);
+    } else if (isRich && intervals.length <= 5 && quality !== '5') {
+        // SMART EXTENSIONS: Add safe tensions based on chord quality
+        const safeExtensions = {
+            'major': [14],      // 9
+            'maj7': [14, 18],   // 9, #11
+            'minor': [14, 17],   // 9, 11
+            'm7': [14, 17],     // 9, 11
+            '7': [14, 21],      // 9, 13
+            'halfdim': [17],    // 11 (Natural 9 is dangerous)
+            '7alt': [13, 15, 20], // b9, #9, b13
+            '9': [21],          // 13
+            '13': [18]          // #11
+        };
+
+        const potential = safeExtensions[quality] || [14];
+        for (const ext of potential) {
+            if (!intervals.includes(ext) && !intervals.includes(ext % 12)) {
+                intervals.push(ext);
+                if (intervals.length >= 5) break; // Don't over-clutter
+            }
         }
     }
     return intervals;

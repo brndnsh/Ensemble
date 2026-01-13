@@ -168,11 +168,18 @@ function fillBuffers(currentStep) {
                 const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
                 const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
-                if (soloResult && (soloResult.freq || soloResult.midi)) {
-                    if (!soloResult.midi) soloResult.midi = getMidi(soloResult.freq);
-                    if (!soloResult.freq) soloResult.freq = 440 * Math.pow(2, (soloResult.midi - 69) / 12);
-                    sb.lastFreq = soloResult.freq;
-                    notesToMain.push({ ...soloResult, step, module: 'sb' });
+                
+                if (soloResult) {
+                    const results = Array.isArray(soloResult) ? soloResult : [soloResult];
+                    results.forEach(res => {
+                        if (res.freq || res.midi) {
+                            if (!res.midi) res.midi = getMidi(res.freq);
+                            if (!res.freq) res.freq = 440 * Math.pow(2, (res.midi - 69) / 12);
+                            // We only update lastFreq for the primary note (usually the first one)
+                            if (!res.isDoubleStop) sb.lastFreq = res.freq;
+                            notesToMain.push({ ...res, step, module: 'sb' });
+                        }
+                    });
                 }
             }
             sbBufferHead++;
@@ -380,30 +387,35 @@ function handleExport(options) {
                 }
 
                 if (includedTracks.includes('soloist')) {
-                    const res = getSoloistNote(chord, nextChordData?.chord, globalStep, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
-                    if (res && res.midi) {
-                        const noteTimeS = stepTimeS + (res.timingOffset || 0);
-                        const notePulse = Math.max(0, toPulses(noteTimeS));
-                        
-                        if (res.bendStartInterval) {
-                            soloistTrack.pitchBend(notePulse, 2, Math.round(-(res.bendStartInterval / 2) * 8192));
-                            soloistTrack.noteOn(notePulse, 2, res.midi, Math.round(res.velocity * 127));
-                            soloistTrack.pitchBend(toPulses(stepTimeS + sixteenthSec), 2, 0);
-                        } else {
-                            soloistTrack.noteOn(notePulse, 2, res.midi, Math.round(res.velocity * 127));
-                        }
-                        
-                        let endTimeS;
-                        if (res.durationSteps < 1) {
-                            endTimeS = noteTimeS + (res.durationSteps * sixteenthSec);
-                        } else {
-                            const targetStepIdx = globalStep + Math.round(res.durationSteps);
-                            endTimeS = stepTimes[targetStepIdx] || (noteTimeS + (res.durationSteps * sixteenthSec));
-                        }
-                        if (endTimeS - noteTimeS < 0.05) endTimeS = noteTimeS + 0.05;
+                    const soloResult = getSoloistNote(chord, nextChordData?.chord, globalStep, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
+                    if (soloResult) {
+                        const results = Array.isArray(soloResult) ? soloResult : [soloResult];
+                        results.forEach(res => {
+                            if (res.midi) {
+                                const noteTimeS = stepTimeS + (res.timingOffset || 0);
+                                const notePulse = Math.max(0, toPulses(noteTimeS));
+                                
+                                if (res.bendStartInterval) {
+                                    soloistTrack.pitchBend(notePulse, 2, Math.round(-(res.bendStartInterval / 2) * 8192));
+                                    soloistTrack.noteOn(notePulse, 2, res.midi, Math.round(res.velocity * 127));
+                                    soloistTrack.pitchBend(toPulses(stepTimeS + sixteenthSec), 2, 0);
+                                } else {
+                                    soloistTrack.noteOn(notePulse, 2, res.midi, Math.round(res.velocity * 127));
+                                }
+                                
+                                let endTimeS;
+                                if (res.durationSteps < 1) {
+                                    endTimeS = noteTimeS + (res.durationSteps * sixteenthSec);
+                                } else {
+                                    const targetStepIdx = globalStep + Math.round(res.durationSteps);
+                                    endTimeS = stepTimes[targetStepIdx] || (noteTimeS + (res.durationSteps * sixteenthSec));
+                                }
+                                if (endTimeS - noteTimeS < 0.05) endTimeS = noteTimeS + 0.05;
 
-                        soloistTrack.noteOff(toPulses(endTimeS), 2, res.midi);
-                        sb.lastFreq = 440 * Math.pow(2, (res.midi - 69) / 12);
+                                soloistTrack.noteOff(toPulses(endTimeS), 2, res.midi);
+                                if (!res.isDoubleStop) sb.lastFreq = 440 * Math.pow(2, (res.midi - 69) / 12);
+                            }
+                        });
                     }
                 }
             }

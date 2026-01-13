@@ -646,7 +646,7 @@ export const CHORD_PRESETS = [
     },
     { 
         name: "8-Bar Blues", 
-        sections: [{ label: 'Main', value: "I | V7 | IV | IV | I | V7 | I | V7" }], 
+        sections: [{ label: 'Main', value: "I7 | V7 | IV7 | IV7 | I7 | V7 | I7 | V7" }], 
         category: "Blues",
         settings: { bpm: 110, style: 'blues' }
     },
