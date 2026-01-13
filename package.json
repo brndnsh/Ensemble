@@ -1,0 +1,12 @@
+{
+  "name": "ensemble",
+  "version": "1.1.0",
+  "description": "Generative musical accompaniment and chord visualization PWA",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0"
+  }
+}

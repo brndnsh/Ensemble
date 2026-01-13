@@ -94,7 +94,7 @@ export function analyzeForm() {
         // Hard overrides based on common naming conventions
         if (label.includes('intro')) return 'Exposition';
         if (label.includes('outro')) return 'Resolution';
-        if (label.includes('solo')) return 'Climax';
+        if (label.includes('solo') || label.includes('chorus') || label.includes('drop')) return 'Climax';
         
         // Pattern-based roles
         if (isFirstOccurrence) {
