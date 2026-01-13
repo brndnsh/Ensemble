@@ -62,7 +62,7 @@ export const PIANO_CELLS = {
     'Reggae': [
         [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], // Skank on 2 & 4
         [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0], // Double Skank
-        [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]  // Pushed Skank
+        [0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0]  // The Bubble (rhythmic organ)
     ],
     'Acoustic': [
         [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight Quarters (Strum)
@@ -77,7 +77,8 @@ export const PIANO_CELLS = {
     'Neo-Soul': [
         [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Pushed Anticipation
         [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // The "Dilla" Lag
-        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0]  // Lazy 1, &2, 4
+        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0], // Lazy 1, &2, 4
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // Minimalist Backbeat
     ]
 };
 
@@ -136,7 +137,7 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16) {
     if (genre === 'Funk') ctx.intent.syncopation += 0.2;
 
     ctx.intent.layBack = (intensity < 0.4) ? 0.02 : 0; 
-    if (genre === 'Neo-Soul') ctx.intent.layBack += 0.04;
+    if (genre === 'Neo-Soul') ctx.intent.layBack += 0.05; // More lag for Dilla feel
 
     compingState.lockedUntil = step + spm;
 }
@@ -186,26 +187,105 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
     if (!cb.enabled || !chord) return [];
 
     const notes = [];
-    
-    // --- Sustain / CC Handling ---
-    const chordIndex = arranger.progression.indexOf(chord);
     const genre = gb.genreFeel;
-    const ccEvents = handleSustainEvents(step, measureStep, chordIndex, ctx.bandIntensity, genre, stepInfo);
-    
-    // Create a dummy note for CC if needed, or attach to first note?
-    // The worker handles notes. We can return "CC-only" objects or attach to notes.
-    // Standard "Note Object" has ccEvents.
-    // If no notes are generated this step, we still need to send CC.
-    // We'll create a "silent" note object if only CC events exist, 
-    // or we can push a dedicated event type if the architecture supports it.
-    // For now, let's attach to the notes if they exist, or push a dummy object.
-    
+    const intensity = ctx.bandIntensity;
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const spm = ts.beats * ts.stepsPerBeat;
     
+    // --- Sustain / CC Handling ---
+    const chordIndex = arranger.progression.indexOf(chord);
+    const ccEvents = handleSustainEvents(step, measureStep, chordIndex, intensity, genre, stepInfo);
+    
     updateRhythmicIntent(step, (sb.enabled && sb.busySteps > 0), spm);
 
-    // --- Smart Pattern Logic ---
+    // --- GENRE LANES ---
+
+    if (genre === 'Reggae') {
+        // Lane A: The Skank (Staccato chords on 2 & 4)
+        const isSkank = (measureStep === 4 || measureStep === 12);
+        
+        // Lane B: The Bubble (Organ eighth-note patterns)
+        const isBubble = (measureStep % 2 === 1); // Only on the "and"
+        const bubbleProb = 0.3 + (intensity * 0.5);
+        
+        if (isSkank) {
+            let voicing = [...chord.freqs];
+            if (voicing.length > 3) voicing = voicing.slice(0, 3); // Tight skanks
+            
+            voicing.forEach((f, i) => {
+                notes.push({
+                    midi: getMidi(f),
+                    velocity: 0.6 + (Math.random() * 0.2),
+                    durationSteps: 0.5, // Super staccato
+                    ccEvents: (i === 0) ? ccEvents : [],
+                    timingOffset: (i * 0.005) + 0.01,
+                    instrument: 'Piano',
+                    dry: true
+                });
+            });
+            return notes;
+        }
+        
+        if (isBubble && Math.random() < bubbleProb) {
+            // Bubble uses low-register single notes or dyads
+            const bubbleMidi = getMidi(chord.freqs[0]);
+            const bubbleMidi2 = chord.freqs[1] ? getMidi(chord.freqs[1]) : null;
+            
+            const v = 0.4 + (Math.random() * 0.2);
+            notes.push({
+                midi: bubbleMidi,
+                velocity: v,
+                durationSteps: 0.5,
+                ccEvents: ccEvents,
+                timingOffset: 0.005,
+                instrument: 'Piano',
+                dry: true
+            });
+            if (bubbleMidi2 && Math.random() < 0.4) {
+                notes.push({ midi: bubbleMidi2, velocity: v * 0.8, durationSteps: 0.5, ccEvents: [], timingOffset: 0.01, instrument: 'Piano', dry: true });
+            }
+            return notes;
+        }
+        
+        // Return dummy note if CC events exist but no musical notes
+        if (ccEvents.length > 0) {
+            return [{ midi: 0, velocity: 0, durationSteps: 0, ccEvents: ccEvents, instrument: 'Piano', muted: true }];
+        }
+        return [];
+    }
+
+    if (genre === 'Funk') {
+        // Clav-Style: 16th note syncopation with ghost notes
+        const isHit = compingState.currentCell[measureStep % spm] === 1;
+        const ghostProb = 0.15 + (intensity * 0.3);
+        const isGhost = !isHit && (Math.random() < ghostProb);
+
+        if (isHit || isGhost) {
+            let voicing = [...chord.freqs];
+            // Clav is lean; use 2-3 notes max
+            if (voicing.length > 3) voicing = voicing.slice(0, 2);
+            
+            voicing.forEach((f, i) => {
+                notes.push({
+                    midi: getMidi(f),
+                    velocity: (isGhost ? 0.25 : 0.6) * (0.8 + Math.random() * 0.4),
+                    durationSteps: isGhost ? 0.2 : 0.4,
+                    ccEvents: (i === 0) ? ccEvents : [],
+                    timingOffset: (i * 0.004) + (isGhost ? 0.005 : 0),
+                    instrument: 'Piano',
+                    muted: isGhost,
+                    dry: true
+                });
+            });
+            return notes;
+        }
+        if (ccEvents.length > 0) {
+            return [{ midi: 0, velocity: 0, durationSteps: 0, ccEvents: ccEvents, instrument: 'Piano', muted: true }];
+        }
+        return [];
+    }
+
+    // --- STANDARD Pattern Logic ---
     let isHit = compingState.currentCell[measureStep % spm] === 1;
 
     // Conversational: Listen to Soloist
@@ -216,7 +296,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
 
     // Force hit on "One" if empty
     if (measureStep === 0 && !isHit && Math.random() < 0.8) isHit = true;
-    if (stepInfo && stepInfo.isGroupStart && !isHit && Math.random() < (0.4 + ctx.bandIntensity * 0.4)) isHit = true;
+    if (stepInfo && stepInfo.isGroupStart && !isHit && Math.random() < (0.4 + intensity * 0.4)) isHit = true;
     
     // Pad Style Override
     if (cb.style === 'pad') isHit = (stepInChord === 0);
@@ -227,14 +307,14 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         const isStructural = stepInfo ? stepInfo.isGroupStart : (measureStep % 8 === 0);
 
         if (cb.style === 'smart') {
-            const pushProb = 0.15 + (ctx.bandIntensity * 0.2);
+            const pushProb = 0.15 + (intensity * 0.2);
             if (!isDownbeat && Math.random() < pushProb) timingOffset = -0.025;
             if (Math.random() < ctx.intent.anticipation) timingOffset -= 0.010;
             if (Math.random() < ctx.intent.layBack) timingOffset += 0.020;
         }
 
         let durationSteps = ts.stepsPerBeat * 2; // Default 2 beats
-        if (genre === 'Reggae' || genre === 'Funk' || genre === 'Disco') durationSteps = ts.stepsPerBeat * 0.25; 
+        if (genre === 'Disco') durationSteps = ts.stepsPerBeat * 0.25; 
         else if (genre === 'Jazz') durationSteps = ts.stepsPerBeat * 1; 
         else if (genre === 'Acoustic') durationSteps = ts.stepsPerBeat * 2.5; 
         else if (genre === 'Rock' || genre === 'Bossa') durationSteps = ts.stepsPerBeat * 1.5;
@@ -243,7 +323,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         
         durationSteps = Math.max(1, Math.round(durationSteps));
 
-        const velocity = (isStructural ? 0.6 : (isDownbeat ? 0.5 : 0.35)) * (0.8 + ctx.bandIntensity * 0.4);
+        const velocity = (isStructural ? 0.6 : (isDownbeat ? 0.5 : 0.35)) * (0.8 + intensity * 0.4);
 
         let voicing = [...chord.freqs];
         
@@ -264,7 +344,6 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             if (bb.enabled && voicing.length > 0) {
                 let lowestMidi = getMidi(voicing[0]);
                 if (lowestMidi <= bassMidi + 12) {
-                    // Shift the lowest note up an octave to clear the bass register
                     voicing[0] = getFrequency(lowestMidi + 12);
                 }
 
@@ -282,7 +361,6 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         // --- Open Voicings for Jazz/Acoustic ---
         if ((genre === 'Jazz' || genre === 'Acoustic') && chord.quality === 'maj7') {
             if (voicing.length >= 3 && Math.random() < 0.6) {
-                // Move the 2nd note (usually the 3rd or 5th) up an octave for "open" feel
                 const targetIdx = 1;
                 const midi = getMidi(voicing[targetIdx]);
                 voicing[targetIdx] = getFrequency(midi + 12);
@@ -297,8 +375,6 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             if (genre === 'Acoustic') strumSpeed = 0.025; // Slower, audible strum
             
             const stagger = (i * strumSpeed) + humanShift;
-            
-            // Attach CC events to the first note of the chord
             const noteCC = (i === 0) ? ccEvents : [];
 
             notes.push({
@@ -316,8 +392,6 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
     }
     
     if (notes.length === 0 && ccEvents.length > 0) {
-        // No notes played, but we have CC events (pedal changes)
-        // Send a dummy note with velocity 0
         notes.push({
             midi: 0,
             velocity: 0,

@@ -208,7 +208,7 @@ export const bb = {
     lastFreq: null,
     lastPlayedFreq: null,
     buffer: new Map(),
-    octave: 41,
+    octave: 38,
     style: 'smart'
 };
 

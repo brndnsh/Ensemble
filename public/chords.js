@@ -362,6 +362,56 @@ export function resolveChordRoot(part, keyRootMidi, baseOctave) {
     return { rootMidi, rootPart, romanMatch, nnsMatch, noteMatch };
 }
 
+/**
+ * Generates pro-level rootless jazz voicings.
+ * Omits root and often the 5th to focus on 3rd, 7th, and extensions.
+ */
+function getRootlessVoicing(quality, is7th, isRich) {
+    const genre = gb.genreFeel;
+    // Basic types
+    const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
+    const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && (is7th || ['9', '11', '13', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(quality) || quality.startsWith('7'));
+    const isMajor7 = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
+
+    if (isMajor7) {
+        if (quality === 'maj13') return [4, 9, 11, 14]; // 3, 6/13, 7, 9
+        if (quality === 'maj7#11') return [4, 11, 14, 18];  // 3, 7, 9, #11
+        // Standard Maj9/Maj7 cluster
+        return isRich ? [4, 7, 11, 14, 18] : [4, 7, 11, 14]; // 3, 5, 7, 9, (#11 if rich)
+    }
+
+    if (isMinor) {
+        // Neo-Soul Quartal / So-What Voicings
+        if (genre === 'Neo-Soul' && quality === 'minor' && is7th) {
+            return [5, 10, 15, 19]; // 4th, b7th, b3rd (up oct), 5th (up oct) - Classic "So What" stack
+        }
+        if (quality === 'm13') return [3, 7, 10, 14, 21]; // b3, 5, b7, 9, 13
+        if (quality === 'm11') return [3, 10, 14, 17]; // b3, b7, 9, 11
+        if (quality === 'm9') return [3, 7, 10, 14]; // b3, 5, b7, 9
+        return isRich ? [3, 7, 10, 14, 17] : [3, 7, 10, 14]; // b3, 5, b7, 9, (11 if rich)
+    }
+
+    if (isDominant) {
+        // Alt Dominants
+        if (quality === '7alt') return [4, 10, 13, 15, 20]; // 3, b7, b9, #9, b13
+        if (quality === '7b9') return [4, 10, 13, 20];      // 3, b7, b9, b13
+        if (quality === '7#9') return [4, 10, 15, 20];      // 3, b7, #9, b13
+        if (quality === '7b13') return [4, 10, 14, 20];     // 3, b7, 9, b13
+        if (quality === '7#11') return [4, 10, 14, 18];     // 3, b7, 9, #11
+        
+        // Characteristic dominant extensions
+        if (quality === '13' || isRich) return [4, 10, 14, 21]; // 3, b7, 9, 13
+        if (quality === '11') return [5, 10, 14, 17];           // 11, b7, 9, 11 (No 3rd)
+        
+        return [4, 10, 14]; // 3, b7, 9
+    }
+
+    if (quality === 'dim') return [3, 6, 9, 14];      // b3, b5, bb7, 9
+    if (quality === 'halfdim') return [3, 10, 14, 17]; // b3, b7, 9, 11
+
+    return null; // Fallback to standard triads
+}
+
 export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnabled = false) {
     const isPractice = cb.practiceMode;
     const shouldBeRootless = bassEnabled || isPractice;
@@ -369,37 +419,8 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
 
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
     if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
-        if (quality === 'maj7' || quality === 'maj9' || quality === 'maj11' || quality === 'maj13' || quality === 'maj7#11') {
-            if (quality === 'maj13') return [4, 9, 11, 14, 21]; // 3, 6/13, 7, 9, 13
-            if (quality === 'maj11') return [4, 7, 11, 14, 17]; // 3, 5, 7, 9, 11
-            if (quality === 'maj7#11') return [4, 11, 14, 18];  // 3, 7, 9, #11
-            return isRich ? [4, 7, 11, 14, 18] : [4, 7, 11, 14]; // 3, 5, 7, 9, (#11 if rich)
-        }
-        
-        if (quality === 'dim') return isRich ? [3, 6, 9, 14] : [3, 6, 9];      // b3, b5, bb7, (9 if rich)
-        if (quality === 'halfdim') return isRich ? [3, 6, 10, 17] : [3, 6, 10]; // b3, b5, b7, (11 if rich)
-        
-        const isMinor = quality.startsWith('m');
-        const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && (is7th || quality === '13' || quality === '11' || quality.startsWith('7'));
-        
-        if (isMinor) {
-            if (quality === 'm13') return [3, 7, 10, 14, 21]; // b3, 5, b7, 9, 13
-            if (quality === 'm11') return [3, 7, 10, 14, 17]; // b3, 5, b7, 9, 11
-            return isRich ? [3, 7, 10, 14, 17] : [3, 7, 10, 14]; // b3, 5, b7, 9, (11 if rich)
-        }
-
-        if (isDominant) {
-             if (quality === '7alt') return [4, 10, 13, 15, 20]; // 3, b7, b9, #9, b13
-             if (quality === '7b13') return [4, 10, 14, 20];    // 3, b7, 9, b13
-             if (quality === '7#11') return [4, 10, 14, 18];    // 3, b7, 9, #11
-             if (quality === '7b9') return [4, 10, 13];         // 3, b7, b9
-             if (quality === '7#9') return [4, 10, 15];         // 3, b7, #9
-             if (quality === '13') return [4, 10, 14, 21];      // 3, b7, 9, 13
-             if (quality === '11') return [5, 10, 14, 17];      // 11, b7, 9, 11 (No 3rd)
-             
-             // Use 13th only if explicitly requested or rich density
-             return (isRich) ? [4, 10, 14, 21] : [4, 10, 14]; 
-        }
+        const rootless = getRootlessVoicing(quality, is7th, isRich);
+        if (rootless) return rootless;
     }
 
     // 2. POP & ROCK: SPREAD 10ths
@@ -433,7 +454,7 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     else if (quality === '13') intervals = [0, 4, 7, 10, 14, 21];
     else if (quality === 'm13') intervals = [0, 3, 7, 10, 14, 21];
     else if (quality === 'maj13') intervals = [0, 4, 7, 11, 14, 21];
-    else if (quality === '7alt') intervals = [0, 4, 10, 13, 15, 18, 20];
+    else if (quality === '7alt') intervals = [0, 4, 10, 13, 15, 18, 20]; // 1, 3, b7, b9, #9, #11, b13
     else if (quality === '7b13') intervals = [0, 4, 7, 10, 14, 20];
     else if (quality === '7#11') intervals = [0, 4, 7, 10, 14, 18];
     else if (quality === '7b9') intervals = [0, 4, 7, 10, 13];

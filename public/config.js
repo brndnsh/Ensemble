@@ -1,5 +1,5 @@
 // Note: Keep APP_VERSION in sync with CACHE_NAME in sw.js
-export const APP_VERSION = '1.87';
+export const APP_VERSION = '1.88';
 export const KEY_ORDER = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 export const ENHARMONIC_MAP = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
 export const ROMAN_VALS = { 'I': 0, 'II': 2, 'III': 4, 'IV': 5, 'V': 7, 'VI': 9, 'VII': 11 };
@@ -24,4 +24,22 @@ export const MIXER_GAIN_MULTIPLIERS = {
     bass: 0.45,
     soloist: 0.35,
     drums: 0.5
+};
+
+export const REGGAE_RIDDIMS = {
+    'Stalag': [
+        [0, 0, 1.1, 2], [2, 0, 0.9, 2], [4, 7, 1.0, 2], [6, 0, 1.1, 2], [10, 0, 0.9, 2], [12, 7, 1.0, 2]
+    ],
+    '54-46': [
+        [0, 0, 1.1, 2], [2, 0, 0.9, 2], [6, 0, 1.0, 2], [8, 0, 1.1, 2], [10, 0, 0.9, 2], [14, 0, 1.0, 2]
+    ],
+    'Real Rock': [
+        [0, 0, 1.1, 3], [3, 0, 0.8, 1], [4, 7, 1.0, 3], [7, 7, 0.8, 1], [8, 10, 1.1, 3], [11, 10, 0.8, 1], [12, 7, 1.0, 4]
+    ],
+    'Steppers': [
+        [0, 0, 1.1, 2], [4, 0, 1.0, 2], [8, 0, 1.1, 2], [12, 0, 1.0, 2]
+    ],
+    'One Drop': [
+        [8, 0, 1.2, 4]
+    ]
 };

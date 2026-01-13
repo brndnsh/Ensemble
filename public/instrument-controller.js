@@ -206,7 +206,7 @@ export function resetToDefaults() {
     
     bb.volume = 0.45;
     bb.reverb = 0.05;
-    bb.octave = 41;
+    bb.octave = 38;
     bb.style = 'smart';
     
     sb.volume = 0.5;
@@ -227,7 +227,7 @@ export function resetToDefaults() {
     ui.notationSelect.value = 'roman';
     ui.densitySelect.value = 'standard';
     ui.octave.value = 65;
-    ui.bassOctave.value = 41;
+    ui.bassOctave.value = 38;
     ui.soloistOctave.value = 72;
     ui.chordVol.value = 0.5;
     ui.chordReverb.value = 0.3;
