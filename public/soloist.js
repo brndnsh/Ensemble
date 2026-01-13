@@ -52,6 +52,12 @@ const LICK_LIBRARY = {
     disco: [
         { name: 'Octave Pump', notes: [{o:0, i:0, d:2}, {o:2, i:12, d:2}, {o:4, i:0, d:2}, {o:6, i:12, d:2}] },
         { name: 'Syncopated Triad', notes: [{o:1, i:4, d:1}, {o:3, i:7, d:1}, {o:5, i:12, d:3}] }
+    ],
+    bird: [
+        { name: 'Root Enclosure', notes: [{o:0, i:2, d:1}, {o:1, i:-1, d:1}, {o:2, i:0, d:2}] },
+        { name: '5th Enclosure', notes: [{o:0, i:8, d:1}, {o:1, i:6, d:1}, {o:2, i:7, d:2}] },
+        { name: 'Bebop Run', notes: [{o:0, i:11, d:1}, {o:1, i:10, d:1}, {o:2, i:9, d:1}, {o:3, i:7, d:1}] },
+        { name: 'Double Chromatic', notes: [{o:0, i:2, d:1}, {o:1, i:1, d:1}, {o:2, i:-1, d:1}, {o:3, i:0, d:1}] }
     ]
 };
 
@@ -104,7 +110,7 @@ const STYLE_CONFIG = {
     bird: {
         restBase: 0.25,
         restGrowth: 0.08,
-        cells: [3, 5, 4, 7, 0, 10],
+        cells: [5, 7, 8, 9, 10, 3], // Removed 0 (straight 8ths), added 8 & 9 for syncopation
         registerSoar: 5,
         tensionScale: 0.7,
         timingJitter: 15,
