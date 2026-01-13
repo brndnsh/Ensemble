@@ -47,6 +47,26 @@ describe('Chord Logic', () => {
             expect(quality).toBe('7b9');
             expect(is7th).toBe(true);
         });
+
+        it('should identify 11th chords', () => {
+            const { quality } = getChordDetails('11');
+            expect(quality).toBe('11');
+        });
+
+        it('should identify 13th chords', () => {
+            const { quality } = getChordDetails('13');
+            expect(quality).toBe('13');
+        });
+
+        it('should identify altered dominant chords', () => {
+            const { quality } = getChordDetails('7alt');
+            expect(quality).toBe('7alt');
+        });
+
+        it('should identify 7#11 chords', () => {
+            const { quality } = getChordDetails('7#11');
+            expect(quality).toBe('7#11');
+        });
     });
 
     describe('getIntervals', () => {
@@ -75,6 +95,23 @@ describe('Chord Logic', () => {
             expect(intervals).toContain(7); // 5th
             expect(intervals).toContain(11); // 7th
             expect(intervals).toContain(14); // 9th
+        });
+
+        it('should provide intervals for 11th chords (1, 3, 5, b7, 9, 11)', () => {
+            const intervals = getIntervals('11', true, 'standard', 'Jazz', false);
+            expect(intervals).toContain(17); // 11th
+        });
+
+        it('should provide intervals for 13th chords (1, 3, 5, b7, 9, 13)', () => {
+            const intervals = getIntervals('13', true, 'standard', 'Jazz', false);
+            expect(intervals).toContain(21); // 13th
+        });
+
+        it('should provide intervals for 7alt chords', () => {
+            const intervals = getIntervals('7alt', true, 'standard', 'Jazz', false);
+            // Typically includes b9, #9, #11, b13 (13, 15, 18, 20)
+            expect(intervals).toContain(13); // b9
+            expect(intervals).toContain(15); // #9
         });
     });
 

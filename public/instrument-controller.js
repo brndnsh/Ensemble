@@ -207,10 +207,12 @@ export function resetToDefaults() {
     bb.volume = 0.45;
     bb.reverb = 0.05;
     bb.octave = 41;
+    bb.style = 'smart';
     
     sb.volume = 0.5;
     sb.reverb = 0.6;
     sb.octave = 72;
+    sb.style = 'smart';
     
     gb.volume = 0.5;
     gb.reverb = 0.2;
@@ -264,11 +266,15 @@ export function resetToDefaults() {
 
     ctx.bandIntensity = 0.5;
     ctx.complexity = 0.3;
+    ctx.autoIntensity = true;
     ctx.conductorVelocity = 1.0;
     if (ui.intensitySlider) {
         ui.intensitySlider.value = 50;
         if (ui.intensityValue) ui.intensityValue.textContent = '50%';
+        ui.intensitySlider.disabled = true;
+        ui.intensitySlider.style.opacity = 0.5;
     }
+    if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = true;
     if (ui.complexitySlider) {
         ui.complexitySlider.value = 30;
         if (ui.complexityValue) ui.complexityValue.textContent = 'Low';

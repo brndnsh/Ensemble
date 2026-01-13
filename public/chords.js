@@ -35,12 +35,16 @@ const NOTE_REGEX = /^([A-G][#b]?)/i;
  * @returns {{quality: string, is7th: boolean, suffix: string}}
  */
 export function getChordDetails(symbol) {
-    let quality = 'major', is7th = symbol.includes('7') || symbol.includes('9');
-    const suffixMatch = symbol.match(/(maj7|maj9|maj|M7|m9|m7b5|m7|m6|min|m|dim|o7|o|°7|°|aug|\+|-|ø7|ø|h7|7b5|sus4|sus2|add9|7b9|7#9|7|9|6|5)/);
+    let quality = 'major', is7th = symbol.includes('7') || symbol.includes('9') || symbol.includes('11') || symbol.includes('13') || symbol.includes('alt');
+    const suffixMatch = symbol.match(/(maj7|maj9|maj11|maj13|maj|M7|m13|m11|m9|m7b5|m7|m6|min|m|dim|o7|o|°7|°|aug|\+|-|ø7|ø|h7|7b5|sus4|sus2|add9|7alt|7b13|7#11|7b9|7#9|7|13|11|9|6|5)/);
     const suffix = suffixMatch ? suffixMatch[1] : "";
 
-    if (suffix === 'maj9') quality = 'maj9';
+    if (suffix === 'maj13') quality = 'maj13';
+    else if (suffix === 'maj11') quality = 'maj11';
+    else if (suffix === 'maj9') quality = 'maj9';
     else if (suffix.includes('maj') || suffix === 'M7') quality = 'maj7';
+    else if (suffix === 'm13') quality = 'm13';
+    else if (suffix === 'm11') quality = 'm11';
     else if (suffix === 'm9') quality = 'm9';
     else if (suffix === 'm7b5' || suffix === 'ø7' || suffix === 'ø' || suffix === 'h7' || symbol.includes('7b5')) quality = 'halfdim';
     else if (suffix === 'm6') quality = 'm6';
@@ -51,8 +55,13 @@ export function getChordDetails(symbol) {
     else if (suffix === 'sus4') quality = 'sus4';
     else if (suffix === 'sus2') quality = 'sus2';
     else if (suffix === 'add9') quality = 'add9';
+    else if (suffix === '7alt') quality = '7alt';
+    else if (suffix === '7b13') quality = '7b13';
+    else if (suffix === '7#11') quality = '7#11';
     else if (suffix === '7b9') quality = '7b9';
     else if (suffix === '7#9') quality = '7#9';
+    else if (suffix === '13') quality = '13';
+    else if (suffix === '11') quality = '11';
     else if (suffix === '9') quality = '9';
     else if (suffix === '6') quality = '6';
     else if (suffix === '5') quality = '5';
@@ -358,18 +367,35 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
 
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
     if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
-        if (quality === 'maj7' || quality === 'maj9') return isRich ? [4, 7, 11, 14, 18] : [4, 7, 11, 14]; // 3, 5, 7, 9, (#11 if rich)
+        if (quality === 'maj7' || quality === 'maj9' || quality === 'maj11' || quality === 'maj13') {
+            if (quality === 'maj13') return [4, 9, 11, 14, 21]; // 3, 6/13, 7, 9, 13
+            if (quality === 'maj11') return [4, 7, 11, 14, 17]; // 3, 5, 7, 9, 11
+            return isRich ? [4, 7, 11, 14, 18] : [4, 7, 11, 14]; // 3, 5, 7, 9, (#11 if rich)
+        }
         
         if (quality === 'dim') return isRich ? [3, 6, 9, 14] : [3, 6, 9];      // b3, b5, bb7, (9 if rich)
         if (quality === 'halfdim') return isRich ? [3, 6, 10, 17] : [3, 6, 10]; // b3, b5, b7, (11 if rich)
         
-        const isMinor = quality === 'minor';
-        const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && is7th && quality !== 'maj7';
+        const isMinor = quality.startsWith('m');
+        const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && (is7th || quality === '13' || quality === '11' || quality.startsWith('7'));
         
-        if (isMinor) return isRich ? [3, 7, 10, 14, 17] : [3, 7, 10, 14];      // b3, 5, b7, 9, (11 if rich)
+        if (isMinor) {
+            if (quality === 'm13') return [3, 7, 10, 14, 21]; // b3, 5, b7, 9, 13
+            if (quality === 'm11') return [3, 7, 10, 14, 17]; // b3, 5, b7, 9, 11
+            return isRich ? [3, 7, 10, 14, 17] : [3, 7, 10, 14]; // b3, 5, b7, 9, (11 if rich)
+        }
+
         if (isDominant) {
+             if (quality === '7alt') return [4, 10, 13, 15, 20]; // 3, b7, b9, #9, b13
+             if (quality === '7b13') return [4, 10, 14, 20];    // 3, b7, 9, b13
+             if (quality === '7#11') return [4, 10, 14, 18];    // 3, b7, 9, #11
+             if (quality === '7b9') return [4, 10, 13];         // 3, b7, b9
+             if (quality === '7#9') return [4, 10, 15];         // 3, b7, #9
+             if (quality === '13') return [4, 10, 14, 21];      // 3, b7, 9, 13
+             if (quality === '11') return [4, 10, 14, 17];      // 3, b7, 9, 11
+             
              // Use 13th only if explicitly requested or rich density
-             return (isRich || quality === '13') ? [4, 10, 14, 21] : [4, 10, 14]; 
+             return (isRich) ? [4, 10, 14, 21] : [4, 10, 14]; 
         }
     }
 
@@ -381,8 +407,12 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
 
     // 3. FALLBACK: STANDARD TRIADS/EXTENSIONS
     let intervals = [0, 4, 7];
-    if (quality === 'minor') intervals = [0, 3, 7];
-    else if (quality === 'dim') intervals = [0, 3, 6];
+    const isMinorQuality = (quality.startsWith('m') && !quality.startsWith('maj')) || quality === 'minor' || quality === 'halfdim';
+    if (isMinorQuality) {
+        intervals = [0, 3, 7];
+    }
+    
+    if (quality === 'dim') intervals = [0, 3, 6];
     else if (quality === 'halfdim') intervals = [0, 3, 6];
     else if (quality === 'aug') intervals = [0, 4, 8];
     else if (quality === 'sus4') intervals = [0, 5, 7];
@@ -393,15 +423,26 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     else if (quality === '9') intervals = [0, 4, 7, 10, 14];
     else if (quality === 'maj9') intervals = [0, 4, 7, 11, 14];
     else if (quality === 'm9') intervals = [0, 3, 7, 10, 14];
+    else if (quality === '11') intervals = [0, 4, 7, 10, 14, 17];
+    else if (quality === 'm11') intervals = [0, 3, 7, 10, 14, 17];
+    else if (quality === 'maj11') intervals = [0, 4, 7, 11, 14, 17];
+    else if (quality === '13') intervals = [0, 4, 7, 10, 14, 21];
+    else if (quality === 'm13') intervals = [0, 3, 7, 10, 14, 21];
+    else if (quality === 'maj13') intervals = [0, 4, 7, 11, 14, 21];
+    else if (quality === '7alt') intervals = [0, 4, 10, 13, 15, 18, 20];
+    else if (quality === '7b13') intervals = [0, 4, 7, 10, 14, 20];
+    else if (quality === '7#11') intervals = [0, 4, 7, 10, 14, 18];
     else if (quality === '7b9') intervals = [0, 4, 7, 10, 13];
     else if (quality === '7#9') intervals = [0, 4, 7, 10, 15];
     else if (quality === '5') intervals = [0, 7];
 
     if (is7th || quality === 'halfdim') {
-        if (quality === 'maj7' || quality === 'maj9') intervals.push(11);
-        else if (quality === 'dim') intervals.push(9); 
-        else if (quality === 'halfdim') intervals.push(10);
-        else if (!intervals.includes(10)) intervals.push(10); 
+        if (quality.startsWith('maj')) intervals.push(11);
+        else if (quality === 'dim') { if (!intervals.includes(9)) intervals.push(9); }
+        else if (quality === 'halfdim') { if (!intervals.includes(10)) intervals.push(10); }
+        else if (!intervals.includes(10) && !quality.startsWith('maj') && quality !== '5' && quality !== '6' && quality !== 'm6') {
+            intervals.push(10); 
+        }
     }
 
     if (density === 'thin' && intervals.length >= 4) {

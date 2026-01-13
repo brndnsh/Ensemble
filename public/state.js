@@ -57,7 +57,7 @@ export const ctx = {
     wakeLock: null,
     bandIntensity: 0.5, // The 'Conductor' signal for global energy
     complexity: 0.3,
-    autoIntensity: false,
+    autoIntensity: true,
     metronome: false,
     applyPresetSettings: false,
     sustainActive: false,
@@ -209,7 +209,7 @@ export const bb = {
     lastPlayedFreq: null,
     buffer: new Map(),
     octave: 41,
-    style: 'arp'
+    style: 'smart'
 };
 
 /**
@@ -245,7 +245,7 @@ export const sb = {
     lastNoteEnd: 0,
     lastNoteStartTime: 0,
     octave: 72, // C5
-    style: 'scalar',
+    style: 'smart',
     direction: 1,
     currentPhraseSteps: 0,
     isResting: false,
