@@ -133,7 +133,8 @@ export const cb = {
     density: 'standard', 
     practiceMode: false,
     lastActiveChordIndex: null,
-    buffer: new Map()
+    buffer: new Map(),
+    activeTab: 'smart'
 };
 
 /**
@@ -152,7 +153,7 @@ export const cb = {
  * @property {number} reverb - Reverb level.
  * @property {number} measures - Number of measures in the loop (1-8).
  * @property {number} currentMeasure - Currently visible measure for editing.
- * @property {boolean} autoFollow - Whether to scroll grid during playback.
+ * @property {boolean} followPlayback - Whether to scroll grid during playback.
  * @property {number} humanize - Humanization percentage (0-100).
  * @property {number} swing - Swing percentage (0-100).
  * @property {string} swingSub - Swing subdivision ('8th' or '16th').
@@ -175,7 +176,7 @@ export const gb = {
     reverb: 0.2,
     measures: 1,
     currentMeasure: 0,
-    autoFollow: true,
+    followPlayback: true,
     humanize: 20,
     swing: 0,
     swingSub: '8th',
@@ -209,7 +210,8 @@ export const bb = {
     lastPlayedFreq: null,
     buffer: new Map(),
     octave: 38,
-    style: 'smart'
+    style: 'smart',
+    activeTab: 'smart'
 };
 
 /**
@@ -264,7 +266,8 @@ export const sb = {
     isReplayingMotif: false,
     motifReplayIndex: 0,
     hookRetentionProb: 0.4,
-    tension: 0
+    tension: 0,
+    activeTab: 'smart'
 };
 
 /**
@@ -349,8 +352,8 @@ export function dispatch(action, payload) {
         case 'SET_HUMANIZE':
             gb.humanize = payload;
             break;
-        case 'SET_AUTO_FOLLOW':
-            gb.autoFollow = payload;
+        case 'SET_FOLLOW_PLAYBACK':
+            gb.followPlayback = payload;
             break;
         case 'SET_GENRE_FEEL':
             // payload: { feel: 'Rock', swing: 0, sub: '8th' }
@@ -364,6 +367,10 @@ export function dispatch(action, payload) {
             gb.fillStartStep = payload.startStep;
             gb.fillLength = payload.length;
             gb.pendingCrash = !!payload.crash;
+            break;
+        case 'SET_ACTIVE_TAB':
+            // payload: { module: 'cb', tab: 'smart' }
+            stateMap[payload.module].activeTab = payload.tab;
             break;
         
         // --- Options ---

@@ -170,15 +170,30 @@
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <h2>Chords</h2>
                 </div>
+                <!-- TAB NAV -->
+                <div class="instrument-tabs">
+                    <button class="instrument-tab-btn" data-module="cb" data-tab="classic">Classic</button>
+                    <button class="instrument-tab-btn active" data-module="cb" data-tab="smart">Smart</button>
+                </div>
                  <div style="display: flex; gap: 0.5rem; align-items: center;">
                      <button class="panel-menu-btn" aria-label="Settings">⋮</button>
                      <button class="power-btn desktop-power-btn active" id="chordPowerBtnDesktop" aria-label="Toggle Chords">⏻</button>
                  </div>
             </div>
             
-            <div style="margin-bottom: 0;">
-                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
-                <div class="presets-container" id="chordStylePresets"></div>
+            <!-- CLASSIC TAB -->
+            <div id="chord-tab-classic" class="instrument-tab-content">
+                <div style="margin-bottom: 0;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
+                    <div class="presets-container" id="chordStylePresets"></div>
+                </div>
+            </div>
+
+            <!-- SMART TAB -->
+            <div id="chord-tab-smart" class="instrument-tab-content active">
+                <div class="smart-status" style="padding: 0.5rem; background: rgba(59, 130, 246, 0.05); border-radius: 8px; border: 1px dashed rgba(59, 130, 246, 0.2); text-align: center;">
+                    <p style="font-size: 0.8rem; color: var(--blue); margin: 0;">✨ <strong>Smart Follow</strong> Active</p>
+                </div>
             </div>
 
             <div class="panel-settings-menu">
@@ -230,9 +245,9 @@
                 </div>
                 
                 <!-- TAB NAV -->
-                <div class="groove-tabs">
-                    <button class="groove-tab-btn" data-tab="classic">Classic</button>
-                    <button class="groove-tab-btn active" data-tab="smart">Smart</button>
+                <div class="instrument-tabs">
+                    <button class="instrument-tab-btn" data-module="gb" data-tab="classic">Classic</button>
+                    <button class="instrument-tab-btn active" data-module="gb" data-tab="smart">Smart</button>
                 </div>
 
                  <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -242,7 +257,7 @@
             </div>
 
             <!-- CLASSIC TAB -->
-            <div id="groove-tab-classic" class="groove-tab-content">
+            <div id="groove-tab-classic" class="instrument-tab-content">
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
                     <div class="presets-container" id="drumPresets"></div>
@@ -265,20 +280,16 @@
                     </div>
 
                     <div id="measurePagination" style="display: flex; gap: 0.4rem; margin-bottom: 1rem; align-items: center;"></div>
-
                     <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
                         <button id="cloneMeasureBtn" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);">⧉ Copy to All</button>
-                            <label for="autoFollowCheck" title="Follow playback on grid & auto-switch instruments to match genre">Auto-Follow Genre</label>
-                            <input type="checkbox" id="autoFollowCheck" checked>
                     </div>
 
                     <div class="sequencer-grid" id="sequencerGrid"></div>
-                    <div style="font-size: 0.8rem; color: #64748b; font-style: italic; margin-top: 0.75rem;">Tap steps to create your own beat...</div>
                 </div>
             </div>
 
             <!-- SMART TAB -->
-            <div id="groove-tab-smart" class="groove-tab-content active">
+            <div id="groove-tab-smart" class="instrument-tab-content active">
                 <div class="smart-control-group" style="margin-bottom: 1.5rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Genre</label>
                     <div class="genre-selector">
@@ -315,10 +326,6 @@
                         <span id="complexityValue" style="color: var(--accent-color); font-weight: bold;">Low</span>
                     </label>
                     <input type="range" id="complexitySlider" min="0" max="100" value="30" style="width: 100%; height: 6px;">
-                </div>
-                
-                <div style="background: rgba(59, 130, 246, 0.1); padding: 1rem; border-radius: 8px; border: 1px dashed rgba(59, 130, 246, 0.3); font-size: 0.85rem; color: var(--text-secondary); margin-top: 2rem;">
-                    <p style="margin: 0;"><strong>Conductor Mode:</strong> Adjusting intensity signals all instruments to dynamically change dynamics and density.</p>
                 </div>
             </div>
 
@@ -370,15 +377,30 @@
                  <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <h2>Bass</h2>
                 </div>
+                <!-- TAB NAV -->
+                <div class="instrument-tabs">
+                    <button class="instrument-tab-btn" data-module="bb" data-tab="classic">Classic</button>
+                    <button class="instrument-tab-btn active" data-module="bb" data-tab="smart">Smart</button>
+                </div>
                  <div style="display: flex; gap: 0.5rem; align-items: center;">
                      <button class="panel-menu-btn" aria-label="Settings">⋮</button>
                      <button class="power-btn desktop-power-btn" id="bassPowerBtnDesktop" aria-label="Toggle Bassist">⏻</button>
                  </div>
             </div>
 
-            <div style="margin-bottom: 0;">
-                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
-                <div class="presets-container" id="bassStylePresets"></div>
+            <!-- CLASSIC TAB -->
+            <div id="bass-tab-classic" class="instrument-tab-content">
+                <div style="margin-bottom: 0;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
+                    <div class="presets-container" id="bassStylePresets"></div>
+                </div>
+            </div>
+
+            <!-- SMART TAB -->
+            <div id="bass-tab-smart" class="instrument-tab-content active">
+                <div class="smart-status" style="padding: 0.5rem; background: rgba(220, 50, 47, 0.05); border-radius: 8px; border: 1px dashed rgba(220, 50, 47, 0.2); text-align: center;">
+                    <p style="font-size: 0.8rem; color: var(--red); margin: 0;">✨ <strong>Smart Follow</strong> Active</p>
+                </div>
             </div>
 
             <div class="panel-settings-menu">
@@ -417,15 +439,30 @@
                  <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <h2>Soloist</h2>
                 </div>
+                <!-- TAB NAV -->
+                <div class="instrument-tabs">
+                    <button class="instrument-tab-btn" data-module="sb" data-tab="classic">Classic</button>
+                    <button class="instrument-tab-btn active" data-module="sb" data-tab="smart">Smart</button>
+                </div>
                  <div style="display: flex; gap: 0.5rem; align-items: center;">
                      <button class="panel-menu-btn" aria-label="Settings">⋮</button>
                      <button class="power-btn desktop-power-btn" id="soloistPowerBtnDesktop" aria-label="Toggle Soloist">⏻</button>
                  </div>
             </div>
 
-            <div style="margin-bottom: 0;">
-                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
-                <div class="presets-container" id="soloistStylePresets"></div>
+            <!-- CLASSIC TAB -->
+            <div id="soloist-tab-classic" class="instrument-tab-content">
+                <div style="margin-bottom: 0;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
+                    <div class="presets-container" id="soloistStylePresets"></div>
+                </div>
+            </div>
+
+            <!-- SMART TAB -->
+            <div id="soloist-tab-smart" class="instrument-tab-content active">
+                <div class="smart-status" style="padding: 0.5rem; background: rgba(133, 153, 0, 0.05); border-radius: 8px; border: 1px dashed rgba(133, 153, 0, 0.2); text-align: center;">
+                    <p style="font-size: 0.8rem; color: var(--green); margin: 0;">✨ <strong>Smart Follow</strong> Active</p>
+                </div>
             </div>
 
              <div class="panel-settings-menu">

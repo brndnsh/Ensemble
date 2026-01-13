@@ -18,14 +18,27 @@ import { applyConductor } from './conductor.js';
 
 export function updateStyle(type, styleId) {
     const UPDATE_STYLE_CONFIG = {
-        chord: { selector: '.chord-style-chip', module: 'cb' },
-        bass: { selector: '.bass-style-chip', module: 'bb' },
-        soloist: { selector: '.soloist-style-chip', module: 'sb' }
+        chord: { selector: '.chord-style-chip', module: 'cb', panelId: 'chord' },
+        bass: { selector: '.bass-style-chip', module: 'bb', panelId: 'bass' },
+        soloist: { selector: '.soloist-style-chip', module: 'sb', panelId: 'soloist' }
     };
     const c = UPDATE_STYLE_CONFIG[type];
     if (!c) return;
     
     dispatch('SET_STYLE', { module: c.module, style: styleId });
+
+    // When a manual style is selected, we switch the tab to 'classic' automatically
+    // unless the style being set is 'smart' (though usually smart is set via tabs)
+    if (styleId !== 'smart') {
+        dispatch('SET_ACTIVE_TAB', { module: c.module, tab: 'classic' });
+        // Update UI Tabs
+        document.querySelectorAll(`.instrument-tab-btn[data-module="${c.module}"]`).forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === 'classic');
+        });
+        document.querySelectorAll(`[id^="${c.panelId}-tab-"]`).forEach(panel => {
+            panel.classList.toggle('active', panel.id === `${c.panelId}-tab-classic`);
+        });
+    }
 
     document.querySelectorAll(c.selector).forEach(chip => {
         chip.classList.toggle('active', chip.dataset.id === styleId);
@@ -204,12 +217,22 @@ export function setupUIHandlers(refs) {
                 }
                 loadDrumPreset(config.drum);
 
-                // Auto-Follow: Switch instruments to genre-appropriate styles
-                if (gb.autoFollow) {
-                    if (config.chord) updateStyle('chord', config.chord);
-                    if (config.bass) updateStyle('bass', config.bass);
-                    if (config.soloist) updateStyle('soloist', config.soloist);
-                }
+                // Smart Follow: Sync instruments that are in 'smart' mode
+                const modules = [
+                    { id: 'chord', state: cb, configKey: 'chord' },
+                    { id: 'bass', state: bb, configKey: 'bass' },
+                    { id: 'soloist', state: sb, configKey: 'soloist' }
+                ];
+
+                modules.forEach(m => {
+                    if (m.state.activeTab === 'smart') {
+                        // Keep it in 'smart' mode, engine handles the rest
+                        dispatch('SET_STYLE', { module: m.state === cb ? 'cb' : (m.state === bb ? 'bb' : 'sb'), style: 'smart' });
+                        // Clear active chips in the Classic tab since we are in Smart mode
+                        const chipSelector = { 'chord': '.chord-style-chip', 'bass': '.bass-style-chip', 'soloist': '.soloist-style-chip' }[m.id];
+                        document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
+                    }
+                });
 
                 saveCurrentState();
                 showToast(`Switched to ${genre} feel`);
@@ -507,7 +530,6 @@ export function setupUIHandlers(refs) {
     ui.swingSlider.addEventListener('input', e => { gb.swing = parseInt(e.target.value); saveCurrentState(); });
     ui.swingBase.addEventListener('change', e => { gb.swingSub = e.target.value; saveCurrentState(); });
     ui.humanizeSlider.addEventListener('input', e => { gb.humanize = parseInt(e.target.value); saveCurrentState(); });
-    ui.autoFollowCheck.addEventListener('change', e => { gb.autoFollow = e.target.checked; saveCurrentState(); });
     ui.drumBarsSelect.addEventListener('change', e => updateMeasures(e.target.value));
     ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
 
@@ -523,6 +545,24 @@ export function setupUIHandlers(refs) {
         const c = refs.POWER_CONFIG[type];
         c.els.forEach(el => {
             if (el) el.addEventListener('click', () => togglePower(type));
+        });
+    });
+
+    document.querySelectorAll('.instrument-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const module = btn.dataset.module;
+            const tab = btn.dataset.tab;
+            if (tab === 'smart' && module !== 'gb') {
+                // Explicitly set style to smart when entering Smart tab
+                dispatch('SET_STYLE', { module, style: 'smart' });
+                // Clear manual chips in the Classic tab
+                const chipSelector = { 'cb': '.chord-style-chip', 'bb': '.bass-style-chip', 'sb': '.soloist-style-chip' }[module];
+                if (chipSelector) document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
+                
+                flushBuffers();
+                syncWorker();
+                saveCurrentState();
+            }
         });
     });
 

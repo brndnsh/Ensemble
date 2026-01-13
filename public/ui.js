@@ -421,7 +421,7 @@ export function recalculateScrollOffsets() {
 
 export function initTabs() {
     const mobileTabItems = document.querySelectorAll('.tab-item');
-    const grooveTabBtns = document.querySelectorAll('.groove-tab-btn');
+    const instrumentTabBtns = document.querySelectorAll('.instrument-tab-btn');
     
     const activateMobileTab = (item) => {
         const btn = item.querySelector('.tab-btn');
@@ -437,15 +437,25 @@ export function initTabs() {
         gb.mobileTab = target;
     };
 
-    const activateGrooveTab = (btn) => {
+    const activateInstrumentTab = (btn) => {
+        const module = btn.dataset.module;
         const target = btn.dataset.tab;
-        document.querySelectorAll('.groove-tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.groove-tab-content').forEach(c => c.classList.remove('active'));
         
-        const content = document.getElementById(`groove-tab-${target}`);
-        if (content) content.classList.add('active');
+        // Find panel context to scope button/content queries
+        const panelId = { cb: 'chord', bb: 'bass', sb: 'soloist', gb: 'groove' }[module];
+        
+        // Update Buttons within the same panel
+        document.querySelectorAll(`.instrument-tab-btn[data-module="${module}"]`).forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        gb.activeTab = target;
+        
+        // Update Content within the same panel
+        document.querySelectorAll(`[id^="${panelId}-tab-"]`).forEach(c => c.classList.remove('active'));
+        const content = document.getElementById(`${panelId}-tab-${target}`);
+        if (content) content.classList.add('active');
+        
+        // Update State
+        const stateMap = { cb, bb, sb, gb };
+        if (stateMap[module]) stateMap[module].activeTab = target;
     };
 
     mobileTabItems.forEach(item => {
@@ -460,14 +470,16 @@ export function initTabs() {
         }
     });
 
-    grooveTabBtns.forEach(btn => {
+    instrumentTabBtns.forEach(btn => {
         btn.onclick = () => {
-            activateGrooveTab(btn);
+            activateInstrumentTab(btn);
             saveCurrentState();
         };
         
-        if (btn.dataset.tab === gb.activeTab) {
-            activateGrooveTab(btn);
+        const module = btn.dataset.module;
+        const stateMap = { cb, bb, sb, gb };
+        if (btn.dataset.tab === stateMap[module].activeTab) {
+            activateInstrumentTab(btn);
         }
     });
 }
@@ -590,7 +602,7 @@ export function updateActiveChordUI(index) {
     }
 
     // --- 2. Sequencer Grid Scrolling (Auto-Follow) ---
-    if (gb.autoFollow && ctx.isPlaying && ui.sequencerGrid) {
+    if (gb.followPlayback && ctx.isPlaying && ui.sequencerGrid) {
         const playingSteps = ui.sequencerGrid.querySelectorAll('.step.playing');
         if (playingSteps.length > 0) {
             const firstStep = playingSteps[0];
