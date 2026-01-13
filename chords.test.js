@@ -24,6 +24,12 @@ describe('Chord Logic', () => {
             expect(is7th).toBe(true);
         });
 
+        it('should identify dominant 7th chords', () => {
+            const { quality, is7th } = getChordDetails('7');
+            expect(quality).toBe('7');
+            expect(is7th).toBe(true);
+        });
+
         it('should identify Major 7th chords', () => {
             const { quality, is7th } = getChordDetails('maj7');
             expect(quality).toBe('maj7');
@@ -113,6 +119,13 @@ describe('Chord Logic', () => {
             // Typically includes b9, #9, #11, b13 (13, 15, 18, 20)
             expect(intervals).toContain(13); // b9
             expect(intervals).toContain(15); // #9
+        });
+
+        it('should provide correct intervals for dominant 7th chords (b7, not Maj7)', () => {
+            const { quality, is7th } = getChordDetails('7');
+            const intervals = getIntervals(quality, is7th, 'standard', 'Jazz', false);
+            expect(intervals).toContain(10); // b7
+            expect(intervals).not.toContain(11); // No Maj7
         });
     });
 
