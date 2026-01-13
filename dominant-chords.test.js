@@ -18,11 +18,11 @@ describe('Dominant Chord Intervals', () => {
         { symbol: '9', expected: [4, 10, 14] },
         { symbol: '13', expected: [4, 10, 14, 21] },
         { symbol: '11', expected: [5, 10, 14, 17] }, // No 3rd
-        { symbol: '7alt', expected: [4, 10, 13, 15, 20] },
+        { symbol: '7alt', expected: [4, 10, 13, 15, 18, 20] },
         { symbol: '7b9', expected: [4, 10, 13, 20] },
         { symbol: '7#9', expected: [4, 10, 15, 20] },
         { symbol: '7#11', expected: [4, 10, 14, 18] },
-        { symbol: '7b13', expected: [0, 4, 7, 10, 14, 20] }, // Fallback check?
+        { symbol: '7b13', expected: [4, 10, 14, 20] }, // Rootless: 3, b7, 9, b13
     ];
 
     testCases.forEach(({ symbol, expected }) => {
@@ -33,12 +33,18 @@ describe('Dominant Chord Intervals', () => {
             
             // Check for b7 (10)
             expect(intervals).toContain(10);
+            // Rootless check: should NOT contain root (0)
+            expect(intervals).not.toContain(0);
+            
             // Check for 3rd (4) - except for 11th chords which use 4th (5)
             if (symbol !== '11') {
                 expect(intervals).toContain(4);
             } else {
                 expect(intervals).toContain(5);
             }
+
+            // Verify the specific interval set matches expected exactly
+            expect(intervals.sort((a,b)=>a-b)).toEqual(expected.sort((a,b)=>a-b));
         });
     });
     

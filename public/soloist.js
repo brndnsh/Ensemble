@@ -27,8 +27,11 @@ const RHYTHMIC_CELLS = [
     [1, 1, 0, 1], // 7: Bebop-esque 1
     [0, 1, 1, 0], // 8: Offbeat syncopation
     [1, 0, 1, 1], // 9: Syncopated 2
-    [0, 1, 0, 1], // 10: Pure offbeats
+    [0, 1, 0, 1], // 10: Pure offbeats (16th offbeats)
     [1, 0, 0, 0, 0, 0, 0, 0], // 11: Half note (if 8 steps used)
+    [0, 0, 1, 0], // 12: Single Offbeat 8th (the "And")
+    [1, 0, 1, 0, 1, 0], // 13: Triplet-esque (Quarter + 8th feel)
+    [0, 1, 0, 0]  // 14: Single Syncopated 16th (the "e")
 ];
 
 /**
@@ -68,87 +71,119 @@ const LICK_LIBRARY = {
 
 const STYLE_CONFIG = {
     scalar: {
-        restBase: 0.2, 
-        restGrowth: 0.05,
-        cells: [0, 1, 2],
+        restBase: 0.3, 
+        restGrowth: 0.06,
+        cells: [0, 2, 11], // 8ths, quarters, halfs
         registerSoar: 7,
         tensionScale: 0.6, 
-        timingJitter: 15,
-        maxNotesPerPhrase: 12
+        timingJitter: 12,
+        maxNotesPerPhrase: 10,
+        doubleStopProb: 0.0,
+        anticipationProb: 0.15,
+        targetExtensions: [2, 9] // 9, 13
     },
     shred: {
-        restBase: 0.1,
-        restGrowth: 0.03,
-        cells: [1, 1, 4, 3],
+        restBase: 0.15,
+        restGrowth: 0.04,
+        cells: [1, 3, 4, 7], // fast cells
         registerSoar: 14,
         tensionScale: 0.2,
         timingJitter: 5,
-        maxNotesPerPhrase: 24
+        maxNotesPerPhrase: 24,
+        doubleStopProb: 0.05,
+        anticipationProb: 0.05,
+        targetExtensions: [2]
     },
     blues: {
-        restBase: 0.35, // More space
-        restGrowth: 0.1,
-        cells: [0, 2, 3, 5, 6, 8],
+        restBase: 0.5, // Increased from 0.45
+        restGrowth: 0.12,
+        cells: [2, 11, 0, 12, 6], // Added 12 (Single offbeat 8th)
         registerSoar: 7,
         tensionScale: 0.8,
-        timingJitter: 22,
-        maxNotesPerPhrase: 8
+        timingJitter: 20,
+        maxNotesPerPhrase: 6,
+        doubleStopProb: 0.15,
+        anticipationProb: 0.3,
+        targetExtensions: [9, 10] // 6, b7
     },
     neo: {
-        restBase: 0.4,
-        restGrowth: 0.08,
-        cells: [6, 10, 0, 9],
+        restBase: 0.5,
+        restGrowth: 0.1,
+        cells: [11, 2, 6, 10, 12], // Added 12
         registerSoar: 7,
         tensionScale: 0.6,
-        timingJitter: 25,
-        maxNotesPerPhrase: 10
+        timingJitter: 30,
+        maxNotesPerPhrase: 8,
+        doubleStopProb: 0.1,
+        anticipationProb: 0.4,
+        targetExtensions: [2, 6, 9, 11] // 9, #11, 13, maj7
     },
     minimal: {
-        restBase: 0.55,
-        restGrowth: 0.18,
-        cells: [2, 0, 10],
+        restBase: 0.65,
+        restGrowth: 0.2,
+        cells: [11, 2, 12], // Added 12
         registerSoar: 10,
         tensionScale: 0.9,
         timingJitter: 35,
-        maxNotesPerPhrase: 5
+        maxNotesPerPhrase: 4,
+        doubleStopProb: 0.0,
+        anticipationProb: 0.1,
+        targetExtensions: [2, 7]
     },
     bird: {
-        restBase: 0.25,
-        restGrowth: 0.08,
-        cells: [5, 7, 8, 9, 10, 3], // Removed 0 (straight 8ths), added 8 & 9 for syncopation
+        restBase: 0.5, // Increased from 0.45
+        restGrowth: 0.1,
+        cells: [0, 12, 2], // Switched to 8th-note heavy Bebop phrasing: 8ths, offbeat 8th, quarters. Removed 16th syncopation (6).
         registerSoar: 5,
         tensionScale: 0.7,
         timingJitter: 15,
-        maxNotesPerPhrase: 16
+        maxNotesPerPhrase: 10, // Reduced from 12
+        doubleStopProb: 0.0,
+        anticipationProb: 0.5,
+        targetExtensions: [2, 5, 9] // 9, 11, 13
     },
     disco: {
-        restBase: 0.2,
-        restGrowth: 0.05,
+        restBase: 0.25,
+        restGrowth: 0.06,
         cells: [0, 2, 5, 10],
         registerSoar: 12,
         tensionScale: 0.5,
-        timingJitter: 5,
-        maxNotesPerPhrase: 14
+        timingJitter: 8,
+        maxNotesPerPhrase: 12,
+        doubleStopProb: 0.05,
+        anticipationProb: 0.2,
+        targetExtensions: [2, 9]
     },
     bossa: {
-        restBase: 0.3,
-        restGrowth: 0.07,
-        cells: [0, 6, 8, 10, 2], 
+        restBase: 0.4,
+        restGrowth: 0.08,
+        cells: [11, 2, 0, 6, 8], 
         registerSoar: 8,
         tensionScale: 0.7,
-        timingJitter: 18,
-        maxNotesPerPhrase: 12
+        timingJitter: 15,
+        maxNotesPerPhrase: 8,
+        doubleStopProb: 0.0,
+        anticipationProb: 0.35,
+        targetExtensions: [2, 6, 9] // 9, #11, 13
     }
 };
 
 // --- Helpers ---
 
 export function getScaleForChord(chord, nextChord, style) {
+    if (style === 'smart') {
+        const mapping = { 
+            'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'neo', 'Blues': 'blues', 
+            'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 
+            'Bossa Nova': 'bossa', 'Afrobeat': 'blues', 'Acoustic': 'minimal'
+        };
+        style = mapping[gb.genreFeel] || 'scalar';
+    }
+
     const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;
     const isDominant = chord.quality.startsWith('7') || 
                        ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(chord.quality) ||
                        (chord.intervals.includes(10) && chord.intervals.includes(4));
-    const isV7toMinor = isDominant && nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
     
     // 1. Tension High? Altered/Diminished
     if (sb.tension > 0.7 && isDominant) {
@@ -157,8 +192,13 @@ export function getScaleForChord(chord, nextChord, style) {
 
     // 2. Style Specifics
     if (style === 'blues' || style === 'disco') {
-        if (['minor', 'halfdim', 'dim'].includes(chord.quality)) return [0, 3, 5, 6, 7, 10]; // Minor Blues
-        return [0, 3, 4, 5, 7, 9, 10]; // Major Blues + b3
+        const base = ['minor', 'halfdim', 'dim'].includes(chord.quality) 
+            ? [0, 2, 3, 5, 6, 7, 10] 
+            : [0, 2, 3, 4, 5, 6, 7, 9, 10];
+        
+        // If tension is high, allow Major 7th (11) for that sophisticated blues "crunch"
+        if (sb.tension > 0.7) base.push(11);
+        return base.sort((a,b)=>a-b);
     }
     
     if (style === 'neo') {
@@ -169,9 +209,7 @@ export function getScaleForChord(chord, nextChord, style) {
         return [0, 2, 4, 6, 7, 9, 11]; // Lydian (classic Bossa color)
     }
 
-    // 3. Chord Scale Logic (Prioritize Chord Quality over Diatonic Key)
-    if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant for minor resolutions
-    
+    // 3. Chord Scale Logic (Prioritize Specific Qualities)
     switch (chord.quality) {
         case 'minor': return [0, 2, 3, 5, 7, 8, 10]; 
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
@@ -180,18 +218,24 @@ export function getScaleForChord(chord, nextChord, style) {
         case 'maj7': return [0, 2, 4, 5, 7, 9, 11];
         case 'sus4': return [0, 2, 5, 7, 9, 10]; // Mixolydian sus4
         case '7alt': return [0, 1, 3, 4, 6, 8, 10];
+        case '7#9': return [0, 1, 3, 4, 6, 8, 10]; // Altered
         case '7b9': return [0, 1, 4, 5, 7, 8, 10];
+        case '7b13': return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
         case '7#11': return [0, 2, 4, 6, 7, 9, 10]; // Lydian Dominant
+        case '9': return [0, 2, 4, 5, 7, 9, 10];
+        case '13': return [0, 2, 4, 6, 7, 9, 10]; // Lydian Dominant
     }
+
+    const isV7toMinor = isDominant && nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
+    if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
 
     if (isDominant) {
         // If it's a "II7" (Major II), usually Lydian Dominant (#11) sounds better
-        // We'll approximate this by checking if the root is 2 semitones from the key root
         const keyRoot = KEY_ORDER.indexOf(arranger.key);
-        const relativeRoot = (chord.rootMidi - keyRoot + 12) % 12;
+        const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
         if (relativeRoot === 2 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10]; 
 
-        return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
+        return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian fallback
     }
     // 4. Diatonic Fallback (Only for simple triads that fit the key)
     const keyRoot = KEY_ORDER.indexOf(arranger.key);
@@ -219,9 +263,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             style = 'blues';
         } else {
             const mapping = { 
-                'Rock': 'shred', 'Jazz': 'bird', 'Funk': 'blues', 'Blues': 'blues', 
-                'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 'Bossa Nova': 'bossa',
-                'Afrobeat': 'blues' // Afrobeat uses soulful/bluesy leads
+                'Rock': 'scalar', // Switched from shred to scalar for more lyrical rock leads
+                'Jazz': 'bird', 
+                'Funk': 'neo', // Switched from blues to neo for funk (more space)
+                'Blues': 'blues', 
+                'Neo-Soul': 'neo', 
+                'Disco': 'disco', 
+                'Bossa': 'bossa', 
+                'Bossa Nova': 'bossa',
+                'Afrobeat': 'blues',
+                'Acoustic': 'minimal'
             };
             style = mapping[gb.genreFeel] || 'scalar';
         }
@@ -240,7 +291,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // --- 1. Cycle & Tension Tracking ---
     
     // Dynamic Cycle length: Match progression if short, else default to 4
-    const progressionBars = arranger.progression.length / stepsPerMeasure;
+    const progressionBars = (arranger.progression && arranger.progression.length > 0) ? arranger.progression.length / stepsPerMeasure : 4;
     const CYCLE_BARS = (progressionBars > 0 && progressionBars <= 8) ? progressionBars : 4;
     const stepsPerCycle = stepsPerMeasure * CYCLE_BARS;
     const cycleStep = step % stepsPerCycle;
@@ -272,9 +323,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // --- 2. Breath & Phrasing Logic ---
     
     // Initialize phrase tracking if needed
-    if (typeof sb.currentPhraseSteps === 'undefined') sb.currentPhraseSteps = 0;
-    if (typeof sb.notesInPhrase === 'undefined') sb.notesInPhrase = 0;
-    if (typeof sb.qaState === 'undefined') sb.qaState = 'Question'; // Question or Answer
+    if (typeof sb.currentPhraseSteps === 'undefined' || (step === 0 && !sb.isResting)) {
+        sb.currentPhraseSteps = 0;
+        sb.notesInPhrase = 0;
+        sb.qaState = 'Question';
+        sb.isResting = true; // Start with a breath!
+        return null; // Force early exit for the initial breath
+    }
     
     if (typeof sb.contourSteps === 'undefined') {
         sb.contourSteps = 0;
@@ -303,7 +358,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     let restProb = (config.restBase * (2.0 - intensity * 1.5)) + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
     
     // Force breath if note budget exceeded
-    if (sb.notesInPhrase >= config.maxNotesPerPhrase) restProb += 0.4;
+    // Tempo-aware budget: at 200 BPM, 14 notes is too many.
+    const tempoBudgetFactor = Math.max(0.5, 1.0 - (ctx.bpm - 100) * 0.004);
+    if (sb.notesInPhrase >= config.maxNotesPerPhrase * tempoBudgetFactor) restProb += 0.4;
 
     // Rests are less likely to start on a group start (don't breathe on the "One" or structural anchors)
     if (isGroupStart) restProb *= 0.3;
@@ -315,10 +372,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
     // If we are currently resting
     if (sb.isResting) {
-        if (Math.random() < 0.4 + (intensity * 0.3)) { // Higher chance to restart phrase at high intensity
+        // Lower chance to start playing immediately at step 0 to allow the groove to establish
+        const startBias = step < 8 ? 0.3 : 1.0;
+        // High tempo = even less likely to start playing immediately
+        const tempoStartBias = Math.max(0.4, 1.0 - (ctx.bpm - 120) * 0.005);
+        
+        if (Math.random() < (0.4 + (intensity * 0.3)) * startBias * tempoStartBias) { 
             sb.isResting = false;
             sb.currentPhraseSteps = 0;
             sb.notesInPhrase = 0;
+            sb.busySteps = 0; // Ensure we don't start busy
             
             // Toggle Q&A state
             sb.qaState = sb.qaState === 'Question' ? 'Answer' : 'Question';
@@ -416,241 +479,306 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // B. Cell Selection (Rhythm) - strictly strictly only if NOT replaying
     // If we are replaying a motif, we must respect its silence (gaps) and not fill them with random cells
     if (!sb.isReplayingMotif && !selectedMidi && stepInBeat === 0) {
-        // New beat, pick a cell
-        let cellPool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
+        // RHYTHMIC INERTIA: 60% chance to keep previous cell if it wasn't silent
+        if (sb.currentCell && sb.currentCell.some(v => v === 1) && Math.random() < 0.6) {
+            // Keep previous cell for rhythmic continuity
+        } else {
+            // New beat, pick a cell
+            let cellPool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
 
-        // SPEED GOVERNOR: At high tempos, 16th notes become unplayable/messy
-        if (ctx.bpm > 140 && style !== 'shred') {
-             cellPool = cellPool.filter((_, idx) => ![1, 3, 4, 7, 9].includes(idx));
-             if (cellPool.length === 0) cellPool = [RHYTHMIC_CELLS[0]]; 
-        }
-        
-        // Tension influence
-        if (sb.tension > 0.7 && style === 'shred') cellPool = [RHYTHMIC_CELLS[1]]; 
-        if (sb.tension < 0.3 && style === 'minimal') cellPool = [RHYTHMIC_CELLS[2]]; 
-        
-        sb.currentCell = cellPool[Math.floor(Math.random() * cellPool.length)];
-        
-        // Humanize
-        if (Math.random() < 0.1) sb.currentCell = [0, 0, 0, 0];
-    }
-    
-    // Only trigger cell-based play if we are NOT replaying a motif
-    if (!sb.isReplayingMotif && !selectedMidi && sb.currentCell[stepInBeat] === 1) shouldPlay = true;
-
-    if (!shouldPlay) return null;
-    sb.notesInPhrase++;
-
-
-    // --- 4. Pitch Selection (Standard Weighted Generation) ---
-
-    const rootMidi = currentChord.rootMidi;
-
-    if (!selectedMidi) {
-        const chordTones = currentChord.intervals.map(i => rootMidi + i);
-        const scaleIntervals = getScaleForChord(currentChord, nextChord, style);
-        const scaleTones = scaleIntervals.map(i => rootMidi + i);
-        
-        // Use the style-specific 'registerSoar' value scaled by Intensity
-        const soarAmount = config.registerSoar * (0.5 + intensity); // e.g. 5 * 1.5 = 7.5
-        const dynamicCenter = centerMidi + Math.floor(sb.tension * soarAmount);
-        
-        const minMidi = dynamicCenter - 15; // Reduced range
-        const maxMidi = dynamicCenter + 15;
-        const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
-
-        let candidates = [];
-        
-        for (let m = minMidi; m <= maxMidi; m++) {
-            const pc = (m % 12 + 12) % 12;
-            const rootPC = (rootMidi % 12 + 12) % 12;
-            const interval = (pc - rootPC + 12) % 12;
-            
-            let weight = 1.0;
-            
-            const isChordTone = chordTones.some(ct => (ct % 12 + 12) % 12 === pc);
-            const isScaleTone = scaleTones.some(st => (st % 12 + 12) % 12 === pc);
-            
-            if (!isScaleTone) continue; 
-
-            // Vocal Range Gravity: Prefer the "meat" of the range
-            // Penalize upper register to use it sparingly
-            if (m > centerMidi + 7) weight -= 4;
-            if (m > centerMidi + 12) weight -= 10;
-
-            // Beat Strength & "Sweet Notes"
-            if (isStrongBeat) {
-                if (isChordTone) {
-                    weight += 10;
-                    // Target the 3rd on the Downbeat (Sweetness)
-                    if (beatInMeasure === 0 && (interval === 3 || interval === 4)) {
-                        weight += 15; 
+                        // SPEED GOVERNOR: At higher tempos, restrict fast cells aggressively
+                        if (ctx.bpm > 140 && style !== 'shred') {
+                            // Aggressively filter out ANY 16th-resolution density (1, 3, 4, 5, 6, 7, 8, 9, 10, 14)
+                            const forbiddenIdx = [1, 3, 4, 5, 6, 7, 8, 9, 10, 14];
+                            cellPool = cellPool.filter((_, idx) => !forbiddenIdx.includes(idx));
+                            
+                            // At extremely high tempos (>180), even offbeat 8ths (0, 6, 12) might be too much
+                            if (ctx.bpm > 180) {
+                                // Restrict to Quarters (2) and Halfs (11) only
+                                cellPool = cellPool.filter((_, idx) => [2, 11].includes(idx));
+                            }
+                            
+                            if (cellPool.length === 0) cellPool = [RHYTHMIC_CELLS[2]]; // Fallback to Quarters
+                        } else if (ctx.bpm > 120 && style !== 'shred') {
+                            // Moderate filtering for medium-up tempos
+                            cellPool = cellPool.filter((_, idx) => ![1, 3, 4, 7, 9].includes(idx));
+                        }
+                        
+                        // Tension influence
+                        if (sb.tension > 0.7 && style === 'shred') cellPool = [RHYTHMIC_CELLS[1]]; 
+                        if (sb.tension < 0.3 && style === 'minimal') cellPool = [RHYTHMIC_CELLS[2]]; 
+                        
+                        sb.currentCell = cellPool[Math.floor(Math.random() * cellPool.length)];
                     }
-                } else {
-                    // HARMONIC SIEVE: Filter out "Avoid Notes" on strong beats
-                    // These are notes that are "in the scale" but clash horribly with chord tones
-                    let isClash = false;
                     
-                    const isDominant = currentChord.quality.startsWith('7') || 
-                                     ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(currentChord.quality) ||
-                                     (currentChord.intervals.includes(10) && currentChord.intervals.includes(4));
+                                    // Humanize
+                                    if (Math.random() < 0.1) sb.currentCell = [0, 0, 0, 0];
+                                }
+                                
+                                // Only trigger cell-based play if we are NOT replaying a motif
+                                if (!sb.isReplayingMotif && !selectedMidi && sb.currentCell && sb.currentCell[stepInBeat] === 1) shouldPlay = true;
+                            
+                                if (!shouldPlay) return null;                sb.notesInPhrase++;
+            
+            
+                // --- 4. Pitch Selection (Standard Weighted Generation) ---
+            
+                // ANTICIPATION LOGIC: 
+                // On step 14 or 15 (upbeat of 4), we have a chance to anticipate the NEXT chord
+                const isAnticipationStep = (measureStep >= 14);
+                let targetChord = currentChord;
+                if (isAnticipationStep && nextChord && Math.random() < (config.anticipationProb || 0)) {
+                    targetChord = nextChord;
+                }
+            
+                const rootMidi = targetChord.rootMidi;
+            
+                if (!selectedMidi) {
+                    const chordTones = targetChord.intervals.map(i => rootMidi + i);
+                    const scaleIntervals = getScaleForChord(targetChord, null, style);
+                    const scaleTones = scaleIntervals.map(i => rootMidi + i);
                     
-                    const isMajorLike = ['major', 'maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(currentChord.quality) || isDominant;
+                    // Use the style-specific 'registerSoar' value scaled by Intensity
+                    const soarAmount = config.registerSoar * (0.5 + intensity); // e.g. 5 * 1.5 = 7.5
+                    const dynamicCenter = centerMidi + Math.floor(sb.tension * soarAmount);
                     
-                    // 1. Avoid 4th (5 semitones) on Major/Dominant chords (Clashes with 3rd)
-                    if (isMajorLike && interval === 5) isClash = true;
-
-                    // 2. Avoid b6 (8 semitones) on Minor chords (Clashes with 5th)
-                    if (currentChord.quality === 'minor' && interval === 8) isClash = true;
-
-                    // 3. Avoid b2 (1 semitone) generally (unless altered context)
-                    if (interval === 1) isClash = true;
-
-                    if (isClash) {
-                        weight -= 50; // Hard Veto: Overpowers stepwise bonus
-                    } else {
-                        weight -= 5; // Soft Penalty: "Tensions" (9, 13) are okay-ish
+                    const minMidi = dynamicCenter - 15; // Reduced range
+                    const maxMidi = dynamicCenter + 15;
+                    const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
+            
+                    let candidates = [];
+                    
+                    for (let m = minMidi; m <= maxMidi; m++) {
+                        const pc = (m % 12 + 12) % 12;
+                        const rootPC = (rootMidi % 12 + 12) % 12;
+                        const interval = (pc - rootPC + 12) % 12;
+                        
+                        let weight = 1.0;
+                        
+                        const isChordTone = chordTones.some(ct => (ct % 12 + 12) % 12 === pc);
+                        const isScaleTone = scaleTones.some(st => (st % 12 + 12) % 12 === pc);
+                        
+                        if (!isScaleTone) continue; 
+            
+                        // Target Extensions (Color Notes)
+                        if (config.targetExtensions && config.targetExtensions.includes(interval)) {
+                            weight += 12;
+                            if (isStrongBeat) weight += 5; // Extra weight for extensions on strong beats
+                        }
+            
+                        // Vocal Range Gravity: Prefer the "meat" of the range
+                        // Penalize upper register to use it sparingly
+                        if (m > centerMidi + 7) weight -= 4;
+                        if (m > centerMidi + 12) weight -= 10;
+            
+                        // Beat Strength & "Sweet Notes"
+                        if (isStrongBeat) {
+                            if (isChordTone) {
+                                weight += 10;
+                                // Target the 3rd or 7th on the Downbeat (Sweetness)
+                                if (beatInMeasure === 0 && (interval === 3 || interval === 4 || interval === 10 || interval === 11)) {
+                                    weight += 15; 
+                                }
+                            } else {
+                                // HARMONIC SIEVE: Filter out "Avoid Notes" on strong beats
+                                // These are notes that are "in the scale" but clash horribly with chord tones
+                                let isClash = false;
+                                
+                                const isDominant = targetChord.quality.startsWith('7') || 
+                                                 ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(targetChord.quality) ||
+                                                 (targetChord.intervals.includes(10) && targetChord.intervals.includes(4));
+                                
+                                const isMajorLike = ['major', 'maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(targetChord.quality) || isDominant;
+                                
+                                // 1. Avoid 4th (5 semitones) on Major/Dominant chords (Clashes with 3rd)
+                                if (isMajorLike && interval === 5) isClash = true;
+            
+                                // 2. Avoid b6 (8 semitones) on Minor chords (Clashes with 5th)
+                                if (targetChord.quality === 'minor' && interval === 8) isClash = true;
+            
+                                // 3. Avoid b2 (1 semitone) generally (unless altered context)
+                                if (interval === 1) isClash = true;
+            
+                                if (isClash) {
+                                    weight -= 50; // Hard Veto: Overpowers stepwise bonus
+                                } else {
+                                    weight -= 5; // Soft Penalty: "Tensions" (9, 13) are okay-ish
+                                }
+                            }
+                        } else {
+                            if (!isChordTone) weight += 2; 
+                        }
+            
+                        // Tension
+                        if (sb.tension > 0.8) {
+                            if (!isChordTone && isScaleTone) weight += 5;
+                        } else if (sb.tension < 0.2) {
+                            if (interval === 0 || interval === 7) weight += 8;
+                        }
+                        
+                        // Proximity & Melodic Flow
+                        const dist = Math.abs(m - lastMidi);
+                        
+                        if (dist === 0) weight -= 5; // Avoid same note repeated too much
+            
+                        // Melodic Contour Influence
+                        if (sb.melodicTrend === 'Up' && m > lastMidi) weight += 8;
+                        if (sb.melodicTrend === 'Down' && m < lastMidi) weight += 8;
+                        if (sb.melodicTrend === 'Static' && dist <= 2) weight += 5;
+                        
+                        // Phrase Landing: Increase weight for chord tones (1, 3, 5) on the last note before resting
+                        // We estimate "last note" by checking if restProb is high
+                        if (restProb > 0.3 && isChordTone) {
+                            if (interval === 0 || interval === 4 || interval === 7 || interval === 3) {
+                                weight += 25;
+                                // "Answers" should definitely resolve to the root or 3rd
+                                if (sb.qaState === 'Answer' && (interval === 0 || interval === 3 || interval === 4)) weight += 15;
+                            }
+                        }
+            
+                        // Favor root for Answers
+                        if (sb.qaState === 'Answer' && interval === 0) weight += 10;
+            
+                        // Step-wise is VERY good (1-2 semi) - Primary movement
+                        if (dist > 0 && dist <= 2) {
+                            // Tempo-aware stepwise bias: the faster the tempo, the more we prefer steps
+                            const tempoStepBias = (ctx.bpm / 100) * 15;
+                            weight += (15 + tempoStepBias);
+                            if (style === 'scalar') weight += 20; // Strong bias for smooth lines in scalar mode
+                        } 
+                        
+                        // Small Skips (3rds, 4ths) - Secondary movement
+                        if (dist >= 3 && dist <= 5) {
+                            weight += 4;
+                        }
+            
+                        // Musical Skips (5ths, 6ths) - Use sparingly
+                        if (dist > 5 && dist <= 9) {
+                            if (Math.random() < 0.3) weight += 2;
+                            else weight -= 2;
+                        }
+            
+                        // Penalize large leaps heavily
+                        if (dist > 9) weight -= 30;
+            
+                        candidates.push({ midi: m, weight: Math.max(0.1, weight) });
+                    }
+            
+                    // Selection
+                    let totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
+                    let randomVal = Math.random() * totalWeight;
+                    selectedMidi = lastMidi;
+                    
+                    for (const cand of candidates) {
+                        randomVal -= cand.weight;
+                        if (randomVal <= 0) {
+                            selectedMidi = cand.midi;
+                            break;
+                        }
+                    }
+                    
+                    // Force Root on Cycle Reset
+                    if (cycleStep === 0 && isStrongBeat) {
+                        selectedMidi = chordTones[0];
+                        let safety = 0;
+                        while (selectedMidi < minMidi && safety < 10) { 
+                            selectedMidi += 12;
+                            safety++;
+                        }
+                        safety = 0;
+                        while (selectedMidi > maxMidi && safety < 10) {
+                            selectedMidi -= 12;
+                            safety++;
+                        }
                     }
                 }
-            } else {
-                if (!isChordTone) weight += 2; 
-            }
-
-            // Tension
-            if (sb.tension > 0.8) {
-                if (!isChordTone && isScaleTone) weight += 5;
-            } else if (sb.tension < 0.2) {
-                if (interval === 0 || interval === 7) weight += 8;
-            }
             
-            // Proximity & Melodic Flow
-            const dist = Math.abs(m - lastMidi);
             
-            if (dist === 0) weight -= 5; // Avoid same note repeated too much
-
-            // Melodic Contour Influence
-            if (sb.melodicTrend === 'Up' && m > lastMidi) weight += 8;
-            if (sb.melodicTrend === 'Down' && m < lastMidi) weight += 8;
-            if (sb.melodicTrend === 'Static' && dist <= 2) weight += 5;
-            
-            // Phrase Landing: Increase weight for chord tones (1, 3, 5) on the last note before resting
-            // We estimate "last note" by checking if restProb is high
-            if (restProb > 0.3 && isChordTone) {
-                if (interval === 0 || interval === 4 || interval === 7 || interval === 3) {
-                    weight += 25;
-                    // "Answers" should definitely resolve to the root or 3rd
-                    if (sb.qaState === 'Answer' && (interval === 0 || interval === 3 || interval === 4)) weight += 15;
+                // --- 5. Articulation & Humanization ---
+                
+                // A. Blue Note Curls & Scoops
+                let bendStartInterval = 0;
+                const intervalFromRoot = (selectedMidi - rootMidi + 120) % 12;
+                
+                // 1. Target: Major 3rd (4) -> Curl from Minor 3rd
+                if (intervalFromRoot === 4 && ['blues', 'neo', 'bird', 'minimal'].includes(style)) {
+                    if (Math.random() < 0.4) bendStartInterval = 1; 
                 }
-            }
-
-            // Favor root for Answers
-            if (sb.qaState === 'Answer' && interval === 0) weight += 10;
-
-            // Step-wise is VERY good (1-2 semi) - Primary movement
-            if (dist > 0 && dist <= 2) {
-                weight += 15;
-                if (style === 'scalar') weight += 20; // Strong bias for smooth lines in scalar mode
-            } 
+                
+                // 2. Target: Perfect 5th (7) -> Curl from b5 (Blues only)
+                if (intervalFromRoot === 7 && style === 'blues') {
+                     if (Math.random() < 0.3) bendStartInterval = 1; 
+                }
             
-            // Small Skips (3rds, 4ths) - Secondary movement
-            if (dist >= 3 && dist <= 5) {
-                weight += 4;
-            }
+                // 3. Target: Root (0) -> Soulful Scoop (Neo/Soul)
+                if (intervalFromRoot === 0 && ['neo', 'bird', 'blues'].includes(style) && isStrongBeat) {
+                     if (Math.random() < 0.35) bendStartInterval = 0.5; // Quarter-tone scoop
+                }
             
-            // Musical Skips (5ths, 6ths) - Use sparingly
-            if (dist > 5 && dist <= 9) {
-                if (Math.random() < 0.3) weight += 2;
-                else weight -= 2;
-            }
-
-            // Penalize large leaps heavily
-            if (dist > 9) weight -= 30;
-
-            candidates.push({ midi: m, weight: Math.max(0.1, weight) });
-        }
-
-        // Selection
-        let totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
-        let randomVal = Math.random() * totalWeight;
-        selectedMidi = lastMidi;
-        
-        for (const cand of candidates) {
-            randomVal -= cand.weight;
-            if (randomVal <= 0) {
-                selectedMidi = cand.midi;
-                break;
-            }
-        }
-        
-        // Force Root on Cycle Reset
-        if (cycleStep === 0 && isStrongBeat) {
-            selectedMidi = chordTones[0];
-            let safety = 0;
-            while (selectedMidi < minMidi && safety < 10) { 
-                selectedMidi += 12;
-                safety++;
-            }
-            safety = 0;
-            while (selectedMidi > maxMidi && safety < 10) {
-                selectedMidi -= 12;
-                safety++;
-            }
-        }
-    }
-
-
-    // --- 5. Articulation & Humanization ---
-    
-    // A. Blue Note Curls & Scoops
-    let bendStartInterval = 0;
-    const intervalFromRoot = (selectedMidi - rootMidi + 120) % 12;
-    
-    // 1. Target: Major 3rd (4) -> Curl from Minor 3rd
-    if (intervalFromRoot === 4 && ['blues', 'neo', 'bird', 'minimal'].includes(style)) {
-        if (Math.random() < 0.4) bendStartInterval = 1; 
-    }
-    
-    // 2. Target: Perfect 5th (7) -> Curl from b5 (Blues only)
-    if (intervalFromRoot === 7 && style === 'blues') {
-         if (Math.random() < 0.3) bendStartInterval = 1; 
-    }
-
-    // 3. Target: Root (0) -> Soulful Scoop (Neo/Soul)
-    if (intervalFromRoot === 0 && ['neo', 'bird', 'blues'].includes(style) && isStrongBeat) {
-         if (Math.random() < 0.35) bendStartInterval = 0.5; // Quarter-tone scoop
-    }
-
-    // B. Dynamic Arcs (Storytelling Velocity)
-    // Parabolic curve: Start med, peak high, end low
-    // Phrase progress approx 0 to ~16 (typical phrase length)
-    // Normalize to 0-1 assuming 32 step max phrase
-    const phraseProg = Math.min(1, sb.currentPhraseSteps / 32);
-    const arch = Math.sin(phraseProg * Math.PI); // 0 -> 1 -> 0
-    
-    let baseVel = 0.7;
-    let dynRange = 0.3;
-    if (style === 'minimal') { baseVel = 0.5; dynRange = 0.5; }
-    
-    let velocity = baseVel + (arch * dynRange);
-    
-    // Add randomness
-    velocity += (Math.random() - 0.5) * 0.1;
-    
-    // Accent strong beats
-    if (isStrongBeat) velocity *= 1.1;
-
-
-    // C. Micro-Timing
-    let timingOffset = (Math.random() - 0.5) * config.timingJitter;
-
-    // D. Duration
-    if (style === 'minimal') {
-        durationMultiplier = Math.random() < 0.3 ? 2 : 1;
-    }
-    
+                // B. Dynamic Arcs (Storytelling Velocity)
+                // Parabolic curve: Start med, peak high, end low
+                // Phrase progress approx 0 to ~16 (typical phrase length)
+                // Normalize to 0-1 assuming 32 step max phrase
+                const phraseProg = Math.min(1, sb.currentPhraseSteps / 32);
+                const arch = Math.sin(phraseProg * Math.PI); // 0 -> 1 -> 0
+                
+                let baseVel = 0.7;
+                let dynRange = 0.3;
+                if (style === 'minimal') { baseVel = 0.5; dynRange = 0.5; }
+                
+                let velocity = baseVel + (arch * dynRange);
+                
+                // Add randomness
+                velocity += (Math.random() - 0.5) * 0.1;
+                
+                // Accent strong beats
+                if (isStrongBeat) velocity *= 1.1;
+            
+            
+                // C. Micro-Timing
+                let timingOffset = (Math.random() - 0.5) * config.timingJitter;
+            
+                // D. Duration & Rhythmic Cell Mapping
+                if (!sb.isReplayingMotif) {
+                    const cellType = sb.currentCell.join('');
+                    const cellDurs = {
+                        '1010': 2, // 8ths
+                        '1111': 1, // 16ths
+                        '1000': 4, // Quarter
+                        '1110': 1, // Gallop
+                        '1011': 1,
+                        '0111': 1,
+                        '1001': 1,
+                        '1101': 1,
+                        '0110': 1,
+                        '0101': 1,
+                        '10000000': 8, // Half
+                        '0010': 2, // Offbeat 8th
+                        '0100': 1  // Single 16th
+                    };
+                    durationMultiplier = cellDurs[cellType] || 1;
+                    
+                    // Embellish durations for expressive styles
+                    if (durationMultiplier >= 2 && ['blues', 'neo', 'bossa', 'minimal', 'bird'].includes(style)) {
+                        if (Math.random() < 0.4) durationMultiplier *= 1.5;
+                    }
+                }    
     // Safety: Ensure we never have 0 duration (machine gun effect)
     durationMultiplier = Math.max(1, Math.round(durationMultiplier || 1));
     sb.busySteps = durationMultiplier - 1;
+
+    // E. Double Stop Logic (Rock/Blues/Neo-Soul)
+    let notes = [];
+    if (Math.random() < (config.doubleStopProb || 0)) {
+        // Typical double stop intervals: 4th, 5th, 6th, or octave
+        const dsIntervals = [5, 7, 9, 12];
+        const dsInt = dsIntervals[Math.floor(Math.random() * dsIntervals.length)];
+        const secondMidi = selectedMidi + (Math.random() > 0.5 ? dsInt : -dsInt);
+        // Clamp second note to reasonable range
+        if (secondMidi > 40 && secondMidi < 100) {
+            notes.push({ midi: secondMidi, velocity: velocity * 0.8, isDoubleStop: true });
+        }
+    }
 
     // --- 6. Update State & Motif Buffer ---
     
@@ -672,13 +800,19 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     // Incorporate style-based timing offsets (previously in main.js)
     if (style === 'neo') timingOffset += (0.01 + Math.random() * 0.035) * 1000; // ms
 
-    return {
+    const resultNote = {
         midi: selectedMidi,
         velocity,
         durationSteps: durationMultiplier,
         bendStartInterval, 
         ccEvents: [],
         timingOffset: timingOffset / 1000, // convert back to seconds
-        style // Keep style for articulation choice in engine
+        style
     };
+
+    if (notes.length > 0) {
+        return [resultNote, ...notes.map(n => ({...resultNote, ...n}))];
+    }
+
+    return resultNote;
 }

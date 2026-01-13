@@ -785,15 +785,20 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
 
     // Monophonic Cutoff: Ensure only one note rings at a time per module.
     // If a note arrives with an identical or past time, we still cutoff to prevent bunching.
-    if (sb.lastSoloistGain) {
+    // NEW: Allow small overlap (double stops) if notes start at almost the exact same time.
+    if (sb.lastSoloistGain && Math.abs(playTime - sb.lastNoteStartTime) > 0.001) {
         try {
             const g = sb.lastSoloistGain.gain;
             g.cancelScheduledValues(playTime);
             g.setTargetAtTime(0, playTime, 0.005);
         } catch (e) {}
     }
-    sb.lastSoloistGain = gain;
-    sb.lastNoteStartTime = playTime;
+    
+    // Only track the primary note for future cutoffs
+    if (Math.abs(playTime - sb.lastNoteStartTime) > 0.001) {
+        sb.lastSoloistGain = gain;
+        sb.lastNoteStartTime = playTime;
+    }
 
     // Smart Vibrato Logic
     // Only apply vibrato if note is long enough to warrant it
