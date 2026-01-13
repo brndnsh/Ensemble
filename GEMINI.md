@@ -32,7 +32,7 @@ Ensemble is a zero-dependency project and requires no build step.
     # Node.js
     npx serve .
     ```
-*   **Testing**: Currently, testing is performed via manual verification in the browser. (TODO: Implement automated unit tests for chord parsing and scale logic).
+*   **Testing**: Automated unit tests are available using Vitest. Run `npm test` to execute them. Covers `chords.js`, `utils.js`, `arranger-controller.js`, `soloist.js`, etc.
 *   **PWA**: Service worker (`sw.js`) and manifest (`manifest.json`) are configured for offline use and installation.
 
 ## Development Conventions
