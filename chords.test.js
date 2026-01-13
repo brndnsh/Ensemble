@@ -97,9 +97,10 @@ describe('Chord Logic', () => {
             expect(intervals).toContain(14); // 9th
         });
 
-        it('should provide intervals for 11th chords (1, 3, 5, b7, 9, 11)', () => {
+        it('should provide intervals for 11th chords (No 3rd to avoid clash)', () => {
             const intervals = getIntervals('11', true, 'standard', 'Jazz', false);
             expect(intervals).toContain(17); // 11th
+            expect(intervals).not.toContain(4); // No 3rd
         });
 
         it('should provide intervals for 13th chords (1, 3, 5, b7, 9, 13)', () => {

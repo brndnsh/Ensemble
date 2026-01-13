@@ -28,72 +28,105 @@ const RHYTHMIC_CELLS = [
     [0, 1, 1, 0], // 8: Offbeat syncopation
     [1, 0, 1, 1], // 9: Syncopated 2
     [0, 1, 0, 1], // 10: Pure offbeats
+    [1, 0, 0, 0, 0, 0, 0, 0], // 11: Half note (if 8 steps used)
 ];
+
+/**
+ * Lick Library: Pre-baked "hooky" melodic/rhythmic fragments.
+ * 'i' = interval from root, 'd' = duration in steps, 'o' = step offset from start of lick
+ */
+const LICK_LIBRARY = {
+    blues: [
+        { name: 'The Box', notes: [{o:0, i:3, d:2}, {o:2, i:5, d:2}, {o:4, i:0, d:4}] },
+        { name: 'Soul Slide', notes: [{o:0, i:7, d:1}, {o:1, i:6, d:1}, {o:2, i:5, d:2}, {o:4, i:3, d:4}] },
+        { name: 'Root Pivot', notes: [{o:0, i:0, d:2}, {o:2, i:10, d:2}, {o:4, i:0, d:4}] }
+    ],
+    jazz: [
+        { name: 'ii-V Enclosure', notes: [{o:0, i:2, d:1}, {o:1, i:1, d:1}, {o:2, i:0, d:2}] },
+        { name: 'Arp Up', notes: [{o:0, i:0, d:2}, {o:2, i:4, d:2}, {o:4, i:7, d:2}, {o:6, i:11, d:2}] }
+    ],
+    rock: [
+        { name: 'Pentatonic Run', notes: [{o:0, i:7, d:1}, {o:1, i:5, d:1}, {o:2, i:3, d:1}, {o:3, i:0, d:5}] },
+        { name: 'Octave Jump', notes: [{o:0, i:0, d:2}, {o:4, i:12, d:4}] }
+    ],
+    disco: [
+        { name: 'Octave Pump', notes: [{o:0, i:0, d:2}, {o:2, i:12, d:2}, {o:4, i:0, d:2}, {o:6, i:12, d:2}] },
+        { name: 'Syncopated Triad', notes: [{o:1, i:4, d:1}, {o:3, i:7, d:1}, {o:5, i:12, d:3}] }
+    ]
+};
 
 const STYLE_CONFIG = {
     scalar: {
-        restBase: 0.1, // Reduced for less sparsity
-        restGrowth: 0.02, // Slower rest growth for longer phrases
-        cells: [0, 1, 2], // Focused on 8ths (0), 16ths (1), and Quarters (2) for flow
+        restBase: 0.2, 
+        restGrowth: 0.05,
+        cells: [0, 1, 2],
         registerSoar: 7,
         tensionScale: 0.6, 
-        timingJitter: 15
+        timingJitter: 15,
+        maxNotesPerPhrase: 12
     },
     shred: {
-        restBase: 0.05,
-        restGrowth: 0.02,
+        restBase: 0.1,
+        restGrowth: 0.03,
         cells: [1, 1, 4, 3],
         registerSoar: 14,
-        tensionScale: 0.2, // Shredders care less about tension, more about speed
-        timingJitter: 5
+        tensionScale: 0.2,
+        timingJitter: 5,
+        maxNotesPerPhrase: 24
     },
     blues: {
-        restBase: 0.20,
-        restGrowth: 0.08,
+        restBase: 0.35, // More space
+        restGrowth: 0.1,
         cells: [0, 2, 3, 5, 6, 8],
         registerSoar: 7,
-        tensionScale: 0.8, // Blues is all about tension/release
-        timingJitter: 22
+        tensionScale: 0.8,
+        timingJitter: 22,
+        maxNotesPerPhrase: 8
     },
     neo: {
-        restBase: 0.25,
-        restGrowth: 0.05,
+        restBase: 0.4,
+        restGrowth: 0.08,
         cells: [6, 10, 0, 9],
         registerSoar: 7,
         tensionScale: 0.6,
-        timingJitter: 25
+        timingJitter: 25,
+        maxNotesPerPhrase: 10
     },
     minimal: {
-        restBase: 0.40,
-        restGrowth: 0.15,
+        restBase: 0.55,
+        restGrowth: 0.18,
         cells: [2, 0, 10],
         registerSoar: 10,
         tensionScale: 0.9,
-        timingJitter: 35
+        timingJitter: 35,
+        maxNotesPerPhrase: 5
     },
     bird: {
-        restBase: 0.15,
-        restGrowth: 0.06,
+        restBase: 0.25,
+        restGrowth: 0.08,
         cells: [3, 5, 4, 7, 0, 10],
         registerSoar: 5,
         tensionScale: 0.7,
-        timingJitter: 15
+        timingJitter: 15,
+        maxNotesPerPhrase: 16
     },
     disco: {
-        restBase: 0.12,
-        restGrowth: 0.03,
-        cells: [0, 2, 5, 10], // 8ths, Quarters, Offbeats
-        registerSoar: 12, // High register strings/synth leads
+        restBase: 0.2,
+        restGrowth: 0.05,
+        cells: [0, 2, 5, 10],
+        registerSoar: 12,
         tensionScale: 0.5,
-        timingJitter: 5 // Tight timing
+        timingJitter: 5,
+        maxNotesPerPhrase: 14
     }
 };
 
 // --- Helpers ---
 
-function getScaleForChord(chord, style) {
+function getScaleForChord(chord, nextChord, style) {
     const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;
     const isDominant = chord.intervals.includes(10) && chord.intervals.includes(4);
+    const isV7toMinor = isDominant && nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
     
     // 1. Tension High? Altered/Diminished
     if (sb.tension > 0.7 && isDominant) {
@@ -110,7 +143,31 @@ function getScaleForChord(chord, style) {
         if (['maj7', 'major'].includes(chord.quality)) return [0, 2, 4, 6, 7, 9, 11]; // Lydian
     }
 
-    // 3. Diatonic Fallback
+    // 3. Chord Scale Logic (Prioritize Chord Quality over Diatonic Key)
+    if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant for minor resolutions
+    
+    switch (chord.quality) {
+        case 'minor': return [0, 2, 3, 5, 7, 8, 10]; 
+        case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
+        case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
+        case 'aug': return [0, 2, 4, 6, 8, 10];
+        case 'maj7': return [0, 2, 4, 5, 7, 9, 11];
+        case 'sus4': return [0, 2, 5, 7, 9, 10]; // Mixolydian sus4
+        case '7alt': return [0, 1, 3, 4, 6, 8, 10];
+        case '7b9': return [0, 1, 4, 5, 7, 8, 10];
+        case '7#11': return [0, 2, 4, 6, 7, 9, 10]; // Lydian Dominant
+    }
+
+    if (isDominant) {
+        // If it's a "II7" (Major II), usually Lydian Dominant (#11) sounds better
+        // We'll approximate this by checking if the root is 2 semitones from the key root
+        const keyRoot = KEY_ORDER.indexOf(arranger.key);
+        const relativeRoot = (chord.rootMidi - keyRoot + 12) % 12;
+        if (relativeRoot === 2 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10]; 
+
+        return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
+    }
+    // 4. Diatonic Fallback (Only for simple triads that fit the key)
     const keyRoot = KEY_ORDER.indexOf(arranger.key);
     const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
     const keyNotes = keyIntervals.map(i => (keyRoot + i) % 12);
@@ -122,15 +179,8 @@ function getScaleForChord(chord, style) {
         return keyNotes.map(note => (note - chordRoot + 12) % 12).sort((a, b) => a - b);
     }
 
-    // 4. Chord Scale Fallback
-    switch (chord.quality) {
-        case 'minor': return [0, 2, 3, 5, 7, 8, 10]; 
-        case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
-        case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
-        case 'aug': return [0, 2, 4, 6, 8, 10];
-        case 'maj7': return [0, 2, 4, 5, 7, 9, 11];
-        default: return chord.intervals.includes(10) ? [0, 2, 4, 5, 7, 9, 10] : [0, 2, 4, 5, 7, 9, 11];
-    }
+    // 5. Final Fallback
+    return chord.intervals.includes(11) ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 4, 5, 7, 9, 10];
 }
 
 // --- Main Generator ---
@@ -193,6 +243,25 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     
     // Initialize phrase tracking if needed
     if (typeof sb.currentPhraseSteps === 'undefined') sb.currentPhraseSteps = 0;
+    if (typeof sb.notesInPhrase === 'undefined') sb.notesInPhrase = 0;
+    if (typeof sb.qaState === 'undefined') sb.qaState = 'Question'; // Question or Answer
+    
+    if (typeof sb.contourSteps === 'undefined') {
+        sb.contourSteps = 0;
+        sb.melodicTrend = 'Static';
+    }
+
+    // Update Melodic Contour every 4-8 steps
+    if (sb.contourSteps <= 0) {
+        const trends = ['Up', 'Down', 'Static'];
+        sb.melodicTrend = trends[Math.floor(Math.random() * trends.length)];
+        // Answers tend to go down or stay static
+        if (sb.qaState === 'Answer' && Math.random() < 0.7) {
+            sb.melodicTrend = Math.random() < 0.5 ? 'Down' : 'Static';
+        }
+        sb.contourSteps = 4 + Math.floor(Math.random() * 5); // 4-8 steps
+    }
+    sb.contourSteps--;
     
     // Check for Breath (Start of new phrase?)
     const phraseLengthBars = sb.currentPhraseSteps / stepsPerMeasure;
@@ -201,9 +270,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const tempoBreathFactor = Math.max(0, (ctx.bpm - 120) * 0.003); 
     
     // Intensity Scaling: High intensity = fewer rests (more aggressive playing)
-    // We use a steeper curve (2.0 - intensity * 1.5) to force more space at low energy
     let restProb = (config.restBase * (2.0 - intensity * 1.5)) + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
     
+    // Force breath if note budget exceeded
+    if (sb.notesInPhrase >= config.maxNotesPerPhrase) restProb += 0.4;
+
     // Rests are less likely to start on a group start (don't breathe on the "One" or structural anchors)
     if (isGroupStart) restProb *= 0.3;
     
@@ -217,12 +288,28 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (Math.random() < 0.4 + (intensity * 0.3)) { // Higher chance to restart phrase at high intensity
             sb.isResting = false;
             sb.currentPhraseSteps = 0;
+            sb.notesInPhrase = 0;
             
-            // Decision: Repeat a Hook or a Motif?
+            // Toggle Q&A state
+            sb.qaState = sb.qaState === 'Question' ? 'Answer' : 'Question';
+
+            // Decision: Repeat a Hook, a Motif, or Trigger a Library Lick?
             const hasHook = sb.hookBuffer && sb.hookBuffer.length > 0;
             const hasMotif = sb.motifBuffer && sb.motifBuffer.length > 0;
             
-            if ((hasHook || hasMotif) && Math.random() < 0.5) {
+            const rand = Math.random();
+            if (rand < 0.2 && LICK_LIBRARY[style]) {
+                // Trigger Library Lick (The "Hook" generator)
+                const licks = LICK_LIBRARY[style];
+                const selectedLick = licks[Math.floor(Math.random() * licks.length)];
+                sb.activeBuffer = selectedLick.notes.map(n => ({
+                    interval: n.i,
+                    dur: n.d,
+                    step: cycleStep + n.o
+                }));
+                sb.isReplayingMotif = true;
+                sb.motifReplayIndex = 0;
+            } else if ((hasHook || hasMotif) && rand < 0.6) {
                 sb.isReplayingMotif = true;
                 // Prefer hook on short loops, motif on long ones
                 const useHook = hasHook && (progressionBars <= 8 || Math.random() < 0.3);
@@ -230,11 +317,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                 sb.motifReplayIndex = 0;
             } else {
                 sb.isReplayingMotif = false;
-                // If we didn't replay, maybe move motif to hook if it was long enough
                 if (hasMotif && sb.motifBuffer.length > 4 && Math.random() < sb.hookRetentionProb) {
                     sb.hookBuffer = [...sb.motifBuffer];
                 }
-                sb.motifBuffer = []; // Clear short-term memory
+                sb.motifBuffer = []; 
             }
         } else {
             return null; // Continue resting
@@ -282,7 +368,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             }
 
             // Snap to scale
-            const scaleIntervals = getScaleForChord(currentChord, style);
+            const scaleIntervals = getScaleForChord(currentChord, nextChord, style);
             const scaleTones = scaleIntervals.map(i => rootMidi + i);
             
             let bestMidi = targetMidi;
@@ -323,6 +409,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (!sb.isReplayingMotif && !selectedMidi && sb.currentCell[stepInBeat] === 1) shouldPlay = true;
 
     if (!shouldPlay) return null;
+    sb.notesInPhrase++;
 
 
     // --- 4. Pitch Selection (Standard Weighted Generation) ---
@@ -331,7 +418,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
     if (!selectedMidi) {
         const chordTones = currentChord.intervals.map(i => rootMidi + i);
-        const scaleIntervals = getScaleForChord(currentChord, style);
+        const scaleIntervals = getScaleForChord(currentChord, nextChord, style);
         const scaleTones = scaleIntervals.map(i => rootMidi + i);
         
         // Use the style-specific 'registerSoar' value scaled by Intensity
@@ -407,7 +494,25 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             const dist = Math.abs(m - lastMidi);
             
             if (dist === 0) weight -= 5; // Avoid same note repeated too much
+
+            // Melodic Contour Influence
+            if (sb.melodicTrend === 'Up' && m > lastMidi) weight += 8;
+            if (sb.melodicTrend === 'Down' && m < lastMidi) weight += 8;
+            if (sb.melodicTrend === 'Static' && dist <= 2) weight += 5;
             
+            // Phrase Landing: Increase weight for chord tones (1, 3, 5) on the last note before resting
+            // We estimate "last note" by checking if restProb is high
+            if (restProb > 0.3 && isChordTone) {
+                if (interval === 0 || interval === 4 || interval === 7 || interval === 3) {
+                    weight += 25;
+                    // "Answers" should definitely resolve to the root or 3rd
+                    if (sb.qaState === 'Answer' && (interval === 0 || interval === 3 || interval === 4)) weight += 15;
+                }
+            }
+
+            // Favor root for Answers
+            if (sb.qaState === 'Answer' && interval === 0) weight += 10;
+
             // Step-wise is VERY good (1-2 semi) - Primary movement
             if (dist > 0 && dist <= 2) {
                 weight += 15;
@@ -426,7 +531,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             }
 
             // Penalize large leaps heavily
-            if (dist > 9) weight -= 20;
+            if (dist > 9) weight -= 30;
 
             candidates.push({ midi: m, weight: Math.max(0.1, weight) });
         }
@@ -447,8 +552,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         // Force Root on Cycle Reset
         if (cycleStep === 0 && isStrongBeat) {
             selectedMidi = chordTones[0];
-            while (selectedMidi < minMidi) selectedMidi += 12;
-            while (selectedMidi > maxMidi) selectedMidi -= 12;
+            let safety = 0;
+            while (selectedMidi < minMidi && safety < 10) { 
+                selectedMidi += 12;
+                safety++;
+            }
+            safety = 0;
+            while (selectedMidi > maxMidi && safety < 10) {
+                selectedMidi -= 12;
+                safety++;
+            }
         }
     }
 

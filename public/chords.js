@@ -36,12 +36,13 @@ const NOTE_REGEX = /^([A-G][#b]?)/i;
  */
 export function getChordDetails(symbol) {
     let quality = 'major', is7th = symbol.includes('7') || symbol.includes('9') || symbol.includes('11') || symbol.includes('13') || symbol.includes('alt');
-    const suffixMatch = symbol.match(/(maj7|maj9|maj11|maj13|maj|M7|m13|m11|m9|m7b5|m7|m6|min|m|dim|o7|o|°7|°|aug|\+|-|ø7|ø|h7|7b5|sus4|sus2|add9|7alt|7b13|7#11|7b9|7#9|7|13|11|9|6|5)/);
+    const suffixMatch = symbol.match(/(maj7#11|maj7|maj9|maj11|maj13|maj|M7|m13|m11|m9|m7b5|m7|m6|min|m|dim7|dim|o7|o|°7|°|aug|\+|-|ø7|ø|h7|7b5|sus4|sus2|add9|7alt|7b13|7#11|7b9|7#9|7|alt|13|11|9|6|5)/);
     const suffix = suffixMatch ? suffixMatch[1] : "";
 
     if (suffix === 'maj13') quality = 'maj13';
     else if (suffix === 'maj11') quality = 'maj11';
     else if (suffix === 'maj9') quality = 'maj9';
+    else if (suffix === 'maj7#11') quality = 'maj7#11';
     else if (suffix.includes('maj') || suffix === 'M7') quality = 'maj7';
     else if (suffix === 'm13') quality = 'm13';
     else if (suffix === 'm11') quality = 'm11';
@@ -55,7 +56,7 @@ export function getChordDetails(symbol) {
     else if (suffix === 'sus4') quality = 'sus4';
     else if (suffix === 'sus2') quality = 'sus2';
     else if (suffix === 'add9') quality = 'add9';
-    else if (suffix === '7alt') quality = '7alt';
+    else if (suffix === '7alt' || suffix === 'alt') quality = '7alt';
     else if (suffix === '7b13') quality = '7b13';
     else if (suffix === '7#11') quality = '7#11';
     else if (suffix === '7b9') quality = '7b9';
@@ -367,9 +368,10 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
 
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
     if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
-        if (quality === 'maj7' || quality === 'maj9' || quality === 'maj11' || quality === 'maj13') {
+        if (quality === 'maj7' || quality === 'maj9' || quality === 'maj11' || quality === 'maj13' || quality === 'maj7#11') {
             if (quality === 'maj13') return [4, 9, 11, 14, 21]; // 3, 6/13, 7, 9, 13
             if (quality === 'maj11') return [4, 7, 11, 14, 17]; // 3, 5, 7, 9, 11
+            if (quality === 'maj7#11') return [4, 11, 14, 18];  // 3, 7, 9, #11
             return isRich ? [4, 7, 11, 14, 18] : [4, 7, 11, 14]; // 3, 5, 7, 9, (#11 if rich)
         }
         
@@ -392,7 +394,7 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
              if (quality === '7b9') return [4, 10, 13];         // 3, b7, b9
              if (quality === '7#9') return [4, 10, 15];         // 3, b7, #9
              if (quality === '13') return [4, 10, 14, 21];      // 3, b7, 9, 13
-             if (quality === '11') return [4, 10, 14, 17];      // 3, b7, 9, 11
+             if (quality === '11') return [5, 10, 14, 17];      // 11, b7, 9, 11 (No 3rd)
              
              // Use 13th only if explicitly requested or rich density
              return (isRich) ? [4, 10, 14, 21] : [4, 10, 14]; 
@@ -423,9 +425,10 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     else if (quality === '9') intervals = [0, 4, 7, 10, 14];
     else if (quality === 'maj9') intervals = [0, 4, 7, 11, 14];
     else if (quality === 'm9') intervals = [0, 3, 7, 10, 14];
-    else if (quality === '11') intervals = [0, 4, 7, 10, 14, 17];
+    else if (quality === '11') intervals = [0, 5, 7, 10, 14, 17]; // No 3rd to avoid clash
     else if (quality === 'm11') intervals = [0, 3, 7, 10, 14, 17];
     else if (quality === 'maj11') intervals = [0, 4, 7, 11, 14, 17];
+    else if (quality === 'maj7#11') intervals = [0, 4, 7, 11, 14, 18];
     else if (quality === '13') intervals = [0, 4, 7, 10, 14, 21];
     else if (quality === 'm13') intervals = [0, 3, 7, 10, 14, 21];
     else if (quality === 'maj13') intervals = [0, 4, 7, 11, 14, 21];
@@ -464,17 +467,20 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
     else if (quality === 'maj7') { absSuffix = 'maj7'; nnsSuffix = 'maj7'; romSuffix = 'maj7'; }
     else if (quality === 'maj9') { absSuffix = 'maj9'; nnsSuffix = 'maj9'; romSuffix = 'maj9'; }
     else if (quality === 'm9') { absSuffix = 'm9'; nnsSuffix = '-9'; romSuffix = '9'; }
+    else if (quality === 'maj11') { absSuffix = 'maj11'; nnsSuffix = 'maj11'; romSuffix = 'maj11'; }
+    else if (quality === 'maj7#11') { absSuffix = 'maj7#11'; nnsSuffix = 'maj7#11'; romSuffix = 'maj7#11'; }
     else if (quality === 'sus4') { absSuffix = 'sus4'; nnsSuffix = 'sus4'; romSuffix = 'sus4'; }
     else if (quality === 'sus2') { absSuffix = 'sus2'; nnsSuffix = 'sus2'; romSuffix = 'sus2'; }
     else if (quality === 'add9') { absSuffix = 'add9'; nnsSuffix = 'add9'; romSuffix = 'add9'; }
     else if (quality === '6') { absSuffix = '6'; nnsSuffix = '6'; romSuffix = '6'; }
     else if (quality === 'm6') { absSuffix = 'm6'; nnsSuffix = '-6'; romSuffix = '6'; }
     else if (quality === '9') { absSuffix = '9'; nnsSuffix = '9'; romSuffix = '9'; }
+    else if (quality === '7alt') { absSuffix = '7alt'; nnsSuffix = '7alt'; romSuffix = '7alt'; }
     else if (quality === '7b9') { absSuffix = '7b9'; nnsSuffix = '7b9'; romSuffix = '7b9'; }
     else if (quality === '7#9') { absSuffix = '7#9'; nnsSuffix = '7#9'; romSuffix = '7#9'; }
     else if (quality === '5') { absSuffix = '5'; nnsSuffix = '5'; romSuffix = '5'; }
     
-    if (is7th && !['maj7', 'maj9', 'halfdim', '7b9', '7#9', '9'].includes(quality)) { 
+    if (is7th && !['maj7', 'maj9', 'maj11', 'maj7#11', 'halfdim', '7b9', '7#9', '7alt', '9'].includes(quality)) { 
         absSuffix += '7'; nnsSuffix += '7'; romSuffix += '7';
     }
 

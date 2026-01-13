@@ -14,7 +14,7 @@ let interval = 25;
 let bbBufferHead = 0;
 let sbBufferHead = 0;
 let cbBufferHead = 0;
-const LOOKAHEAD = 32;
+const LOOKAHEAD = 64;
 
 // --- EXPORT HELPERS ---
 
@@ -127,20 +127,28 @@ function fillBuffers(currentStep) {
     if (bbBufferHead < currentStep) bbBufferHead = currentStep;
     if (sbBufferHead < currentStep) sbBufferHead = currentStep;
     if (cbBufferHead < currentStep) cbBufferHead = currentStep;
+    
     let head = 999999;
     if (bb.enabled) head = Math.min(head, bbBufferHead);
     if (sb.enabled) head = Math.min(head, sbBufferHead);
     if (cb.enabled) head = Math.min(head, cbBufferHead);
     if (head === 999999) head = currentStep;
+
+    if (ctx.workerLogging) {
+        console.log(`[Worker] fillBuffers: head=${head}, targetStep=${targetStep}, LOOKAHEAD=${LOOKAHEAD}, arrangerSteps=${arranger.totalSteps}`);
+    }
+
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    
     while (head < targetStep) {
         const step = head;
         const chordData = getChordAtStep(step);
-        if (chordData) {
-            const { chord, stepInChord } = chordData;
-            const nextChordData = getChordAtStep(step + 4);
-            const stepInfo = getStepInfo(step, ts);
-            if (bb.enabled && step >= bbBufferHead) {
+        
+        // --- Bass ---
+        if (bb.enabled && step >= bbBufferHead) {
+            if (chordData) {
+                const { chord, stepInChord } = chordData;
+                const nextChordData = getChordAtStep(step + 4);
                 if (isBassActive(bb.style, step, stepInChord)) {
                     const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord, arranger.isMinor);
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
@@ -150,9 +158,15 @@ function fillBuffers(currentStep) {
                         notesToMain.push({ ...bassResult, step, module: 'bb' });
                     }
                 }
-                bbBufferHead++;
             }
-            if (sb.enabled && step >= sbBufferHead) {
+            bbBufferHead++;
+        }
+
+        // --- Soloist ---
+        if (sb.enabled && step >= sbBufferHead) {
+            if (chordData) {
+                const { chord, stepInChord } = chordData;
+                const nextChordData = getChordAtStep(step + 4);
                 const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
                 if (soloResult && (soloResult.freq || soloResult.midi)) {
                     if (!soloResult.midi) soloResult.midi = getMidi(soloResult.freq);
@@ -160,9 +174,15 @@ function fillBuffers(currentStep) {
                     sb.lastFreq = soloResult.freq;
                     notesToMain.push({ ...soloResult, step, module: 'sb' });
                 }
-                sbBufferHead++;
             }
-            if (cb.enabled && step >= cbBufferHead) {
+            sbBufferHead++;
+        }
+
+        // --- Chords ---
+        if (cb.enabled && step >= cbBufferHead) {
+            if (chordData) {
+                const { chord, stepInChord } = chordData;
+                const stepInfo = getStepInfo(step, ts);
                 const chordNotes = getAccompanimentNotes(chord, step, stepInChord, step % (ts.beats * ts.stepsPerBeat), stepInfo);
                 if (chordNotes.length > 0) {
                     chordNotes.forEach(n => {
@@ -170,9 +190,10 @@ function fillBuffers(currentStep) {
                         notesToMain.push({ ...n, freq, step, module: 'cb' });
                     });
                 }
-                cbBufferHead++;
             }
+            cbBufferHead++;
         }
+        
         head++;
     }
     if (notesToMain.length > 0) postMessage({ type: 'notes', notes: notesToMain });
@@ -492,8 +513,12 @@ self.onmessage = (e) => {
                 }
                 if (data.ctx) Object.assign(ctx, data.ctx);
                 break;
-            case 'requestBuffer': fillBuffers(data.step); break;
+            case 'requestBuffer': 
+                if (ctx.workerLogging) console.log(`[Worker] requestBuffer: step=${data.step}, currentHeads=[bb:${bbBufferHead}, sb:${sbBufferHead}, cb:${cbBufferHead}]`);
+                fillBuffers(data.step); 
+                break;
             case 'flush':
+                if (ctx.workerLogging) console.log(`[Worker] flush: step=${data.step}`);
                 bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step;
                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
                 sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;

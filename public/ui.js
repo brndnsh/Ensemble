@@ -291,8 +291,9 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
     });
 }
 
-export function renderGrid() {
+export function renderGrid(skipScroll = false) {
     if (!ui.sequencerGrid) return;
+    const currentScroll = ui.sequencerGrid.scrollLeft;
     ui.sequencerGrid.innerHTML = '';
     const spm = getStepsPerMeasure(arranger.timeSignature);
     const totalSteps = gb.measures * spm;
@@ -369,6 +370,10 @@ export function renderGrid() {
     }
     labelRow.appendChild(labelSteps);
     ui.sequencerGrid.appendChild(labelRow);
+
+    if (skipScroll) {
+        ui.sequencerGrid.scrollLeft = currentScroll;
+    }
 
     renderGridState();
 }
@@ -544,22 +549,65 @@ export function updateActiveChordUI(index) {
     const cards = document.querySelectorAll('.chord-card');
     cards.forEach((c, i) => c.classList.toggle('active', i === index));
     
+    // --- 1. Arranger Scrolling ---
     if (index !== null && cards[index] && ui.chordVisualizer) {
         const card = cards[index];
         const container = ui.chordVisualizer;
         
-        // Calculate target scroll position to keep card roughly centered
-        // but only if it's out of view or near the edges
-        const cardTop = card.offsetTop - container.offsetTop;
+        // Find true offset relative to container (handles nested hierarchy)
+        let actualTop = 0;
+        let curr = card;
+        while (curr && curr !== container) {
+            actualTop += curr.offsetTop;
+            curr = curr.offsetParent;
+        }
+
         const cardHeight = card.offsetHeight;
         const containerHeight = container.clientHeight;
         const currentScroll = container.scrollTop;
         
-        if (cardTop < currentScroll + 50 || cardTop + cardHeight > currentScroll + containerHeight - 50) {
+        // LOOK-AHEAD: Check if the *next* row/measure is visible
+        const nextChord = cards[index + 1];
+        let nextTop = actualTop;
+        if (nextChord) {
+            let nCurr = nextChord;
+            let nTop = 0;
+            while (nCurr && nCurr !== container) {
+                nTop += nCurr.offsetTop;
+                nCurr = nCurr.offsetParent;
+            }
+            nextTop = nTop;
+        }
+
+        // If the current card OR the next chord is getting close to the bottom, scroll down
+        const threshold = 80; // pixels from edge
+        if (actualTop < currentScroll + threshold || nextTop + cardHeight > currentScroll + containerHeight - threshold) {
             container.scrollTo({
-                top: cardTop - (containerHeight / 2) + (cardHeight / 2),
+                top: actualTop - (containerHeight / 2) + (cardHeight / 2),
                 behavior: 'smooth'
             });
+        }
+    }
+
+    // --- 2. Sequencer Grid Scrolling (Auto-Follow) ---
+    if (gb.autoFollow && ctx.isPlaying && ui.sequencerGrid) {
+        const playingSteps = ui.sequencerGrid.querySelectorAll('.step.playing');
+        if (playingSteps.length > 0) {
+            const firstStep = playingSteps[0];
+            const container = ui.sequencerGrid;
+            
+            // Check horizontal bounds
+            const stepLeft = firstStep.offsetLeft - container.offsetLeft;
+            const stepWidth = firstStep.offsetWidth;
+            const containerWidth = container.clientWidth;
+            const currentScroll = container.scrollLeft;
+
+            if (stepLeft < currentScroll + 40 || stepLeft + stepWidth > currentScroll + containerWidth - 40) {
+                container.scrollTo({
+                    left: stepLeft - (containerWidth / 2) + (stepWidth / 2),
+                    behavior: 'smooth'
+                });
+            }
         }
     }
 }
