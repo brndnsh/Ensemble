@@ -66,7 +66,7 @@ describe('Soloist Engine', () => {
         // Force shouldPlay by mocking Math.random or trying multiple times
         // In this architecture, it's easier to just call it until we get a note
         let note = null;
-        for(let i=0; i<20; i++) {
+        for(let i=0; i<100; i++) {
             note = getSoloistNote(mockChord, null, 0, 440, 72, 'scalar', 0);
             if (note) break;
         }
@@ -79,7 +79,7 @@ describe('Soloist Engine', () => {
         // We can't easily peek into getScaleForChord because it's internal,
         // but we can check if it EVER generates a B (midi 71/83) vs Bb (70/82)
         let generatedMidi = [];
-        for(let i=0; i<500; i++) {
+        for(let i=0; i<2000; i++) {
             const note = getSoloistNote(mockChord, null, i, 440, 72, 'scalar', i%4);
             if (note) generatedMidi.push(note.midi);
         }
@@ -96,7 +96,7 @@ describe('Soloist Engine', () => {
         const fMinor = { rootMidi: 53, quality: 'minor', intervals: [0, 3, 7] };
         
         let generatedMidi = [];
-        for(let i=0; i<200; i++) {
+        for(let i=0; i<1000; i++) {
             const note = getSoloistNote(mockChord, fMinor, i, 440, 72, 'scalar', i%4);
             if (note) generatedMidi.push(note.midi);
         }
@@ -111,7 +111,7 @@ describe('Soloist Engine', () => {
         sb.notesInPhrase = 15; // scalar max is 12
         
         let rests = 0;
-        for(let i=0; i<20; i++) {
+        for(let i=0; i<100; i++) {
             const note = getSoloistNote(mockChord, null, i, 440, 72, 'scalar', i%4);
             if (!note) rests++;
         }
@@ -124,7 +124,7 @@ describe('Soloist Engine', () => {
         sb.currentPhraseSteps = 28; // Approaching end (max ~32)
         
         let notes = [];
-        for(let i=0; i<100; i++) {
+        for(let i=0; i<1000; i++) {
             const note = getSoloistNote(mockChord, null, i, 440, 72, 'scalar', i%4);
             if (note) notes.push(note.midi % 12);
         }

@@ -48,9 +48,11 @@ describe('Accompaniment Engine', () => {
 
     describe('Style Logic', () => {
         it('should generate notes on the downbeat (step 0) by default', () => {
-            const notes = getAccompanimentNotes(mockChord, 0, 0, 0, { isBeatStart: true, isGroupStart: true });
-            expect(notes.length).toBeGreaterThan(0);
-            expect(notes[0].midi).toBe(60); // Root
+            for(let i=0; i<100; i++) {
+                const notes = getAccompanimentNotes(mockChord, 0, 0, 0, { isBeatStart: true, isGroupStart: true });
+                expect(notes.length).toBeGreaterThan(0);
+                expect(notes[0].midi).toBe(60); // Root
+            }
         });
 
         it('should only play on the start of the chord in "pad" style', () => {

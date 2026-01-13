@@ -227,14 +227,105 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
         }
     }
     gb.instruments.forEach(inst => {
-        const stepVal = inst.steps[step];
-        if (stepVal > 0 && !inst.muted) {
-            let velocity = stepVal === 2 ? 1.25 : 0.9;
+        let stepVal = inst.steps[step];
+        let velocity = stepVal === 2 ? 1.25 : 0.9;
+        let shouldPlay = stepVal > 0;
+        let soundName = inst.name;
+
+                            // --- Jazz Procedural Overrides ---
+
+                            if (gb.genreFeel === 'Jazz' && !inst.muted) {
+
+                                const loopStep = step % 16; // Loop every measure (4/4 assumption for standard Jazz)
+
+                                
+
+                                if (inst.name === 'Open') {
+
+                                    // Procedural Ride Pattern: "Hey, Swing-the-band"
+
+                                    shouldPlay = false;
+
+                                    if ([0, 4, 6, 8, 12, 14].includes(loopStep)) {
+
+                                        shouldPlay = true;
+
+                                        // Consistent driving pulse on quarter notes
+
+                                        if (loopStep % 4 === 0) velocity = 1.15; 
+
+                                        else velocity = 0.75; // Soft "skip" note
+
+                                    }
+
+                                } else if (inst.name === 'HiHat') {
+
+                                    // Foot Chick on 2 & 4
+
+                                    shouldPlay = false;
+
+                                    if (loopStep === 4 || loopStep === 12) {
+
+                                        shouldPlay = true;
+
+                                        velocity = 0.8;
+
+                                    }
+
+                            } else if (inst.name === 'Kick') {
+                                    shouldPlay = false;
+                                    // 1. Feathering (Classic Bop technique) - Soft pulse on quarters
+                                    // Keeps the band together without being "Four-on-the-floor" dance style
+                                    if (loopStep % 4 === 0) {
+                                        shouldPlay = true;
+                                        velocity = 0.35; 
+                                    }
+                                    
+                                    // 2. "Bombs" (Accents) - Interactive punctuation
+                                    // Scale probability with intensity.
+                                    const bombProb = ctx.bandIntensity * 0.3; // 0.0 to 0.3
+                                    if (Math.random() < bombProb) {
+                                        // Target "and" of 3 (10), "and" of 4 (14), or "let" of 4 (15) for anticipation
+                                        if ([10, 14, 15].includes(loopStep)) {
+                                            shouldPlay = true;
+                                            velocity = 0.9 + (Math.random() * 0.2);
+                                        }
+                                    }
+
+                                } else if (inst.name === 'Snare') {
+                                    shouldPlay = false;
+                                    
+                                    // Comping Logic: Toned down for "Metronome" stability
+                                    // 1. "Chatter" / Ghost Notes - Minimal texture
+                                    if (Math.random() < 0.08) { 
+                                        shouldPlay = true; 
+                                        velocity = 0.25; 
+                                    }
+
+                                    // 2. Accents - Structural Anchors
+                                    // Prioritize "And of 4" (Step 14) as the main rhythmic push
+                                    if (loopStep === 14) {
+                                        if (Math.random() < 0.6 + (ctx.bandIntensity * 0.3)) {
+                                            shouldPlay = true;
+                                            velocity = 0.85;
+                                        }
+                                    }
+                                    // Secondary accent on "And of 2" (Step 6)
+                                    else if (loopStep === 6) {
+                                        if (Math.random() < 0.3 + (ctx.bandIntensity * 0.3)) {
+                                            shouldPlay = true;
+                                            velocity = 0.8;
+                                        }
+                                    }
+                                }
+
+                            }
+
+        if (shouldPlay && !inst.muted) {
             // Tame accents for Funk Hi-Hats at high intensity to prevent them from overpowering the mix
             if (gb.genreFeel === 'Funk' && stepVal === 2 && ctx.bandIntensity > 0.6 && (inst.name === 'HiHat' || inst.name === 'Open')) {
                 velocity = 1.05;
             }
-            let soundName = inst.name;
             
             // --- Snare Timbre Shifting ---
             if (inst.name === 'Snare') {
@@ -261,8 +352,13 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
             else if (inst.name === 'Snare') velocity *= isBackbeat ? 1.1 : 0.9;
             else if (inst.name === 'HiHat' || inst.name === 'Open') {
                 velocity *= isQuarter ? 1.1 : 0.85;
-                if (gb.genreFeel === 'Jazz') velocity *= (1.0 - (ctx.bandIntensity * 0.35));
-                if (ctx.bpm > 165) { velocity *= 0.7; if (!isQuarter) velocity *= 0.6; }
+                if (gb.genreFeel === 'Jazz' && inst.name !== 'HiHat' && inst.name !== 'Open') { 
+                    // Legacy dampening check removed for Ride/Chick as they have set velocities now.
+                    // Kept empty to ensure no double-application if logic changes.
+                } else if (gb.genreFeel !== 'Jazz') {
+                     // Fast tempo dampening for non-jazz
+                     if (ctx.bpm > 165) { velocity *= 0.7; if (!isQuarter) velocity *= 0.6; }
+                }
             }
             playDrumSound(soundName, finalTime, velocity * conductorVel);
         } else if (stepVal === 0 && !inst.muted && inst.name === 'Snare' && (gb.genreFeel === 'Funk' || gb.genreFeel === 'Jazz') && ctx.complexity > 0.4 && Math.random() < (ctx.complexity * 0.35)) {
