@@ -227,6 +227,15 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
         }
     }
     gb.instruments.forEach(inst => {
+        let instTime = finalTime;
+
+        // --- Neo-Soul "Dilla" Quantization Mismatch ---
+        if (gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Hip Hop') {
+            // Hats push forward (straighter), Snare drags back (lazier)
+            if (inst.name === 'HiHat' || inst.name === 'Open') instTime -= 0.012; 
+            if (inst.name === 'Snare') instTime += 0.008;
+        }
+
         let stepVal = inst.steps[step];
         let velocity = stepVal === 2 ? 1.25 : 0.9;
         let shouldPlay = stepVal > 0;
@@ -436,7 +445,7 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                      if (ctx.bpm > 165) { velocity *= 0.7; if (!isQuarter) velocity *= 0.6; }
                 }
             }
-            playDrumSound(soundName, finalTime, velocity * conductorVel);
+            playDrumSound(soundName, instTime, velocity * conductorVel);
         }
     });
 }
