@@ -1,5 +1,5 @@
 import { ctx, arranger, cb, bb, sb, gb } from './state.js';
-import { getMidi } from './utils.js';
+import { getMidi, getFrequency } from './utils.js';
 import { TIME_SIGNATURES } from './config.js';
 
 /**
@@ -217,26 +217,58 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         }
 
         let durationSteps = ts.stepsPerBeat * 2; // Default 2 beats
-        if (genre === 'Reggae' || genre === 'Funk' || genre === 'Disco') durationSteps = ts.stepsPerBeat * 0.25; // 16th
-        else if (genre === 'Jazz') durationSteps = ts.stepsPerBeat * 1; // Quarter
-        else if (genre === 'Acoustic') durationSteps = ts.stepsPerBeat * 2.5; // Ring out
+        if (genre === 'Reggae' || genre === 'Funk' || genre === 'Disco') durationSteps = ts.stepsPerBeat * 0.25; 
+        else if (genre === 'Jazz') durationSteps = ts.stepsPerBeat * 1; 
+        else if (genre === 'Acoustic') durationSteps = ts.stepsPerBeat * 2.5; 
         else if (genre === 'Rock' || genre === 'Bossa') durationSteps = ts.stepsPerBeat * 1.5;
         
         if (cb.style === 'pad') durationSteps = chord.beats * ts.stepsPerBeat;
+        
+        durationSteps = Math.max(1, Math.round(durationSteps));
 
         const velocity = (isStructural ? 0.6 : (isDownbeat ? 0.5 : 0.35)) * (0.8 + ctx.bandIntensity * 0.4);
 
         let voicing = [...chord.freqs];
         
+        // --- Frequency Slotting & Soloist Pocket ---
+        const soloistMidi = sb.enabled ? getMidi(sb.lastFreq) : 0;
+        const bassMidi = bb.enabled ? getMidi(bb.lastFreq) : 0;
+        const useClarity = soloistMidi > 72;
+
         if (cb.style === 'smart') {
+            // Soloist Pocket: Reduce density or drop velocity when soloist is high
+            if (useClarity && Math.random() < 0.7) {
+                if (voicing.length > 3) voicing = voicing.slice(0, 3);
+            }
+
             if (!isStructural && voicing.length > 3 && Math.random() < 0.5) voicing = voicing.slice(0, 3);
-            if (bb.enabled && voicing.length > 3) {
-                voicing.shift();
-                if ((chord.is7th || chord.quality.includes('9')) && voicing.length > 3) {
-                    const rootPC = chord.rootMidi % 12;
-                    const fifthPC = (rootPC + 7) % 12;
-                    voicing = voicing.filter(f => (getMidi(f) % 12) !== fifthPC);
+            
+            // Frequency Slotting: Avoid masking the bass
+            if (bb.enabled && voicing.length > 0) {
+                let lowestMidi = getMidi(voicing[0]);
+                if (lowestMidi <= bassMidi + 12) {
+                    // Shift the lowest note up an octave to clear the bass register
+                    voicing[0] = getFrequency(lowestMidi + 12);
                 }
+
+                if (voicing.length > 3) {
+                    voicing.shift();
+                    if ((chord.is7th || chord.quality.includes('9')) && voicing.length > 3) {
+                        const rootPC = chord.rootMidi % 12;
+                        const fifthPC = (rootPC + 7) % 12;
+                        voicing = voicing.filter(f => (getMidi(f) % 12) !== fifthPC);
+                    }
+                }
+            }
+        }
+
+        // --- Open Voicings for Jazz/Acoustic ---
+        if ((genre === 'Jazz' || genre === 'Acoustic') && chord.quality === 'maj7') {
+            if (voicing.length >= 3 && Math.random() < 0.6) {
+                // Move the 2nd note (usually the 3rd or 5th) up an octave for "open" feel
+                const targetIdx = 1;
+                const midi = getMidi(voicing[targetIdx]);
+                voicing[targetIdx] = getFrequency(midi + 12);
             }
         }
 
@@ -264,7 +296,9 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
                 dry: (genre === 'Reggae' || genre === 'Funk' || genre === 'Disco')
             });
         });
-    } else if (ccEvents.length > 0) {
+    }
+    
+    if (notes.length === 0 && ccEvents.length > 0) {
         // No notes played, but we have CC events (pedal changes)
         // Send a dummy note with velocity 0
         notes.push({

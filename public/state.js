@@ -224,7 +224,11 @@ export const bb = {
  * @property {number} octave - Base MIDI octave.
  * @property {string} style - Soloing style ID (e.g., 'blues', 'shred').
  * @property {number} direction - Melodic direction (1 or -1).
+ * @property {string} melodicTrend - Current melodic direction intent ('Up', 'Down', 'Static').
+ * @property {number} contourSteps - Remaining steps for the current melodic trend.
  * @property {number} currentPhraseSteps - Steps elapsed in current phrase.
+ * @property {number} notesInPhrase - Number of notes played in the current phrase.
+ * @property {string} qaState - Conversational state ('Question' or 'Answer').
  * @property {boolean} isResting - Whether the soloist is taking a breath.
  * @property {Array<number>} currentCell - Current rhythmic cell.
  * @property {number} busySteps - Counter for "busy" playing periods.
@@ -247,7 +251,11 @@ export const sb = {
     octave: 72, // C5
     style: 'smart',
     direction: 1,
+    melodicTrend: 'Static',
+    contourSteps: 0,
     currentPhraseSteps: 0,
+    notesInPhrase: 0,
+    qaState: 'Question',
     isResting: false,
     currentCell: [1, 0, 1, 0],
     busySteps: 0,

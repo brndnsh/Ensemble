@@ -21,11 +21,20 @@ import { applyTheme, setBpm } from './app-controller.js';
 let userPresets = storage.get('userPresets');
 let userDrumPresets = storage.get('userDrumPresets');
 let iosAudioUnlocked = false;
+let isScheduling = false;
 let viz;
 
 /** @type {HTMLAudioElement} */
 const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ");
 silentAudio.loop = true;
+
+/**
+ * Diagnostic: Enables detailed logging of worker/scheduler interactions.
+ */
+window.enableWorkerLogging = (enabled) => {
+    ctx.workerLogging = enabled;
+    console.log(`[Worker] Logging ${enabled ? 'ENABLED' : 'DISABLED'}`);
+};
 
 async function requestWakeLock() {
     if (!('wakeLock' in navigator)) return;
@@ -94,15 +103,22 @@ function togglePlay() {
 }
 
 function scheduler() {
-    requestBuffer(ctx.step);
-    while (ctx.nextNoteTime < ctx.audio.currentTime + ctx.scheduleAheadTime) {
-        if (ctx.isCountingIn) {
-            scheduleCountIn(ctx.countInBeat, ctx.nextNoteTime);
-            advanceCountIn();
-        } else {
-            scheduleGlobalEvent(ctx.step, ctx.nextNoteTime);
-            advanceGlobalStep();
+    if (isScheduling) return;
+    isScheduling = true;
+
+    try {
+        requestBuffer(ctx.step);
+        while (ctx.nextNoteTime < ctx.audio.currentTime + ctx.scheduleAheadTime) {
+            if (ctx.isCountingIn) {
+                scheduleCountIn(ctx.countInBeat, ctx.nextNoteTime);
+                advanceCountIn();
+            } else {
+                scheduleGlobalEvent(ctx.step, ctx.nextNoteTime);
+                advanceGlobalStep();
+            }
         }
+    } finally {
+        isScheduling = false;
     }
 }
 
@@ -401,7 +417,7 @@ function updateDrumVis(ev) {
     if (ctx.lastActiveDrumElements) ctx.lastActiveDrumElements.forEach(s => s.classList.remove('playing'));
     const spm = getStepsPerMeasure(arranger.timeSignature);
     const stepMeasure = Math.floor(ev.step / spm);
-    if (gb.autoFollow && stepMeasure !== gb.currentMeasure && ctx.isPlaying) switchMeasure(stepMeasure);
+    if (gb.autoFollow && stepMeasure !== gb.currentMeasure && ctx.isPlaying) switchMeasure(stepMeasure, true);
     const offset = gb.currentMeasure * spm;
     if (ev.step >= offset && ev.step < offset + spm) {
         const activeSteps = gb.cachedSteps[ev.step - offset];
@@ -482,8 +498,8 @@ function init() {
         setInstrumentControllerRefs(() => scheduler(), viz);
         initTabs(); setupPanelMenus(); renderGrid(); renderMeasurePagination(switchMeasure);
         if (!savedState || !savedState.gb || !savedState.gb.pattern) loadDrumPreset('Standard');
-        setupPresets(); setupUIHandlers({ togglePlay, previewChord: window.previewChord, init, viz, silentAudio, iosAudioUnlocked, POWER_CONFIG: getPowerConfig() });
-        renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI);
+        setupPresets({ togglePlay }); setupUIHandlers({ togglePlay, previewChord: window.previewChord, init, viz, silentAudio, iosAudioUnlocked, POWER_CONFIG: getPowerConfig() });
+        renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, togglePlay);
         renderUserDrumPresets(switchMeasure); loadFromUrl(); renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         
         initializePowerButtons();

@@ -689,9 +689,13 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     // Pitch Envelope
     if (bendStartInterval !== 0) {
         const startFreq = freq * Math.pow(2, -bendStartInterval / 12);
-        // Deliberate bends: longer for blues/minimal, and scaled with note duration
-        let bendDuration = (style === 'blues' || style === 'minimal') ? 0.25 : 0.15;
-        bendDuration = Math.min(duration * 0.6, bendDuration + (duration * 0.05));
+        // Deliberate bends: longer for blues, shorter for bebop
+        let bendDuration = 0.1;
+        if (style === 'blues') bendDuration = 0.15;
+        else if (style === 'bird') bendDuration = 0.05;
+        else if (style === 'minimal') bendDuration = 0.25;
+        
+        bendDuration = Math.min(duration * 0.6, bendDuration);
         
         osc1.frequency.setValueAtTime(startFreq, playTime);
         osc1.frequency.exponentialRampToValueAtTime(freq, playTime + bendDuration);

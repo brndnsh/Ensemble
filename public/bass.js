@@ -51,25 +51,45 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     let sectionEnd = arranger.totalSteps;
     const currentSectionId = currentChord.sectionId;
     
-    for (let i = 0; i < arranger.stepMap.length; i++) {
-        if (arranger.stepMap[i].chord.sectionId === currentSectionId) {
-            sectionStart = arranger.stepMap[i].start;
-            let j = i;
-            while (j < arranger.stepMap.length && arranger.stepMap[j].chord.sectionId === currentSectionId) {
-                sectionEnd = arranger.stepMap[j].end;
-                j++;
+    // Safeguard: Ensure stepMap exists to prevent infinite loop
+    if (arranger.stepMap && arranger.stepMap.length > 0) {
+        for (let i = 0; i < arranger.stepMap.length; i++) {
+            if (arranger.stepMap[i].chord.sectionId === currentSectionId) {
+                sectionStart = arranger.stepMap[i].start;
+                let j = i;
+                let iterations = 0;
+                // Add safety limit to internal while loop
+                while (j < arranger.stepMap.length && arranger.stepMap[j].chord.sectionId === currentSectionId && iterations < 1000) {
+                    sectionEnd = arranger.stepMap[j].end;
+                    j++;
+                    iterations++;
+                }
+                break; // Found the section, no need to keep searching
             }
-            break;
         }
     }
     const sectionLength = sectionEnd - sectionStart;
     const intensity = sectionLength > 0 ? (step - sectionStart) / sectionLength : 0;
     
-    const safeCenterMidi = (typeof centerMidi === 'number' && !isNaN(centerMidi)) ? centerMidi : 41;
+    let safeCenterMidi = (typeof centerMidi === 'number' && !isNaN(centerMidi)) ? centerMidi : 41;
+
+    // --- Genre-Specific Register Offsets ---
+    if (style === 'dub' || gb.genreFeel === 'Reggae') safeCenterMidi = 32;
+    else if (style === 'disco' || gb.genreFeel === 'Disco') safeCenterMidi = 45;
+
     const prevMidi = getMidi(prevFreq);
 
-    const absMin = Math.max(26, safeCenterMidi - 15); 
-    const absMax = safeCenterMidi + 15;
+    let absMin = Math.max(26, safeCenterMidi - 15); 
+    let absMax = safeCenterMidi + 15;
+
+    // --- Sweet Spot Constraints ---
+    if (style === 'rock' || style === 'funk') {
+        absMin = Math.max(28, absMin);
+        absMax = Math.min(52, absMax);
+    }
+    
+    // Final Range Safety
+    if (absMax < absMin) absMax = absMin + 1;
 
     const clampAndNormalize = (midi) => {
         if (!Number.isFinite(midi)) return safeCenterMidi;
@@ -127,7 +147,8 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         if (Math.random() < 0.15 + (intensity * 0.15)) { // More jumps at high intensity
             const direction = Math.random() < 0.5 ? 1 : -1;
             const shifted = note + (12 * direction);
-            if (shifted >= absMin && shifted <= absMax) return shifted;
+            // Restrict jumps to stay below MIDI 55 to avoid clashing with Piano LH
+            if (shifted >= absMin && shifted <= Math.min(absMax, 55)) return shifted;
         }
         return note;
     };

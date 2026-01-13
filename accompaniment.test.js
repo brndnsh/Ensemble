@@ -71,14 +71,16 @@ describe('Accompaniment Engine', () => {
         it('should use short durations for Funk/Reggae/Disco', () => {
             gb.genreFeel = 'Funk';
             const notes = getAccompanimentNotes(mockChord, 0, 0, 0, { isBeatStart: true });
-            expect(notes[0].durationSteps).toBe(1); // 4 * 0.25 = 1 step
-            expect(notes[0].dry).toBe(true);
+            const playedNotes = notes.filter(n => n.midi > 0);
+            expect(playedNotes[0].durationSteps).toBe(1); // 4 * 0.25 = 1 step
+            expect(playedNotes[0].dry).toBe(true);
         });
 
         it('should use longer durations for Acoustic', () => {
             gb.genreFeel = 'Acoustic';
             const notes = getAccompanimentNotes(mockChord, 0, 0, 0, { isBeatStart: true });
-            expect(notes[0].durationSteps).toBe(10); // 4 * 2.5 = 10 steps
+            const playedNotes = notes.filter(n => n.midi > 0);
+            expect(playedNotes[0].durationSteps).toBe(10); // 4 * 2.5 = 10 steps
         });
     });
 

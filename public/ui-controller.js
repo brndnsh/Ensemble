@@ -48,7 +48,8 @@ const SMART_GENRES = {
     'Bossa': { swing: 0, drum: 'Bossa Nova', feel: 'Bossa Nova', bass: 'bossa', soloist: 'scalar' }
 };
 
-export function setupPresets() {
+export function setupPresets(refs = {}) {
+    const { togglePlay } = refs;
     const renderCategorized = (container, data, type, activeId, onSelect) => {
         if (!container) return;
         container.innerHTML = '';
@@ -97,6 +98,8 @@ export function setupPresets() {
     }
 
     renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', arranger.lastChordPreset, (item, chip) => {
+        if (ctx.isPlaying && togglePlay) togglePlay();
+        
         arranger.sections = item.sections.map(s => ({
             id: generateId(),
             label: s.label,

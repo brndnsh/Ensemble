@@ -47,7 +47,7 @@ export function debounceSaveState() {
     saveTimeout = setTimeout(saveCurrentState, 1000);
 }
 
-export function renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI) {
+export function renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, togglePlay) {
     const userPresets = storage.get('userPresets');
     ui.userPresetsContainer.innerHTML = '';
     if (userPresets.length === 0) { ui.userPresetsContainer.style.display = 'none'; return; }
@@ -57,9 +57,10 @@ export function renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDup
             if (confirm("Delete this preset?")) {
                 userPresets.splice(idx, 1);
                 storage.save('userPresets', userPresets);
-                renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI);
+                renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, togglePlay);
             }
         }, () => {
+            if (ctx.isPlaying && togglePlay) togglePlay();
             arranger.sections = p.sections ? decompressSections(p.sections) : [{ id: generateId(), label: 'Main', value: p.prog }];
             arranger.lastChordPreset = p.name;
             renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);

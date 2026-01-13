@@ -17,11 +17,11 @@ export function setInstrumentControllerRefs(scheduler, viz) {
     vizRef = viz;
 }
 
-export function switchMeasure(idx) {
+export function switchMeasure(idx, skipScroll = false) {
     if (gb.currentMeasure === idx) return;
     gb.currentMeasure = idx;
     renderMeasurePagination(switchMeasure);
-    renderGrid();
+    renderGrid(skipScroll);
 }
 
 export function updateMeasures(val) {
