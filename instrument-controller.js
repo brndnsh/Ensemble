@@ -217,7 +217,7 @@ export function resetToDefaults() {
     gb.swing = 0;
     gb.swingSub = '8th';
     gb.genreFeel = 'Rock';
-    gb.activeTab = 'classic';
+    gb.activeTab = 'smart';
 
     ui.bpmInput.value = 100;
     ui.keySelect.value = 'C';
