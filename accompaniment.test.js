@@ -72,8 +72,16 @@ describe('Accompaniment Engine', () => {
     describe('Genre-specific Scaling', () => {
         it('should use short durations for Funk/Reggae/Disco', () => {
             gb.genreFeel = 'Funk';
-            const notes = getAccompanimentNotes(mockChord, 0, 0, 0, { isBeatStart: true });
-            const playedNotes = notes.filter(n => n.midi > 0);
+            let playedNotes = [];
+            for (let i = 0; i < 100; i++) {
+                // Reset lock to ensure new pattern generation or force re-eval
+                compingState.lockedUntil = 0; 
+                const notes = getAccompanimentNotes(mockChord, 0, 0, 0, { isBeatStart: true });
+                playedNotes = notes.filter(n => n.midi > 0);
+                if (playedNotes.length > 0) break;
+            }
+            
+            expect(playedNotes.length).toBeGreaterThan(0);
             expect(playedNotes[0].durationSteps).toBe(1); // 4 * 0.25 = 1 step
             expect(playedNotes[0].dry).toBe(true);
         });

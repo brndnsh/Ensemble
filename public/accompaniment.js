@@ -84,6 +84,11 @@ export const PIANO_CELLS = {
 function updateRhythmicIntent(step, soloistBusy, spm = 16) {
     if (step < compingState.lockedUntil) return;
 
+    // Detect Soloist Falling Edge (Busy -> Not Busy) for "Call & Response"
+    const wasBusy = compingState.soloistActivity > 0;
+    compingState.soloistActivity = soloistBusy ? 1 : 0;
+    const soloistJustStopped = wasBusy && !soloistBusy;
+
     const intensity = ctx.bandIntensity;
     const complexity = ctx.complexity;
     let genre = gb.genreFeel;
@@ -95,6 +100,9 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16) {
 
     if (soloistBusy) {
         compingState.currentVibe = 'sparse';
+    } else if (soloistJustStopped) {
+        // Soloist is taking a breath -> Fill the space!
+        compingState.currentVibe = 'active';
     } else if (intensity > 0.75 || complexity > 0.7) {
         compingState.currentVibe = 'active';
     } else if (intensity < 0.3) {
@@ -105,7 +113,10 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16) {
 
     let pool = PIANO_CELLS[genre] || PIANO_CELLS[compingState.currentVibe];
     
-    if (PIANO_CELLS[genre]) {
+    // Force conversational spacing
+    if (soloistBusy && cb.style === 'smart') {
+        pool = PIANO_CELLS.sparse;
+    } else if (PIANO_CELLS[genre]) {
         if (compingState.currentVibe === 'sparse' && Math.random() < 0.3) {
             pool = PIANO_CELLS.sparse;
         } else if (compingState.currentVibe === 'active' && Math.random() < 0.3) {
@@ -196,6 +207,12 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
 
     // --- Smart Pattern Logic ---
     let isHit = compingState.currentCell[measureStep % spm] === 1;
+
+    // Conversational: Listen to Soloist
+    // If soloist is busy, suppress hits to avoid clutter (Call & Response)
+    if (sb.enabled && sb.busySteps > 0 && cb.style === 'smart') {
+         if (Math.random() < 0.7) isHit = false; 
+    }
 
     // Force hit on "One" if empty
     if (measureStep === 0 && !isHit && Math.random() < 0.8) isHit = true;

@@ -227,10 +227,78 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
         }
     }
     gb.instruments.forEach(inst => {
+        let instTime = finalTime;
+
+        // --- Neo-Soul "Dilla" Quantization Mismatch ---
+        if (gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Hip Hop') {
+            // Hats push forward (straighter), Snare drags back (lazier)
+            if (inst.name === 'HiHat' || inst.name === 'Open') instTime -= 0.012; 
+            if (inst.name === 'Snare') instTime += 0.008;
+        }
+
         let stepVal = inst.steps[step];
         let velocity = stepVal === 2 ? 1.25 : 0.9;
         let shouldPlay = stepVal > 0;
         let soundName = inst.name;
+
+                            // --- Funk Procedural Overrides ---
+                            if (gb.genreFeel === 'Funk' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                // 1. Intelligent Snare Ghosting
+                                if (inst.name === 'Snare' && stepVal === 0) {
+                                    // Target "e" (1) and "a" (3) subdivisions for syncopation
+                                    const isSubdivision = loopStep % 4 !== 0 && loopStep % 4 !== 2; 
+                                    if (isSubdivision) {
+                                        const kickInst = gb.instruments.find(i => i.name === 'Kick');
+                                        const kickPlaying = kickInst && kickInst.steps[step] > 0;
+                                        
+                                        // Avoid masking the kick; syncopate against it
+                                        if (!kickPlaying && Math.random() < (ctx.complexity * 0.5)) { 
+                                            shouldPlay = true;
+                                            velocity = 0.15 + (Math.random() * 0.1); 
+                                        }
+                                    }
+                                }
+                                
+                                // 2. Dynamic Hi-Hat Barks
+                                if (inst.name === 'HiHat' && shouldPlay) {
+                                    // Open high-hat on the "ah" (last 16th of a beat) creates a "lifting" feel
+                                    if (loopStep % 4 === 3 && Math.random() < (ctx.bandIntensity * 0.35)) {
+                                        soundName = 'Open';
+                                        velocity *= 1.1; // Accent the bark
+                                    }
+                                }
+                            }
+
+                            // --- Reggae Procedural Overrides ---
+                            if (gb.genreFeel === 'Reggae' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                // Dynamic Style Switching based on Intensity
+                                if (inst.name === 'Kick') {
+                                    // 1. Steppers (High Intensity) - Four on the floor
+                                    if (ctx.bandIntensity > 0.7) {
+                                        shouldPlay = (loopStep % 4 === 0);
+                                        if (shouldPlay) velocity = 1.15;
+                                    } 
+                                    // 2. Rockers (Medium Intensity) - Kick on 1 and 3
+                                    // (Preset "One Drop" is on 3 only)
+                                    else if (ctx.bandIntensity > 0.45) {
+                                        // Add Kick on Beat 1 (Step 0)
+                                        if (loopStep === 0) {
+                                            shouldPlay = true;
+                                            velocity = 1.1;
+                                        }
+                                        // Ensure Beat 3 is playing
+                                        if (loopStep === 8) {
+                                            shouldPlay = true;
+                                            velocity = 1.15;
+                                        }
+                                    }
+                                    // Low intensity = Default "One Drop" (Kick on 3 only)
+                                }
+                            }
 
                             // --- Jazz Procedural Overrides ---
 
@@ -331,6 +399,23 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
             if (inst.name === 'Snare') {
                 if (gb.lastDrumPreset === 'Bossa Nova') {
                     soundName = 'Sidestick';
+                    
+                    // --- Bossa Procedural Variation ---
+                    // Add subtle 16th-note syncopation to break the static loop
+                    const loopStep = step % 32; 
+                    if (ctx.bandIntensity > 0.5) {
+                        // "Samba" skip on the 'a' of beat 2 or 4
+                        if ((loopStep === 7 || loopStep === 23) && Math.random() < 0.2) {
+                            shouldPlay = true;
+                            velocity = 0.6;
+                        }
+                    }
+                    // Pickup ghost note at end of phrase
+                    if (loopStep === 31 && Math.random() < 0.2) {
+                        shouldPlay = true;
+                        velocity = 0.45;
+                    }
+
                 } else if (gb.genreFeel === 'Acoustic') {
                     soundName = (ctx.bandIntensity > 0.7) ? 'Snare' : 'Sidestick';
                 } else if (ctx.bandIntensity < 0.35 && gb.genreFeel !== 'Rock') {
@@ -360,9 +445,7 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                      if (ctx.bpm > 165) { velocity *= 0.7; if (!isQuarter) velocity *= 0.6; }
                 }
             }
-            playDrumSound(soundName, finalTime, velocity * conductorVel);
-        } else if (stepVal === 0 && !inst.muted && inst.name === 'Snare' && (gb.genreFeel === 'Funk' || gb.genreFeel === 'Jazz') && ctx.complexity > 0.4 && Math.random() < (ctx.complexity * 0.35)) {
-            playDrumSound('Snare', finalTime, 0.15 * conductorVel);
+            playDrumSound(soundName, instTime, velocity * conductorVel);
         }
     });
 }
