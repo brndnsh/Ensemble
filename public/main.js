@@ -361,6 +361,23 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
             if (inst.name === 'Snare') {
                 if (gb.lastDrumPreset === 'Bossa Nova') {
                     soundName = 'Sidestick';
+                    
+                    // --- Bossa Procedural Variation ---
+                    // Add subtle 16th-note syncopation to break the static loop
+                    const loopStep = step % 32; 
+                    if (ctx.bandIntensity > 0.5) {
+                        // "Samba" skip on the 'a' of beat 2 or 4
+                        if ((loopStep === 7 || loopStep === 23) && Math.random() < 0.2) {
+                            shouldPlay = true;
+                            velocity = 0.6;
+                        }
+                    }
+                    // Pickup ghost note at end of phrase
+                    if (loopStep === 31 && Math.random() < 0.2) {
+                        shouldPlay = true;
+                        velocity = 0.45;
+                    }
+
                 } else if (gb.genreFeel === 'Acoustic') {
                     soundName = (ctx.bandIntensity > 0.7) ? 'Snare' : 'Sidestick';
                 } else if (ctx.bandIntensity < 0.35 && gb.genreFeel !== 'Rock') {
