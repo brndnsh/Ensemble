@@ -59,7 +59,7 @@
 
 - [x] **Genre Stress Tests**: Expand the probabilistic test suite to verify rhythmic anchors.
 
-    - *Plan*: Create `genre-integrity.test.js` to run 2000-measure simulations. Assert that the Reggae "One Drop" (kick on 3) is never violated and that Jazz walking bass never hits a root on beat 4 unless it's a pedal point.
+    - *Plan*: Create `tests/genre-integrity.test.js` to run 2000-measure simulations. Assert that the Reggae "One Drop" (kick on 3) is never violated and that Jazz walking bass never hits a root on beat 4 unless it's a pedal point.
 
 - [x] **Reference Comparison**: Fine-tune velocity and timing curves against classic records.
 
