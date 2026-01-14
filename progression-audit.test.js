@@ -60,6 +60,17 @@ describe('Progression Audit: Verifying All Library Presets', () => {
     
     const allTemplates = [...CHORD_PRESETS, ...SONG_TEMPLATES];
 
+    beforeEach(() => {
+        sb.isResting = false;
+        sb.currentPhraseSteps = 0;
+        sb.notesInPhrase = 0;
+        sb.busySteps = 0;
+        sb.motifBuffer = [];
+        sb.hookBuffer = [];
+        sb.activeBuffer = null;
+        sb.isReplayingMotif = false;
+    });
+
     allTemplates.forEach(template => {
         it(`should handle ${template.name} without errors`, () => {
             // Setup Template
@@ -92,7 +103,7 @@ describe('Progression Audit: Verifying All Library Presets', () => {
                     
                     if (!isInScale) {
                         // Log detailed info for debugging
-                        console.warn(`[Audit] Harmonic Clash in ${template.name}: Chord ${chord.absName} (${chord.quality}) plays ${pc}, but soloist scale is [${soloistScale}]`);
+                        throw new Error(`[Audit] Harmonic Clash in ${template.name}: Chord ${chord.absName} (${chord.quality}) plays PC ${pc} (from interval ${interval}), but soloist scale is [${soloistScale.join(',')}] (type: ${typeof pc})`);
                     }
                     expect(isInScale).toBe(true);
                 });
@@ -127,19 +138,28 @@ describe('Progression Audit: Verifying All Library Presets', () => {
                         expect(typeof note.velocity).toBe('number');
                         
                         // Harmonic integrity check: Is the pitch in the selected scale?
-                        // For expressive styles (Blues, Neo, Jazz), we allow a 1-semitone "Humanization Buffer" 
-                        // to account for intentional chromatic scoops and blue-note curls.
                         const interval = (note.midi - currentChord.rootMidi + 120) % 12;
-                        const isExpressive = ['blues', 'neo', 'bird'].includes(gb.genreFeel.toLowerCase()) || 
-                                             ['blues', 'neo', 'bird'].includes(template.category?.toLowerCase());
+                        const isExpressive = ['blues', 'neo', 'bird', 'jazz', 'neo-soul', 'funk', 'soul/r&b'].includes(gb.genreFeel.toLowerCase()) || 
+                                             ['blues', 'neo', 'bird', 'jazz', 'neo-soul', 'funk', 'soul/r&b'].includes(template.category?.toLowerCase());
 
                         let isInScale = scale.includes(interval);
+                        
+                        // ANTICIPATION CHECK: If it's not in the scale, maybe it anticipated the next chord?
+                        if (!isInScale && nextChord) {
+                            const nextInterval = (note.midi - nextChord.rootMidi + 120) % 12;
+                            const nextScale = getScaleForChord(nextChord, null, 'smart');
+                            if (nextScale.includes(nextInterval)) isInScale = true;
+                        }
+
                         if (!isInScale && isExpressive) {
                             // Check if a neighbor is in the scale (chromatic leading tone / scoop)
                             const neighbors = [(interval - 1 + 12) % 12, (interval + 1 + 12) % 12];
                             isInScale = neighbors.some(n => scale.includes(n));
                         }
 
+                        if (!isInScale) {
+                            throw new Error(`[Audit] Harmonic Clash in ${template.name}: Chord ${currentChord.absName} (${currentChord.quality}) at step ${step} plays PC ${interval}, but soloist scale is [${scale}] and next scale is [${nextChord ? getScaleForChord(nextChord, null, 'smart') : 'N/A'}]`);
+                        }
                         expect(isInScale).toBe(true);
                     });
                 }

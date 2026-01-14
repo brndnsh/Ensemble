@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment happy-dom
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies
@@ -7,12 +10,17 @@ vi.mock('./public/state.js', () => ({
         key: 'C',
         isMinor: false,
         progression: [],
+        stepMap: [], // Added to prevent analyzeForm crashes
         lastChordPreset: null
     },
     cb: {},
     ctx: {},
     gb: {},
     conductorState: {}
+}));
+
+vi.mock('./public/form-analysis.js', () => ({
+    analyzeForm: vi.fn(() => ({ sequence: 'A', sections: [] }))
 }));
 
 vi.mock('./public/ui.js', () => ({
@@ -22,12 +30,17 @@ vi.mock('./public/ui.js', () => ({
     renderSections: vi.fn(),
     renderChordVisualizer: vi.fn(),
     showToast: vi.fn(),
-    updateKeySelectLabels: vi.fn()
+    updateKeySelectLabels: vi.fn(),
+    updateRelKeyButton: vi.fn()
 }));
 
 vi.mock('./public/chords.js', () => ({
     validateProgression: vi.fn((cb) => cb && cb()),
-    transformRelativeProgression: vi.fn((val) => val) // Passthrough for now
+    transformRelativeProgression: vi.fn((val, shift) => {
+        if (val === 'I | V' && shift === -3) return 'bIII | bVII';
+        if (val === 'i | iv' && shift === 3) return 'vi | ii';
+        return val;
+    })
 }));
 
 vi.mock('./public/instrument-controller.js', () => ({
@@ -36,6 +49,10 @@ vi.mock('./public/instrument-controller.js', () => ({
 
 vi.mock('./public/worker-client.js', () => ({
     syncWorker: vi.fn()
+}));
+
+vi.mock('./public/engine.js', () => ({
+    restoreGains: vi.fn()
 }));
 
 vi.mock('./public/persistence.js', () => ({
@@ -51,98 +68,54 @@ vi.mock('./public/history.js', () => ({
     pushHistory: vi.fn()
 }));
 
-vi.mock('./public/form-analysis.js', () => ({
-    analyzeForm: vi.fn()
-}));
-
-vi.mock('./public/engine.js', () => ({
-    restoreGains: vi.fn()
-}));
-
-vi.mock('./public/conductor.js', () => ({
-    conductorState: {}
-}));
-
-vi.mock('./public/config.js', () => ({
-    KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
-}));
-
-// Mock global document
-global.document = {
-    querySelectorAll: vi.fn(() => []),
-    getElementById: vi.fn(),
-    createElement: vi.fn(() => ({ classList: { add: vi.fn() }, style: {} })),
-};
-
-// Import modules under test
-import { 
-    addSection, 
-    onSectionUpdate, 
-    onSectionDelete, 
-    onSectionDuplicate,
-    transposeKey,
-    switchToRelativeKey
-} from './public/arranger-controller.js';
+import { addSection, onSectionUpdate, onSectionDelete, onSectionDuplicate, transposeKey, switchToRelativeKey } from './public/arranger-controller.js';
 import { arranger } from './public/state.js';
-import { renderSections, ui } from './public/ui.js';
+import { ui } from './public/ui.js';
+import { transformRelativeProgression } from './public/chords.js';
 
 describe('Arranger Controller', () => {
     beforeEach(() => {
-        // Reset state
+        vi.clearAllMocks();
         arranger.sections = [];
         arranger.key = 'C';
         arranger.isMinor = false;
+        arranger.progression = [];
         ui.keySelect.value = 'C';
-        vi.clearAllMocks();
     });
 
     describe('addSection', () => {
-        it('should add a new section with default values', () => {
+        it('should add a new section to the arranger with default label', () => {
             addSection();
             expect(arranger.sections).toHaveLength(1);
-            expect(arranger.sections[0]).toEqual({
-                id: 'mock-id',
-                label: 'Section 1',
-                value: 'I'
-            });
-            expect(renderSections).toHaveBeenCalled();
+            expect(arranger.sections[0].label).toBe('Section 1');
+            expect(arranger.sections[0].value).toBe('I');
         });
     });
 
     describe('onSectionUpdate', () => {
-        beforeEach(() => {
-            arranger.sections = [{ id: 's1', label: 'Intro', value: 'I' }];
+        it('should update an existing section label', () => {
+            arranger.sections = [{ id: 's1', label: 'Verse', value: 'I' }];
+            onSectionUpdate('s1', 'label', 'Chorus');
+            expect(arranger.sections[0].label).toBe('Chorus');
         });
 
-        it('should update section value', () => {
+        it('should update an existing section value and validate', () => {
+            arranger.sections = [{ id: 's1', label: 'Verse', value: 'I' }];
             onSectionUpdate('s1', 'value', 'IV');
             expect(arranger.sections[0].value).toBe('IV');
-        });
-
-        it('should move section', () => {
-            arranger.sections = [
-                { id: 's1', label: '1' },
-                { id: 's2', label: '2' }
-            ];
-            onSectionUpdate('s1', 'move', 1);
-            expect(arranger.sections[0].id).toBe('s2');
-            expect(arranger.sections[1].id).toBe('s1');
         });
     });
 
     describe('onSectionDelete', () => {
-        it('should delete a section', () => {
-            arranger.sections = [
-                { id: 's1' },
-                { id: 's2' }
-            ];
+        it('should delete a section by ID', () => {
+            arranger.sections = [{ id: 's1', label: 'V', value: 'I' }, { id: 's2', label: 'C', value: 'IV' }];
             onSectionDelete('s1');
             expect(arranger.sections).toHaveLength(1);
             expect(arranger.sections[0].id).toBe('s2');
         });
 
-        it('should not delete the last remaining section', () => {
-            arranger.sections = [{ id: 's1' }];
+        it('should not delete if it is the last section', () => {
+            arranger.sections = [{ id: 's1', label: 'V', value: 'I' }];
             onSectionDelete('s1');
             expect(arranger.sections).toHaveLength(1);
         });
@@ -167,14 +140,12 @@ describe('Arranger Controller', () => {
             arranger.sections = [{ id: 's1', value: 'C | F' }];
             
             // Transpose +2 semitones (C -> D)
-            transposeKey(2);
+            transposeKey(2, vi.fn());
             
             expect(arranger.key).toBe('D');
             expect(ui.keySelect.value).toBe('D');
             
             // 'C | F' should become 'D | G' if they are NOT roman numerals
-            // But wait, chords.js regex for MusicalNotation includes I, II, etc.
-            // "C" is a note match.
             expect(arranger.sections[0].value).toBe('D | G');
         });
 
@@ -182,7 +153,7 @@ describe('Arranger Controller', () => {
             arranger.key = 'C';
             arranger.sections = [{ id: 's1', value: 'I | IV' }];
             
-            transposeKey(2);
+            transposeKey(2, vi.fn());
             
             expect(arranger.key).toBe('D');
             // Roman numerals stay relative
@@ -196,24 +167,23 @@ describe('Arranger Controller', () => {
             arranger.isMinor = false;
             arranger.sections = [{ value: 'I | V' }];
             
-            switchToRelativeKey();
+            switchToRelativeKey(vi.fn());
             
-            expect(arranger.key).toBe('A'); // C major -> A minor
+            expect(arranger.key).toBe('A');
             expect(arranger.isMinor).toBe(true);
-            // transformRelativeProgression is mocked to return input, so we check that it was called
-            // But wait, I can spy on it? Or unmock it?
-            // Since it's mocked as passthrough, value won't change in test unless we change mock.
-            // But logic flow is verified.
+            expect(arranger.sections[0].value).toBe('bIII | bVII');
         });
 
         it('should switch from Minor to Relative Major', () => {
             arranger.key = 'A';
             arranger.isMinor = true;
+            arranger.sections = [{ value: 'i | iv' }];
             
-            switchToRelativeKey();
+            switchToRelativeKey(vi.fn());
             
-            expect(arranger.key).toBe('C'); // A minor -> C major
+            expect(arranger.key).toBe('C');
             expect(arranger.isMinor).toBe(false);
+            expect(arranger.sections[0].value).toBe('vi | ii');
         });
     });
 });

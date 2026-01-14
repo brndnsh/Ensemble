@@ -374,40 +374,40 @@ function getRootlessVoicing(quality, is7th, isRich) {
     const isMajor7 = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
 
     if (isMajor7) {
-        if (quality === 'maj13') return [4, 9, 11, 14]; // 3, 6/13, 7, 9
-        if (quality === 'maj7#11') return [4, 11, 14, 18];  // 3, 7, 9, #11
+        if (quality === 'maj13') return isRich ? [4, 9, 11, 14] : [4, 9, 11]; // 3, 13, 7, (9)
+        if (quality === 'maj7#11') return isRich ? [4, 11, 14, 18] : [4, 11, 18];  // 3, 7, (9), #11
         // Standard Maj9/Maj7 cluster
-        return isRich ? [4, 7, 11, 14, 18] : [4, 7, 11, 14]; // 3, 5, 7, 9, (#11 if rich)
+        return isRich ? [4, 7, 11, 14] : [4, 11, 14]; // 3, 5, 7, 9 -> Leaner: 3, 7, 9
     }
 
     if (isMinor) {
         // Neo-Soul Quartal / So-What Voicings
         if (genre === 'Neo-Soul' && quality === 'minor' && is7th) {
-            return [5, 10, 15, 19]; // 4th, b7th, b3rd (up oct), 5th (up oct) - Classic "So What" stack
+            return [5, 10, 15, 19]; // Classic "So What" stack (already distinctive)
         }
-        if (quality === 'm13') return [3, 7, 10, 14, 21]; // b3, 5, b7, 9, 13
-        if (quality === 'm11') return [3, 10, 14, 17]; // b3, b7, 9, 11
-        if (quality === 'm9') return [3, 7, 10, 14]; // b3, 5, b7, 9
-        return isRich ? [3, 7, 10, 14, 17] : [3, 7, 10, 14]; // b3, 5, b7, 9, (11 if rich)
+        if (quality === 'm13') return isRich ? [3, 7, 10, 14, 21] : [3, 10, 14, 21]; // b3, (5), b7, 9, 13
+        if (quality === 'm11') return isRich ? [3, 7, 10, 17] : [3, 10, 17]; // b3, (7), 11
+        if (quality === 'm9') return isRich ? [3, 7, 10, 14] : [3, 10, 14]; // b3, (5), b7, 9
+        return isRich ? [3, 7, 10, 14] : [3, 10, 14]; // b3, 5, b7, 9 -> Leaner: b3, b7, 9
     }
 
     if (isDominant) {
         // Alt Dominants
-        if (quality === '7alt') return [4, 10, 13, 15, 18, 20]; // 3, b7, b9, #9, #11, b13
-        if (quality === '7b9') return [4, 10, 13, 20];      // 3, b7, b9, b13
-        if (quality === '7#9') return [4, 10, 15, 20];      // 3, b7, #9, b13
+        if (quality === '7alt') return isRich ? [4, 10, 13, 15, 18, 20] : [4, 10, 15, 20]; // 3, b7, #9, b13
+        if (quality === '7b9') return isRich ? [4, 10, 13, 20] : [4, 10, 13, 16];      // 3, b7, b9, (b13 or 5)
+        if (quality === '7#9') return isRich ? [4, 10, 15, 20] : [4, 10, 15, 16];      // 3, b7, #9, (b13 or 5)
         if (quality === '7b13') return [4, 10, 14, 20];     // 3, b7, 9, b13
         if (quality === '7#11') return [4, 10, 14, 18];     // 3, b7, 9, #11
         
         // Characteristic dominant extensions
         if (quality === '13' || isRich) return [4, 10, 14, 21]; // 3, b7, 9, 13
-        if (quality === '11') return [5, 10, 14, 17];           // 11, b7, 9, 11 (No 3rd)
+        if (quality === '11') return [5, 7, 10, 14];           // 11, 5, b7, 9
         
         return [4, 10, 14]; // 3, b7, 9
     }
 
     if (quality === 'dim') return [3, 6, 9, 14];      // b3, b5, bb7, 9
-    if (quality === 'halfdim') return [3, 6, 10];     // b3, b5, b7
+    if (quality === 'halfdim') return [3, 5, 6, 10];     // b3, 11, b5, b7
 
     return null; // Fallback to standard triads
 }
@@ -583,7 +583,15 @@ function parseProgressionPart(input, key, initialMidis) {
                 if (romanMatch) {
                     const accidental = romanMatch[1] || "";
                     const numeral = romanMatch[2];
-                    if (numeral === numeral.toLowerCase() && quality === 'major') quality = 'minor';
+                    const isLowercase = numeral === numeral.toLowerCase();
+
+                    if (isLowercase) {
+                        if (quality === 'major' || quality === '7') quality = 'minor';
+                        else if (quality === '9') quality = 'm9';
+                        else if (quality === '11') quality = 'm11';
+                        else if (quality === '13') quality = 'm13';
+                    }
+
                     // Only auto-diminished if it's a natural vii (no b or # prefix)
                     if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|°|aug|\+|ø|h|7b5)/)) {
                         quality = is7th ? 'halfdim' : 'dim';
