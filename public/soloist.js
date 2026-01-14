@@ -304,6 +304,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         sb.busySteps--;
         return null;
     }
+
+    // --- 1.5 Melodic Device Buffer Gate ---
+    // If we have a queued sequence (like a Bebop enclosure), play the next note in the sequence.
+    if (sb.deviceBuffer && sb.deviceBuffer.length > 0) {
+        const devNote = sb.deviceBuffer.shift();
+        sb.busySteps = (devNote.durationSteps || 1) - 1;
+        sb.notesInPhrase++;
+        if (!devNote.isDoubleStop) sb.lastFreq = getFrequency(devNote.midi);
+        return devNote;
+    }
     
     // --- 2. Cycle & Tension Tracking ---
     
@@ -546,6 +556,21 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                 if (!isChordTone) weight += 2; 
             }
 
+            // 2. Quartal Harmony Logic (Neo-Soul)
+            // Modern/Neo-Soul styles often favor stacks of 4ths over traditional 3rds.
+            if (style === 'neo' && Math.abs(m - lastMidi) === 5) {
+                weight += 35;
+            }
+
+            // 3. Rhythmic Call and Response (Conversational Logic)
+            // 'Question' phase builds tension with extensions, 'Answer' phase resolves to anchors.
+            if (sb.qaState === 'Question') {
+                if (interval === 6 || interval === 10) weight += 30; // #11 or b7
+            } else if (sb.qaState === 'Answer') {
+                if (interval === 0) weight += 60; // Root (Strong Resolution)
+                if (interval === 7) weight += 30; // 5th (Stable Anchor)
+            }
+
             if (sb.tension > 0.8) {
                 if (!isChordTone && isScaleTone) weight += 5;
             } else if (sb.tension < 0.2) {
@@ -582,8 +607,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                     if (sb.qaState === 'Answer' && (interval === 0 || interval === 3 || interval === 4)) weight += 15;
                 }
             }
-            // Significantly boost root resolution in Answer state for "Call and Response" clarity
-            if (sb.qaState === 'Answer' && interval === 0) weight += 40; // Increased from 10
 
             candidates.push({ midi: m, weight: Math.max(0.1, weight) });
         }
@@ -656,6 +679,30 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     }    
     durationMultiplier = Math.max(1, Math.round(durationMultiplier || 1));
     sb.busySteps = durationMultiplier - 1;
+
+    // --- 7. Melodic Enclosures (Bebop Logic) ---
+    // When targeting a 'Strong Beat', create a 2-step sequence leading to the target.
+    const isBirdStyle = style === 'bird' || (style === 'smart' && gb.genreFeel === 'Jazz');
+    if (isBirdStyle && isStrongBeat && !sb.isReplayingMotif && Math.random() < 0.45) {
+        const aboveMidi = selectedMidi + (Math.random() < 0.5 ? 1 : 2);
+        const belowMidi = selectedMidi - 1;
+        
+        sb.deviceBuffer = [
+            { midi: belowMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: 0 },
+            { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, bendStartInterval, style, timingOffset: 0 }
+        ];
+
+        sb.busySteps = 0; // Ensure the next note in the enclosure sequence triggers on the next step.
+        sb.lastFreq = getFrequency(aboveMidi);
+        
+        return {
+            midi: aboveMidi,
+            velocity: velocity * 0.85,
+            durationSteps: 1,
+            style,
+            timingOffset: timingOffset / 1000
+        };
+    }
 
     let notes = [];
     if (Math.random() < (config.doubleStopProb || 0)) {

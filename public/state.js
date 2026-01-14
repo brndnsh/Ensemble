@@ -272,6 +272,7 @@ export const sb = {
     motifReplayIndex: 0,
     hookRetentionProb: 0.4,
     tension: 0,
+    deviceBuffer: [], // Buffer for multi-step melodic devices like enclosures
     activeTab: 'smart'
 };
 
