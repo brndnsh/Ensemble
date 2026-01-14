@@ -74,6 +74,9 @@ function init() {
             notes.forEach(n => { 
                 if (n.module === 'bb') bb.buffer.set(n.step, n); 
                 else if (n.module === 'sb') {
+                    // ENFORCE MONOPHONIC: If double stops are disabled, skip additional notes for the same step
+                    if (!sb.doubleStops && sb.buffer.has(n.step)) return;
+
                     if (!sbUpdatedSteps.has(n.step)) {
                         sb.buffer.set(n.step, []);
                         sbUpdatedSteps.add(n.step);

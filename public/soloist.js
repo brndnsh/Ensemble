@@ -82,7 +82,7 @@ const STYLE_CONFIG = {
         anticipationProb: 0.1,
         targetExtensions: [2, 9],
         deviceProb: 0.15,
-        allowedDevices: ['run', 'slide']
+        allowedDevices: ['run', 'slide', 'guitarDouble']
     },
     shred: {
         restBase: 0.1,
@@ -96,7 +96,7 @@ const STYLE_CONFIG = {
         anticipationProb: 0.05,
         targetExtensions: [2],
         deviceProb: 0.4,
-        allowedDevices: ['run']
+        allowedDevices: ['run', 'guitarDouble']
     },
     blues: {
         restBase: 0.6, 
@@ -106,11 +106,11 @@ const STYLE_CONFIG = {
         tensionScale: 0.8,
         timingJitter: 25, 
         maxNotesPerPhrase: 5, 
-        doubleStopProb: 0.2, 
+        doubleStopProb: 0.35, // Increased from 0.2
         anticipationProb: 0.3,
         targetExtensions: [9, 10],
         deviceProb: 0.3,
-        allowedDevices: ['slide', 'enclosure']
+        allowedDevices: ['slide', 'enclosure', 'guitarDouble']
     },
     neo: {
         restBase: 0.45,
@@ -124,7 +124,7 @@ const STYLE_CONFIG = {
         anticipationProb: 0.45,
         targetExtensions: [2, 6, 9, 11],
         deviceProb: 0.25,
-        allowedDevices: ['quartal', 'slide']
+        allowedDevices: ['quartal', 'slide', 'guitarDouble']
     },
     minimal: {
         restBase: 0.65,
@@ -148,11 +148,11 @@ const STYLE_CONFIG = {
         tensionScale: 0.7,
         timingJitter: 15,
         maxNotesPerPhrase: 16, 
-        doubleStopProb: 0.0,
+        doubleStopProb: 0.1,
         anticipationProb: 0.5,
         targetExtensions: [2, 5, 9], // 9, 11, 13
         deviceProb: 0.5,
-        allowedDevices: ['enclosure', 'run']
+        allowedDevices: ['enclosure', 'run', 'guitarDouble']
     },
     disco: {
         restBase: 0.25,
@@ -176,11 +176,11 @@ const STYLE_CONFIG = {
         tensionScale: 0.7,
         timingJitter: 15,
         maxNotesPerPhrase: 8,
-        doubleStopProb: 0.0,
+        doubleStopProb: 0.08,
         anticipationProb: 0.35,
         targetExtensions: [2, 6, 9], // 9, #11, 13
         deviceProb: 0.2,
-        allowedDevices: ['enclosure', 'slide']
+        allowedDevices: ['enclosure', 'slide', 'guitarDouble']
     }
 };
 
@@ -280,7 +280,7 @@ export function getScaleForChord(chord, nextChord, style) {
 
 // --- Main Generator ---
 
-export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 72, style = 'scalar', stepInChord = 0, bassFreq = null) {
+export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 72, style = 'scalar', stepInChord = 0, bassFreq = null, isPriming = false) {
     if (!currentChord) return null;
 
     if (style === 'smart') {
@@ -313,22 +313,32 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const beatInMeasure = Math.floor(measureStep / stepsPerBeat);
     const intensity = ctx.bandIntensity || 0.5;
     
-    // --- 1. Physical Duration Gate ---
+    // --- 0. Warm-up Logic ---
+    // Prevent "guns-blazing" starts by scaling activity for the first few measures.
+    if (!isPriming) {
+        sb.sessionSteps = (sb.sessionSteps || 0) + 1;
+    }
+    const WARMUP_DURATION = stepsPerMeasure * 2; 
+    const warmupFactor = isPriming ? 1.0 : Math.min(1.0, sb.sessionSteps / WARMUP_DURATION);
+    
+    // --- 1. Melodic Device Buffer Gate ---
+    // If we have a queued sequence (like a Bebop enclosure), play the next note in the sequence.
+    // We check this BEFORE the busySteps gate to allow sequence consumption to bypass physical gaps.
+    if (sb.deviceBuffer && sb.deviceBuffer.length > 0) {
+        const devNote = sb.deviceBuffer.shift();
+        const primaryNote = Array.isArray(devNote) ? devNote[0] : devNote;
+        sb.busySteps = (primaryNote.durationSteps || 1) - 1;
+        sb.notesInPhrase++;
+        if (!primaryNote.isDoubleStop) sb.lastFreq = getFrequency(primaryNote.midi);
+        return devNote;
+    }
+
+    // --- 1.5 Physical Duration Gate ---
     // If we are still "busy" from the previous note's duration, decrement and skip.
     // This is the primary mechanism for preventing overlapping monophonic notes.
     if (sb.busySteps > 0) {
         sb.busySteps--;
         return null;
-    }
-
-    // --- 1.5 Melodic Device Buffer Gate ---
-    // If we have a queued sequence (like a Bebop enclosure), play the next note in the sequence.
-    if (sb.deviceBuffer && sb.deviceBuffer.length > 0) {
-        const devNote = sb.deviceBuffer.shift();
-        sb.busySteps = (devNote.durationSteps || 1) - 1;
-        sb.notesInPhrase++;
-        if (!devNote.isDoubleStop) sb.lastFreq = getFrequency(devNote.midi);
-        return devNote;
     }
     
     // --- 2. Cycle & Tension Tracking ---
@@ -389,6 +399,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const tempoBreathFactor = Math.max(0, (ctx.bpm - 120) * 0.003); 
     let restProb = (config.restBase * (2.0 - intensity * 1.5)) + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
     
+    // Scale rest probability based on warmup (Higher rest prob at start)
+    restProb = restProb + (1.0 - warmupFactor) * 0.4;
+
     const tempoBudgetFactor = Math.max(0.5, 1.0 - (ctx.bpm - 100) * 0.004);
     if (sb.notesInPhrase >= config.maxNotesPerPhrase * tempoBudgetFactor) restProb += 0.4;
 
@@ -575,7 +588,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             // 2. Quartal Harmony Logic (Neo-Soul)
             // Modern/Neo-Soul styles often favor stacks of 4ths over traditional 3rds.
             if (style === 'neo' && Math.abs(m - lastMidi) === 5) {
-                weight += 35;
+                weight += 100; // Increased to ensure it out-competes aggregate stepwise movement
             }
 
             // 3. Rhythmic Call and Response (Conversational Logic)
@@ -597,17 +610,17 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             if (dist === 0) weight -= 15; 
             
             if (dist > 0 && dist <= 2) {
-                const tempoStepBias = (ctx.bpm / 100) * 15;
-                weight += (25 + tempoStepBias);
-                if (style === 'scalar') weight += 20; 
+                const tempoStepBias = (ctx.bpm / 100) * 20;
+                weight += (45 + tempoStepBias); // Increased from 25
+                if (style === 'scalar') weight += 30; // Increased from 20
             } else if (dist >= 3 && dist <= 4) {
-                weight += 10; 
+                weight += 5; // Reduced from 10
             } else if (dist >= 5 && dist <= 7) {
-                weight -= 5; 
+                weight -= 15; // Increased penalty from -5
             } else if (dist > 7 && dist <= 12) {
-                weight -= 40; 
+                weight -= 60; // Increased penalty from -40
             } else if (dist > 12) {
-                weight -= 100; 
+                weight -= 150; // Increased penalty from -100
             }
 
             if (sb.melodicTrend === 'Up' && m > lastMidi) weight += 15;
@@ -698,7 +711,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
     // --- 7. Advanced Melodic Devices ---
     
-    if (!sb.isReplayingMotif && isStrongBeat && Math.random() < (config.deviceProb || 0)) {
+    if (!sb.isReplayingMotif && isStrongBeat && Math.random() < (config.deviceProb * warmupFactor)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         
         if (deviceType === 'enclosure') {
@@ -713,17 +726,17 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             return { midi: aboveMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
         } 
         
-        if (deviceType === 'quartal') {
+        if (deviceType === 'quartal' && sb.doubleStops) {
             // Stack of 4ths (Neo-Soul style)
             const midMidi = selectedMidi + 5;
             const topMidi = selectedMidi + 10;
             sb.deviceBuffer = [
-                { midi: midMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: 0 },
-                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0 }
+                { midi: midMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: 0, isDoubleStop: true },
+                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: false }
             ];
             sb.busySteps = 0;
             sb.lastFreq = getFrequency(topMidi);
-            return { midi: topMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
+            return { midi: topMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: timingOffset / 1000, isDoubleStop: true };
         }
 
         if (deviceType === 'run') {
@@ -752,20 +765,68 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             sb.lastFreq = getFrequency(graceMidi);
             return { midi: graceMidi, velocity: velocity * 0.7, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
         }
+
+        if (deviceType === 'guitarDouble' && sb.doubleStops) {
+            const rand = Math.random();
+            const dsInterval = (style === 'blues' || style === 'scalar') ? (Math.random() < 0.7 ? 5 : 7) : (Math.random() < 0.5 ? 3 : 4);
+            const secondMidi = selectedMidi + dsInterval;
+
+            if (rand < 0.4) {
+                // Variation 1: Hendrix Hammer (Hold one note, hammer the other)
+                sb.deviceBuffer = [
+                    [{ midi: secondMidi, velocity: velocity * 0.9, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: true },
+                     { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: false }]
+                ];
+                sb.busySteps = 0;
+                sb.lastFreq = getFrequency(selectedMidi);
+                return [{ midi: secondMidi - 2, velocity: velocity * 0.7, durationSteps: 1, style, timingOffset: 0, isDoubleStop: true },
+                        { midi: selectedMidi, velocity: velocity * 0.8, durationSteps: 1, style, timingOffset: 0, isDoubleStop: false }];
+            } else if (rand < 0.7) {
+                // Variation 2: Slide In (Chromatic slide on both notes)
+                sb.deviceBuffer = [
+                    [{ midi: secondMidi, velocity: velocity * 0.9, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: true },
+                     { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: false }]
+                ];
+                sb.busySteps = 0;
+                sb.lastFreq = getFrequency(selectedMidi - 1);
+                return [{ midi: secondMidi - 1, velocity: velocity * 0.6, durationSteps: 1, style, timingOffset: 0, isDoubleStop: true },
+                        { midi: selectedMidi - 1, velocity: velocity * 0.7, durationSteps: 1, style, timingOffset: 0, isDoubleStop: false }];
+            } else {
+                // Variation 3: Rhythmic Punctuations (Double stop hits)
+                return [{ midi: secondMidi, velocity: velocity, durationSteps: 1, style, timingOffset: 0, isDoubleStop: true },
+                        { midi: selectedMidi, velocity: velocity * 1.1, durationSteps: 1, style, timingOffset: 0, isDoubleStop: false }];
+            }
+        }
     }
 
     let notes = [];
-    if (Math.random() < (config.doubleStopProb || 0)) {
-        let dsIntervals = [5, 7, 9, 12];
-        if (style === 'blues') dsIntervals = [3, 4, 5, 9, 12]; // SRV: 3rds, 4ths, 6ths
-        if (style === 'scalar' || style === 'shred') dsIntervals = [7, 12]; // Rock: Power chords/Octaves
-        if (style === 'neo') dsIntervals = [4, 5, 9, 11]; // Neo: 3rds, 4ths, 6ths, Maj7s
-        if (style === 'bossa') dsIntervals = [4, 9]; // Bossa: 3rds, 6ths
+    if (sb.doubleStops && !sb.isReplayingMotif) {
+        const isUpbeat = stepInBeat === 2;
+        const isPhraseEnd = sb.notesInPhrase > (config.maxNotesPerPhrase * 0.7);
+        const dsMod = (isUpbeat || isPhraseEnd) ? 1.2 : 0.6; // Increased from 0.3 to be less restrictive
 
-        const dsInt = dsIntervals[Math.floor(Math.random() * dsIntervals.length)];
-        const secondMidi = selectedMidi + (Math.random() > 0.5 ? dsInt : -dsInt);
-        if (secondMidi > 40 && secondMidi < 100) {
-            notes.push({ midi: secondMidi, velocity: velocity * 0.8, isDoubleStop: true });
+        if (Math.random() < (config.doubleStopProb * dsMod * warmupFactor)) {
+            let dsIntervals = [5, 7, 9, 12];
+            if (style === 'blues') dsIntervals = [3, 4, 5, 9, 10, 12]; 
+            if (style === 'scalar' || style === 'shred') dsIntervals = [7, 12, 5]; 
+            if (style === 'neo') dsIntervals = [4, 5, 10, 11]; 
+            if (style === 'bossa') dsIntervals = [4, 9, 5]; 
+
+            // Chord Awareness: If chord has a strong b7 or 3rd, try to include it
+            const currentPC = (selectedMidi % 12 + 12) % 12;
+            const rootPC = (targetChord.rootMidi % 12 + 12) % 12;
+            const currentInterval = (currentPC - rootPC + 12) % 12;
+
+            if (targetChord.quality.includes('7') && currentInterval === 0) {
+                // If we are on the root, adding the b7 (10) or 4th (5) is very guitaristic
+                dsIntervals = [10, 5, 12];
+            }
+
+            const dsInt = dsIntervals[Math.floor(Math.random() * dsIntervals.length)];
+            const secondMidi = selectedMidi + (Math.random() > 0.5 ? dsInt : -dsInt);
+            if (secondMidi > 40 && secondMidi < 100) {
+                notes.push({ midi: secondMidi, velocity: velocity * 0.8, isDoubleStop: true });
+            }
         }
     }
 
@@ -790,11 +851,14 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         bendStartInterval, 
         ccEvents: [],
         timingOffset: timingOffset / 1000,
-        style
+        style,
+        isDoubleStop: false
     };
 
-    if (notes.length > 0) {
-        return [resultNote, ...notes.map(n => ({...resultNote, ...n}))];
+    if (notes.length > 0 && sb.doubleStops) {
+        // LEAD PRIORITIZATION: Return harmony notes first, then the lead note.
+        // This ensures the lead note 'wins' in monophonic voice-stealing scenarios.
+        return [...notes.map(n => ({...resultNote, ...n})), resultNote];
     }
 
     return resultNote;

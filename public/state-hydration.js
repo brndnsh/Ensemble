@@ -46,6 +46,7 @@ export function hydrateState(viz) {
             sb.octave = (savedState.sb.octave === 77 || savedState.sb.octave === 67 || savedState.sb.octave === undefined) ? 72 : savedState.sb.octave; 
             sb.volume = savedState.sb.volume; 
             sb.reverb = savedState.sb.reverb; 
+            sb.doubleStops = savedState.sb.doubleStops !== undefined ? savedState.sb.doubleStops : false;
         }
         if (savedState.gb) { 
             gb.enabled = savedState.gb.enabled !== undefined ? savedState.gb.enabled : true; 
@@ -99,6 +100,7 @@ export function hydrateState(viz) {
         if (ui.bassReverb) ui.bassReverb.value = bb.reverb;
         if (ui.soloistVol) ui.soloistVol.value = sb.volume;
         if (ui.soloistReverb) ui.soloistReverb.value = sb.reverb;
+        if (ui.soloistDoubleStops) ui.soloistDoubleStops.checked = sb.doubleStops;
         if (ui.drumVol) ui.drumVol.value = gb.volume;
         if (ui.drumReverb) ui.drumReverb.value = gb.reverb;
         if (ui.swingSlider) ui.swingSlider.value = gb.swing;

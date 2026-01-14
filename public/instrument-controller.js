@@ -95,9 +95,25 @@ export function handleTap(setBpmRef) {
 }
 
 export function flushBuffers(primeSteps = 0) {
-    flushBuffer('chord', primeSteps);
-    flushBuffer('bass', primeSteps);
-    flushBuffer('soloist', primeSteps);
+    // 1. Clear local buffers
+    bb.buffer.clear();
+    sb.buffer.clear();
+    cb.buffer.clear();
+    
+    // 2. Kill current sounds and buses
+    killAllPianoNotes();
+    killSoloistNote();
+    killBassNote();
+    killDrumNote();
+    
+    killChordBus();
+    killBassBus();
+    killSoloistBus();
+    killDrumBus();
+
+    // 3. Trigger a SINGLE worker flush
+    flushWorker(ctx.step, null, primeSteps);
+    restoreGains();
 }
 
 export function flushBuffer(type, primeSteps = 0) {
@@ -123,7 +139,11 @@ export function flushBuffer(type, primeSteps = 0) {
         killDrumBus();
     }
     
-    flushWorker(ctx.step, null, primeSteps);
+    // Solo flush (usually from UI toggles)
+    if (type !== 'none') {
+        flushWorker(ctx.step, null, primeSteps);
+    }
+    restoreGains();
 }
 
 export function getPowerConfig() {
@@ -216,6 +236,7 @@ export function resetToDefaults() {
     sb.octave = 72;
     sb.style = 'smart';
     sb.activeTab = 'smart';
+    sb.doubleStops = false;
     
     gb.volume = 0.5;
     gb.reverb = 0.2;
@@ -275,6 +296,7 @@ export function resetToDefaults() {
         ui.intensitySlider.style.opacity = 0.5;
     }
     if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = true;
+    if (ui.soloistDoubleStops) ui.soloistDoubleStops.checked = false;
     if (ui.complexitySlider) {
         ui.complexitySlider.value = 30;
         if (ui.complexityValue) ui.complexityValue.textContent = 'Low';

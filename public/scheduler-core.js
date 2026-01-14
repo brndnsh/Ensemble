@@ -1,4 +1,4 @@
-import { ctx, gb, cb, bb, sb, arranger, vizState, storage } from './state.js';
+import { ctx, gb, cb, bb, sb, arranger, vizState, storage, dispatch } from './state.js';
 import { ui, updateGenreUI, triggerFlash, updateActiveChordUI, clearActiveVisuals } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, updateSustain, killAllNotes, restoreGains } from './engine.js';
 import { TIME_SIGNATURES } from './config.js';
@@ -58,6 +58,7 @@ export function togglePlay(viz) {
         }
 
         ctx.step = 0;
+        dispatch('RESET_SESSION'); // Reset warm-up counters
         syncWorker(); 
         const primeSteps = (arranger.totalSteps > 0) ? arranger.totalSteps * 2 : 0;
         flushBuffers(primeSteps);
@@ -411,7 +412,7 @@ export function syncAndFlushWorker(step) {
         },
         cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled, volume: cb.volume },
         bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq, volume: bb.volume },
-        sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume },
+        sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume, doubleStops: sb.doubleStops },
         gb: { 
             genreFeel: gb.genreFeel, 
             lastDrumPreset: gb.lastDrumPreset, 

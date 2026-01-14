@@ -15,7 +15,8 @@ vi.mock('./public/state.js', () => ({
         motifBuffer: [],
         hookBuffer: [],
         lastFreq: 440,
-        hookRetentionProb: 0.5
+        hookRetentionProb: 0.5,
+        doubleStops: true
     },
     cb: { enabled: true },
     ctx: { bandIntensity: 0.5, bpm: 120, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
@@ -66,9 +67,11 @@ describe('Soloist Phrasing & Logic', () => {
             const result = getSoloistNote(chordC, null, 14, 440, 72, 'blues', 14);
             if (Array.isArray(result) && result.length > 1) {
                 foundDoubleStop = true;
-                expect(result[0].midi).toBeDefined();
-                expect(result[1].midi).toBeDefined();
-                expect(result[1].isDoubleStop).toBe(true);
+                // Lead Prioritization check: Lead note should be last
+                const leadNote = result[result.length - 1];
+                const harmonyNote = result[0];
+                expect(leadNote.isDoubleStop).toBe(false);
+                expect(harmonyNote.isDoubleStop).toBe(true);
                 break;
             }
         }
