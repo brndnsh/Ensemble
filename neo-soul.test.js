@@ -20,7 +20,7 @@ vi.mock('./public/state.js', () => ({
         sections: []
     },
     gb: { genreFeel: 'Neo-Soul' },
-    bb: { enabled: true }
+    bb: { pocketOffset: 0.025 },
 }));
 
 vi.mock('./public/config.js', async (importOriginal) => {

@@ -201,6 +201,7 @@ export const gb = {
  * @property {Map<number, Object>} buffer - Map of scheduled notes from the worker.
  * @property {number} octave - Base MIDI octave.
  * @property {string} style - Playing style ID (e.g., 'walking', 'funk').
+ * @property {number} pocketOffset - Micro-timing offset in seconds (e.g. 0.02 for 20ms lag).
  */
 export const bb = {
     enabled: false,
@@ -211,6 +212,7 @@ export const bb = {
     buffer: new Map(),
     octave: 38,
     style: 'smart',
+    pocketOffset: 0.0,
     activeTab: 'smart'
 };
 

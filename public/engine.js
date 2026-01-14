@@ -594,13 +594,17 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
         const thump = ctx.audio.createBufferSource();
         thump.buffer = gb.audioBuffers.noise;
         const thumpFilter = ctx.audio.createBiquadFilter();
+        
+        // SLAP/MUTE Logic: Ghost notes use a tighter, more resonant "thump"
         thumpFilter.type = muted ? 'bandpass' : 'lowpass';
-        thumpFilter.frequency.value = muted ? 800 : 600;
-        thumpFilter.frequency.setValueAtTime(muted ? 800 : 600, startTime);
-        if (muted) thumpFilter.Q.value = 2.0;
+        const thumpFreq = muted ? 1200 : 600; // Raised frequency for ghost clicks
+        thumpFilter.frequency.value = thumpFreq;
+        thumpFilter.frequency.setValueAtTime(thumpFreq, startTime);
+        if (muted) thumpFilter.Q.value = 4.0; // Higher resonance for "slap" feel
 
         const thumpGain = ctx.audio.createGain();
-        const thumpTargetVol = vol * (muted ? 0.6 : (isPop ? 0.35 : 0.2));
+        // Ghost notes are mostly percussive; regular notes have just a hint of thump
+        const thumpTargetVol = vol * (muted ? 1.0 : (isPop ? 0.35 : 0.2));
         
         thumpGain.gain.value = 0;
         thumpGain.gain.setTargetAtTime(thumpTargetVol, startTime, 0.001);
@@ -627,8 +631,8 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
         const gain = ctx.audio.createGain();
         gain.gain.value = 0;
         gain.gain.setValueAtTime(0, startTime);
-        // Slightly softer attack for Pop (4ms instead of 2ms) to reduce "quack"
-        gain.gain.setTargetAtTime(tonalVol, startTime, isPop ? 0.004 : 0.01);
+        // Sharper attack for Pop (0.002s) per the plan, regular notes stay at 0.01s
+        gain.gain.setTargetAtTime(tonalVol, startTime, isPop ? 0.002 : 0.01);
         
         const sustainDuration = (muted ? 0.01 : (isPop ? duration * 0.1 : duration * 0.2));
         const sustainEnd = startTime + sustainDuration;

@@ -255,23 +255,33 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
     }
 
     if (genre === 'Funk') {
-        // Clav-Style: 16th note syncopation with ghost notes
+        // Clav-Style: 16th note syncopation with ghost notes ("chucks")
         const isHit = compingState.currentCell[measureStep % spm] === 1;
-        const ghostProb = 0.15 + (intensity * 0.3);
+        const ghostProb = 0.2 + (intensity * 0.4);
         const isGhost = !isHit && (Math.random() < ghostProb);
 
         if (isHit || isGhost) {
-            let voicing = [...chord.freqs];
-            // Clav is lean; use 2-3 notes max
-            if (voicing.length > 3) voicing = voicing.slice(0, 2);
+            // CLAV-STYLE VOICING: Lean 2-note voicings (Guide Tones: 3rd and 7th)
+            // This maintains the "lean, funky pocket" requested.
+            let voicing = [];
             
-            voicing.forEach((f, i) => {
+            // Extract 3rd and 7th from intervals if possible, otherwise use slice
+            const three = chord.intervals ? chord.intervals.find(i => i === 3 || i === 4) : undefined;
+            const seven = chord.intervals ? chord.intervals.find(i => i === 10 || i === 11) : undefined;
+            
+            if (three !== undefined && seven !== undefined) {
+                voicing = [chord.rootMidi + three, chord.rootMidi + seven];
+            } else {
+                voicing = chord.freqs.slice(0, 2).map(f => getMidi(f));
+            }
+            
+            voicing.forEach((m, i) => {
                 notes.push({
-                    midi: getMidi(f),
-                    velocity: (isGhost ? 0.25 : 0.6) * (0.8 + Math.random() * 0.4),
-                    durationSteps: isGhost ? 0.2 : 0.4,
+                    midi: m,
+                    velocity: (isGhost ? 0.25 : 0.65) * (0.8 + Math.random() * 0.4),
+                    durationSteps: isGhost ? 0.1 : 0.4, // Super short ghost "chucks"
                     ccEvents: (i === 0) ? ccEvents : [],
-                    timingOffset: (i * 0.004) + (isGhost ? 0.005 : 0),
+                    timingOffset: (i * 0.004) + (isGhost ? (0.005 + Math.random() * 0.01) : 0),
                     instrument: 'Piano',
                     muted: isGhost,
                     dry: true

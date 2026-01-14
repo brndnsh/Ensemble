@@ -82,8 +82,8 @@ describe('Accompaniment Engine', () => {
             }
             
             expect(playedNotes.length).toBeGreaterThan(0);
-            // Can be 0.4 (hit) or 0.2 (ghost note)
-            expect([0.4, 0.2]).toContain(playedNotes[0].durationSteps); 
+            // Can be 0.4 (hit), 0.2 (Reggae), or 0.1 (Funk ghost)
+            expect([0.4, 0.2, 0.1]).toContain(playedNotes[0].durationSteps); 
             expect(playedNotes[0].dry).toBe(true);
         });
 
