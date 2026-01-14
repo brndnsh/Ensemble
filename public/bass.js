@@ -51,7 +51,7 @@ function getScaleForBass(chord, nextChord, isMinor = false) {
 /**
  * Generates a frequency for a bass line.
  */
-export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 38, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0, isMinor = false) {
+export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 38, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0, isMinor = false, isPriming = false) {
     if (!currentChord) return null;
 
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];

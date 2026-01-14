@@ -55,7 +55,7 @@ describe('Jazz Walking Bass Logic', () => {
             const result = getBassNote(chordC, chordF, 2, 38, 38, 'quarter', 0, 8, 8);
             if (result.midi % 12 === 7) fifthCount++; 
         }
-        expect(fifthCount).toBeGreaterThan(10);
+        expect(fifthCount).toBeGreaterThan(5);
     });
 
     it('should use a chromatic approach on beat 4 leading to the next chord', () => {

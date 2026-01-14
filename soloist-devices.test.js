@@ -17,6 +17,7 @@ vi.mock('./public/state.js', () => ({
         deviceBuffer: [],
         lastFreq: 440,
         hookRetentionProb: 0.5,
+        doubleStops: true,
         currentCell: [1, 1, 1, 1]
     },
     cb: { enabled: true },
@@ -62,17 +63,29 @@ describe('Soloist Advanced Melodic Devices', () => {
         for (let i = 0; i < 200; i++) {
             sb.deviceBuffer = [];
             sb.busySteps = 0;
-            // Step 0 is a strong beat
-            const result = getSoloistNote(chordC, null, 0, 440, 72, 'bird', 0);
+            sb.isResting = false;
+            sb.currentPhraseSteps = 1;
+
+            // Trigger the device on Step 16
+            const result = getSoloistNote(chordC, null, 16, 440, 72, 'bird', 0);
             
             if (result && sb.deviceBuffer.length === 2) {
-                enclosureDetected = true;
-                // First note should be 16th (duration 1)
-                expect(result.durationSteps).toBe(1);
-                // Buffer should have 2 more notes
-                expect(sb.deviceBuffer[0].midi).toBeDefined();
-                expect(sb.deviceBuffer[1].midi).toBeDefined();
-                break;
+                // The first note of the enclosure sequence is found!
+                // Now we must simulate the next steps to verify the buffer is consumed.
+                
+                // Step 17 should return the first note from the buffer
+                const note2 = getSoloistNote(chordC, null, 17, 440, 72, 'bird', 1);
+                
+                // Step 18 should return the final note from the buffer
+                const note3 = getSoloistNote(chordC, null, 18, 440, 72, 'bird', 2);
+
+                if (note2 && note3) {
+                    enclosureDetected = true;
+                    // Check properties of the resulting notes if needed
+                    expect(note2.midi).toBeDefined();
+                    expect(note3.midi).toBeDefined();
+                    break;
+                }
             }
         }
         expect(enclosureDetected).toBe(true);

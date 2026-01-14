@@ -533,10 +533,15 @@ export function setupUIHandlers(refs) {
     ui.drumBarsSelect.addEventListener('change', e => updateMeasures(e.target.value));
     ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
 
-    [ui.metronome, ui.countIn, ui.visualFlash, ui.haptic, ui.applyPresetSettings].forEach(el => {
+    [ui.metronome, ui.countIn, ui.visualFlash, ui.haptic, ui.applyPresetSettings, ui.soloistDoubleStops].forEach(el => {
         el.addEventListener('change', () => {
             if (el === ui.metronome) ctx.metronome = el.checked;
             if (el === ui.applyPresetSettings) ctx.applyPresetSettings = el.checked;
+            if (el === ui.soloistDoubleStops) {
+                dispatch('SET_DOUBLE_STOPS', el.checked);
+                syncWorker();
+                flushBuffers();
+            }
             saveCurrentState();
         });
     });

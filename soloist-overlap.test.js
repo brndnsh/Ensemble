@@ -15,7 +15,8 @@ vi.mock('./public/state.js', () => ({
         motifBuffer: [],
         hookBuffer: [],
         lastFreq: 440,
-        hookRetentionProb: 0.5
+        hookRetentionProb: 0.5,
+        doubleStops: true
     },
     cb: { enabled: true },
     ctx: { bandIntensity: 0.5, bpm: 120 },
@@ -57,7 +58,8 @@ describe('Soloist Overlap Test', () => {
         gb.genreFeel = 'Rock';
     });
 
-    it('should not have more than 2 notes overlapping', () => {
+    it('should not have more than 2 notes overlapping when doubleStops is enabled', () => {
+        sb.doubleStops = true;
         const activeNotes = []; // { endStep: number }
         let maxOverlaps = 0;
 
@@ -70,7 +72,7 @@ describe('Soloist Overlap Test', () => {
                 }
             }
 
-            const result = getSoloistNote(mockChord, null, step, 440, 72, 'scalar', step % 16);
+            const result = getSoloistNote(mockChord, null, step + 16, 440, 72, 'scalar', step % 16);
             
             if (result) {
                 const notes = Array.isArray(result) ? result : [result];
@@ -83,5 +85,33 @@ describe('Soloist Overlap Test', () => {
         }
 
         expect(maxOverlaps).toBeLessThanOrEqual(2);
+    });
+
+    it('should be strictly monophonic when doubleStops is disabled', () => {
+        sb.doubleStops = false;
+        const activeNotes = [];
+        let maxOverlaps = 0;
+
+        for (let step = 0; step < 1000; step++) {
+            for (let i = activeNotes.length - 1; i >= 0; i--) {
+                if (activeNotes[i].endStep <= step) activeNotes.splice(i, 1);
+            }
+
+            const result = getSoloistNote(mockChord, null, step + 16, 440, 72, 'scalar', step % 16);
+            
+            if (result) {
+                // When doubleStops is false, getSoloistNote should ONLY return single notes
+                // BUT the synth manages the actual voice stealing.
+                // Here we test the CONTENT GENERATOR'S intent.
+                expect(Array.isArray(result)).toBe(false);
+                activeNotes.push({ endStep: step + result.durationSteps });
+            }
+
+            maxOverlaps = Math.max(maxOverlaps, activeNotes.length);
+        }
+
+        // Note: Content generator might produce consecutive notes (maxOverlaps could be 1 here)
+        // The actual synth-level monophony is handled in synth-soloist.js
+        expect(maxOverlaps).toBeLessThanOrEqual(1);
     });
 });

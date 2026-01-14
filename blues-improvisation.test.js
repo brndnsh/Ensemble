@@ -16,6 +16,7 @@ vi.mock('./public/state.js', () => ({
         hookBuffer: [],
         lastFreq: 440,
         hookRetentionProb: 0.5,
+        doubleStops: true,
         currentCell: [1, 1, 1, 1]
     },
     cb: { enabled: true, octave: 60, density: 'standard', practiceMode: false },
@@ -130,9 +131,9 @@ describe('Genre Specific Test: 12-Bar Blues in F', () => {
         }
 
         // Blues mode has a double stop probability of 0.15 (relative to playing)
-        // We expect at least 10% to account for randomness variance
+        // Since we now use dsMod (0.3 for most steps), the effective rate is lower (~4-5%).
         expect(noteCount).toBeGreaterThan(0);
-        expect(doubleStopCount / noteCount).toBeGreaterThan(0.10); 
+        expect(doubleStopCount / noteCount).toBeGreaterThan(0.03); 
     });
 
     it('should handle the VI7alt (D7alt) turnaround chord with altered scale logic under tension', () => {

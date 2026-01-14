@@ -40,7 +40,7 @@ export function initUI() {
         'exportBassCheck', 'exportSoloistCheck', 'exportDrumsCheck', 'exportDurationInput', 'exportDurationContainer',
         'exportFilenameInput', 'installAppBtn', 'flashOverlay', 'resetSettingsBtn', 'refreshAppBtn', 'editorOverlay',
         'editArrangementBtn', 'closeEditorBtn', 'intensitySlider', 'complexitySlider', 'intensityValue',
-        'autoIntensityCheck', 'complexityValue'
+        'autoIntensityCheck', 'complexityValue', 'soloistDoubleStops'
     ];
 
     uiIds.forEach(id => ui[id] = document.getElementById(id));

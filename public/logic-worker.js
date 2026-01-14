@@ -259,8 +259,9 @@ function handleExport(options) {
         soloistTrack.setName(0, 'Soloist'); soloistTrack.programChange(0, 2, 80);
         drumTrack.setName(0, 'Drums');
 
-        const prevStates = { cb: cb.enabled, bb: bb.enabled, sb: sb.enabled, gb: gb.enabled, intensity: ctx.bandIntensity };
+        const prevStates = { cb: cb.enabled, bb: bb.enabled, sb: sb.enabled, gb: gb.enabled, intensity: ctx.bandIntensity, doubleStops: sb.doubleStops, sessionSteps: sb.sessionSteps };
         cb.enabled = true; bb.enabled = true; sb.enabled = true; gb.enabled = true;
+        sb.sessionSteps = 1000; // Bypass warm-up for export
         compingState.lockedUntil = 0; compingState.lastChordIndex = -1;
         sb.busySteps = 0; sb.isResting = false; sb.currentPhraseSteps = 0;
 
@@ -493,7 +494,7 @@ function handleExport(options) {
         });
         metaTrack.endOfTrack(finalPulse);
 
-        cb.enabled = prevStates.cb; bb.enabled = prevStates.bb; sb.enabled = prevStates.sb; gb.enabled = prevStates.gb; ctx.bandIntensity = prevStates.intensity;
+        cb.enabled = prevStates.cb; bb.enabled = prevStates.bb; sb.enabled = prevStates.sb; gb.enabled = prevStates.gb; ctx.bandIntensity = prevStates.intensity; sb.doubleStops = prevStates.doubleStops; sb.sessionSteps = prevStates.sessionSteps;
 
         const header = new Uint8Array([...writeString('MThd'), ...writeInt32(6), ...writeInt16(1), ...writeInt16(finalTrackList.length), ...writeInt16(PPQ)]);
         const trackChunks = finalTrackList.map(t => t.compile());
@@ -547,6 +548,8 @@ self.onmessage = (e) => {
                 
                 bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step;
                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
+                sb.sessionSteps = 0;
+                sb.deviceBuffer = [];
                 bb.busySteps = 0;
                 sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;
                 
@@ -614,7 +617,8 @@ function handlePrime(steps) {
                         chordData.chordIndex, 
                         s, 
                         stepInChord, 
-                        arranger.isMinor
+                        arranger.isMinor,
+                        true // isPriming
                     );
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
                          if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
@@ -632,7 +636,8 @@ function handlePrime(steps) {
                 sb.octave, 
                 sb.style, 
                 stepInChord, 
-                bb.lastFreq
+                bb.lastFreq,
+                true // isPriming
             );
             
             if (soloResult) {
@@ -651,4 +656,9 @@ function handlePrime(steps) {
     if (ctx.workerLogging) {
         console.log(`[Worker] Priming complete in ${elapsed.toFixed(2)}ms`);
     }
+
+    // Reset physical and session state for the REAL start at Step 0
+    sb.busySteps = 0;
+    bb.busySteps = 0;
+    sb.sessionSteps = 0;
 }

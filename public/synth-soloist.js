@@ -2,13 +2,15 @@ import { ctx, sb } from './state.js';
 import { safeDisconnect } from './utils.js';
 
 export function killSoloistNote() {
-    if (sb.lastSoloistGain) {
-        try {
-            const g = sb.lastSoloistGain.gain;
-            g.cancelScheduledValues(ctx.audio.currentTime);
-            g.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
-        } catch(e) {}
-        sb.lastSoloistGain = null;
+    if (sb.activeVoices && sb.activeVoices.length > 0) {
+        sb.activeVoices.forEach(voice => {
+            try {
+                const g = voice.gain.gain;
+                g.cancelScheduledValues(ctx.audio.currentTime);
+                g.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
+            } catch(e) {}
+        });
+        sb.activeVoices = [];
     }
 }
 
@@ -17,10 +19,44 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     
     const now = ctx.audio.currentTime;
     const playTime = Math.max(time, now);
+
+    // --- Voice Management (Duophonic Limit) ---
+    // We allow at most 2 notes to ring simultaneously.
+    // If a double stop (2 notes) starts, any previous notes are killed.
+    // If a single note starts and 2 are ringing, the oldest is killed.
+    
+    if (!sb.activeVoices) sb.activeVoices = [];
+    
+    // clean up voices that have finished their release (roughly duration + 0.5s)
+    sb.activeVoices = sb.activeVoices.filter(v => (v.time + v.duration + 0.5) > playTime);
+
     const randomizedVol = vol * (0.95 + Math.random() * 0.1);
     const gain = ctx.audio.createGain();
     gain.gain.value = 0;
     gain.gain.setValueAtTime(0, playTime);
+
+    // Dynamic Voice Limit: 1 for Pure Monophonic, 2 for Double Stops
+    const VOICE_LIMIT = sb.doubleStops ? 2 : 1;
+
+    // If we are starting a note at a NEW time, and we already have voices,
+    // we might need to steal one to keep the limit correct.
+    const isNewGesture = sb.activeVoices.length > 0 && Math.abs(playTime - sb.activeVoices[sb.activeVoices.length-1].time) > 0.001;
+    
+    if (isNewGesture || sb.activeVoices.length >= VOICE_LIMIT) {
+        const voicesToKill = isNewGesture ? sb.activeVoices.length : (sb.activeVoices.length - VOICE_LIMIT + 1);
+        for (let i = 0; i < voicesToKill; i++) {
+            const oldest = sb.activeVoices.shift();
+            if (oldest) {
+                try {
+                    oldest.gain.gain.cancelScheduledValues(playTime);
+                    oldest.gain.gain.setTargetAtTime(0, playTime, 0.01);
+                } catch(e) {}
+            }
+        }
+    }
+
+    sb.activeVoices.push({ gain, time: playTime, duration });
+
     const pan = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
     if (ctx.audio.createStereoPanner) pan.pan.setValueAtTime((Math.random() * 2 - 1) * 0.3, playTime);
 
@@ -121,23 +157,6 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     filter.connect(gain);
     gain.connect(pan);
     pan.connect(ctx.soloistGain);
-
-    // Monophonic Cutoff: Ensure only one note rings at a time per module.
-    // If a note arrives with an identical or past time, we still cutoff to prevent bunching.
-    // NEW: Allow small overlap (double stops) if notes start at almost the exact same time.
-    if (sb.lastSoloistGain && Math.abs(playTime - sb.lastNoteStartTime) > 0.001) {
-        try {
-            const g = sb.lastSoloistGain.gain;
-            g.cancelScheduledValues(playTime);
-            g.setTargetAtTime(0, playTime, 0.005);
-        } catch (e) {}
-    }
-    
-    // Only track the primary note for future cutoffs
-    if (Math.abs(playTime - sb.lastNoteStartTime) > 0.001) {
-        sb.lastSoloistGain = gain;
-        sb.lastNoteStartTime = playTime;
-    }
 
     // Smart Vibrato Logic
     // Only apply vibrato if note is long enough to warrant it

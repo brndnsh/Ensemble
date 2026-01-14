@@ -15,7 +15,8 @@ vi.mock('./public/state.js', () => ({
         motifBuffer: [],
         hookBuffer: [],
         lastFreq: 440,
-        hookRetentionProb: 0.5
+        hookRetentionProb: 0.5,
+        doubleStops: true
     },
     cb: { enabled: true, octave: 60, density: 'standard', practiceMode: false },
     ctx: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 } },

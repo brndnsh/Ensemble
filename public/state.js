@@ -272,6 +272,9 @@ export const sb = {
     motifReplayIndex: 0,
     hookRetentionProb: 0.4,
     tension: 0,
+    doubleStops: false, // Choosing between more guitar-like solos or vocal/horn style
+    activeVoices: [], // Track active gain nodes for voice stealing (duophonic limit)
+    sessionSteps: 0, // Steps elapsed since playback start for warm-up logic
     deviceBuffer: [], // Buffer for multi-step melodic devices like enclosures
     activeTab: 'smart'
 };
@@ -320,6 +323,15 @@ export function dispatch(action, payload) {
             break;
         case 'SET_AUTO_INTENSITY':
             ctx.autoIntensity = !!payload;
+            break;
+        case 'SET_DOUBLE_STOPS':
+            sb.doubleStops = !!payload;
+            break;
+        case 'RESET_SESSION':
+            sb.sessionSteps = 0;
+            break;
+        case 'SET_SESSION_STEPS':
+            sb.sessionSteps = payload;
             break;
         case 'UPDATE_CONDUCTOR_DECISION': 
             // Composite update from Conductor
