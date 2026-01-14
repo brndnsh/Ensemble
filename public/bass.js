@@ -52,6 +52,8 @@ function getScaleForBass(chord, nextChord, isMinor = false) {
  * Generates a frequency for a bass line.
  */
 export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 38, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0, isMinor = false) {
+    if (!currentChord) return null;
+
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
 
@@ -187,6 +189,8 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
              else durationSteps = durationMultiplier;
         }
         
+        bb.busySteps = Math.max(0, Math.round(durationSteps) - 1);
+
         return { 
             midi, 
             velocity, 
@@ -475,6 +479,14 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
  * Determines if the bass should play at a specific step.
  */
 export function isBassActive(style, step, stepInChord) {
+    if (bb.busySteps > 0) {
+        bb.busySteps--;
+        // The "One" is sacred: allow it to interrupt any sustaining note/fill
+        // to ensure the harmonic foundation is solid.
+        if (stepInChord !== 0) return false;
+        else bb.busySteps = 0; // Force reset if we are interrupting
+    }
+
     if (style === 'smart') {
         const mapping = { 
             'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo',

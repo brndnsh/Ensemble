@@ -547,6 +547,7 @@ self.onmessage = (e) => {
                 
                 bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step;
                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
+                bb.busySteps = 0;
                 sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;
                 
                 // Reset accompaniment memory
@@ -581,6 +582,7 @@ function handlePrime(steps) {
     // Reset soloist state for priming
     sb.isResting = false;
     sb.busySteps = 0;
+    bb.busySteps = 0;
     sb.currentPhraseSteps = 0;
     sb.motifBuffer = [];
     sb.hookBuffer = [];
