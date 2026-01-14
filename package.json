@@ -7,7 +7,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "vitest": "^2.1.9",
-    "happy-dom": "^15.7.4"
+    "happy-dom": "^20.1.0",
+    "vitest": "^4.0.17"
   }
 }
