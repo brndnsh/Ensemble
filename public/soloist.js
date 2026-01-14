@@ -133,7 +133,7 @@ const STYLE_CONFIG = {
     bird: {
         restBase: 0.3, 
         restGrowth: 0.05,
-        cells: [0, 12, 2, 7], // 8ths, offbeat 8th, quarters, and bebop syncopation
+        cells: [0, 12, 2, 7, 1], // 8ths, offbeat 8th, quarters, bebop syncopation, and 16ths
         registerSoar: 5,
         tensionScale: 0.7,
         timingJitter: 15,

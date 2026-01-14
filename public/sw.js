@@ -1,5 +1,5 @@
 // Note: Keep CACHE_NAME version in sync with APP_VERSION in config.js
-const CACHE_NAME = 'ensemble-v1.97';
+const CACHE_NAME = 'ensemble-v1.98';
 const ASSETS = [
     './',
     './index.html',
@@ -30,6 +30,14 @@ const ASSETS = [
     './worker-client.js',
     './fills.js',
     './form-analysis.js',
+    './animation-loop.js',
+    './groove-engine.js',
+    './scheduler-core.js',
+    './state-hydration.js',
+    './synth-drums.js',
+    './synth-bass.js',
+    './synth-soloist.js',
+    './synth-chords.js',
     './styles.css',
     './manifest.json',
     './icon.svg',
