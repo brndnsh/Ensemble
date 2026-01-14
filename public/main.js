@@ -188,8 +188,7 @@ function advanceGlobalStep() {
             gb.pendingGenreFeel = null;
 
             // Re-sync all procedural engines to the new feel
-            syncWorker();
-            flushBuffers();
+            syncAndFlushWorker(ctx.step);
             
             // Visual feedback of the sync boundary
             triggerFlash(0.15);
@@ -783,6 +782,42 @@ window.previewChord = (index) => {
         setTimeout(() => { if (!ctx.isPlaying) cards[index].classList.remove('active'); }, 300); 
     }
 };
+
+/**
+ * Collects current state and sends a combined sync+flush message to the worker.
+ * This ensures atomic state update and buffer regeneration at measure boundaries.
+ */
+export function syncAndFlushWorker(step) {
+    const syncData = {
+        arranger: { 
+            progression: arranger.progression, 
+            stepMap: arranger.stepMap, 
+            totalSteps: arranger.totalSteps,
+            key: arranger.key,
+            isMinor: arranger.isMinor,
+            timeSignature: arranger.timeSignature,
+            grouping: arranger.grouping
+        },
+        cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled, volume: cb.volume },
+        bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq, volume: bb.volume },
+        sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume },
+        gb: { 
+            genreFeel: gb.genreFeel, 
+            lastDrumPreset: gb.lastDrumPreset, 
+            enabled: gb.enabled, 
+            volume: gb.volume,
+            measures: gb.measures,
+            swing: gb.swing,
+            swingSub: gb.swingSub,
+            instruments: gb.instruments.map(i => ({ name: i.name, steps: [...i.steps], muted: i.muted }))
+        },
+        ctx: { bpm: ctx.bpm, bandIntensity: ctx.bandIntensity, complexity: ctx.complexity, autoIntensity: ctx.autoIntensity }
+    };
+
+    killAllNotes();
+    flushWorker(step, syncData);
+    restoreGains();
+}
 
 function loadFromUrl() {
     const params = new URLSearchParams(window.location.search); let hasParams = false;
