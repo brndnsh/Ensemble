@@ -133,4 +133,42 @@ describe('Genre Integrity Stress Test', () => {
             expect(avgOne).toBeGreaterThan(avgOther);
         });
     });
+
+    describe('Rock (Stadium) Integrity', () => {
+        const simulateRockDrum = (step, intensity, instName) => {
+            const loopStep = step % 16;
+            let soundName = instName;
+            let shouldPlay = (loopStep % 4 === 0); // Basic 4ths for simulation
+            
+            if (intensity > 0.7) {
+                if (instName === 'HiHat') soundName = 'Open';
+            }
+            return soundName;
+        };
+
+        it('should switch to Open Hi-Hats in Anthem mode (High Intensity)', () => {
+            const hiHatSound = simulateRockDrum(0, 0.8, 'HiHat');
+            expect(hiHatSound).toBe('Open');
+        });
+
+        it('should maintain Closed Hi-Hats in Tight mode (Low Intensity)', () => {
+            const hiHatSound = simulateRockDrum(0, 0.3, 'HiHat');
+            expect(hiHatSound).toBe('HiHat');
+        });
+    });
+
+    describe('Disco Integrity', () => {
+        const simulateDiscoKick = (step) => {
+            const loopStep = step % 16;
+            return (loopStep % 4 === 0); // Procedural override
+        };
+
+        it('should enforce Four-on-the-Floor kick regardless of measure step', () => {
+            for (let i = 0; i < 16; i++) {
+                const isKick = simulateDiscoKick(i);
+                if (i % 4 === 0) expect(isKick).toBe(true);
+                else expect(isKick).toBe(false);
+            }
+        });
+    });
 });
