@@ -28,6 +28,18 @@ This document tracks specific reference recordings used to calibrate the Ensembl
 
 ---
 
+## DSP Filter Profiles
+
+### Bass Engine
+- **Funk/Pop Thumb:** Velocity > 1.1 triggers "Pop" mode.
+- **Filter Cutoff:** Base 1000Hz, decaying to 800Hz (Pop) or 500Hz (Normal).
+- **Resonant Peak:** 1800Hz (Q: 1.5, Gain: 5) for character without nasal resonance.
+- **Reggae Dub:** Low-shelf at 100Hz (+2dB) for weight.
+
+### Piano Engine
+- **Attack Transient:** 1200Hz - 2000Hz noise strike.
+- **Harmonic Body:** Filter depth reduced to 2400Hz to eliminate digital harshness.
+
 ## Current Calibration Log
 
 ### [Date: 2026-01-14]

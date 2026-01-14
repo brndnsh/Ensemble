@@ -41,7 +41,8 @@ Ensemble is a zero-dependency project and requires no build step.
 *   **ES Modules**: Use `import`/`export` for all logic. Maintain a flat or shallow directory structure.
 *   **Styling**: Use CSS variables defined in `:root` (Solarized theme). Avoid hardcoded hex values in component styles.
 *   **State Access**: Read state through the exported objects (`ctx`, `arranger`, `gb`, etc.). **NEVER** modify these objects directly. Use `dispatch(action, payload)` from `state.js` to trigger updates.
-*   **Precision Timing**: Use `ctx.audio.currentTime` for all audio scheduling. Visual events should be pushed to `ctx.drawQueue` for synchronization in the `requestAnimationFrame` loop.
+*   **Precision Timing**: Use `ctx.audio.currentTime` for all audio scheduling. Visual events should be pushed to `ctx.drawQueue` for synchronization in the `requestAnimationFrame` loop. Always snap `ctx.nextNoteTime` to `ctx.unswungNextNoteTime` at measure boundaries to prevent drift accumulation.
+*   **Atomic Transitions**: When implementing state changes that affect rhythmic feel (swing, subdivisions), perform the update at the *start* of the scheduling loop for Step 0. This prevents lookahead logic from queuing notes using stale state.
 *   **Mobile First**: Prioritize performance and touch-target sizes for mobile devices. Prefer simplified visuals over complex effects if they cause lag on low-end hardware.
 
 ## Gemini Specific Instructions
@@ -50,12 +51,14 @@ Ensemble is a zero-dependency project and requires no build step.
 *   Ensure all new features respect the `bandIntensity` and `complexity` signals from the conductor.
 *   Always maintain JSDoc comments in `state.js` when updating the state schema.
 *   **Worker Sync**: When refreshing the engine state, ensure `syncWorker()` (or `dispatch`) is called **before** `flushBuffers()` so the worker uses the latest state. Call `restoreGains()` **after** `flushBuffers()` to prevent audio bus silence.
+*   **Buffer Integrity**: During a `flush` operation (e.g., genre switch), explicitly clear the client-side instrument buffers (`cb.buffer`, `bb.buffer`, `sb.buffer`) to prevent stale patterns from playing.
 
 ## Roadmap & Future Goals
 
-The project is currently transitioning from static loop-based accompaniment to "Smart Grooves"—generative, intensity-aware engines. Future work focuses on:
+The project is currently transitioning from static loop-based accompaniment to "Smart Grooves"—generative, intensity-aware engines. **Rock (Stadium), Disco (Four-on-the-Floor), and Hip Hop (Boom Bap)** are now implemented. Future work focuses on:
 
 1.  **Bass Engine**: Implementing chromatic walking logic for Jazz, "Slap & Pop" synthesis for Funk, and micro-timing (Dilla feel) for Neo-Soul.
 2.  **Accompaniment Engine**: Transitioning to rootless jazz voicings, implementing Reggae "Bubble/Skank" dual-lane logic, and quartal harmony for modern genres.
 3.  **Authenticity Verification**: Expanding the probabilistic testing suite (`*.test.js`) to ensure genre-specific rhythmic and harmonic anchors are maintained over long durations.
-4.  **Reference-Driven Tuning**: Calibrating velocity maps and timing offsets against classic genre recordings to achieve a "pro-level" musical feel.
+4.  **Latin/Bossa Percussion**: Expand procedural percussion (shakers/agogo) for Latin styles.
+5.  **Reference-Driven Tuning**: Calibrating velocity maps and timing offsets against classic genre recordings to achieve a "pro-level" musical feel.
