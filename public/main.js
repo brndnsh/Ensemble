@@ -283,6 +283,34 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
         let shouldPlay = stepVal > 0;
         let soundName = inst.name;
 
+                            // --- Hip Hop Procedural Overrides ---
+                            if (gb.genreFeel === 'Hip Hop' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                // 1. "Boom Bap" Swing (MPC-60 style)
+                                // Hard swing on even 16ths (e.g. step 1, 3, 5...)
+                                // We simulate this by delaying the note if it's an offbeat 16th.
+                                if (loopStep % 2 === 1) {
+                                    // 0.035s is roughly a heavy 60-65% swing at 90 BPM
+                                    instTime += 0.035; 
+                                }
+
+                                // 2. Kick Ghosting (The "Skippy" Kick)
+                                if (inst.name === 'Kick') {
+                                    // Random ghost kick on 'a' of 1 or 3 (Steps 3, 11)
+                                    if ((loopStep === 3 || loopStep === 11) && Math.random() < 0.3) {
+                                        shouldPlay = true;
+                                        velocity = 0.6; // Soft ghost
+                                    }
+                                }
+
+                                // 3. Lazy Snare (Slightly late backbeat)
+                                if (inst.name === 'Snare' && (loopStep === 4 || loopStep === 12)) {
+                                    instTime += 0.015; // Drag the backbeat
+                                    velocity = 1.15; // Heavy hit
+                                }
+                            }
+
                             // --- Funk Procedural Overrides ---
                             if (gb.genreFeel === 'Funk' && !inst.muted) {
                                 const loopStep = step % 16;

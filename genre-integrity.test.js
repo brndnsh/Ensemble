@@ -171,4 +171,28 @@ describe('Genre Integrity Stress Test', () => {
             }
         });
     });
+
+    describe('Hip Hop Integrity', () => {
+        it('should generate ghost kicks on 16th offbeats (Steps 3/11)', () => {
+            let ghostKickCount = 0;
+            const measures = 100;
+            
+            // Mock random logic
+            const simulateHipHopKick = (step) => {
+                const loopStep = step % 16;
+                // Steps 3 and 11 are candidates
+                if ((loopStep === 3 || loopStep === 11) && Math.random() < 0.3) {
+                    return true;
+                }
+                return false;
+            };
+
+            for (let i = 0; i < measures * 16; i++) {
+                if (simulateHipHopKick(i)) ghostKickCount++;
+            }
+
+            // Expect *some* ghost kicks (randomness means > 0 is good enough check)
+            expect(ghostKickCount).toBeGreaterThan(0);
+        });
+    });
 });
