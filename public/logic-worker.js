@@ -555,7 +555,43 @@ self.onmessage = (e) => {
 
                 fillBuffers(data.step);
                 break;
+            case 'prime':
+                handlePrime(data);
+                break;
             case 'export': handleExport(data); break;
         }
     } catch (err) { postMessage({ type: 'error', data: err.message, stack: err.stack }); }
 };
+
+function handlePrime(steps) {
+    if (!sb.enabled || arranger.totalSteps === 0) return;
+    
+    // Default to ~2 measures of priming if not specified
+    // (Assuming 4/4: 4 beats * 4 subdivisions = 16 steps/measure * 2 = 32)
+    const stepsToPrime = steps || 32;
+    
+    // We simulate the END of the loop to flow naturally into the start
+    let startStep = arranger.totalSteps - stepsToPrime;
+    
+    // Handle short loops (if song is shorter than prime length)
+    if (startStep < 0) {
+        startStep = 0;
+    }
+    
+    if (ctx.workerLogging) {
+        console.log(`[Worker] Priming soloist for ${stepsToPrime} steps (from ${startStep} to ${arranger.totalSteps})`);
+    }
+
+    // Run the generation loop to populate internal state (motifs, phrase arcs, etc.)
+    // We intentionally discard the returned notes.
+    for (let s = startStep; s < arranger.totalSteps; s++) {
+        const chordData = getChordAtStep(s);
+        if (chordData) {
+            const { chord, stepInChord } = chordData;
+            const nextChordData = getChordAtStep(s + 4); 
+            
+            // Invoke generator to update sb state
+            getSoloistNote(chord, nextChordData?.chord, s, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
+        }
+    }
+}

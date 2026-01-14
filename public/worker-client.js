@@ -50,6 +50,10 @@ export function requestBuffer(step) {
     if (timerWorker) timerWorker.postMessage({ type: 'requestBuffer', data: { step } });
 }
 
+export function primeWorker(steps = 32) {
+    if (timerWorker) timerWorker.postMessage({ type: 'prime', data: steps });
+}
+
 export function syncWorker() {
     if (!timerWorker) return;
     timerWorker.postMessage({

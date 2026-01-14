@@ -7,7 +7,7 @@ import { normalizeKey, getMidi, midiToNote, generateId, compressSections, decomp
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { exportToMidi } from './midi-export.js';
 import { UnifiedVisualizer } from './visualizer.js';
-import { initWorker, startWorker, stopWorker, flushWorker, requestBuffer, syncWorker } from './worker-client.js';
+import { initWorker, startWorker, stopWorker, flushWorker, requestBuffer, syncWorker, primeWorker } from './worker-client.js';
 import { initPWA, triggerInstall } from './pwa.js';
 import { saveCurrentState, debounceSaveState, renderUserPresets, renderUserDrumPresets } from './persistence.js';
 import { conductorState, applyConductor, updateAutoConductor, checkSectionTransition } from './conductor.js';
@@ -82,6 +82,7 @@ function togglePlay() {
         ctx.step = 0;
         flushBuffers();
         syncWorker();
+        primeWorker();
         if (!iosAudioUnlocked) {
             silentAudio.play().catch(e => console.log("Audio unlock failed", e));
             iosAudioUnlocked = true;
