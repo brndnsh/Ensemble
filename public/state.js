@@ -180,7 +180,7 @@ export const gb = {
     humanize: 20,
     swing: 0,
     swingSub: '8th',
-    lastDrumPreset: 'Standard',
+    lastDrumPreset: 'Basic Rock',
     audioBuffers: {},
     cachedSteps: [],
     genreFeel: 'Rock',

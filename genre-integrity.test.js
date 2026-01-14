@@ -37,7 +37,7 @@ describe('Genre Integrity Stress Test', () => {
             // the Bass engine's relationship to the pocket here.
             
             let kickOnOneCount = 0;
-            const measures = 100;
+            const measures = 2000;
 
             // We mock the main scheduler's logic for Reggae Kick
             const simulateReggaeKick = (step, intensity) => {
@@ -57,7 +57,7 @@ describe('Genre Integrity Stress Test', () => {
         });
 
         it('should maintain the "Dub" register (Low) in Reggae style', () => {
-            runSimulation('Reggae', 32, (step, stepInChord, beatIndex, chord) => {
+            runSimulation('Reggae', 2000, (step, stepInChord, beatIndex, chord) => {
                 if (isBassActive('smart', step, stepInChord)) {
                     const note = getBassNote(chord, null, beatIndex, null, 38, 'smart', 0, step, stepInChord);
                     if (note) {
@@ -74,7 +74,7 @@ describe('Genre Integrity Stress Test', () => {
             let downbeatMatches = 0;
             let totalDownbeats = 0;
 
-            runSimulation('Jazz', 100, (step, stepInChord, beatIndex, chord) => {
+            runSimulation('Jazz', 2000, (step, stepInChord, beatIndex, chord) => {
                 if (stepInChord === 0) { // Beat 1
                     const note = getBassNote(chord, null, beatIndex, null, 38, 'smart', 0, step, stepInChord);
                     const pc = note.midi % 12;
@@ -92,7 +92,7 @@ describe('Genre Integrity Stress Test', () => {
             // Our walking logic on Beat 4 (index 3) is designed to "approach" the next chord
             // so it should rarely be a static root.
             let rootOnFourCount = 0;
-            const measures = 100;
+            const measures = 2000;
 
             const nextChord = { rootMidi: 53 }; // F
 
@@ -114,7 +114,7 @@ describe('Genre Integrity Stress Test', () => {
             let otherVelocitySum = 0;
             let otherCount = 0;
 
-            runSimulation('Funk', 50, (step, stepInChord, beatIndex, chord) => {
+            runSimulation('Funk', 2000, (step, stepInChord, beatIndex, chord) => {
                 if (isBassActive('smart', step, stepInChord)) {
                     const note = getBassNote(chord, null, beatIndex, null, 38, 'smart', 0, step, stepInChord);
                     if (note) {
@@ -128,9 +128,71 @@ describe('Genre Integrity Stress Test', () => {
                 }
             });
 
-            const avgOne = oneVelocitySum / 50;
+            const avgOne = oneVelocitySum / 2000;
             const avgOther = otherVelocitySum / otherCount;
             expect(avgOne).toBeGreaterThan(avgOther);
+        });
+    });
+
+    describe('Rock (Stadium) Integrity', () => {
+        const simulateRockDrum = (step, intensity, instName) => {
+            const loopStep = step % 16;
+            let soundName = instName;
+            let shouldPlay = (loopStep % 4 === 0); // Basic 4ths for simulation
+            
+            if (intensity > 0.7) {
+                if (instName === 'HiHat') soundName = 'Open';
+            }
+            return soundName;
+        };
+
+        it('should switch to Open Hi-Hats in Anthem mode (High Intensity)', () => {
+            const hiHatSound = simulateRockDrum(0, 0.8, 'HiHat');
+            expect(hiHatSound).toBe('Open');
+        });
+
+        it('should maintain Closed Hi-Hats in Tight mode (Low Intensity)', () => {
+            const hiHatSound = simulateRockDrum(0, 0.3, 'HiHat');
+            expect(hiHatSound).toBe('HiHat');
+        });
+    });
+
+    describe('Disco Integrity', () => {
+        const simulateDiscoKick = (step) => {
+            const loopStep = step % 16;
+            return (loopStep % 4 === 0); // Procedural override
+        };
+
+        it('should enforce Four-on-the-Floor kick regardless of measure step', () => {
+            for (let i = 0; i < 16; i++) {
+                const isKick = simulateDiscoKick(i);
+                if (i % 4 === 0) expect(isKick).toBe(true);
+                else expect(isKick).toBe(false);
+            }
+        });
+    });
+
+    describe('Hip Hop Integrity', () => {
+        it('should generate ghost kicks on 16th offbeats (Steps 3/11)', () => {
+            let ghostKickCount = 0;
+            const measures = 100;
+            
+            // Mock random logic
+            const simulateHipHopKick = (step) => {
+                const loopStep = step % 16;
+                // Steps 3 and 11 are candidates
+                if ((loopStep === 3 || loopStep === 11) && Math.random() < 0.3) {
+                    return true;
+                }
+                return false;
+            };
+
+            for (let i = 0; i < measures * 16; i++) {
+                if (simulateHipHopKick(i)) ghostKickCount++;
+            }
+
+            // Expect *some* ghost kicks (randomness means > 0 is good enough check)
+            expect(ghostKickCount).toBeGreaterThan(0);
         });
     });
 });

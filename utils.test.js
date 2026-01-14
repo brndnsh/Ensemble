@@ -56,4 +56,34 @@ describe('Utility Functions', () => {
             expect(getStepsPerMeasure('6/8')).toBe(12);
         });
     });
+
+    describe('Compression/Decompression', () => {
+        it('should compress and decompress sections correctly', async () => {
+            const { compressSections, decompressSections } = await import('./public/utils.js');
+            const sections = [
+                { id: '1', label: 'Verse', value: 'C | F' },
+                { id: '2', label: 'Chorus', value: 'G | C' }
+            ];
+            const compressed = compressSections(sections);
+            expect(typeof compressed).toBe('string');
+            expect(compressed.length).toBeGreaterThan(0);
+
+            const decompressed = decompressSections(compressed);
+            expect(decompressed).toHaveLength(2);
+            expect(decompressed[0].label).toBe('Verse');
+            expect(decompressed[0].value).toBe('C | F');
+            expect(decompressed[1].label).toBe('Chorus');
+            expect(decompressed[1].value).toBe('G | C');
+            // IDs are regenerated on decompression
+            expect(decompressed[0].id).not.toBe('1');
+        });
+
+        it('should handle unicode characters', async () => {
+            const { compressSections, decompressSections } = await import('./public/utils.js');
+            const sections = [{ id: '1', label: 'Intro 🎵', value: 'Cm7' }];
+            const compressed = compressSections(sections);
+            const decompressed = decompressSections(compressed);
+            expect(decompressed[0].label).toBe('Intro 🎵');
+        });
+    });
 });

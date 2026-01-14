@@ -128,6 +128,15 @@ function scheduler() {
                 scheduleCountIn(ctx.countInBeat, ctx.nextNoteTime);
                 advanceCountIn();
             } else {
+                // --- Atomic Boundary Check ---
+                // We check if we're at a measure boundary BEFORE scheduling the next event.
+                // This ensures that if a genre change is pending, we don't look ahead
+                // and schedule the next measure using the OLD genre logic.
+                const spm = getStepsPerMeasure();
+                if (ctx.step % spm === 0 && gb.pendingGenreFeel) {
+                    applyPendingGenre();
+                }
+
                 scheduleGlobalEvent(ctx.step, ctx.nextNoteTime);
                 advanceGlobalStep();
             }
@@ -135,6 +144,33 @@ function scheduler() {
     } finally {
         isScheduling = false;
     }
+}
+
+/**
+ * Applies the queued genre feel changes immediately.
+ */
+function applyPendingGenre() {
+    const payload = gb.pendingGenreFeel;
+    if (!payload) return;
+
+    gb.genreFeel = payload.feel;
+    if (payload.swing !== undefined) gb.swing = payload.swing;
+    if (payload.sub !== undefined) gb.swingSub = payload.sub;
+    if (payload.genreName) gb.lastSmartGenre = payload.genreName;
+    
+    // Crucial: Load the new drum pattern so it doesn't "stick"
+    if (payload.drum) {
+        loadDrumPreset(payload.drum);
+    }
+
+    gb.pendingGenreFeel = null;
+    updateGenreUI(0);
+    
+    // Snap clock to unswung grid to prevent accumulated drift from previous swing
+    ctx.nextNoteTime = ctx.unswungNextNoteTime;
+
+    syncAndFlushWorker(ctx.step);
+    triggerFlash(0.15);
 }
 
 function advanceCountIn() {
@@ -191,33 +227,6 @@ function advanceGlobalStep() {
     ctx.nextNoteTime += duration;
     ctx.unswungNextNoteTime += sixteenth;
     ctx.step++;
-
-    // --- Measure Boundary Sync & Pending Genre Changes ---
-    const stepsPerMeasure = getStepsPerMeasure();
-    if (ctx.step % stepsPerMeasure === 0) {
-        if (gb.pendingGenreFeel) {
-            const payload = gb.pendingGenreFeel;
-            gb.genreFeel = payload.feel;
-            if (payload.swing !== undefined) gb.swing = payload.swing;
-            if (payload.sub !== undefined) gb.swingSub = payload.sub;
-            
-            // Sync the logical genre name for UI purposes
-            if (payload.genreName) {
-                gb.lastSmartGenre = payload.genreName;
-            }
-
-            gb.pendingGenreFeel = null;
-
-            // Update UI buttons state (removes pending, sets active)
-            updateGenreUI(0);
-
-            // Re-sync all procedural engines to the new feel
-            syncAndFlushWorker(ctx.step);
-            
-            // Visual feedback of the sync boundary
-            triggerFlash(0.15);
-        }
-    }
 }
 
 function getChordAtStep(step) {
@@ -283,6 +292,34 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
         let shouldPlay = stepVal > 0;
         let soundName = inst.name;
 
+                            // --- Hip Hop Procedural Overrides ---
+                            if (gb.genreFeel === 'Hip Hop' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                // 1. "Boom Bap" Swing (MPC-60 style)
+                                // Hard swing on even 16ths (e.g. step 1, 3, 5...)
+                                // We simulate this by delaying the note if it's an offbeat 16th.
+                                if (loopStep % 2 === 1) {
+                                    // 0.035s is roughly a heavy 60-65% swing at 90 BPM
+                                    instTime += 0.035; 
+                                }
+
+                                // 2. Kick Ghosting (The "Skippy" Kick)
+                                if (inst.name === 'Kick') {
+                                    // Random ghost kick on 'a' of 1 or 3 (Steps 3, 11)
+                                    if ((loopStep === 3 || loopStep === 11) && Math.random() < 0.3) {
+                                        shouldPlay = true;
+                                        velocity = 0.6; // Soft ghost
+                                    }
+                                }
+
+                                // 3. Lazy Snare (Slightly late backbeat)
+                                if (inst.name === 'Snare' && (loopStep === 4 || loopStep === 12)) {
+                                    instTime += 0.015; // Drag the backbeat
+                                    velocity = 1.15; // Heavy hit
+                                }
+                            }
+
                             // --- Funk Procedural Overrides ---
                             if (gb.genreFeel === 'Funk' && !inst.muted) {
                                 const loopStep = step % 16;
@@ -309,6 +346,56 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                                     if (loopStep % 4 === 3 && Math.random() < (ctx.bandIntensity * 0.35)) {
                                         soundName = 'Open';
                                         velocity *= 1.1; // Accent the bark
+                                    }
+                                }
+                            }
+
+                            // --- Disco Procedural Overrides ---
+                            if (gb.genreFeel === 'Disco' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                // 1. Four-on-the-Floor Kick
+                                if (inst.name === 'Kick') {
+                                    shouldPlay = (loopStep % 4 === 0);
+                                    if (shouldPlay) velocity = (loopStep === 0) ? 1.2 : 1.1; 
+                                }
+                                
+                                // 2. Backbeat Snare (plus optional ghosting)
+                                if (inst.name === 'Snare') {
+                                    shouldPlay = (loopStep === 4 || loopStep === 12);
+                                    if (shouldPlay) velocity = 1.15;
+                                    
+                                    // Ghost notes at end of phrase
+                                    if (loopStep === 15 && Math.random() < 0.2) {
+                                        shouldPlay = true;
+                                        velocity = 0.4;
+                                    }
+                                }
+                                
+                                // 3. Offbeat Hi-Hat Breathing
+                                if (inst.name === 'HiHat' || inst.name === 'Open') {
+                                    shouldPlay = false; // Reset pattern
+                                    
+                                    // Always play the offbeat "tsst"
+                                    if (loopStep % 4 === 2) {
+                                        shouldPlay = true;
+                                        // Modulate Open vs Closed based on intensity
+                                        if (ctx.bandIntensity > 0.6) {
+                                            soundName = 'Open';
+                                            velocity = 1.1;
+                                        } else {
+                                            soundName = 'HiHat'; // Closed
+                                            velocity = 0.9;
+                                        }
+                                    }
+                                    
+                                    // 16th note "chick" glue
+                                    if (loopStep % 2 === 1) { // 1, 3, 5, 7...
+                                        if (Math.random() < 0.6) {
+                                            shouldPlay = true;
+                                            soundName = 'HiHat';
+                                            velocity = 0.5; // Quiet
+                                        }
                                     }
                                 }
                             }
@@ -422,8 +509,14 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
 
         if (shouldPlay && !inst.muted) {
             // Tame accents for Funk Hi-Hats at high intensity to prevent them from overpowering the mix
-            if (gb.genreFeel === 'Funk' && stepVal === 2 && ctx.bandIntensity > 0.6 && (inst.name === 'HiHat' || inst.name === 'Open')) {
-                velocity = 1.05;
+            if (gb.genreFeel === 'Funk' && (inst.name === 'HiHat' || inst.name === 'Open')) {
+                 if (stepVal === 2 && ctx.bandIntensity > 0.6) velocity = 1.0; // Cap accents
+                 else if (stepVal !== 2) velocity = Math.min(velocity, 0.75); // Cap others
+            }
+            
+            // --- Neo-Soul Global Dampening ---
+            if (gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Hip Hop') {
+                velocity *= 0.75; // General dampening for "chill" vibe
             }
             
             // --- Snare Timbre Shifting ---
@@ -455,8 +548,73 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
             }
 
             if (gb.genreFeel === 'Rock') {
-                if (inst.name === 'Kick' && isDownbeat) velocity *= 1.2;
-                if (inst.name === 'Snare' && isBackbeat) velocity *= 1.2;
+                // --- Rock "Stadium" Logic ---
+                const loopStep = step % 16;
+
+                // 1. "Right-Hand Lead" Hi-Hat Pulse (Human Feel)
+                if (inst.name === 'HiHat' || inst.name === 'Open') {
+                    if (loopStep % 4 === 0) velocity *= 1.05; // Downbeats heavier
+                    else if (loopStep % 4 === 2) velocity *= 0.95; // Upbeats lighter
+                }
+
+                // 2. Procedural Kick Variation (The "Skip")
+                if (inst.name === 'Kick') {
+                    // Add "And of 3" kick (Step 10) randomly in normal/high intensity
+                    if (loopStep === 10 && ctx.bandIntensity > 0.4 && Math.random() < 0.25) {
+                        shouldPlay = true;
+                        velocity = 0.9; // Not a full accent
+                    }
+                }
+
+                // 3. Subtle Snare Ghosts ("Grease")
+                if (inst.name === 'Snare' && !shouldPlay) {
+                    // Ghost on 'a' of 2 (Step 7) or 'e' of 3 (Step 9) - classic syncopation
+                    if ((loopStep === 7 || loopStep === 9) && ctx.bandIntensity > 0.35 && ctx.bandIntensity < 0.75) {
+                        if (Math.random() < 0.12) {
+                            shouldPlay = true;
+                            velocity = 0.35; // Very soft
+                        }
+                    }
+                }
+
+                // "Anthem" Mode (High Intensity)
+                if (ctx.bandIntensity > 0.7) {
+                    if (inst.name === 'HiHat' && shouldPlay) {
+                        // Switch to Open Hat (Washy Ride feel)
+                        soundName = 'Open';
+                        velocity *= 1.1; 
+                    }
+                    if (inst.name === 'Snare' && shouldPlay) {
+                        // Heavy Backbeat
+                        velocity *= 1.15;
+                    }
+                    // Add heavy downbeat kick emphasis
+                    if (inst.name === 'Kick' && isDownbeat) {
+                         velocity *= 1.25;
+                    }
+                } 
+                // "Tight" Mode (Low Intensity)
+                else if (ctx.bandIntensity < 0.4) {
+                    if (inst.name === 'Snare' && shouldPlay) {
+                         // Tighter, controlled snare
+                         velocity *= 0.85;
+                         // Use Sidestick for very quiet verses
+                         if (ctx.bandIntensity < 0.25) soundName = 'Sidestick';
+                    }
+                    if (inst.name === 'HiHat') {
+                        // Tight, closed hats
+                        velocity *= 0.8;
+                    }
+                    // Reduce ghost notes or extra kicks
+                    if (inst.name === 'Kick' && !isDownbeat) {
+                        velocity *= 0.7;
+                    }
+                }
+                // Standard Rock Fallback
+                else {
+                    if (inst.name === 'Kick' && isDownbeat) velocity *= 1.2;
+                    if (inst.name === 'Snare' && isBackbeat) velocity *= 1.2;
+                }
             } else if (gb.genreFeel === 'Funk' && stepVal === 2) velocity *= 1.1;
 
             if (gb.genreFeel === 'Disco' && inst.name === 'Open') {
@@ -743,7 +901,7 @@ function init() {
         viz = new UnifiedVisualizer('unifiedVizContainer'); viz.addTrack('bass', 'var(--success-color)'); viz.addTrack('soloist', 'var(--soloist-color)');
         setInstrumentControllerRefs(() => scheduler(), viz);
         initTabs(); setupPanelMenus(); renderGrid(); renderMeasurePagination(switchMeasure);
-        if (!savedState || !savedState.gb || !savedState.gb.pattern) loadDrumPreset('Standard');
+        if (!savedState || !savedState.gb || !savedState.gb.pattern) loadDrumPreset('Basic Rock');
         setupPresets({ togglePlay }); setupUIHandlers({ togglePlay, previewChord: window.previewChord, init, viz, silentAudio, iosAudioUnlocked, POWER_CONFIG: getPowerConfig() });
         renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, togglePlay);
         renderUserDrumPresets(switchMeasure); loadFromUrl(); renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
@@ -844,6 +1002,14 @@ export function syncAndFlushWorker(step) {
         },
         ctx: { bpm: ctx.bpm, bandIntensity: ctx.bandIntensity, complexity: ctx.complexity, autoIntensity: ctx.autoIntensity }
     };
+
+    // Atomic Buffer Clearing:
+    // We clear the client-side buffers for all instruments to ensure 
+    // no stale notes from the previous genre/state are played.
+    cb.buffer.clear();
+    bb.buffer.clear();
+    sb.buffer.clear();
+    gb.fillActive = false; // Cancel any active fill
 
     killAllNotes();
     flushWorker(step, syncData);

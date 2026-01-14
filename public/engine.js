@@ -628,14 +628,14 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
         const targetCutoff = (isPop ? 4000 : 1000) + (tonalVol * 2000);
         mainFilter.frequency.value = targetCutoff;
         mainFilter.frequency.setValueAtTime(targetCutoff, startTime);
-        mainFilter.frequency.setTargetAtTime(isPop ? 1000 : 600, startTime + 0.02, duration * 0.5);
+        mainFilter.frequency.setTargetAtTime(isPop ? 800 : 500, startTime + 0.02, duration * 0.5);
 
         // Slap/Pop Resonant Peak
         const popPeak = ctx.audio.createBiquadFilter();
         popPeak.type = 'peaking';
-        popPeak.frequency.value = 2200; // Lowered from 2500 to move away from nasal range
-        popPeak.Q.value = 2.5; // Lowered from 5 to reduce resonance
-        popPeak.gain.value = isPop ? 7 : 0; // Lowered from 12
+        popPeak.frequency.value = 1800; // Lowered from 2200 to reduce quack
+        popPeak.Q.value = 1.5; // Lowered from 2.5 for smoother resonance
+        popPeak.gain.value = isPop ? 5 : 0; // Lowered from 7
         if (isPop) popPeak.gain.setTargetAtTime(0, startTime + 0.05, 0.05);
 
         const gain = ctx.audio.createGain();
