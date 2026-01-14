@@ -128,6 +128,15 @@ function scheduler() {
                 scheduleCountIn(ctx.countInBeat, ctx.nextNoteTime);
                 advanceCountIn();
             } else {
+                // --- Atomic Boundary Check ---
+                // We check if we're at a measure boundary BEFORE scheduling the next event.
+                // This ensures that if a genre change is pending, we don't look ahead
+                // and schedule the next measure using the OLD genre logic.
+                const spm = getStepsPerMeasure();
+                if (ctx.step % spm === 0 && gb.pendingGenreFeel) {
+                    applyPendingGenre();
+                }
+
                 scheduleGlobalEvent(ctx.step, ctx.nextNoteTime);
                 advanceGlobalStep();
             }
@@ -135,6 +144,28 @@ function scheduler() {
     } finally {
         isScheduling = false;
     }
+}
+
+/**
+ * Applies the queued genre feel changes immediately.
+ */
+function applyPendingGenre() {
+    const payload = gb.pendingGenreFeel;
+    if (!payload) return;
+
+    gb.genreFeel = payload.feel;
+    if (payload.swing !== undefined) gb.swing = payload.swing;
+    if (payload.sub !== undefined) gb.swingSub = payload.sub;
+    if (payload.genreName) gb.lastSmartGenre = payload.genreName;
+
+    gb.pendingGenreFeel = null;
+    updateGenreUI(0);
+    
+    // Snap clock to unswung grid to prevent accumulated drift from previous swing
+    ctx.nextNoteTime = ctx.unswungNextNoteTime;
+
+    syncAndFlushWorker(ctx.step);
+    triggerFlash(0.15);
 }
 
 function advanceCountIn() {
@@ -191,33 +222,6 @@ function advanceGlobalStep() {
     ctx.nextNoteTime += duration;
     ctx.unswungNextNoteTime += sixteenth;
     ctx.step++;
-
-    // --- Measure Boundary Sync & Pending Genre Changes ---
-    const stepsPerMeasure = getStepsPerMeasure();
-    if (ctx.step % stepsPerMeasure === 0) {
-        if (gb.pendingGenreFeel) {
-            const payload = gb.pendingGenreFeel;
-            gb.genreFeel = payload.feel;
-            if (payload.swing !== undefined) gb.swing = payload.swing;
-            if (payload.sub !== undefined) gb.swingSub = payload.sub;
-            
-            // Sync the logical genre name for UI purposes
-            if (payload.genreName) {
-                gb.lastSmartGenre = payload.genreName;
-            }
-
-            gb.pendingGenreFeel = null;
-
-            // Update UI buttons state (removes pending, sets active)
-            updateGenreUI(0);
-
-            // Re-sync all procedural engines to the new feel
-            syncAndFlushWorker(ctx.step);
-            
-            // Visual feedback of the sync boundary
-            triggerFlash(0.15);
-        }
-    }
 }
 
 function getChordAtStep(step) {
@@ -993,6 +997,14 @@ export function syncAndFlushWorker(step) {
         },
         ctx: { bpm: ctx.bpm, bandIntensity: ctx.bandIntensity, complexity: ctx.complexity, autoIntensity: ctx.autoIntensity }
     };
+
+    // Atomic Buffer Clearing:
+    // We clear the client-side buffers for all instruments to ensure 
+    // no stale notes from the previous genre/state are played.
+    cb.buffer.clear();
+    bb.buffer.clear();
+    sb.buffer.clear();
+    gb.fillActive = false; // Cancel any active fill
 
     killAllNotes();
     flushWorker(step, syncData);
