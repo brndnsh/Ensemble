@@ -14,7 +14,7 @@ import { getChordDetails, getIntervals } from './public/chords.js';
 
 describe('Dominant Chord Intervals', () => {
     const testCases = [
-        { symbol: '7', expected: [4, 10, 14] }, // Rootless: 3, b7, 9
+        { symbol: '7', expected: [4, 7, 10] }, // Rootless (Functional): 3, 5, b7
         { symbol: '9', expected: [4, 10, 14] },
         { symbol: '13', expected: [4, 10, 14, 21] },
         { symbol: '11', expected: [5, 7, 10, 14] }, // 11, 5, b7, 9 (No 3rd)

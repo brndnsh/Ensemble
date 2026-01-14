@@ -22,12 +22,11 @@ describe('Rootless Jazz Voicings', () => {
         cb.density = 'standard';
     });
 
-    it('should omit root and 5th for Jazz maj7 (standard density)', () => {
+    it('should use 3-5-7 for Jazz maj7 (standard density)', () => {
         const intervals = getIntervals('maj7', true, 'standard', 'Jazz', true);
-        // Expect 3, 7, 9 -> [4, 11, 14]
-        expect(intervals).toEqual([4, 11, 14]);
-        expect(intervals).not.toContain(0);
-        expect(intervals).not.toContain(7);
+        // Expect 3, 5, 7 -> [4, 7, 11] (New Functional Scaling)
+        expect(intervals).toEqual([4, 7, 11]);
+        expect(intervals).not.toContain(0); // Still no root
     });
 
     it('should use "So What" voicing for Neo-Soul minor 7', () => {

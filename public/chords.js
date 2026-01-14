@@ -376,8 +376,10 @@ function getRootlessVoicing(quality, is7th, isRich) {
     if (isMajor7) {
         if (quality === 'maj13') return isRich ? [4, 11, 14, 18, 21] : [4, 11, 14, 21]; // 3, 7, 9, (#11), 13
         if (quality === 'maj7#11') return isRich ? [4, 11, 14, 18] : [4, 11, 18];  // 3, 7, (9), #11
-        // Standard Maj9/Maj7 cluster: Omit 5th for that "pro" open sound
-        return isRich ? [4, 11, 14, 21] : [4, 11, 14]; // 3, 7, 9, (13)
+        if (quality === 'maj9') return isRich ? [4, 11, 14, 21] : [4, 11, 14];
+        
+        // Standard Maj7: Use 3-5-7 for clarity, 3-7-9 for richness
+        return isRich ? [4, 11, 14] : [4, 7, 11];
     }
 
     if (isMinor) {
@@ -389,7 +391,9 @@ function getRootlessVoicing(quality, is7th, isRich) {
         if (quality === 'm13') return isRich ? [3, 10, 14, 17, 21] : [3, 10, 14, 21]; // b3, b7, 9, (11), 13
         if (quality === 'm11') return isRich ? [3, 10, 14, 17] : [3, 10, 17]; // b3, (b7), 11
         if (quality === 'm9') return isRich ? [3, 10, 14, 17] : [3, 10, 14]; // b3, b7, 9, (11)
-        return isRich ? [3, 10, 14, 17] : [3, 10, 14]; // b3, b7, 9
+        
+        // Standard Minor 7: Use b3-5-b7 for clarity, b3-b7-9 for richness
+        return isRich ? [3, 10, 14] : [3, 7, 10]; 
     }
 
     if (isDominant) {
@@ -403,8 +407,9 @@ function getRootlessVoicing(quality, is7th, isRich) {
         // Characteristic dominant extensions
         if (quality === '13' || isRich) return [4, 10, 14, 21]; // 3, b7, 9, 13
         if (quality === '11') return [5, 7, 10, 14];           // 11, 5, b7, 9
+        if (quality === '9') return [4, 10, 14];               // 3, b7, 9
         
-        return [4, 10, 14]; // 3, b7, 9
+        return [4, 7, 10]; // 3, 5, b7
     }
 
     if (quality === 'dim') return [3, 6, 9, 14];      // b3, b5, bb7, 9
