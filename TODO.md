@@ -70,3 +70,35 @@
 - [x] **Rock "Stadium" Logic**: Implement dynamic switching between "Tight" (closed hats, rimshots) and "Anthem" (open hats, heavy crash rides) modes based on intensity.
 - [x] **Disco "Four-on-the-Floor" Engine**: Create a dedicated procedural engine for Disco that locks the Kick to 1-2-3-4 and modulates the offbeat Hi-Hat duration (open/closed) based on song sections.
 - [x] **Hip Hop "Boom Bap" Swing**: Differentiate Hip Hop from Neo-Soul by implementing a "hard swing" (MPC 60% swing) versus the Neo-Soul "lag" (unquantized drag).
+
+# Engine Modularization (Technical Debt Reduction)
+
+- [x] **Phase 1: Shared Utilities & Infrastructure**
+    - Move `safeDisconnect` and non-graph helpers to `utils.js`.
+    - Ensure `ctx` exports all necessary `AudioNode` buses (chordsGain, drumsGain, etc.) for external use.
+- [x] **Phase 2: Instrument Logic Extraction**
+    - Create `public/synth-drums.js`: Extract `playDrumSound`, `killDrumNote`, and internal drum oscillators/buffers.
+    - Create `public/synth-bass.js`: Extract `playBassNote`, `killBassNote`, and monophonic tracking logic.
+    - Create `public/synth-soloist.js`: Extract `playSoloNote`, `killSoloistNote`, and vibrato/bend synthesis.
+    - Create `public/synth-chords.js`: Extract `playNote`, `playChordScratch`, `INSTRUMENT_PRESETS`, and sustain pedal management (`heldNotes`).
+- [x] **Phase 3: Engine Orchestration & Facade**
+    - Refactor `engine.js` to focus strictly on the global signal chain (Saturator, Limiter, Reverb, Bus Routing).
+    - Implement a Facade pattern in `engine.js` by re-exporting the `play*` functions to ensure zero breaking changes in `main.js`.
+- [x] **Phase 4: Reliability & Testing**
+    - Verify monophonic "Panic" logic (`killAllNotes`) works across the new distributed architecture.
+    - Run the full test suite (`npm test`) to ensure no regressions in audio timing or synthesis output.
+
+# Main Orchestration Modularization (Technical Debt Reduction)
+
+- [x] **Phase 1: Procedural Groove Extraction**
+    - Create `public/groove-engine.js`: Extract the ~300 lines of `if (gb.genreFeel === '...')` logic from `scheduleDrums`.
+    - Implement a clean API for instrument-specific procedural overrides (Kick/Snare/Hat variations).
+- [x] **Phase 2: Scheduling & Timing Core**
+    - Create `public/scheduler-core.js`: Isolate the high-precision `scheduler()`, `advanceGlobalStep()`, and `scheduleCountIn()` logic.
+    - Decouple the clock logic from UI-specific countdowns.
+- [x] **Phase 3: Animation & Visual Dispatch**
+    - Create `public/animation-loop.js`: Extract the `draw()` loop and `drawQueue` processing.
+    - Move visual-specific state updates (like `updateDrumVis` and `updateChordVis`) here.
+- [x] **Phase 4: State & URL Hydration**
+    - Create `public/state-hydration.js`: Extract the complex state recovery logic from `init()` and `loadFromUrl()`.
+    - Ensure all initial UI synchronization is handled in this dedicated module.

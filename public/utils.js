@@ -134,13 +134,212 @@ export function getStepInfo(step, tsConfig) {
     const isBeatStart = (mStep % stepsPerBeat === 0);
     const beatIndex = Math.floor(mStep / stepsPerBeat);
 
-    return {
-        isMeasureStart,
-        isGroupStart,
-        isBeatStart,
-        groupIndex,
-        stepInGroup,
-        beatIndex,
-        mStep
-    };
-}
+        return {
+
+            isMeasureStart,
+
+            isGroupStart,
+
+            isBeatStart,
+
+            groupIndex,
+
+            stepInGroup,
+
+            beatIndex,
+
+            mStep
+
+        };
+
+    }
+
+    
+
+    /**
+
+    
+
+     * Safely disconnects multiple Web Audio nodes.
+
+    
+
+     * @param {AudioNode[]} nodes 
+
+    
+
+     */
+
+    
+
+    export function safeDisconnect(nodes) {
+
+    
+
+        nodes.forEach(node => {
+
+    
+
+            if (node) {
+
+    
+
+                try { node.disconnect(); } catch (e) {}
+
+    
+
+            }
+
+    
+
+        });
+
+    
+
+    }
+
+    
+
+    
+
+    
+
+    /**
+
+    
+
+     * Creates a simple algorithmic reverb impulse response.
+
+    
+
+     * @param {AudioContext} audioCtx 
+
+    
+
+     * @param {number} duration 
+
+    
+
+     * @param {number} decay 
+
+    
+
+     * @returns {AudioBuffer}
+
+    
+
+     */
+
+    
+
+    export function createReverbImpulse(audioCtx, duration = 2.0, decay = 2.0) {
+
+    
+
+        const sampleRate = audioCtx.sampleRate;
+
+    
+
+        const length = sampleRate * duration;
+
+    
+
+        const impulse = audioCtx.createBuffer(2, length, sampleRate);
+
+    
+
+        for (let channel = 0; channel < 2; channel++) {
+
+    
+
+            const data = impulse.getChannelData(channel);
+
+    
+
+            for (let i = 0; i < length; i++) {
+
+    
+
+                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+
+    
+
+            }
+
+    
+
+        }
+
+    
+
+        return impulse;
+
+    
+
+    }
+
+    
+
+    
+
+    
+
+    /**
+
+    
+
+     * Creates a soft-clipping curve for the WaveShaperNode.
+
+    
+
+     * @returns {Float32Array}
+
+    
+
+     */
+
+    
+
+    export function createSoftClipCurve() {
+
+    
+
+        const n_samples = 44100;
+
+    
+
+        const curve = new Float32Array(n_samples);
+
+    
+
+        for (let i = 0; i < n_samples; ++i) {
+
+    
+
+            const x = (i * 2) / n_samples - 1;
+
+    
+
+            // Normalized monotonic cubic: f(x) = (3x - x^3) / 2
+
+    
+
+            curve[i] = (3 * x - Math.pow(x, 3)) / 2;
+
+    
+
+        }
+
+    
+
+        return curve;
+
+    
+
+    }
+
+    
+
+    
+
+    
