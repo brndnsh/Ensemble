@@ -64,3 +64,9 @@
 - [x] **Reference Comparison**: Fine-tune velocity and timing curves against classic records.
 
     - *Plan*: Document specific reference tracks (e.g., "Cantaloupe Island" for Jazz-Funk, "Redemption Song" for Reggae) and adjust the engine's default velocity maps to match their dynamic range.
+
+# Procedural Genre Expansion
+
+- [x] **Rock "Stadium" Logic**: Implement dynamic switching between "Tight" (closed hats, rimshots) and "Anthem" (open hats, heavy crash rides) modes based on intensity.
+- [x] **Disco "Four-on-the-Floor" Engine**: Create a dedicated procedural engine for Disco that locks the Kick to 1-2-3-4 and modulates the offbeat Hi-Hat duration (open/closed) based on song sections.
+- [ ] **Hip Hop "Boom Bap" Swing**: Differentiate Hip Hop from Neo-Soul by implementing a "hard swing" (MPC 60% swing) versus the Neo-Soul "lag" (unquantized drag).

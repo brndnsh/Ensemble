@@ -313,6 +313,56 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                                 }
                             }
 
+                            // --- Disco Procedural Overrides ---
+                            if (gb.genreFeel === 'Disco' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                // 1. Four-on-the-Floor Kick
+                                if (inst.name === 'Kick') {
+                                    shouldPlay = (loopStep % 4 === 0);
+                                    if (shouldPlay) velocity = (loopStep === 0) ? 1.2 : 1.1; 
+                                }
+                                
+                                // 2. Backbeat Snare (plus optional ghosting)
+                                if (inst.name === 'Snare') {
+                                    shouldPlay = (loopStep === 4 || loopStep === 12);
+                                    if (shouldPlay) velocity = 1.15;
+                                    
+                                    // Ghost notes at end of phrase
+                                    if (loopStep === 15 && Math.random() < 0.2) {
+                                        shouldPlay = true;
+                                        velocity = 0.4;
+                                    }
+                                }
+                                
+                                // 3. Offbeat Hi-Hat Breathing
+                                if (inst.name === 'HiHat' || inst.name === 'Open') {
+                                    shouldPlay = false; // Reset pattern
+                                    
+                                    // Always play the offbeat "tsst"
+                                    if (loopStep % 4 === 2) {
+                                        shouldPlay = true;
+                                        // Modulate Open vs Closed based on intensity
+                                        if (ctx.bandIntensity > 0.6) {
+                                            soundName = 'Open';
+                                            velocity = 1.1;
+                                        } else {
+                                            soundName = 'HiHat'; // Closed
+                                            velocity = 0.9;
+                                        }
+                                    }
+                                    
+                                    // 16th note "chick" glue
+                                    if (loopStep % 2 === 1) { // 1, 3, 5, 7...
+                                        if (Math.random() < 0.6) {
+                                            shouldPlay = true;
+                                            soundName = 'HiHat';
+                                            velocity = 0.5; // Quiet
+                                        }
+                                    }
+                                }
+                            }
+
                             // --- Reggae Procedural Overrides ---
                             if (gb.genreFeel === 'Reggae' && !inst.muted) {
                                 const loopStep = step % 16;
@@ -461,8 +511,45 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
             }
 
             if (gb.genreFeel === 'Rock') {
-                if (inst.name === 'Kick' && isDownbeat) velocity *= 1.2;
-                if (inst.name === 'Snare' && isBackbeat) velocity *= 1.2;
+                // --- Rock "Stadium" Logic ---
+                // "Anthem" Mode (High Intensity)
+                if (ctx.bandIntensity > 0.7) {
+                    if (inst.name === 'HiHat' && shouldPlay) {
+                        // Switch to Open Hat (Washy Ride feel)
+                        soundName = 'Open';
+                        velocity *= 1.1; 
+                    }
+                    if (inst.name === 'Snare' && shouldPlay) {
+                        // Heavy Backbeat
+                        velocity *= 1.15;
+                    }
+                    // Add heavy downbeat kick emphasis
+                    if (inst.name === 'Kick' && isDownbeat) {
+                         velocity *= 1.25;
+                    }
+                } 
+                // "Tight" Mode (Low Intensity)
+                else if (ctx.bandIntensity < 0.4) {
+                    if (inst.name === 'Snare' && shouldPlay) {
+                         // Tighter, controlled snare
+                         velocity *= 0.85;
+                         // Use Sidestick for very quiet verses
+                         if (ctx.bandIntensity < 0.25) soundName = 'Sidestick';
+                    }
+                    if (inst.name === 'HiHat') {
+                        // Tight, closed hats
+                        velocity *= 0.8;
+                    }
+                    // Reduce ghost notes or extra kicks
+                    if (inst.name === 'Kick' && !isDownbeat) {
+                        velocity *= 0.7;
+                    }
+                }
+                // Standard Rock Fallback
+                else {
+                    if (inst.name === 'Kick' && isDownbeat) velocity *= 1.2;
+                    if (inst.name === 'Snare' && isBackbeat) velocity *= 1.2;
+                }
             } else if (gb.genreFeel === 'Funk' && stepVal === 2) velocity *= 1.1;
 
             if (gb.genreFeel === 'Disco' && inst.name === 'Open') {
