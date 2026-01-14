@@ -531,6 +531,19 @@ self.onmessage = (e) => {
                 break;
             case 'flush':
                 if (ctx.workerLogging) console.log(`[Worker] flush: step=${data.step}`);
+                // Sync first if data is provided to ensure correct style/genre
+                if (data.syncData) {
+                    const syncData = data.syncData;
+                    if (syncData.arranger) { Object.assign(arranger, syncData.arranger); arranger.totalSteps = syncData.arranger.totalSteps; arranger.stepMap = syncData.arranger.stepMap; }
+                    if (syncData.cb) Object.assign(cb, syncData.cb);
+                    if (syncData.bb) Object.assign(bb, syncData.bb);
+                    if (syncData.sb) Object.assign(sb, syncData.sb);
+                    if (syncData.gb) {
+                        Object.assign(gb, syncData.gb);
+                        if (syncData.gb.instruments) { syncData.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
+                    }
+                    if (syncData.ctx) Object.assign(ctx, syncData.ctx);
+                }
                 bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step;
                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
                 sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;

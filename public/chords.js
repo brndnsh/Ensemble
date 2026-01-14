@@ -374,30 +374,31 @@ function getRootlessVoicing(quality, is7th, isRich) {
     const isMajor7 = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
 
     if (isMajor7) {
-        if (quality === 'maj13') return isRich ? [4, 9, 11, 14] : [4, 9, 11]; // 3, 13, 7, (9)
+        if (quality === 'maj13') return isRich ? [4, 11, 14, 18, 21] : [4, 11, 14, 21]; // 3, 7, 9, (#11), 13
         if (quality === 'maj7#11') return isRich ? [4, 11, 14, 18] : [4, 11, 18];  // 3, 7, (9), #11
-        // Standard Maj9/Maj7 cluster
-        return isRich ? [4, 7, 11, 14] : [4, 11, 14]; // 3, 5, 7, 9 -> Leaner: 3, 7, 9
+        // Standard Maj9/Maj7 cluster: Omit 5th for that "pro" open sound
+        return isRich ? [4, 11, 14, 21] : [4, 11, 14]; // 3, 7, 9, (13)
     }
 
     if (isMinor) {
         // Neo-Soul Quartal / So-What Voicings
         if (genre === 'Neo-Soul' && quality === 'minor' && is7th) {
-            return [5, 10, 15, 19]; // Classic "So What" stack (already distinctive)
+            // Modern quartal stacks: 4, b7, b3, 5, (9)
+            return isRich ? [5, 10, 15, 19, 26] : [5, 10, 15, 19]; 
         }
-        if (quality === 'm13') return isRich ? [3, 7, 10, 14, 21] : [3, 10, 14, 21]; // b3, (5), b7, 9, 13
-        if (quality === 'm11') return isRich ? [3, 7, 10, 17] : [3, 10, 17]; // b3, (7), 11
-        if (quality === 'm9') return isRich ? [3, 7, 10, 14] : [3, 10, 14]; // b3, (5), b7, 9
-        return isRich ? [3, 7, 10, 14] : [3, 10, 14]; // b3, 5, b7, 9 -> Leaner: b3, b7, 9
+        if (quality === 'm13') return isRich ? [3, 10, 14, 17, 21] : [3, 10, 14, 21]; // b3, b7, 9, (11), 13
+        if (quality === 'm11') return isRich ? [3, 10, 14, 17] : [3, 10, 17]; // b3, (b7), 11
+        if (quality === 'm9') return isRich ? [3, 10, 14, 17] : [3, 10, 14]; // b3, b7, 9, (11)
+        return isRich ? [3, 10, 14, 17] : [3, 10, 14]; // b3, b7, 9
     }
 
     if (isDominant) {
         // Alt Dominants
         if (quality === '7alt') return isRich ? [4, 10, 13, 15, 18, 20] : [4, 10, 15, 20]; // 3, b7, #9, b13
-        if (quality === '7b9') return isRich ? [4, 10, 13, 20] : [4, 10, 13, 16];      // 3, b7, b9, (b13 or 5)
-        if (quality === '7#9') return isRich ? [4, 10, 15, 20] : [4, 10, 15, 16];      // 3, b7, #9, (b13 or 5)
-        if (quality === '7b13') return [4, 10, 14, 20];     // 3, b7, 9, b13
-        if (quality === '7#11') return [4, 10, 14, 18];     // 3, b7, 9, #11
+        if (quality === '7b9') return isRich ? [4, 10, 13, 16, 20] : [4, 10, 13, 16];      // 3, b7, b9, (5 or b13)
+        if (quality === '7#9') return isRich ? [4, 10, 15, 16, 20] : [4, 10, 15, 16];      // 3, b7, #9, (5 or b13)
+        if (quality === '7b13') return isRich ? [4, 10, 14, 20, 26] : [4, 10, 14, 20];     // 3, b7, 9, b13
+        if (quality === '7#11') return isRich ? [4, 10, 14, 18, 21] : [4, 10, 14, 18];     // 3, b7, 9, #11
         
         // Characteristic dominant extensions
         if (quality === '13' || isRich) return [4, 10, 14, 21]; // 3, b7, 9, 13

@@ -645,4 +645,34 @@ export function updateRelKeyButton() {
     ui.relKeyBtn.textContent = label;
 }
 
+/**
+ * Updates genre button classes and countdowns for pending changes.
+ */
+export function updateGenreUI(stepsUntilNextMeasure = 0, stepsPerBeat = 4) {
+    const btns = document.querySelectorAll('.genre-btn');
+    const beatsRemaining = Math.ceil(stepsUntilNextMeasure / stepsPerBeat);
+    
+    btns.forEach(btn => {
+        const isTarget = gb.pendingGenreFeel && btn.dataset.genre === (gb.pendingGenreFeel.genreName || getGenreNameFromFeel(gb.pendingGenreFeel.feel));
+        
+        if (isTarget) {
+            btn.classList.add('pending');
+            btn.dataset.countdown = beatsRemaining > 0 ? beatsRemaining : '';
+        } else {
+            btn.classList.remove('pending');
+            delete btn.dataset.countdown;
+        }
+
+        // Active state should reflect ACTUAL current feel
+        btn.classList.toggle('active', btn.dataset.genre === gb.lastSmartGenre && !btn.classList.contains('pending'));
+    });
+}
+
+function getGenreNameFromFeel(feel) {
+    // Reverse lookup or mapping helper
+    const map = { 'Rock': 'Rock', 'Jazz': 'Jazz', 'Funk': 'Funk', 'Disco': 'Disco', 'Blues': 'Blues', 'Neo-Soul': 'Neo-Soul', 'Reggae': 'Reggae', 'Acoustic': 'Acoustic', 'Bossa Nova': 'Bossa' };
+    return map[feel] || feel;
+}
+
+
 

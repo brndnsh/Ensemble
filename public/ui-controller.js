@@ -199,43 +199,56 @@ export function setupUIHandlers(refs) {
     document.querySelectorAll('.genre-btn').forEach(btn => {
         if (btn.dataset.genre === gb.lastSmartGenre) btn.classList.add('active');
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
             const genre = btn.dataset.genre;
-            gb.lastSmartGenre = genre;
+            
+            if (ctx.isPlaying) {
+                // Remove existing pending classes
+                document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('pending'));
+                // Mark this one as pending
+                btn.classList.add('pending');
+                showToast(`Queued ${genre} for next measure...`);
+            } else {
+                // Immediate change if not playing
+                document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active', 'pending'));
+                btn.classList.add('active');
+                gb.lastSmartGenre = genre;
+            }
+            
             const config = SMART_GENRES[genre];
             if (config) {
                 dispatch('SET_GENRE_FEEL', {
+                    genreName: genre,
                     feel: config.feel,
                     swing: config.swing,
-                    sub: config.sub
+                    sub: config.sub,
+                    drum: config.drum,
+                    chord: config.chord,
+                    bass: config.bass,
+                    soloist: config.soloist
                 });
-                ui.swingSlider.value = config.swing;
-                if (config.sub) {
-                    ui.swingBase.value = config.sub;
+                
+                // If not playing, update UI controls immediately
+                if (!ctx.isPlaying) {
+                    ui.swingSlider.value = config.swing;
+                    if (config.sub) ui.swingBase.value = config.sub;
+                    loadDrumPreset(config.drum);
+                    
+                    const modules = [
+                        { id: 'chord', state: cb, configKey: 'chord' },
+                        { id: 'bass', state: bb, configKey: 'bass' },
+                        { id: 'soloist', state: sb, configKey: 'soloist' }
+                    ];
+
+                    modules.forEach(m => {
+                        if (m.state.activeTab === 'smart') {
+                            dispatch('SET_STYLE', { module: m.state === cb ? 'cb' : (m.state === bb ? 'bb' : 'sb'), style: 'smart' });
+                            const chipSelector = { 'chord': '.chord-style-chip', 'bass': '.bass-style-chip', 'soloist': '.soloist-style-chip' }[m.id];
+                            document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
+                        }
+                    });
                 }
-                loadDrumPreset(config.drum);
-
-                // Smart Follow: Sync instruments that are in 'smart' mode
-                const modules = [
-                    { id: 'chord', state: cb, configKey: 'chord' },
-                    { id: 'bass', state: bb, configKey: 'bass' },
-                    { id: 'soloist', state: sb, configKey: 'soloist' }
-                ];
-
-                modules.forEach(m => {
-                    if (m.state.activeTab === 'smart') {
-                        // Keep it in 'smart' mode, engine handles the rest
-                        dispatch('SET_STYLE', { module: m.state === cb ? 'cb' : (m.state === bb ? 'bb' : 'sb'), style: 'smart' });
-                        // Clear active chips in the Classic tab since we are in Smart mode
-                        const chipSelector = { 'chord': '.chord-style-chip', 'bass': '.bass-style-chip', 'soloist': '.soloist-style-chip' }[m.id];
-                        document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
-                    }
-                });
 
                 saveCurrentState();
-                showToast(`Switched to ${genre} feel`);
             }
         });
     });

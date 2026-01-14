@@ -137,41 +137,42 @@ header {
 
 @media (max-width: 600px) {
     header {
-        padding: 0.5rem 0.2rem;
+        padding: 0.5rem 0.4rem;
         height: 64px;
-        gap: 0.15rem;
+        gap: 0.25rem;
         max-width: 100%;
         overflow: hidden;
+        justify-content: space-between;
     }
     
     h1 {
-        font-size: 0.95rem;
-        letter-spacing: -0.02em;
-        flex-shrink: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 1.1rem; /* Slightly larger than 0.95rem but with better packing */
+        letter-spacing: -0.03em;
+        flex-shrink: 0; /* Don't let title be crushed */
+        overflow: visible;
     }
 
     .main-controls {
-        gap: 0.15rem;
-        flex-shrink: 0;
+        gap: 0.2rem;
+        flex-shrink: 1; /* Controls can shrink slightly if needed */
+        justify-content: flex-end;
     }
 
     .primary-btn {
-        min-width: 58px;
+        min-width: 54px; /* Reduced from 58px */
         font-size: 0.75rem;
-        padding: 0.4rem 0.3rem;
+        padding: 0.4rem 0.2rem;
     }
 
     input[type="number"] {
-        width: 42px;
+        width: 38px; /* Reduced from 42px */
         font-size: 0.85rem;
         padding: 0;
     }
 
     .control-group {
-        padding: 0.2rem 0.15rem;
-        gap: 0.15rem;
+        padding: 0.2rem 0.1rem;
+        gap: 0.1rem;
     }
 
     .control-label {
@@ -179,8 +180,14 @@ header {
     }
 
     #settingsBtn {
-        margin-right: 6px;
-        padding: 0.25rem !important; /* Force smaller padding on mobile */
+        margin-right: 0;
+        padding: 0.2rem !important;
+        font-size: 1.1rem !important;
+    }
+
+    #tapBtn {
+        padding: 0.2rem 0.3rem !important;
+        font-size: 0.7rem !important;
     }
 }
 
@@ -812,12 +819,40 @@ h2 {
     .genre-btn[data-genre="Acoustic"] { border-color: var(--yellow); }
     .genre-btn[data-genre="Bossa"] { border-color: var(--green); }
     
-    .genre-btn.active {
-        color: var(--base3);
-        font-weight: bold;
-    }
-    
-    .genre-btn.active[data-genre="Rock"] { background: var(--blue); border-color: var(--blue); }
+.genre-btn.active {
+    background: var(--accent-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.genre-btn.pending {
+    position: relative;
+    animation: genre-pulse 1s infinite alternate;
+    border-style: dashed !important;
+}
+
+.genre-btn.pending::after {
+    content: attr(data-countdown);
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--error-color);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+@keyframes genre-pulse {
+    from { opacity: 0.7; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1.02); }
+}
+
+.genre-btn.active[data-genre="Rock"] { background: var(--blue); border-color: var(--blue); }
     .genre-btn.active[data-genre="Jazz"] { background: var(--green); border-color: var(--green); }
     .genre-btn.active[data-genre="Funk"] { background: var(--magenta); border-color: var(--magenta); }
     .genre-btn.active[data-genre="Disco"] { background: var(--violet); border-color: var(--violet); }

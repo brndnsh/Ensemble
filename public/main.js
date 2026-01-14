@@ -1,5 +1,5 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger, subscribe } from './state.js';
-import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
+import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels, updateRelKeyButton, updateGenreUI } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { SONG_TEMPLATES, DRUM_PRESETS, CHORD_PRESETS } from './presets.js';
@@ -73,6 +73,12 @@ function togglePlay() {
     } else {
         if (ctx.suspendTimeout) clearTimeout(ctx.suspendTimeout);
         initAudio();
+        
+        // Explicit resume here to ensure the user gesture context is fully utilized
+        if (ctx.audio && ctx.audio.state === 'suspended') {
+            ctx.audio.resume();
+        }
+
         ctx.step = 0;
         flushBuffers();
         syncWorker();
@@ -108,6 +114,15 @@ function scheduler() {
 
     try {
         requestBuffer(ctx.step);
+        
+        // Update genre UI (countdowns)
+        if (gb.pendingGenreFeel) {
+            const stepsPerMeasure = getStepsPerMeasure();
+            const stepsRemaining = stepsPerMeasure - (ctx.step % stepsPerMeasure);
+            const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+            updateGenreUI(stepsRemaining, ts.stepsPerBeat);
+        }
+
         while (ctx.nextNoteTime < ctx.audio.currentTime + ctx.scheduleAheadTime) {
             if (ctx.isCountingIn) {
                 scheduleCountIn(ctx.countInBeat, ctx.nextNoteTime);
@@ -176,6 +191,33 @@ function advanceGlobalStep() {
     ctx.nextNoteTime += duration;
     ctx.unswungNextNoteTime += sixteenth;
     ctx.step++;
+
+    // --- Measure Boundary Sync & Pending Genre Changes ---
+    const stepsPerMeasure = getStepsPerMeasure();
+    if (ctx.step % stepsPerMeasure === 0) {
+        if (gb.pendingGenreFeel) {
+            const payload = gb.pendingGenreFeel;
+            gb.genreFeel = payload.feel;
+            if (payload.swing !== undefined) gb.swing = payload.swing;
+            if (payload.sub !== undefined) gb.swingSub = payload.sub;
+            
+            // Sync the logical genre name for UI purposes
+            if (payload.genreName) {
+                gb.lastSmartGenre = payload.genreName;
+            }
+
+            gb.pendingGenreFeel = null;
+
+            // Update UI buttons state (removes pending, sets active)
+            updateGenreUI(0);
+
+            // Re-sync all procedural engines to the new feel
+            syncAndFlushWorker(ctx.step);
+            
+            // Visual feedback of the sync boundary
+            triggerFlash(0.15);
+        }
+    }
 }
 
 function getChordAtStep(step) {
@@ -301,92 +343,81 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                             }
 
                             // --- Jazz Procedural Overrides ---
-
                             if (gb.genreFeel === 'Jazz' && !inst.muted) {
-
-                                const loopStep = step % 16; // Loop every measure (4/4 assumption for standard Jazz)
-
-                                
-
+                                const loopStep = step % 16;
                                 if (inst.name === 'Open') {
-
-                                    // Procedural Ride Pattern: "Hey, Swing-the-band"
-
                                     shouldPlay = false;
-
                                     if ([0, 4, 6, 8, 12, 14].includes(loopStep)) {
-
                                         shouldPlay = true;
-
-                                        // Consistent driving pulse on quarter notes
-
                                         if (loopStep % 4 === 0) velocity = 1.15; 
-
-                                        else velocity = 0.75; // Soft "skip" note
-
+                                        else velocity = 0.75; 
                                     }
-
                                 } else if (inst.name === 'HiHat') {
-
-                                    // Foot Chick on 2 & 4
-
                                     shouldPlay = false;
-
                                     if (loopStep === 4 || loopStep === 12) {
-
                                         shouldPlay = true;
-
                                         velocity = 0.8;
-
                                     }
-
-                            } else if (inst.name === 'Kick') {
+                                } else if (inst.name === 'Kick') {
                                     shouldPlay = false;
-                                    // 1. Feathering (Classic Bop technique) - Soft pulse on quarters
-                                    // Keeps the band together without being "Four-on-the-floor" dance style
-                                    if (loopStep % 4 === 0) {
-                                        shouldPlay = true;
-                                        velocity = 0.35; 
-                                    }
-                                    
-                                    // 2. "Bombs" (Accents) - Interactive punctuation
-                                    // Scale probability with intensity.
-                                    const bombProb = ctx.bandIntensity * 0.3; // 0.0 to 0.3
+                                    if (loopStep % 4 === 0) { shouldPlay = true; velocity = 0.35; }
+                                    const bombProb = ctx.bandIntensity * 0.3;
                                     if (Math.random() < bombProb) {
-                                        // Target "and" of 3 (10), "and" of 4 (14), or "let" of 4 (15) for anticipation
-                                        if ([10, 14, 15].includes(loopStep)) {
-                                            shouldPlay = true;
-                                            velocity = 0.9 + (Math.random() * 0.2);
-                                        }
+                                        if ([10, 14, 15].includes(loopStep)) { shouldPlay = true; velocity = 0.9 + (Math.random() * 0.2); }
                                     }
-
                                 } else if (inst.name === 'Snare') {
                                     shouldPlay = false;
-                                    
-                                    // Comping Logic: Toned down for "Metronome" stability
-                                    // 1. "Chatter" / Ghost Notes - Minimal texture
-                                    if (Math.random() < 0.08) { 
-                                        shouldPlay = true; 
-                                        velocity = 0.25; 
-                                    }
-
-                                    // 2. Accents - Structural Anchors
-                                    // Prioritize "And of 4" (Step 14) as the main rhythmic push
+                                    if (Math.random() < 0.08) { shouldPlay = true; velocity = 0.25; }
                                     if (loopStep === 14) {
-                                        if (Math.random() < 0.6 + (ctx.bandIntensity * 0.3)) {
-                                            shouldPlay = true;
-                                            velocity = 0.85;
-                                        }
-                                    }
-                                    // Secondary accent on "And of 2" (Step 6)
-                                    else if (loopStep === 6) {
-                                        if (Math.random() < 0.3 + (ctx.bandIntensity * 0.3)) {
-                                            shouldPlay = true;
-                                            velocity = 0.8;
-                                        }
+                                        if (Math.random() < 0.6 + (ctx.bandIntensity * 0.3)) { shouldPlay = true; velocity = 0.85; }
+                                    } else if (loopStep === 6) {
+                                        if (Math.random() < 0.3 + (ctx.bandIntensity * 0.3)) { shouldPlay = true; velocity = 0.8; }
                                     }
                                 }
+                            }
 
+                            // --- Blues Procedural Overrides ---
+                            if (gb.genreFeel === 'Blues' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                if (inst.name === 'HiHat') {
+                                    // Classic Foot Chick on 2 & 4
+                                    shouldPlay = false;
+                                    if (loopStep === 4 || loopStep === 12) {
+                                        shouldPlay = true;
+                                        velocity = 0.85;
+                                    }
+                                } else if (inst.name === 'Open') {
+                                    // Blues Shuffle Ride Pattern
+                                    // Use a combination of solid quarters and probabilistic "skip" notes
+                                    shouldPlay = false;
+                                    if (loopStep % 4 === 0) {
+                                        // Solid pulse on 1, 2, 3, 4
+                                        shouldPlay = true;
+                                        velocity = 1.1;
+                                    } else if (loopStep % 2 === 0) {
+                                        // The "skip" note (8th note upbeat)
+                                        // Probability increases with intensity/complexity
+                                        const skipProb = 0.4 + (ctx.bandIntensity * 0.5);
+                                        if (Math.random() < skipProb) {
+                                            shouldPlay = true;
+                                            velocity = 0.7;
+                                        }
+                                    }
+                                } else if (inst.name === 'Kick') {
+                                    // Traditional Blues: Heavy on 1, interactive elsewhere
+                                    // If not already scheduled by pattern, ensure 1 is there
+                                    if (loopStep === 0) {
+                                        shouldPlay = true;
+                                        velocity = 1.2;
+                                    }
+                                } else if (inst.name === 'Snare') {
+                                    // Shuffle "Backbeat" on 2 & 4
+                                    if (loopStep === 4 || loopStep === 12) {
+                                        shouldPlay = true;
+                                        velocity = 1.1;
+                                    }
+                                }
                             }
 
         if (shouldPlay && !inst.muted) {
@@ -719,6 +750,24 @@ function init() {
         
         initializePowerButtons();
         
+        // --- BACKGROUND RECOVERY ---
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                console.log("[Main] Page visible. Checking audio state...");
+                if (ctx.audio) {
+                    console.log(`[Main] Current AudioContext state: ${ctx.audio.state}`);
+                    // If suspended but we are supposed to be playing, try a soft resume
+                    if (ctx.audio.state === 'suspended' && ctx.isPlaying) {
+                        ctx.audio.resume().catch(e => console.error("[Main] Background resume failed:", e));
+                    }
+                }
+                // Ensure silentAudio is still playing if we are active (iOS Safari hack)
+                if (ctx.isPlaying && silentAudio.paused) {
+                    silentAudio.play().catch(() => {});
+                }
+            }
+        });
+
         validateProgression(() => { renderChordVisualizer(); analyzeFormUI(); });
         
         // --- WORKER INIT ---
@@ -764,6 +813,42 @@ window.previewChord = (index) => {
         setTimeout(() => { if (!ctx.isPlaying) cards[index].classList.remove('active'); }, 300); 
     }
 };
+
+/**
+ * Collects current state and sends a combined sync+flush message to the worker.
+ * This ensures atomic state update and buffer regeneration at measure boundaries.
+ */
+export function syncAndFlushWorker(step) {
+    const syncData = {
+        arranger: { 
+            progression: arranger.progression, 
+            stepMap: arranger.stepMap, 
+            totalSteps: arranger.totalSteps,
+            key: arranger.key,
+            isMinor: arranger.isMinor,
+            timeSignature: arranger.timeSignature,
+            grouping: arranger.grouping
+        },
+        cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled, volume: cb.volume },
+        bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq, volume: bb.volume },
+        sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume },
+        gb: { 
+            genreFeel: gb.genreFeel, 
+            lastDrumPreset: gb.lastDrumPreset, 
+            enabled: gb.enabled, 
+            volume: gb.volume,
+            measures: gb.measures,
+            swing: gb.swing,
+            swingSub: gb.swingSub,
+            instruments: gb.instruments.map(i => ({ name: i.name, steps: [...i.steps], muted: i.muted }))
+        },
+        ctx: { bpm: ctx.bpm, bandIntensity: ctx.bandIntensity, complexity: ctx.complexity, autoIntensity: ctx.autoIntensity }
+    };
+
+    killAllNotes();
+    flushWorker(step, syncData);
+    restoreGains();
+}
 
 function loadFromUrl() {
     const params = new URLSearchParams(window.location.search); let hasParams = false;

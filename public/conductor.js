@@ -43,7 +43,15 @@ export function applyConductor() {
         intent: { density: targetIntentDensity }
     });
 
-    // --- 4. Intensity-Aware Mixing ---
+    // --- 4. Micro-Timing (Pocket) ---
+    let targetBassPocket = 0;
+    const genre = gb.genreFeel;
+    if (genre === 'Neo-Soul') targetBassPocket = 0.025; // 25ms "Dilla" lag
+    else if (genre === 'Funk') targetBassPocket = -0.005; // 5ms "Ahead of the beat" push for Funk energy
+    
+    dispatch('SET_PARAM', { module: 'bb', param: 'pocketOffset', value: targetBassPocket });
+
+    // --- 5. Intensity-Aware Mixing ---
     if (ctx.masterLimiter && ctx.audio) {
         // Dynamic Compression: Tighter at high intensity to glue the mix
         const targetThreshold = -0.5 - (intensity * 1.5); // -0.5 to -2.0 dB

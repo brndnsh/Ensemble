@@ -165,8 +165,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     }
 
     const result = (freq, durationMultiplier = null, velocity = 1.0, muted = false, bendStartInterval = 0) => {
-        let timingOffset = 0;
-        if (style === 'neo') timingOffset = 0.025; // 25ms laid-back "Dilla" feel
+        let timingOffset = bb.pocketOffset || 0;
         
         // Intensity-based timing: Push slightly ahead during climaxes
         if (intensity > 0.8) timingOffset -= 0.005;
@@ -410,23 +409,32 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         let approach;
         let bend = 0;
 
-        if (sb.tension > 0.6 || (diff >= 2 && Math.random() < 0.8)) {
+        // AUTHENTIC JAZZ WALKING: Prioritize chromatic approach notes (1 semitone away)
+        // If distance is >= 2, we must use a chromatic neighbor to "pull" into the next root.
+        if (diff >= 2 || sb.tension > 0.6 || Math.random() < 0.8) {
             const below = targetRoot - 1;
             const above = targetRoot + 1;
             
+            // Choose the neighbor that continues the current direction or provides the smoothest line
             if (prevMidi < targetRoot) {
-                approach = (targetRoot - prevMidi > 5) ? above : below;
+                // If coming from below, we usually continue to approach from below (target-1)
+                // Unless we are far enough below to jump above and drop down (target+1)
+                approach = (targetRoot - prevMidi > 5 && Math.random() < 0.4) ? above : below;
             } else {
-                approach = (prevMidi - targetRoot > 5) ? below : above;
+                // If coming from above, we usually continue to approach from above (target+1)
+                // Unless we are far enough above to jump below and push up (target-1)
+                approach = (prevMidi - targetRoot > 5 && Math.random() < 0.4) ? below : above;
             }
             
+            // Safety clamp
             if (approach < absMin || approach > absMax) {
                  approach = (approach < absMin) ? targetRoot + 1 : targetRoot - 1;
             }
             
-            if (Math.random() < 0.3) bend = (approach < targetRoot) ? -1 : 1;
+            if (Math.random() < 0.25) bend = (approach < targetRoot) ? -1 : 1;
         } else {
-            let candidates = [targetRoot - 1, targetRoot + 1, targetRoot - 5, targetRoot + 7];
+            // Diatonic/Scale approach (4th or 5th)
+            let candidates = [targetRoot - 5, targetRoot + 7, targetRoot + 5, targetRoot - 7];
             let valid = candidates.filter(n => n >= absMin && n <= absMax && !isSameAsPrev(n));
             approach = valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : targetRoot - 5;
         }

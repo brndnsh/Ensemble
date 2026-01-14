@@ -96,9 +96,15 @@ describe('Soloist Engine', () => {
         const fMinor = { rootMidi: 53, quality: 'minor', intervals: [0, 3, 7] };
         
         let generatedMidi = [];
-        for(let i=0; i<1000; i++) {
-            const note = getSoloistNote(mockChord, fMinor, i, 440, 72, 'scalar', i%4);
-            if (note) generatedMidi.push(note.midi);
+        for(let i=0; i<2000; i++) {
+            const note = getSoloistNote(mockChord, fMinor, i, 440, 72, 'bird', i%4);
+            if (note) {
+                if (Array.isArray(note)) {
+                    generatedMidi.push(...note.map(n => n.midi));
+                } else {
+                    generatedMidi.push(note.midi);
+                }
+            }
         }
         
         const hasDb = generatedMidi.some(m => m % 12 === 1);
