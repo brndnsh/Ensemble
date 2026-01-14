@@ -134,14 +134,14 @@ describe('Jazz Standard Test: Rhythm Changes', () => {
         
         // vi7 (Gm7)
         const gm7 = progression[1];
-        // Standard rootless for minor: b3, b7, 9 -> [3, 10, 14]
-        expect(gm7.intervals).toEqual([3, 10, 14]);
+        // Standard rootless for minor (standard density): b3, 5, b7 -> [3, 7, 10]
+        expect(gm7.intervals).toEqual([3, 7, 10]);
         expect(gm7.intervals).not.toContain(0);
 
         // F7 (V7)
         const f7 = progression[3];
-        // Standard rootless: 3, b7, 9 -> [4, 10, 14]
-        expect(f7.intervals).toEqual([4, 10, 14]);
+        // Standard rootless (standard density): 3, 5, b7 -> [4, 7, 10]
+        expect(f7.intervals).toEqual([4, 7, 10]);
         expect(f7.intervals).not.toContain(0);
     });
 

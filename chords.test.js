@@ -161,14 +161,13 @@ describe('Chord Logic', () => {
             expect(intervals).toContain(7);
         });
 
-        it('should return rootless Jazz Major 7th intervals (no 0)', () => {
+        it('should use 3-5-7 for Jazz maj7 (standard density)', () => {
             const intervals = getIntervals('maj7', true, 'standard', 'Jazz', true);
             expect(intervals).not.toContain(0);
             expect(intervals).toContain(4); // 3rd
             expect(intervals).toContain(11); // 7th
-            expect(intervals).toContain(14); // 9th
-            // 5th (7) is now omitted in standard density for a leaner sound
-            expect(intervals).not.toContain(7); 
+            expect(intervals).toContain(7); // 5th (Now included for stability)
+            expect(intervals).not.toContain(14); // 9th (Reserved for Rich density or explicit maj9)
         });
 
         it('should provide intervals for 11th chords (No 3rd to avoid clash)', () => {
