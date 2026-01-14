@@ -5,7 +5,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 ## Key Features
 
 *   🖋️ **Advanced Arranger**: Build complex song structures using Roman Numerals, Nashville Numbers, or Absolute chord names. Features include song templates, drag-and-drop reordering, and a specialized symbol palette.
-*   🎸 **Generative Virtual Band**: Intelligent **Bassist** and **Soloist** engines that utilize "Expressive Musicality" logic to generate human-like, intensity-aware accompaniment in real-time. Features a **Smart Genres** system (Disco, Jazz, Funk, Acoustic, etc.) that coordinates all instruments for a cohesive feel.
+*   🎸 **Generative Virtual Band**: Intelligent **Bassist** and **Soloist** engines that utilize "Expressive Musicality" logic to generate human-like, intensity-aware accompaniment in real-time. Features advanced **Melodic Devices** (Enclosures, Quartal Harmony, Call & Response) and a **Smart Genres** system that coordinates all instruments for a cohesive feel.
 *   🥁 **Smart Drum Machine**: A multi-level velocity step sequencer with built-in genre presets and adjustable swing/humanization. Integrated with a procedural fill engine.
 *   📊 **Unified Visualizer**: A multi-track harmonic monitor that superimposes instrumental performance over chord data, with real-time interval analysis and retractable UI.
 *   🎹 **Pro Accompaniment**: Highly optimized voicing engine with adjustable density, styles (Pad, Funk, Reggae), and intelligent relative key transposition.
@@ -30,7 +30,7 @@ Navigate to `http://localhost:8000` to start playing.
 
 ## Tech Stack
 
-*   **Engine**: Vanilla JavaScript (ES Modules) & Web Audio API.
+*   **Engine**: Vanilla JavaScript (ES Modules) & Web Audio API. Modularized core for high-precision scheduling and synthesis.
 *   **Background Processing**: Web Workers (`logic-worker.js`) for glitch-free algorithmic generation.
 *   **UI**: Pure CSS (Solarized variables) with no external frameworks.
 *   **State**: Centralized reactive state with JSDoc typing.

@@ -4,22 +4,21 @@ Ensemble is a high-performance Progressive Web App (PWA) designed for generative
 
 ## Project Overview
 
-*   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `fills`).
-*   **Core Logic**: Orchestrated by `main.js` (scheduling/timing) and `conductor.js` (global dynamics/intensity management). Includes the **Smart Grooves** system, a multi-module architecture where `gb.genreFeel` and `ctx.bandIntensity` drive procedural behaviors across drums (`main.js`, `fills.js`), piano (`accompaniment.js`), bass (`bass.js`), and soloist (`soloist.js`).
-*   **Audio Engine**: Built on the **Web Audio API**. Synthesis logic is decentralized within individual engine files and orchestrated by `engine.js`.
-*   **State Management**: Centralized reactive state defined in `state.js` utilizing an Event Bus pattern. State objects (`ctx`, `arranger`, etc.) are exported for read access, but modifications MUST be performed via the `dispatch` function to ensure decoupling and worker synchronization.
-*   **Performance**: Off-main-thread musical calculations are handled by `logic-worker.js` via `worker-client.js` to ensure jitter-free audio and UI responsiveness.
-*   **UI/UX**: Vanilla CSS using Solarized color variables. Responsive design focused on mobile practice sessions.
+*   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `fills`). Core logic is modularized into high-precision scheduling (`scheduler-core.js`), visual rendering (`visualizer.js`), and decentralized synthesis (`synth-*.js`).
+*   **Core Logic**: Orchestrated by `main.js` (entry/init), `scheduler-core.js` (timing/scheduling), and `conductor.js` (global dynamics/intensity management). Includes the **Smart Grooves** system, a multi-module architecture where `gb.genreFeel` and `ctx.bandIntensity` drive procedural behaviors across drums (`scheduler-core.js`, `fills.js`), piano (`accompaniment.js`), bass (`bass.js`), and soloist (`soloist.js`).
+*   **Audio Engine**: Built on the **Web Audio API**. Synthesis logic is decentralized into instrument-specific synthesis modules (`synth-bass.js`, `synth-soloist.js`, etc.) and orchestrated by `engine.js`.
 
 ## Key Files & Responsibilities
 
-*   `main.js`: Main entry point, high-precision scheduler, and visual animation loop.
+*   `main.js`: Main entry point and application initialization.
+*   `scheduler-core.js`: High-precision lookahead scheduler for all audio events.
 *   `state.js`: Single source of truth for global, arranger, and instrument states.
 *   `conductor.js`: The "brain" that adjusts band intensity, complexity, and mixing parameters based on song form.
-*   `engine.js`: Low-level Web Audio operations and sound synthesis.
-*   `soloist.js` / `bass.js`: Algorithmic engines for lead and bass lines with "Expressive Musicality" logic.
+*   `engine.js`: Low-level Web Audio operations and synthesis orchestration.
+*   `soloist.js` / `bass.js`: Algorithmic engines for lead and bass lines with "Expressive Musicality" logic. Includes advanced **Melodic Devices** (Enclosures, Quartal Harmony, Call and Response).
+*   `visualizer.js`: Unified class-based harmonic monitor and track renderer.
 *   `arranger-controller.js`: Manages song structure, transpositions, and chord progression logic.
-*   `ui-controller.js` / `ui.js`: Bridges DOM events with back-end logic and handles complex rendering (e.g., chord visualizer).
+*   `ui-controller.js` / `ui.js`: Bridges DOM events with back-end logic and handles complex rendering.
 
 ## Building and Running
 
@@ -57,8 +56,9 @@ Ensemble is a zero-dependency project and requires no build step.
 
 The project is currently transitioning from static loop-based accompaniment to "Smart Grooves"—generative, intensity-aware engines. **Rock (Stadium), Disco (Four-on-the-Floor), and Hip Hop (Boom Bap)** are now implemented. Future work focuses on:
 
-1.  **Bass Engine**: Implementing chromatic walking logic for Jazz, "Slap & Pop" synthesis for Funk, and micro-timing (Dilla feel) for Neo-Soul.
-2.  **Accompaniment Engine**: Transitioning to rootless jazz voicings, implementing Reggae "Bubble/Skank" dual-lane logic, and quartal harmony for modern genres.
-3.  **Authenticity Verification**: Expanding the probabilistic testing suite (`*.test.js`) to ensure genre-specific rhythmic and harmonic anchors are maintained over long durations.
-4.  **Latin/Bossa Percussion**: Expand procedural percussion (shakers/agogo) for Latin styles.
-5.  **Reference-Driven Tuning**: Calibrating velocity maps and timing offsets against classic genre recordings to achieve a "pro-level" musical feel.
+1.  **Soloist Engine (v1.99)**: COMPLETED implementation of advanced melodic devices including Bebop enclosures, quartal harmony (Neo-Soul), and rhythmic call-and-response logic.
+2.  **Bass Engine**: Implementing chromatic walking logic for Jazz, "Slap & Pop" synthesis for Funk, and micro-timing (Dilla feel) for Neo-Soul.
+3.  **Accompaniment Engine**: Transitioning to rootless jazz voicings, implementing Reggae "Bubble/Skank" dual-lane logic.
+4.  **Authenticity Verification**: Expanding the probabilistic testing suite (`*.test.js`) to ensure genre-specific rhythmic and harmonic anchors are maintained over long durations.
+5.  **Latin/Bossa Percussion**: Expand procedural percussion (shakers/agogo) for Latin styles.
+6.  **Reference-Driven Tuning**: Calibrating velocity maps and timing offsets against classic genre recordings to achieve a "pro-level" musical feel.
