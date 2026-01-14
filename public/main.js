@@ -73,6 +73,12 @@ function togglePlay() {
     } else {
         if (ctx.suspendTimeout) clearTimeout(ctx.suspendTimeout);
         initAudio();
+        
+        // Explicit resume here to ensure the user gesture context is fully utilized
+        if (ctx.audio && ctx.audio.state === 'suspended') {
+            ctx.audio.resume();
+        }
+
         ctx.step = 0;
         flushBuffers();
         syncWorker();
@@ -755,6 +761,24 @@ function init() {
         
         initializePowerButtons();
         
+        // --- BACKGROUND RECOVERY ---
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                console.log("[Main] Page visible. Checking audio state...");
+                if (ctx.audio) {
+                    console.log(`[Main] Current AudioContext state: ${ctx.audio.state}`);
+                    // If suspended but we are supposed to be playing, try a soft resume
+                    if (ctx.audio.state === 'suspended' && ctx.isPlaying) {
+                        ctx.audio.resume().catch(e => console.error("[Main] Background resume failed:", e));
+                    }
+                }
+                // Ensure silentAudio is still playing if we are active (iOS Safari hack)
+                if (ctx.isPlaying && silentAudio.paused) {
+                    silentAudio.play().catch(() => {});
+                }
+            }
+        });
+
         validateProgression(() => { renderChordVisualizer(); analyzeFormUI(); });
         
         // --- WORKER INIT ---

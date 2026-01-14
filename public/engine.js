@@ -44,13 +44,23 @@ function createSoftClipCurve() {
  * Must be called in response to a user gesture.
  */
 export function initAudio() {
-    if (!ctx.audio) {
+    if (!ctx.audio || ctx.audio.state === 'closed') {
         // Modern AudioSession API to bypass silent switch on iOS
         if (navigator.audioSession) {
             navigator.audioSession.type = 'playback';
         }
 
         ctx.audio = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Add statechange listener for diagnostics
+        ctx.audio.onstatechange = () => {
+            console.log(`[DSP] AudioContext state changed to: ${ctx.audio.state}`);
+            // Auto-recovery: if it enters suspended unexpectedly while we should be playing
+            if (ctx.audio.state === 'suspended' && ctx.isPlaying) {
+                console.log("[DSP] Unexpected suspension. Attempting auto-resume...");
+                ctx.audio.resume().catch(e => console.error("[DSP] Auto-resume failed:", e));
+            }
+        };
 
         ctx.masterGain = ctx.audio.createGain();
         // Use smooth ramping instead of direct assignment to prevent clicks
