@@ -94,13 +94,13 @@ export function handleTap(setBpmRef) {
     }
 }
 
-export function flushBuffers() {
-    flushBuffer('chord');
-    flushBuffer('bass');
-    flushBuffer('soloist');
+export function flushBuffers(primeSteps = 0) {
+    flushBuffer('chord', primeSteps);
+    flushBuffer('bass', primeSteps);
+    flushBuffer('soloist', primeSteps);
 }
 
-export function flushBuffer(type) {
+export function flushBuffer(type, primeSteps = 0) {
     if (type === 'bass' || type === 'all') {
         if (bb.lastPlayedFreq !== null) bb.lastFreq = bb.lastPlayedFreq;
         bb.buffer.clear();
@@ -123,7 +123,7 @@ export function flushBuffer(type) {
         killDrumBus();
     }
     
-    flushWorker(ctx.step);
+    flushWorker(ctx.step, null, primeSteps);
 }
 
 export function getPowerConfig() {
