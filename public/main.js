@@ -512,6 +512,34 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
 
             if (gb.genreFeel === 'Rock') {
                 // --- Rock "Stadium" Logic ---
+                const loopStep = step % 16;
+
+                // 1. "Right-Hand Lead" Hi-Hat Pulse (Human Feel)
+                if (inst.name === 'HiHat' || inst.name === 'Open') {
+                    if (loopStep % 4 === 0) velocity *= 1.05; // Downbeats heavier
+                    else if (loopStep % 4 === 2) velocity *= 0.95; // Upbeats lighter
+                }
+
+                // 2. Procedural Kick Variation (The "Skip")
+                if (inst.name === 'Kick') {
+                    // Add "And of 3" kick (Step 10) randomly in normal/high intensity
+                    if (loopStep === 10 && ctx.bandIntensity > 0.4 && Math.random() < 0.25) {
+                        shouldPlay = true;
+                        velocity = 0.9; // Not a full accent
+                    }
+                }
+
+                // 3. Subtle Snare Ghosts ("Grease")
+                if (inst.name === 'Snare' && !shouldPlay) {
+                    // Ghost on 'a' of 2 (Step 7) or 'e' of 3 (Step 9) - classic syncopation
+                    if ((loopStep === 7 || loopStep === 9) && ctx.bandIntensity > 0.35 && ctx.bandIntensity < 0.75) {
+                        if (Math.random() < 0.12) {
+                            shouldPlay = true;
+                            velocity = 0.35; // Very soft
+                        }
+                    }
+                }
+
                 // "Anthem" Mode (High Intensity)
                 if (ctx.bandIntensity > 0.7) {
                     if (inst.name === 'HiHat' && shouldPlay) {
