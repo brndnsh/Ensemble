@@ -88,7 +88,7 @@ export const DRUM_PRESETS = {
         category: 'Pop/Rock', swing: 0, sub: '8th', 
         'Kick': "2000000020100000", 
         'Snare': "0000200000002000", 
-        'HiHat': "2121212121212121", 
+        'HiHat': "2020202020202020", 
         'Open': "0000000000000000",
         '3/4': { // Rock Waltz K-- S-- K--
             'Kick': "200000002000",
