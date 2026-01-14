@@ -156,7 +156,15 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return midi === prevMidi;
     };
 
+    // --- Ensemble Awareness (Soloist Space) ---
+    // If the soloist is shredding, reduce bass complexity to avoid mud.
+    const isSoloistBusy = sb.busySteps > 0;
+    const soloistIntensityFactor = isSoloistBusy ? 0.3 : 1.0;
+
     const withOctaveJump = (note) => {
+        // Skip octave jumps if soloist is busy
+        if (isSoloistBusy) return note;
+
         if (Math.random() < 0.15 + (intensity * 0.15)) { // More jumps at high intensity
             const direction = Math.random() < 0.5 ? 1 : -1;
             const shifted = note + (12 * direction);
@@ -191,9 +199,18 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         
         bb.busySteps = Math.max(0, Math.round(durationSteps) - 1);
 
+        // --- Articulation (Slap & Pop) ---
+        // Boost velocity to trigger Pop mode (vel > 1.1) in Funk/Disco styles at high intensity.
+        let finalVelocity = velocity;
+        const isPopStyle = style === 'funk' || style === 'disco';
+        const isAccentedUpbeat = (step % 4 === 2);
+        if (isPopStyle && globalIntensity > 0.8 && isAccentedUpbeat) {
+            finalVelocity = Math.max(finalVelocity, 1.2);
+        }
+
         return { 
             midi, 
-            velocity, 
+            velocity: finalVelocity, 
             durationSteps: durationSteps || ts.stepsPerBeat, 
             bendStartInterval, 
             ccEvents: [], 
@@ -215,6 +232,21 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         }
         return false;
     })();
+
+    // --- Ensemble Awareness (Kick Drum Mirroring) ---
+    // If Kick is present, align with it in Rock/Funk styles.
+    const kickInst = (gb.instruments || []).find(i => i.name === 'Kick');
+    const hasKickTrigger = kickInst && kickInst.steps && kickInst.steps[step % (gb.measures * stepsPerMeasure)] > 0;
+    
+    if ((style === 'rock' || style === 'funk') && hasKickTrigger) {
+        // Play with increased velocity on kick hits
+        const kickVel = (kickInst.steps[step % (gb.measures * stepsPerMeasure)] === 2) ? 1.25 : 1.15;
+        return result(getFrequency(baseRoot), null, kickVel);
+    } else if ((style === 'rock' || style === 'funk') && !hasKickTrigger && globalIntensity < 0.4) {
+        // If no kick and intensity is low, prefer silence or ghost notes.
+        if (Math.random() < 0.6) return null;
+        if (Math.random() < 0.3) return result(getFrequency(baseRoot), 1, 0.4, true);
+    }
 
     // --- HARMONIC RESET ---
     // Beat 1 of a chord: Always land on Root or 5th
@@ -334,6 +366,9 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
         // The "Grease" - b7 or 5th usage on weak 16ths
         if ((stepInBeat === 1 || stepInBeat === 3) && Math.random() < 0.3) {
+            // If soloist is busy, skip the grease to stay grounded
+            if (isSoloistBusy) return null;
+
             const useFlat7 = currentChord.intervals.includes(10) || Math.random() < 0.6;
             const interval = useFlat7 ? 10 : 7;
             const note = baseRoot + interval; 
@@ -349,7 +384,8 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         }
 
         // Ghost notes (dead notes)
-        if (Math.random() < 0.15) {
+        // Soloist Space: Skip ghost notes if soloist is busy
+        if (!isSoloistBusy && Math.random() < 0.15) {
              return result(getFrequency(prevMidi || baseRoot), 0.25, 0.35, true);
         }
 
@@ -385,9 +421,16 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     
     // Check for eighth-note skip ("and" of a beat)
     if (beatIndex % 1 !== 0) {
-        if (Math.random() < 0.3) {
+        // If soloist is busy, never play eighth-note skips (even ghost notes)
+        if (isSoloistBusy) return null;
+
+        // Reduced probability of skips for a more solid foundation
+        const baseSkipProb = 0.15;
+        const skipProb = baseSkipProb + (globalIntensity * 0.15);
+        
+        if (Math.random() < skipProb) {
             const skipVel = 0.6 + Math.random() * 0.3;
-            const isMuted = Math.random() < 0.2;
+            const isMuted = Math.random() < 0.3; // More ghost notes for taste
             if (Math.random() < 0.7 && prevMidi) {
                 const ghostNote = Math.random() < 0.3 ? withOctaveJump(prevMidi) : prevMidi;
                 return result(getFrequency(ghostNote), 2, skipVel, isMuted);
@@ -406,53 +449,58 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     // Use smarter scale logic
     const scale = getScaleForBass(currentChord, nextChord, isMinor);
 
-    // Final Beat of Chord: Smart Approach Note
+    // Final Beat of Chord: Smart Approach Note (Harmonic Pull)
     if (intBeat === beatsInChord - 1 && nextChord) {
         const nextTarget = nextChord.bassMidi !== null && nextChord.bassMidi !== undefined ? nextChord.bassMidi : nextChord.rootMidi;
         const targetRoot = normalizeToRange(nextTarget);
         
-        const diff = Math.abs(prevMidi - targetRoot);
-        let approach;
-        let bend = 0;
+        // Tasteful Harmonic Pull: 
+        // Only use chromatic/dominant anchors ~30-50% of the time. 
+        // Resolution to the root/scale tones is often more "foundational".
+        const pullTension = (sb.tension || 0) + (globalIntensity * 0.4);
+        const baseProb = isSoloistBusy ? 0.2 : 0.4;
+        const chromaticProb = baseProb + (pullTension * 0.4);
 
-        // AUTHENTIC JAZZ WALKING: Prioritize chromatic approach notes (1 semitone away)
-        // If distance is >= 2, we must use a chromatic neighbor to "pull" into the next root.
-        if (diff >= 2 || sb.tension > 0.6 || Math.random() < 0.8) {
-            const below = targetRoot - 1;
-            const above = targetRoot + 1;
-            
-            // Choose the neighbor that continues the current direction or provides the smoothest line
-            if (prevMidi < targetRoot) {
-                // If coming from below, we usually continue to approach from below (target-1)
-                // Unless we are far enough below to jump above and drop down (target+1)
-                approach = (targetRoot - prevMidi > 5 && Math.random() < 0.4) ? above : below;
-            } else {
-                // If coming from above, we usually continue to approach from above (target+1)
-                // Unless we are far enough above to jump below and push up (target-1)
-                approach = (prevMidi - targetRoot > 5 && Math.random() < 0.4) ? below : above;
+        if (Math.random() < chromaticProb) {
+            // Priority 1: Leading Tone (Half step above/below)
+            // Priority 2: Dominant Anchor (Perfect 5th above = -5 semitones from target)
+            const choices = [
+                { midi: targetRoot - 1, weight: 1.0 }, 
+                { midi: targetRoot + 1, weight: 0.6 }, 
+                { midi: targetRoot - 5, weight: 0.4 }  
+            ];
+
+            let totalWeight = choices.reduce((acc, c) => acc + c.weight, 0);
+            let r = Math.random() * totalWeight;
+            let approach = targetRoot - 1;
+            for (let c of choices) {
+                r -= c.weight;
+                if (r <= 0) { approach = c.midi; break; }
             }
             
-            // Safety clamp
-            if (approach < absMin || approach > absMax) {
-                 approach = (approach < absMin) ? targetRoot + 1 : targetRoot - 1;
-            }
+            approach = clampAndNormalize(approach);
+            let bend = 0;
+            if (Math.random() < 0.2 && !isSoloistBusy) bend = (approach < targetRoot) ? -1 : 1;
             
-            if (Math.random() < 0.25) bend = (approach < targetRoot) ? -1 : 1;
+            return result(getFrequency(approach), null, velocity, false, bend);
         } else {
-            // Diatonic/Scale approach (4th or 5th)
+            // Foundation resolution (Diatonic)
             let candidates = [targetRoot - 5, targetRoot + 7, targetRoot + 5, targetRoot - 7];
             let valid = candidates.filter(n => n >= absMin && n <= absMax && !isSameAsPrev(n));
-            approach = valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : targetRoot - 5;
+            let approach = valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : targetRoot - 5;
+            return result(getFrequency(approach), null, velocity);
         }
-        
-        return result(getFrequency(approach), null, velocity, false, bend);
     }
 
     // Intermediate beats: Scale-aware walking
     if (intBeat > 0) {
-        if (intBeat === 2 && Math.random() < 0.7) {
-            const hasFlat5 = scale.includes(6) && !scale.includes(7);
-            return result(getFrequency(clampAndNormalize(baseRoot + (hasFlat5 ? 6 : 7))), null, velocity);
+        // Soloist Space: Stick strictly to root-5th foundation if soloist is busy
+        // or if we are on beat 3 (the secondary anchor)
+        const isSecondaryAnchor = (intBeat === 2);
+        if ((isSoloistBusy && Math.random() < 0.9) || (isSecondaryAnchor && Math.random() < 0.6)) {
+             const hasFlat5 = scale.includes(6) && !scale.includes(7);
+             const note = Math.random() < 0.7 ? baseRoot : baseRoot + (hasFlat5 ? 6 : 7);
+             return result(getFrequency(clampAndNormalize(note)), null, velocity);
         }
 
         const dir = (prevMidi && prevMidi > baseRoot + 7) ? -1 : (prevMidi < baseRoot ? 1 : (Math.random() > 0.5 ? 1 : -1));
@@ -518,8 +566,15 @@ export function isBassActive(style, step, stepInChord) {
     }
     
     if (style === 'quarter') {
+        // Quarter notes (Beats 1, 2, 3, 4) are the foundation.
         if (stepInChord % 4 === 0) return true;
-        if (stepInChord % 2 === 0) return true; 
+        
+        // Eighth-note skips: only if intensity is high enough or soloist is resting.
+        // We handle the specific note generation logic in getBassNote.
+        if (stepInChord % 2 === 0) {
+             const busyFactor = sb.busySteps > 0 ? 0.1 : 0.4;
+             return Math.random() < (busyFactor + ctx.bandIntensity * 0.2);
+        }
         return false;
     }
     
