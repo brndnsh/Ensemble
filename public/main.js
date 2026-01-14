@@ -176,6 +176,25 @@ function advanceGlobalStep() {
     ctx.nextNoteTime += duration;
     ctx.unswungNextNoteTime += sixteenth;
     ctx.step++;
+
+    // --- Measure Boundary Sync & Pending Genre Changes ---
+    const stepsPerMeasure = getStepsPerMeasure();
+    if (ctx.step % stepsPerMeasure === 0) {
+        if (gb.pendingGenreFeel) {
+            const payload = gb.pendingGenreFeel;
+            gb.genreFeel = payload.feel;
+            if (payload.swing !== undefined) gb.swing = payload.swing;
+            if (payload.sub !== undefined) gb.swingSub = payload.sub;
+            gb.pendingGenreFeel = null;
+
+            // Re-sync all procedural engines to the new feel
+            syncWorker();
+            flushBuffers();
+            
+            // Visual feedback of the sync boundary
+            triggerFlash(0.15);
+        }
+    }
 }
 
 function getChordAtStep(step) {

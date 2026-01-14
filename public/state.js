@@ -185,6 +185,7 @@ export const gb = {
     cachedSteps: [],
     genreFeel: 'Rock',
     lastSmartGenre: 'Rock',
+    pendingGenreFeel: null,
     fillActive: false,
     fillSteps: {},
     activeTab: 'smart',
@@ -359,9 +360,14 @@ export function dispatch(action, payload) {
             break;
         case 'SET_GENRE_FEEL':
             // payload: { feel: 'Rock', swing: 0, sub: '8th' }
-            gb.genreFeel = payload.feel;
-            if (payload.swing !== undefined) gb.swing = payload.swing;
-            if (payload.sub !== undefined) gb.swingSub = payload.sub;
+            if (ctx.isPlaying) {
+                gb.pendingGenreFeel = payload;
+            } else {
+                gb.genreFeel = payload.feel;
+                if (payload.swing !== undefined) gb.swing = payload.swing;
+                if (payload.sub !== undefined) gb.swingSub = payload.sub;
+                gb.pendingGenreFeel = null;
+            }
             break;
         case 'TRIGGER_FILL':
             gb.fillSteps = payload.steps;
