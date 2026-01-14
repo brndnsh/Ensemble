@@ -547,6 +547,12 @@ self.onmessage = (e) => {
                 bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step;
                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
                 sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;
+                
+                // Reset accompaniment memory
+                compingState.lastChordIndex = -1;
+                compingState.lockedUntil = 0;
+                compingState.rhythmPattern = [];
+
                 fillBuffers(data.step);
                 break;
             case 'export': handleExport(data); break;

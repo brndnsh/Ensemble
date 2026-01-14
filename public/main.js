@@ -157,6 +157,11 @@ function applyPendingGenre() {
     if (payload.swing !== undefined) gb.swing = payload.swing;
     if (payload.sub !== undefined) gb.swingSub = payload.sub;
     if (payload.genreName) gb.lastSmartGenre = payload.genreName;
+    
+    // Crucial: Load the new drum pattern so it doesn't "stick"
+    if (payload.drum) {
+        loadDrumPreset(payload.drum);
+    }
 
     gb.pendingGenreFeel = null;
     updateGenreUI(0);
