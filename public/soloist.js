@@ -70,53 +70,53 @@ const LICK_LIBRARY = {
 };
 
 const STYLE_CONFIG = {
-    scalar: {
-        restBase: 0.3, 
-        restGrowth: 0.06,
-        cells: [0, 2, 11], // 8ths, quarters, halfs
-        registerSoar: 7,
+    scalar: { // Standard Rock/Pop
+        restBase: 0.2, // More driving, less resting than Blues
+        restGrowth: 0.05,
+        cells: [0, 2, 11, 1], // Added 16ths (1) for energy
+        registerSoar: 10, // Wider range (Arena Rock)
         tensionScale: 0.6, 
-        timingJitter: 12,
-        maxNotesPerPhrase: 10,
-        doubleStopProb: 0.0,
-        anticipationProb: 0.15,
-        targetExtensions: [2, 9] // 9, 13
+        timingJitter: 8, // Tighter than Blues
+        maxNotesPerPhrase: 16,
+        doubleStopProb: 0.1,
+        anticipationProb: 0.1,
+        targetExtensions: [2, 9] 
     },
     shred: {
-        restBase: 0.15,
-        restGrowth: 0.04,
-        cells: [1, 3, 4, 7], // fast cells
-        registerSoar: 14,
-        tensionScale: 0.2,
-        timingJitter: 5,
-        maxNotesPerPhrase: 24,
+        restBase: 0.1,
+        restGrowth: 0.02,
+        cells: [1, 3, 4, 7, 0], 
+        registerSoar: 16,
+        tensionScale: 0.3,
+        timingJitter: 4,
+        maxNotesPerPhrase: 32,
         doubleStopProb: 0.05,
         anticipationProb: 0.05,
         targetExtensions: [2]
     },
     blues: {
-        restBase: 0.5, // Increased from 0.45
-        restGrowth: 0.12,
-        cells: [2, 11, 0, 12, 6], // Added 12 (Single offbeat 8th)
-        registerSoar: 7,
+        restBase: 0.6, 
+        restGrowth: 0.15,
+        cells: [2, 11, 0, 12, 6], 
+        registerSoar: 4, 
         tensionScale: 0.8,
-        timingJitter: 20,
-        maxNotesPerPhrase: 6,
-        doubleStopProb: 0.15,
+        timingJitter: 25, 
+        maxNotesPerPhrase: 5, 
+        doubleStopProb: 0.2, 
         anticipationProb: 0.3,
-        targetExtensions: [9, 10] // 6, b7
+        targetExtensions: [9, 10] 
     },
     neo: {
-        restBase: 0.5,
-        restGrowth: 0.1,
-        cells: [11, 2, 6, 10, 12], // Added 12
-        registerSoar: 7,
-        tensionScale: 0.6,
-        timingJitter: 30,
+        restBase: 0.45,
+        restGrowth: 0.12,
+        cells: [11, 2, 6, 10, 12, 14], // Added 14 (Syncopated 16th)
+        registerSoar: 6,
+        tensionScale: 0.7,
+        timingJitter: 45, // Extremely laid back ("Drunken")
         maxNotesPerPhrase: 8,
-        doubleStopProb: 0.1,
-        anticipationProb: 0.4,
-        targetExtensions: [2, 6, 9, 11] // 9, #11, 13, maj7
+        doubleStopProb: 0.15,
+        anticipationProb: 0.45,
+        targetExtensions: [2, 6, 9, 11] 
     },
     minimal: {
         restBase: 0.65,
@@ -196,6 +196,13 @@ export function getScaleForChord(chord, nextChord, style) {
             ? [0, 2, 3, 5, 6, 7, 10] 
             : [0, 2, 3, 4, 5, 6, 7, 9, 10];
         
+        // BB Box Logic: Add Major 3rd (4) and 6th (9) availability over Major chords
+        // allowing the soloist to choose between b3 (3) and 3 (4) for expression.
+        if (style === 'blues' && !['minor', 'halfdim', 'dim'].includes(chord.quality)) {
+            if (!base.includes(4)) base.push(4); // Major 3rd
+            if (!base.includes(9)) base.push(9); // Major 6th
+        }
+
         // If tension is high, allow Major 7th (11) for that sophisticated blues "crunch"
         if (sb.tension > 0.7) base.push(11);
         return base.sort((a,b)=>a-b);
@@ -574,7 +581,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                     if (sb.qaState === 'Answer' && (interval === 0 || interval === 3 || interval === 4)) weight += 15;
                 }
             }
-            if (sb.qaState === 'Answer' && interval === 0) weight += 10;
+            // Significantly boost root resolution in Answer state for "Call and Response" clarity
+            if (sb.qaState === 'Answer' && interval === 0) weight += 40; // Increased from 10
 
             candidates.push({ midi: m, weight: Math.max(0.1, weight) });
         }
@@ -603,11 +611,19 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (intervalFromRoot === 4 && ['blues', 'neo', 'bird', 'minimal'].includes(style)) {
         if (Math.random() < 0.4) bendStartInterval = 1; 
     }
+    // Blues Curl: Bend b3 slightly sharp (Quarter tone or Half tone)
+    if (intervalFromRoot === 3 && style === 'blues') {
+         if (Math.random() < 0.5) bendStartInterval = 0.5; // Quarter tone curl
+    }
     if (intervalFromRoot === 7 && style === 'blues') {
          if (Math.random() < 0.3) bendStartInterval = 1; 
     }
     if (intervalFromRoot === 0 && ['neo', 'bird', 'blues'].includes(style) && isStrongBeat) {
          if (Math.random() < 0.35) bendStartInterval = 0.5; 
+    }
+    // Rock Unison Bend Simulation (Bend 4th to 5th or b7 to Root)
+    if ((intervalFromRoot === 5 || intervalFromRoot === 10) && (style === 'scalar' || style === 'shred')) {
+        if (Math.random() < 0.3) bendStartInterval = 2; // Whole tone bend
     }
 
     const phraseProg = Math.min(1, sb.currentPhraseSteps / 32);
@@ -618,6 +634,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     let velocity = baseVel + (arch * dynRange);
     velocity += (Math.random() - 0.5) * 0.1;
     if (isStrongBeat) velocity *= 1.1;
+
+    // Jazz Ghost Notes
+    if (style === 'bird' && !isStrongBeat && Math.random() < 0.25) {
+        velocity *= 0.4; // Ghost note
+    }
 
     let timingOffset = (Math.random() - 0.5) * config.timingJitter;
 
@@ -637,7 +658,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
     let notes = [];
     if (Math.random() < (config.doubleStopProb || 0)) {
-        const dsIntervals = [5, 7, 9, 12];
+        let dsIntervals = [5, 7, 9, 12];
+        if (style === 'blues') dsIntervals = [3, 4, 5, 9, 12]; // SRV: 3rds, 4ths, 6ths
+        if (style === 'scalar' || style === 'shred') dsIntervals = [7, 12]; // Rock: Power chords/Octaves
+        if (style === 'neo') dsIntervals = [4, 5, 9, 11]; // Neo: 3rds, 4ths, 6ths, Maj7s
+        if (style === 'bossa') dsIntervals = [4, 9]; // Bossa: 3rds, 6ths
+
         const dsInt = dsIntervals[Math.floor(Math.random() * dsIntervals.length)];
         const secondMidi = selectedMidi + (Math.random() > 0.5 ? dsInt : -dsInt);
         if (secondMidi > 40 && secondMidi < 100) {

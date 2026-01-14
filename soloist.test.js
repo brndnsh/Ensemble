@@ -71,8 +71,13 @@ describe('Soloist Engine', () => {
             if (note) break;
         }
         expect(note).not.toBeNull();
-        expect(note).toHaveProperty('midi');
-        expect(note).toHaveProperty('velocity');
+        if (Array.isArray(note)) {
+            expect(note[0]).toHaveProperty('midi');
+            expect(note[0]).toHaveProperty('velocity');
+        } else {
+            expect(note).toHaveProperty('midi');
+            expect(note).toHaveProperty('velocity');
+        }
     });
 
     it('should use Mixolydian (b7) for dominant chords', () => {
