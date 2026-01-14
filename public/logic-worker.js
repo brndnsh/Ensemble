@@ -544,6 +544,7 @@ self.onmessage = (e) => {
                     }
                     if (syncData.ctx) Object.assign(ctx, syncData.ctx);
                 }
+                
                 bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step;
                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
                 sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;
@@ -552,6 +553,10 @@ self.onmessage = (e) => {
                 compingState.lastChordIndex = -1;
                 compingState.lockedUntil = 0;
                 compingState.rhythmPattern = [];
+
+                if (data.primeSteps > 0) {
+                    handlePrime(data.primeSteps);
+                }
 
                 fillBuffers(data.step);
                 break;
@@ -572,6 +577,14 @@ function handlePrime(steps) {
     if (ctx.workerLogging) {
         console.log(`[Worker] Priming engine for ${stepsToPrime} steps...`);
     }
+
+    // Reset soloist state for priming
+    sb.isResting = false;
+    sb.busySteps = 0;
+    sb.currentPhraseSteps = 0;
+    sb.motifBuffer = [];
+    sb.hookBuffer = [];
+    sb.isReplayingMotif = false;
 
     const start = performance.now();
 

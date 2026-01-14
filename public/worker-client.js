@@ -42,8 +42,8 @@ export function stopWorker() {
     if (timerWorker) timerWorker.postMessage({ type: 'stop' });
 }
 
-export function flushWorker(step, syncData = null) {
-    if (timerWorker) timerWorker.postMessage({ type: 'flush', data: { step, syncData } });
+export function flushWorker(step, syncData = null, primeSteps = 0) {
+    if (timerWorker) timerWorker.postMessage({ type: 'flush', data: { step, syncData, primeSteps } });
 }
 
 export function requestBuffer(step) {

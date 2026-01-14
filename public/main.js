@@ -80,12 +80,11 @@ function togglePlay() {
         }
 
         ctx.step = 0;
-        flushBuffers();
-        syncWorker();
-        // Prime the soloist with 2 full passes of the progression to generate ideas
-        if (arranger.totalSteps > 0) {
-            primeWorker(arranger.totalSteps * 2);
-        }
+        syncWorker(); 
+        // Atomic flush and prime: ensures the worker state is primed before the first fillBuffers call
+        const primeSteps = (arranger.totalSteps > 0) ? arranger.totalSteps * 2 : 0;
+        flushBuffers(primeSteps);
+        
         if (!iosAudioUnlocked) {
             silentAudio.play().catch(e => console.log("Audio unlock failed", e));
             iosAudioUnlocked = true;

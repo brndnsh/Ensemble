@@ -297,7 +297,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const beatInMeasure = Math.floor(measureStep / stepsPerBeat);
     const intensity = ctx.bandIntensity || 0.5;
     
-    // --- 1. Cycle & Tension Tracking ---
+    // --- 1. Physical Duration Gate ---
+    // If we are still "busy" from the previous note's duration, decrement and skip.
+    // This is the primary mechanism for preventing overlapping monophonic notes.
+    if (sb.busySteps > 0) {
+        sb.busySteps--;
+        return null;
+    }
+    
+    // --- 2. Cycle & Tension Tracking ---
     
     const progressionBars = (arranger.progression && arranger.progression.length > 0) ? arranger.progression.length / stepsPerMeasure : 4;
     const CYCLE_BARS = (progressionBars > 0 && progressionBars <= 8) ? progressionBars : 4;
@@ -371,7 +379,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             sb.isResting = false;
             sb.currentPhraseSteps = 0;
             sb.notesInPhrase = 0;
-            sb.busySteps = 0; 
             sb.qaState = sb.qaState === 'Question' ? 'Answer' : 'Question';
 
             const hasHook = sb.hookBuffer && sb.hookBuffer.length > 0;
@@ -408,16 +415,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (!sb.isResting && sb.currentPhraseSteps > 4 && Math.random() < restProb) {
         sb.isResting = true;
         sb.currentPhraseSteps = 0;
-        sb.busySteps = 0;
         return null;
     }
     
     sb.currentPhraseSteps++;
-
-    if (sb.busySteps > 0) {
-        sb.busySteps--;
-        return null;
-    }
 
     // --- 3. Harmonization Context (Target Chord) ---
 
