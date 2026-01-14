@@ -864,7 +864,7 @@ function init() {
         viz = new UnifiedVisualizer('unifiedVizContainer'); viz.addTrack('bass', 'var(--success-color)'); viz.addTrack('soloist', 'var(--soloist-color)');
         setInstrumentControllerRefs(() => scheduler(), viz);
         initTabs(); setupPanelMenus(); renderGrid(); renderMeasurePagination(switchMeasure);
-        if (!savedState || !savedState.gb || !savedState.gb.pattern) loadDrumPreset('Standard');
+        if (!savedState || !savedState.gb || !savedState.gb.pattern) loadDrumPreset('Basic Rock');
         setupPresets({ togglePlay }); setupUIHandlers({ togglePlay, previewChord: window.previewChord, init, viz, silentAudio, iosAudioUnlocked, POWER_CONFIG: getPowerConfig() });
         renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, togglePlay);
         renderUserDrumPresets(switchMeasure); loadFromUrl(); renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
