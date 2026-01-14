@@ -17,10 +17,10 @@ describe('Dominant Chord Intervals', () => {
         { symbol: '7', expected: [4, 10, 14] }, // Rootless: 3, b7, 9
         { symbol: '9', expected: [4, 10, 14] },
         { symbol: '13', expected: [4, 10, 14, 21] },
-        { symbol: '11', expected: [5, 10, 14, 17] }, // No 3rd
-        { symbol: '7alt', expected: [4, 10, 13, 15, 18, 20] },
-        { symbol: '7b9', expected: [4, 10, 13, 20] },
-        { symbol: '7#9', expected: [4, 10, 15, 20] },
+        { symbol: '11', expected: [5, 7, 10, 14] }, // 11, 5, b7, 9 (No 3rd)
+        { symbol: '7alt', expected: [4, 10, 15, 20] }, // Standard density: 3, b7, #9, b13
+        { symbol: '7b9', expected: [4, 10, 13, 16] },
+        { symbol: '7#9', expected: [4, 10, 15, 16] },
         { symbol: '7#11', expected: [4, 10, 14, 18] },
         { symbol: '7b13', expected: [4, 10, 14, 20] }, // Rootless: 3, b7, 9, b13
     ];

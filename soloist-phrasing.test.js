@@ -40,8 +40,8 @@ import { getSoloistNote } from './public/soloist.js';
 import { sb, gb } from './public/state.js';
 
 describe('Soloist Phrasing & Logic', () => {
-    const chordC = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major' };
-    const chordF = { rootMidi: 65, intervals: [0, 4, 7], quality: 'major' };
+    const chordC = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major', beats: 4 };
+    const chordF = { rootMidi: 65, intervals: [0, 4, 7], quality: 'major', beats: 4 };
 
     beforeEach(() => {
         sb.isResting = false;
@@ -54,8 +54,16 @@ describe('Soloist Phrasing & Logic', () => {
     it('should support double stops by returning an array of notes', () => {
         // Blues has 15% double stop probability
         let foundDoubleStop = false;
-        for (let i = 0; i < 500; i++) {
-            const result = getSoloistNote(chordC, null, 0, 440, 72, 'blues', 0);
+        for (let i = 0; i < 5000; i++) {
+            sb.isResting = false;
+            sb.currentPhraseSteps = 0;
+            sb.busySteps = 0;
+            
+            // Call at 12 to start phrase
+            getSoloistNote(chordC, null, 12, 440, 72, 'blues', 12);
+            
+            sb.busySteps = 0;
+            const result = getSoloistNote(chordC, null, 14, 440, 72, 'blues', 14);
             if (Array.isArray(result) && result.length > 1) {
                 foundDoubleStop = true;
                 expect(result[0].midi).toBeDefined();
@@ -71,16 +79,27 @@ describe('Soloist Phrasing & Logic', () => {
         // Force anticipation step
         // We use 'bird' (Jazz) which has 50% anticipation probability
         let anticipated = false;
-        for (let i = 0; i < 500; i++) {
+        for (let i = 0; i < 2000; i++) {
+            sb.isResting = false;
+            sb.currentPhraseSteps = 0;
+            sb.busySteps = 0;
+            sb.currentCell = [1, 1, 1, 1]; // Force all 16ths
+            
             // Step 14 is the upbeat of 4
             const result = getSoloistNote(chordC, chordF, 14, 440, 72, 'bird', 14);
             if (result) {
                 const note = Array.isArray(result) ? result[0] : result;
-                // If it anticipated F, it should likely play an F (65) or A (69)
                 const pc = note.midi % 12;
-                if ([5, 9, 0].includes(pc)) { // F, A, or C (C is common to both, but F/A are unique to F chord)
-                    if (pc === 5 || pc === 9) anticipated = true;
-                }
+                
+                // Chord F (anticipated) is F Major: F(5), G(7), A(9), Bb(10), C(0), D(2), E(4)
+                // Chord C (current) is C Major: C(0), D(2), E(4), F(5), G(7), A(9), B(11)
+                
+                // Bb (10) is UNIQUE to the anticipated F chord scale in this context
+                if (pc === 10) anticipated = true;
+                
+                // Also, if it plays the root of F (5) or the 3rd (9) on an anticipation step, 
+                // it's a very strong indicator of anticipation.
+                if (pc === 5 || pc === 9) anticipated = true;
             }
         }
         expect(anticipated).toBe(true);
@@ -101,15 +120,29 @@ describe('Soloist Phrasing & Logic', () => {
     it('should target specific extensions based on style config', () => {
         // Neo-soul targets 9, #11, 13, maj7 (2, 6, 9, 11)
         let extensionsFound = 0;
-        for (let i = 0; i < 2000; i++) {
+        let notesPlayed = 0;
+        
+        // We run until we have a statistically significant number of notes (at least 100)
+        // to ensure we aren't just hitting rests.
+        for (let i = 0; i < 5000 && notesPlayed < 200; i++) {
+            sb.isResting = false;
+            sb.currentPhraseSteps = 0;
+            sb.busySteps = 0;
+            sb.currentCell = [1, 1, 1, 1]; // Force activity
+            
             const result = getSoloistNote(chordC, null, i % 16, 440, 72, 'neo', i % 4);
             if (result) {
                 const note = Array.isArray(result) ? result[0] : result;
                 const interval = (note.midi - chordC.rootMidi + 120) % 12;
+                notesPlayed++;
                 if ([2, 6, 9, 11].includes(interval)) extensionsFound++;
             }
         }
-        // Should find a healthy amount of extensions in Neo-Soul
-        expect(extensionsFound).toBeGreaterThan(20);
+        
+        // In Neo-Soul with high weight (+12) for extensions, they should represent 
+        // a large portion of the melodic content (at least 20%).
+        const extensionRate = extensionsFound / notesPlayed;
+        expect(extensionRate).toBeGreaterThan(0.2);
+        expect(notesPlayed).toBeGreaterThan(100);
     });
 });

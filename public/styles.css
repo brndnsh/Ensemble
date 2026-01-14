@@ -1099,7 +1099,7 @@ h2 {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 9998;
+    z-index: 10002;
     border: none;
     border-radius: 0;
     padding: 0;
@@ -1121,7 +1121,8 @@ h2 {
     display: none;
 }
 
-.chord-maximized #panel-arranger .panel-header-controls > *:not(#maximizeChordBtn) {
+.chord-maximized #panel-arranger .panel-header-controls > *:not(.key-controls),
+.chord-maximized #panel-arranger .key-controls > *:not(#maximizeChordBtn) {
     display: none;
 }
 
