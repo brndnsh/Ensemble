@@ -51,6 +51,7 @@ vi.mock('./public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('./public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() } }));
 
 import { getSoloistNote, getScaleForChord } from './public/soloist.js';
+import { getBassNote } from './public/bass.js';
 import { validateProgression } from './public/chords.js';
 import { arranger, sb } from './public/state.js';
 
@@ -144,5 +145,83 @@ describe('Jazz Standard Test: Autumn Leaves', () => {
         
         // Phrygian Dominant: [0, 1, 4, 5, 7, 8, 10]
         expect(scale).toEqual([0, 1, 4, 5, 7, 8, 10]);
+    });
+
+    it('should generate a valid walking bass line over the full progression', () => {
+        const progression = arranger.progression;
+        let prevMidi = 38; 
+        
+        // Am7 | D7 | Gmaj7 | Cmaj7 | F#m7b5 | B7alt | Em7 | E7
+        for (let bar = 0; bar < 8; bar++) {
+            const chordEntry = arranger.stepMap.find(m => (bar * 16) >= m.start && (bar * 16) < m.end);
+            const currentChord = chordEntry.chord;
+            const nextChord = arranger.stepMap.find(m => ((bar + 1) * 16) >= m.start && ((bar + 1) * 16) < m.end)?.chord;
+
+            for (let beat = 0; beat < 4; beat++) {
+                const step = (bar * 16) + (beat * 4);
+                const result = getBassNote(currentChord, nextChord, beat, 440 * Math.pow(2, (prevMidi - 69) / 12), 38, 'quarter', 0, step, beat * 4);
+                
+                expect(result).not.toBeNull();
+                const midi = result.midi;
+
+                // Beat 1: Root (mostly)
+                if (beat === 0) {
+                    expect(midi % 12).toBe(currentChord.rootMidi % 12);
+                }
+
+                // Register Check: Should stay in a musical bass range
+                expect(midi).toBeGreaterThanOrEqual(28); // E1
+                expect(midi).toBeLessThanOrEqual(55);    // G3
+
+                prevMidi = midi;
+            }
+        }
+    });
+
+    it('should generate pro-level rootless voicings for the accompaniment', () => {
+        const progression = arranger.progression;
+        // Am7 | D7 | Gmaj7 | Cmaj7 | F#m7b5 | B7alt | Em7 | E7
+        
+        // 1. Am7 (ii) - Standard jazz voicing usually has 3, 7, 9
+        const am7 = progression[0];
+        // intervals for minor in Jazz with rootless enabled: [3, 10, 14] or similar
+        // Am7 root is 57 (A2) or 69 (A3). 
+        // rootless intervals for Am7 (quality 'minor', is7th true): [3, 10, 14] -> C, G, B
+        expect(am7.intervals).toContain(3);  // b3 (C)
+        expect(am7.intervals).toContain(10); // b7 (G)
+        expect(am7.intervals).not.toContain(0); // Rootless (no A)
+
+        // 2. D7 (V) - Should have 3, b7, 9
+        const d7 = progression[1];
+        expect(d7.intervals).toContain(4);  // 3 (F#)
+        expect(d7.intervals).toContain(10); // b7 (C)
+        expect(d7.intervals).not.toContain(0); // Rootless (no D)
+
+        // 3. B7alt - Check for altered extensions
+        const b7alt = progression[5];
+        // quality '7alt' intervals: [0, 4, 10, 13, 15, 18, 20] -> Rootless often 3, b7, extensions
+        expect(b7alt.quality).toBe('7alt');
+        expect(b7alt.intervals).toContain(4);  // 3 (D#)
+        expect(b7alt.intervals).toContain(10); // b7 (A)
+        // b9 (13) or #9 (15)
+        const hasAltExtension = b7alt.intervals.includes(13) || b7alt.intervals.includes(15);
+        expect(hasAltExtension).toBe(true);
+    });
+
+    it('should maintain smooth voice leading (minimum average drift) across the A section', () => {
+        const progression = arranger.progression;
+        let lastAvg = null;
+
+        progression.forEach((chord, i) => {
+            const currentMidis = chord.freqs.map(f => Math.round(12 * Math.log2(f / 440) + 69));
+            const currentAvg = currentMidis.reduce((a, b) => a + b, 0) / currentMidis.length;
+
+            if (lastAvg !== null) {
+                const drift = Math.abs(currentAvg - lastAvg);
+                // Voice leading usually keeps drift under 7 semitones (a perfect 5th)
+                expect(drift).toBeLessThan(7);
+            }
+            lastAvg = currentAvg;
+        });
     });
 });

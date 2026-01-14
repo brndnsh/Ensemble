@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Ensemble</title>
     <meta name="color-scheme" content="light dark">
     <meta name="darkreader-lock">
@@ -31,7 +31,7 @@
             <button id="tapBtn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; height: auto;">TAP</button>
         </div>
 
-        <button id="settingsBtn" style="padding: 0.5rem;" aria-label="Settings">⚙️</button>
+        <button id="settingsBtn" style="padding: 0.5rem; background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" aria-label="Settings">⚙️</button>
     </div>
 </header>
 
@@ -40,7 +40,7 @@
     <!-- MAIN COLUMN (Left) -->
     <div class="layout-column main-column" id="col-main">
         <!-- ARRANGER PANEL -->
-        <div class="panel dashboard-panel" id="panel-arranger" data-id="arranger">
+        <div class="panel dashboard-panel active-mobile" id="panel-arranger" data-id="arranger">
             <div class="panel-header chord-panel-header">
                 <div class="panel-title-group">
                     <h2>Arranger</h2>
@@ -165,7 +165,7 @@
     <!-- SIDEBAR COLUMN (Right) -->
     <div class="layout-column sidebar-column" id="col-sidebar">
         <!-- CHORDS PANEL -->
-        <div class="panel dashboard-panel instrument-panel active-mobile" id="panel-chords" data-id="chords">
+        <div class="panel dashboard-panel instrument-panel" id="panel-chords" data-id="chords">
             <div class="panel-header chord-panel-header">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <h2>Chords</h2>
@@ -207,19 +207,6 @@
                                 <option value="standard" selected>Standard (4 notes)</option>
                                 <option value="rich">Rich (5+ notes)</option>
                             </select>
-                        </div>
-                        <div style="margin-bottom: 1rem;">
-                            <label style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; cursor: pointer;">
-                                <input type="checkbox" id="practiceModeCheck">
-                                Soloist/Bass Practice
-                            </label>
-                        </div>
-                        <div>
-                            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
-                                <span>Register</span>
-                                <span id="octaveLabel" style="color: var(--accent-color); font-weight: bold;">F4</span>
-                            </label>
-                            <input type="range" id="octaveSlider" min="32" max="92" value="65" style="width: 100%;" aria-label="Chord Octave">
                         </div>
                     </div>
                     <div>
@@ -298,10 +285,11 @@
                         <button class="genre-btn" data-genre="Funk">Funk</button>
                         <button class="genre-btn" data-genre="Disco">Disco</button>
                         <button class="genre-btn" data-genre="Blues">Blues</button>
-                                    <button class="genre-btn" data-genre="Neo-Soul">Neo-Soul</button>
-                                    <button class="genre-btn" data-genre="Reggae">Reggae</button>
-                                    <button class="genre-btn" data-genre="Acoustic">Acoustic</button>
-                                    <button class="genre-btn" data-genre="Bossa">Bossa</button>                    </div>
+                        <button class="genre-btn" data-genre="Neo-Soul">Neo-Soul</button>
+                        <button class="genre-btn" data-genre="Reggae">Reggae</button>
+                        <button class="genre-btn" data-genre="Acoustic">Acoustic</button>
+                        <button class="genre-btn" data-genre="Bossa">Bossa</button>
+                    </div>
                 </div>
 
                 <div class="smart-control-group" style="margin-bottom: 1.5rem;">
@@ -310,7 +298,8 @@
                         <div style="display: flex; gap: 1rem; align-items: center;">
                             <label style="font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;" title="Automatically vary intensity over time">
                                 <input type="checkbox" id="autoIntensityCheck" checked> Auto
-                            </label>                            <span id="intensityValue" style="color: var(--accent-color); font-weight: bold; font-size: 0.9rem;">50%</span>
+                            </label>
+                            <span id="intensityValue" style="color: var(--accent-color); font-weight: bold; font-size: 0.9rem;">50%</span>
                         </div>
                     </div>
                     <input type="range" id="intensitySlider" min="0" max="100" value="50" style="width: 100%; height: 6px;">
@@ -407,19 +396,10 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <div>
                         <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
-                        <div>
-                            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
-                                <span>Register</span>
-                                <span id="bassOctaveLabel" style="color: var(--accent-color); font-weight: bold;">F2</span>
-                            </label>
-                            <input type="range" id="bassOctaveSlider" min="24" max="60" value="38" style="width: 100%;" aria-label="Bass Octave">
-                        </div>
-                        <div style="text-align: right; margin-top: 0.5rem;">
-                                <span id="bassHeaderReg" style="display:none;"></span>
-                        </div>
                     </div>
                     <div>
                         <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Mixer</h4>
+
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Volume</label>
                             <input type="range" id="bassVolume" min="0" max="1" step="0.05" value="0.45" style="width: 100%;" aria-label="Bass Volume">
@@ -469,19 +449,10 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <div>
                         <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
-<div style="flex: 1;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-        <span>Register</span>
-        <span id="soloistOctaveLabel">C5</span>
-    </div>
-    <input type="range" id="soloistOctaveSlider" min="48" max="91" value="72" style="width: 100%;" aria-label="Soloist Octave">
-</div>
-                            <div style="text-align: right; margin-top: 0.5rem;">
-                                <span id="soloistHeaderReg" style="display:none;"></span>
-                        </div>
                     </div>
                     <div>
                         <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Mixer</h4>
+
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Volume</label>
                             <input type="range" id="soloistVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Soloist Volume">
@@ -526,6 +497,10 @@
                     <label style="display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" id="metronomeCheck">
                         Metronome
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="practiceModeCheck" checked>
+                        Soloist/Bass Practice
                     </label>
                 </div>
 

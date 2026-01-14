@@ -131,13 +131,13 @@ const STYLE_CONFIG = {
         targetExtensions: [2, 7]
     },
     bird: {
-        restBase: 0.5, // Increased from 0.45
-        restGrowth: 0.1,
-        cells: [0, 12, 2], // Switched to 8th-note heavy Bebop phrasing: 8ths, offbeat 8th, quarters. Removed 16th syncopation (6).
+        restBase: 0.3, 
+        restGrowth: 0.05,
+        cells: [0, 12, 2, 7], // 8ths, offbeat 8th, quarters, and bebop syncopation
         registerSoar: 5,
         tensionScale: 0.7,
         timingJitter: 15,
-        maxNotesPerPhrase: 10, // Reduced from 12
+        maxNotesPerPhrase: 16, 
         doubleStopProb: 0.0,
         anticipationProb: 0.5,
         targetExtensions: [2, 5, 9] // 9, 11, 13
@@ -467,12 +467,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             // Inertia
         } else {
             let cellPool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
-            if (ctx.bpm > 140 && style !== 'shred') {
+            if (ctx.bpm > 140 && style !== 'shred' && style !== 'bird') {
                 const forbiddenIdx = [1, 3, 4, 5, 6, 7, 8, 9, 10, 14];
                 cellPool = cellPool.filter((_, idx) => !forbiddenIdx.includes(idx));
                 if (ctx.bpm > 180) cellPool = cellPool.filter((_, idx) => [2, 11].includes(idx));
                 if (cellPool.length === 0) cellPool = [RHYTHMIC_CELLS[2]]; 
-            } else if (ctx.bpm > 120 && style !== 'shred') {
+            } else if (ctx.bpm > 120 && style !== 'shred' && style !== 'bird') {
                 cellPool = cellPool.filter((_, idx) => ![1, 3, 4, 7, 9].includes(idx));
             }
             if (sb.tension > 0.7 && style === 'shred') cellPool = [RHYTHMIC_CELLS[1]]; 
