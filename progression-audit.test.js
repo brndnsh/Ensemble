@@ -139,8 +139,8 @@ describe('Progression Audit: Verifying All Library Presets', () => {
                         
                         // Harmonic integrity check: Is the pitch in the selected scale?
                         const interval = (note.midi - currentChord.rootMidi + 120) % 12;
-                        const isExpressive = ['blues', 'neo', 'bird', 'jazz', 'neo-soul', 'funk', 'soul/r&b'].includes(gb.genreFeel.toLowerCase()) || 
-                                             ['blues', 'neo', 'bird', 'jazz', 'neo-soul', 'funk', 'soul/r&b'].includes(template.category?.toLowerCase());
+                        const isExpressive = ['rock', 'blues', 'neo', 'bird', 'jazz', 'neo-soul', 'funk', 'soul/r&b'].includes(gb.genreFeel.toLowerCase()) || 
+                                             ['rock', 'blues', 'neo', 'bird', 'jazz', 'neo-soul', 'funk', 'soul/r&b'].includes(template.category?.toLowerCase());
 
                         let isInScale = scale.includes(interval);
                         

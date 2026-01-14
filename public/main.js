@@ -658,26 +658,37 @@ function scheduleBass(chordData, step, time) {
 }
 
 function scheduleSoloist(chordData, step, time, unswungTime) {
-    const noteEntry = sb.buffer.get(step);
+    const notes = sb.buffer.get(step);
     sb.buffer.delete(step);
-    if (noteEntry && noteEntry.freq) {
-        const { freq, durationSteps, velocity, bendStartInterval, style, timingOffset, noteType } = noteEntry;
-        const { chord } = chordData;
-        const offsetS = (timingOffset || 0); // timingOffset is in seconds from standardized object
-        sb.lastPlayedFreq = freq;
-        const midi = noteEntry.midi || getMidi(freq);
-        const { name, octave } = midiToNote(midi);
-        const spb = 60.0 / ctx.bpm;
-        const duration = (durationSteps || 4) * 0.25 * spb;
-        const vel = (velocity || 1.0) * (ctx.conductorVelocity || 1.0);
-        const playTime = unswungTime + offsetS;
-        
-        playSoloNote(freq, playTime, duration, vel, bendStartInterval || 0, style);
-        
-        if (vizState.enabled) {
-            ctx.drawQueue.push({ type: 'soloist_vis', name, octave, midi, time: playTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration, noteType });
-        }
-        sb.lastNoteEnd = playTime + duration;
+    
+    if (notes && notes.length > 0) {
+        // Handle array of notes (Double Stops)
+        notes.forEach(noteEntry => {
+            if (noteEntry && noteEntry.freq) {
+                const { freq, durationSteps, velocity, bendStartInterval, style, timingOffset, noteType } = noteEntry;
+                const { chord } = chordData;
+                const offsetS = (timingOffset || 0); 
+                
+                // Only update lastPlayedFreq for the main note to ensure melodic continuity
+                if (!noteEntry.isDoubleStop) {
+                    sb.lastPlayedFreq = freq;
+                }
+                
+                const midi = noteEntry.midi || getMidi(freq);
+                const { name, octave } = midiToNote(midi);
+                const spb = 60.0 / ctx.bpm;
+                const duration = (durationSteps || 4) * 0.25 * spb;
+                const vel = (velocity || 1.0) * (ctx.conductorVelocity || 1.0);
+                const playTime = unswungTime + offsetS;
+                
+                playSoloNote(freq, playTime, duration, vel, bendStartInterval || 0, style);
+                
+                if (vizState.enabled) {
+                    ctx.drawQueue.push({ type: 'soloist_vis', name, octave, midi, time: playTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration, noteType });
+                }
+                sb.lastNoteEnd = playTime + duration;
+            }
+        });
     }
 }
 
@@ -930,9 +941,19 @@ function init() {
         
         // --- WORKER INIT ---
         initWorker(() => scheduler(), (notes) => { 
+            const sbUpdatedSteps = new Set();
             notes.forEach(n => { 
                 if (n.module === 'bb') bb.buffer.set(n.step, n); 
-                else if (n.module === 'sb') sb.buffer.set(n.step, n); 
+                else if (n.module === 'sb') {
+                    // Support polyphony for soloist (Double Stops)
+                    // If this is the first time we see this step in this batch, clear existing buffer
+                    // to prevent duplicates if worker resends data.
+                    if (!sbUpdatedSteps.has(n.step)) {
+                        sb.buffer.set(n.step, []);
+                        sbUpdatedSteps.add(n.step);
+                    }
+                    sb.buffer.get(n.step).push(n);
+                }
                 else if (n.module === 'cb') {
                     if (!cb.buffer.has(n.step)) cb.buffer.set(n.step, []);
                     cb.buffer.get(n.step).push(n);
