@@ -1,5 +1,5 @@
 import { ctx, gb, cb, bb, sb, vizState, storage, arranger, subscribe } from './state.js';
-import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
+import { ui, initUI, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderGrid, renderGridState, clearActiveVisuals, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI, updateKeySelectLabels, updateRelKeyButton, updateGenreUI } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playChordScratch, getVisualTime, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { KEY_ORDER, MIXER_GAIN_MULTIPLIERS, APP_VERSION, TIME_SIGNATURES } from './config.js';
 import { SONG_TEMPLATES, DRUM_PRESETS, CHORD_PRESETS } from './presets.js';
@@ -108,6 +108,15 @@ function scheduler() {
 
     try {
         requestBuffer(ctx.step);
+        
+        // Update genre UI (countdowns)
+        if (gb.pendingGenreFeel) {
+            const stepsPerMeasure = getStepsPerMeasure();
+            const stepsRemaining = stepsPerMeasure - (ctx.step % stepsPerMeasure);
+            const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+            updateGenreUI(stepsRemaining, ts.stepsPerBeat);
+        }
+
         while (ctx.nextNoteTime < ctx.audio.currentTime + ctx.scheduleAheadTime) {
             if (ctx.isCountingIn) {
                 scheduleCountIn(ctx.countInBeat, ctx.nextNoteTime);
@@ -185,7 +194,16 @@ function advanceGlobalStep() {
             gb.genreFeel = payload.feel;
             if (payload.swing !== undefined) gb.swing = payload.swing;
             if (payload.sub !== undefined) gb.swingSub = payload.sub;
+            
+            // Sync the logical genre name for UI purposes
+            if (payload.genreName) {
+                gb.lastSmartGenre = payload.genreName;
+            }
+
             gb.pendingGenreFeel = null;
+
+            // Update UI buttons state (removes pending, sets active)
+            updateGenreUI(0);
 
             // Re-sync all procedural engines to the new feel
             syncAndFlushWorker(ctx.step);

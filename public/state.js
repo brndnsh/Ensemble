@@ -359,7 +359,7 @@ export function dispatch(action, payload) {
             gb.followPlayback = payload;
             break;
         case 'SET_GENRE_FEEL':
-            // payload: { feel: 'Rock', swing: 0, sub: '8th' }
+            // payload: { feel: 'Rock', swing: 0, sub: '8th', drum: '...', ... }
             if (ctx.isPlaying) {
                 gb.pendingGenreFeel = payload;
             } else {
