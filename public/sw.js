@@ -1,5 +1,5 @@
 // Note: Keep CACHE_NAME version in sync with APP_VERSION in config.js
-const CACHE_NAME = 'ensemble-v1.99';
+const CACHE_NAME = 'ensemble-v2.00';
 const ASSETS = [
     './',
     './index.html',

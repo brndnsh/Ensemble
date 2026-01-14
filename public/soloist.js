@@ -80,7 +80,9 @@ const STYLE_CONFIG = {
         maxNotesPerPhrase: 16,
         doubleStopProb: 0.1,
         anticipationProb: 0.1,
-        targetExtensions: [2, 9] 
+        targetExtensions: [2, 9],
+        deviceProb: 0.15,
+        allowedDevices: ['run', 'slide']
     },
     shred: {
         restBase: 0.1,
@@ -92,7 +94,9 @@ const STYLE_CONFIG = {
         maxNotesPerPhrase: 32,
         doubleStopProb: 0.05,
         anticipationProb: 0.05,
-        targetExtensions: [2]
+        targetExtensions: [2],
+        deviceProb: 0.4,
+        allowedDevices: ['run']
     },
     blues: {
         restBase: 0.6, 
@@ -104,7 +108,9 @@ const STYLE_CONFIG = {
         maxNotesPerPhrase: 5, 
         doubleStopProb: 0.2, 
         anticipationProb: 0.3,
-        targetExtensions: [9, 10] 
+        targetExtensions: [9, 10],
+        deviceProb: 0.3,
+        allowedDevices: ['slide', 'enclosure']
     },
     neo: {
         restBase: 0.45,
@@ -116,7 +122,9 @@ const STYLE_CONFIG = {
         maxNotesPerPhrase: 8,
         doubleStopProb: 0.15,
         anticipationProb: 0.45,
-        targetExtensions: [2, 6, 9, 11] 
+        targetExtensions: [2, 6, 9, 11],
+        deviceProb: 0.25,
+        allowedDevices: ['quartal', 'slide']
     },
     minimal: {
         restBase: 0.65,
@@ -128,7 +136,9 @@ const STYLE_CONFIG = {
         maxNotesPerPhrase: 4,
         doubleStopProb: 0.0,
         anticipationProb: 0.1,
-        targetExtensions: [2, 7]
+        targetExtensions: [2, 7],
+        deviceProb: 0.1,
+        allowedDevices: ['slide']
     },
     bird: {
         restBase: 0.3, 
@@ -140,7 +150,9 @@ const STYLE_CONFIG = {
         maxNotesPerPhrase: 16, 
         doubleStopProb: 0.0,
         anticipationProb: 0.5,
-        targetExtensions: [2, 5, 9] // 9, 11, 13
+        targetExtensions: [2, 5, 9], // 9, 11, 13
+        deviceProb: 0.5,
+        allowedDevices: ['enclosure', 'run']
     },
     disco: {
         restBase: 0.25,
@@ -152,7 +164,9 @@ const STYLE_CONFIG = {
         maxNotesPerPhrase: 12,
         doubleStopProb: 0.05,
         anticipationProb: 0.2,
-        targetExtensions: [2, 9]
+        targetExtensions: [2, 9],
+        deviceProb: 0.1,
+        allowedDevices: ['run']
     },
     bossa: {
         restBase: 0.4,
@@ -164,7 +178,9 @@ const STYLE_CONFIG = {
         maxNotesPerPhrase: 8,
         doubleStopProb: 0.0,
         anticipationProb: 0.35,
-        targetExtensions: [2, 6, 9] // 9, #11, 13
+        targetExtensions: [2, 6, 9], // 9, #11, 13
+        deviceProb: 0.2,
+        allowedDevices: ['enclosure', 'slide']
     }
 };
 
@@ -680,28 +696,62 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     durationMultiplier = Math.max(1, Math.round(durationMultiplier || 1));
     sb.busySteps = durationMultiplier - 1;
 
-    // --- 7. Melodic Enclosures (Bebop Logic) ---
-    // When targeting a 'Strong Beat', create a 2-step sequence leading to the target.
-    const isBirdStyle = style === 'bird' || (style === 'smart' && gb.genreFeel === 'Jazz');
-    if (isBirdStyle && isStrongBeat && !sb.isReplayingMotif && Math.random() < 0.45) {
-        const aboveMidi = selectedMidi + (Math.random() < 0.5 ? 1 : 2);
-        const belowMidi = selectedMidi - 1;
+    // --- 7. Advanced Melodic Devices ---
+    
+    if (!sb.isReplayingMotif && isStrongBeat && Math.random() < (config.deviceProb || 0)) {
+        const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         
-        sb.deviceBuffer = [
-            { midi: belowMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: 0 },
-            { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, bendStartInterval, style, timingOffset: 0 }
-        ];
+        if (deviceType === 'enclosure') {
+            const aboveMidi = selectedMidi + (Math.random() < 0.5 ? 1 : 2);
+            const belowMidi = selectedMidi - 1;
+            sb.deviceBuffer = [
+                { midi: belowMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: 0 },
+                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, bendStartInterval, style, timingOffset: 0 }
+            ];
+            sb.busySteps = 0;
+            sb.lastFreq = getFrequency(aboveMidi);
+            return { midi: aboveMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
+        } 
+        
+        if (deviceType === 'quartal') {
+            // Stack of 4ths (Neo-Soul style)
+            const midMidi = selectedMidi + 5;
+            const topMidi = selectedMidi + 10;
+            sb.deviceBuffer = [
+                { midi: midMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: 0 },
+                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0 }
+            ];
+            sb.busySteps = 0;
+            sb.lastFreq = getFrequency(topMidi);
+            return { midi: topMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
+        }
 
-        sb.busySteps = 0; // Ensure the next note in the enclosure sequence triggers on the next step.
-        sb.lastFreq = getFrequency(aboveMidi);
-        
-        return {
-            midi: aboveMidi,
-            velocity: velocity * 0.85,
-            durationSteps: 1,
-            style,
-            timingOffset: timingOffset / 1000
-        };
+        if (deviceType === 'run') {
+            // Scalar run leading to target
+            const stepSize = Math.random() < 0.5 ? 1 : 2;
+            const n1 = selectedMidi - (stepSize * 3);
+            const n2 = selectedMidi - (stepSize * 2);
+            const n3 = selectedMidi - (stepSize * 1);
+            sb.deviceBuffer = [
+                { midi: n2, velocity: velocity * 0.8, durationSteps: 1, style, timingOffset: 0 },
+                { midi: n3, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: 0 },
+                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0 }
+            ];
+            sb.busySteps = 0;
+            sb.lastFreq = getFrequency(n1);
+            return { midi: n1, velocity: velocity * 0.7, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
+        }
+
+        if (deviceType === 'slide') {
+            // Chromatic slide/grace note (Blues/Rock)
+            const graceMidi = selectedMidi - 1;
+            sb.deviceBuffer = [
+                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0 }
+            ];
+            sb.busySteps = 0;
+            sb.lastFreq = getFrequency(graceMidi);
+            return { midi: graceMidi, velocity: velocity * 0.7, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
+        }
     }
 
     let notes = [];

@@ -80,20 +80,24 @@ describe('Soloist Engine', () => {
         }
     });
 
-    it('should use Mixolydian (b7) for dominant chords', () => {
-        // We can't easily peek into getScaleForChord because it's internal,
-        // but we can check if it EVER generates a B (midi 71/83) vs Bb (70/82)
+    it('should use Mixolydian (b7) for dominant chords in scalar style', () => {
+        // We use 'scalar' style and ensure no devices are triggered 
+        // to verify standard Mixolydian behavior.
         let generatedMidi = [];
-        for(let i=0; i<2000; i++) {
+        for(let i=0; i<3000; i++) {
             const note = getSoloistNote(mockChord, null, i, 440, 72, 'scalar', i%4);
-            if (note) generatedMidi.push(note.midi);
+            // If the note has a device buffer, it might use chromaticism.
+            // We ignore notes that are part of a device sequence for this pure scale test.
+            if (note && !Array.isArray(note) && !sb.deviceBuffer?.length) {
+                generatedMidi.push(note.midi);
+            }
         }
         
         const hasB = generatedMidi.some(m => m % 12 === 11);
         const hasBb = generatedMidi.some(m => m % 12 === 10);
         
         expect(hasBb).toBe(true);
-        expect(hasB).toBe(false); // Mixolydian has no natural 7
+        expect(hasB).toBe(false); 
     });
 
     it('should use Phrygian Dominant when resolving to minor', () => {

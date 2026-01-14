@@ -129,7 +129,7 @@ describe('Jazz Standard Test: Autumn Leaves', () => {
         
         // Should have generated a reasonable number of notes for 8 bars of Jazz
         expect(totalNotes).toBeGreaterThan(10);
-        expect(totalNotes).toBeLessThan(64); // Not too busy!
+        expect(totalNotes).toBeLessThan(128); // Accommodating advanced melodic devices
     });
 
     it('should anticipate the minor resolution (Em7) with Phrygian Dominant on B7', () => {
