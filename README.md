@@ -14,19 +14,27 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 
 ## Usage
 
-Ensemble uses vanilla JavaScript with ES Modules and requires no build step. Serve the **public** directory with any local static file server:
+Ensemble uses vanilla JavaScript with ES Modules and requires no build step. Serve the project root directory with any local static file server:
 
 ### Using Python
 ```bash
-python3 -m http.server 8000 --directory public
+python3 -m http.server 8000
 ```
 
 ### Using Node.js
 ```bash
-npx serve public
+npx serve .
 ```
 
 Navigate to `http://localhost:8000` to start playing.
+
+## Testing
+
+Automated unit tests are located in the `tests/` directory and use Vitest.
+
+```bash
+npm test
+```
 
 ## Tech Stack
 
