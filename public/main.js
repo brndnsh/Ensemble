@@ -422,8 +422,14 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
 
         if (shouldPlay && !inst.muted) {
             // Tame accents for Funk Hi-Hats at high intensity to prevent them from overpowering the mix
-            if (gb.genreFeel === 'Funk' && stepVal === 2 && ctx.bandIntensity > 0.6 && (inst.name === 'HiHat' || inst.name === 'Open')) {
-                velocity = 1.05;
+            if (gb.genreFeel === 'Funk' && (inst.name === 'HiHat' || inst.name === 'Open')) {
+                 if (stepVal === 2 && ctx.bandIntensity > 0.6) velocity = 1.0; // Cap accents
+                 else if (stepVal !== 2) velocity = Math.min(velocity, 0.75); // Cap others
+            }
+            
+            // --- Neo-Soul Global Dampening ---
+            if (gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Hip Hop') {
+                velocity *= 0.75; // General dampening for "chill" vibe
             }
             
             // --- Snare Timbre Shifting ---

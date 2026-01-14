@@ -57,10 +57,10 @@
 
 ## Verification & Research
 
-- [ ] **Genre Stress Tests**: Expand the probabilistic test suite to verify rhythmic anchors.
+- [x] **Genre Stress Tests**: Expand the probabilistic test suite to verify rhythmic anchors.
 
     - *Plan*: Create `genre-integrity.test.js` to run 2000-measure simulations. Assert that the Reggae "One Drop" (kick on 3) is never violated and that Jazz walking bass never hits a root on beat 4 unless it's a pedal point.
 
-- [ ] **Reference Comparison**: Fine-tune velocity and timing curves against classic records.
+- [x] **Reference Comparison**: Fine-tune velocity and timing curves against classic records.
 
     - *Plan*: Document specific reference tracks (e.g., "Cantaloupe Island" for Jazz-Funk, "Redemption Song" for Reggae) and adjust the engine's default velocity maps to match their dynamic range.

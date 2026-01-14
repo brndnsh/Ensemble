@@ -313,19 +313,19 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         const stepInBeat = stepInChord % 4;
         const intBeat = Math.floor(stepInChord / 4);
         
-        // The "One" is sacred - Heavy Root with good sustain
-        if (stepInChord === 0) return result(getFrequency(baseRoot), 1.5, 1.25);
+        // The "One" is sacred - Heavy Root but controlled (Ref: Cantaloupe Island)
+        if (stepInChord === 0) return result(getFrequency(baseRoot), 1.5, 0.85);
 
         // "Bootsy" Octave Pops on the 'and' (upbeats)
         if (stepInBeat === 2) {
              if (intBeat < 3 && Math.random() < 0.45) {
-                 return result(getFrequency(clampAndNormalize(baseRoot + 12)), 0.4, 1.15); 
+                 return result(getFrequency(clampAndNormalize(baseRoot + 12)), 0.4, 1.0); 
              }
         }
 
         // Beat 3 (Backbeat) 
         if (intBeat === 2 && stepInBeat === 0 && Math.random() < 0.4) {
-             return result(getFrequency(baseRoot), 0.8, 1.1);
+             return result(getFrequency(baseRoot), 0.8, 0.9);
         }
 
         // The "Grease" - b7 or 5th usage on weak 16ths
@@ -333,20 +333,20 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
             const useFlat7 = currentChord.intervals.includes(10) || Math.random() < 0.6;
             const interval = useFlat7 ? 10 : 7;
             const note = baseRoot + interval; 
-            return result(getFrequency(clampAndNormalize(note)), 0.5, 0.95);
+            return result(getFrequency(clampAndNormalize(note)), 0.5, 0.7);
         }
 
         // Beat 4: Turnaround / Fill
         if (intBeat === 3) {
             if (stepInBeat >= 2 && Math.random() < 0.5) {
                 const approach = Math.random() < 0.5 ? baseRoot - 1 : baseRoot + 7;
-                return result(getFrequency(clampAndNormalize(approach)), 0.5, 1.1);
+                return result(getFrequency(clampAndNormalize(approach)), 0.5, 0.9);
             }
         }
 
         // Ghost notes (dead notes)
         if (Math.random() < 0.15) {
-             return result(getFrequency(prevMidi || baseRoot), 0.25, 0.65, true);
+             return result(getFrequency(prevMidi || baseRoot), 0.25, 0.35, true);
         }
 
         return null;
@@ -369,7 +369,9 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         if (match) {
             const [s, interval, vel, dur] = match;
             const note = clampAndNormalize(deepRoot + interval);
-            return result(getFrequency(note), dur, vel * (0.9 + Math.random() * 0.2));
+            // Lower velocity to 0.8 target (Ref: Redemption Song)
+            const tunedVel = vel * 0.7; 
+            return result(getFrequency(note), dur, tunedVel * (0.95 + Math.random() * 0.1));
         }
         
         return null;
@@ -464,7 +466,9 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return result(getFrequency(clampAndNormalize(baseRoot + nextPC)), null, velocity);
     }
 
-    return result(getFrequency(baseRoot), null, 1.1);
+    // Default Fallback
+    const fallbackVel = (style === 'neo' || gb.genreFeel === 'Neo-Soul') ? 0.85 : 1.1;
+    return result(getFrequency(baseRoot), null, fallbackVel);
 }
 
 /**

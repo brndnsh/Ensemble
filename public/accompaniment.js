@@ -215,7 +215,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             voicing.forEach((f, i) => {
                 notes.push({
                     midi: getMidi(f),
-                    velocity: 0.6 + (Math.random() * 0.2),
+                    velocity: 0.5 + (Math.random() * 0.15), // Reduced from 0.6
                     durationSteps: 0.5, // Super staccato
                     ccEvents: (i === 0) ? ccEvents : [],
                     timingOffset: (i * 0.005) + 0.01,

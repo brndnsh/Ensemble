@@ -37,7 +37,7 @@ describe('Genre Integrity Stress Test', () => {
             // the Bass engine's relationship to the pocket here.
             
             let kickOnOneCount = 0;
-            const measures = 100;
+            const measures = 2000;
 
             // We mock the main scheduler's logic for Reggae Kick
             const simulateReggaeKick = (step, intensity) => {
@@ -57,7 +57,7 @@ describe('Genre Integrity Stress Test', () => {
         });
 
         it('should maintain the "Dub" register (Low) in Reggae style', () => {
-            runSimulation('Reggae', 32, (step, stepInChord, beatIndex, chord) => {
+            runSimulation('Reggae', 2000, (step, stepInChord, beatIndex, chord) => {
                 if (isBassActive('smart', step, stepInChord)) {
                     const note = getBassNote(chord, null, beatIndex, null, 38, 'smart', 0, step, stepInChord);
                     if (note) {
@@ -74,7 +74,7 @@ describe('Genre Integrity Stress Test', () => {
             let downbeatMatches = 0;
             let totalDownbeats = 0;
 
-            runSimulation('Jazz', 100, (step, stepInChord, beatIndex, chord) => {
+            runSimulation('Jazz', 2000, (step, stepInChord, beatIndex, chord) => {
                 if (stepInChord === 0) { // Beat 1
                     const note = getBassNote(chord, null, beatIndex, null, 38, 'smart', 0, step, stepInChord);
                     const pc = note.midi % 12;
@@ -92,7 +92,7 @@ describe('Genre Integrity Stress Test', () => {
             // Our walking logic on Beat 4 (index 3) is designed to "approach" the next chord
             // so it should rarely be a static root.
             let rootOnFourCount = 0;
-            const measures = 100;
+            const measures = 2000;
 
             const nextChord = { rootMidi: 53 }; // F
 
@@ -114,7 +114,7 @@ describe('Genre Integrity Stress Test', () => {
             let otherVelocitySum = 0;
             let otherCount = 0;
 
-            runSimulation('Funk', 50, (step, stepInChord, beatIndex, chord) => {
+            runSimulation('Funk', 2000, (step, stepInChord, beatIndex, chord) => {
                 if (isBassActive('smart', step, stepInChord)) {
                     const note = getBassNote(chord, null, beatIndex, null, 38, 'smart', 0, step, stepInChord);
                     if (note) {
@@ -128,7 +128,7 @@ describe('Genre Integrity Stress Test', () => {
                 }
             });
 
-            const avgOne = oneVelocitySum / 50;
+            const avgOne = oneVelocitySum / 2000;
             const avgOther = otherVelocitySum / otherCount;
             expect(avgOne).toBeGreaterThan(avgOther);
         });
