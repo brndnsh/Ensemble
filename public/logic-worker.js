@@ -566,32 +566,74 @@ self.onmessage = (e) => {
 function handlePrime(steps) {
     if (!sb.enabled || arranger.totalSteps === 0) return;
     
-    // Default to ~2 measures of priming if not specified
-    // (Assuming 4/4: 4 beats * 4 subdivisions = 16 steps/measure * 2 = 32)
-    const stepsToPrime = steps || 32;
-    
-    // We simulate the END of the loop to flow naturally into the start
-    let startStep = arranger.totalSteps - stepsToPrime;
-    
-    // Handle short loops (if song is shorter than prime length)
-    if (startStep < 0) {
-        startStep = 0;
-    }
+    // Default to 2 full loops of the progression to establish firm musical context
+    const stepsToPrime = steps || (arranger.totalSteps * 2);
     
     if (ctx.workerLogging) {
-        console.log(`[Worker] Priming soloist for ${stepsToPrime} steps (from ${startStep} to ${arranger.totalSteps})`);
+        console.log(`[Worker] Priming engine for ${stepsToPrime} steps...`);
     }
 
-    // Run the generation loop to populate internal state (motifs, phrase arcs, etc.)
-    // We intentionally discard the returned notes.
-    for (let s = startStep; s < arranger.totalSteps; s++) {
+    const start = performance.now();
+
+    // We simulate running through the progression (wrapping around)
+    // ensuring that when we finish, the state is primed for Step 0.
+    for (let i = 0; i < stepsToPrime; i++) {
+        const s = i; 
         const chordData = getChordAtStep(s);
+        
         if (chordData) {
             const { chord, stepInChord } = chordData;
-            const nextChordData = getChordAtStep(s + 4); 
+            const nextChordData = getChordAtStep(s + 4);
+            const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+
+            // 1. Prime Bass (if enabled) to update bb.lastFreq
+            if (bb.enabled) {
+                if (isBassActive(bb.style, s, stepInChord)) {
+                    const bassResult = getBassNote(
+                        chord, 
+                        nextChordData?.chord, 
+                        stepInChord / ts.stepsPerBeat, 
+                        bb.lastFreq, 
+                        bb.octave, 
+                        bb.style, 
+                        chordData.chordIndex, 
+                        s, 
+                        stepInChord, 
+                        arranger.isMinor
+                    );
+                    if (bassResult && (bassResult.freq || bassResult.midi)) {
+                         if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
+                         bb.lastFreq = bassResult.freq;
+                    }
+                }
+            }
+
+            // 2. Prime Soloist
+            const soloResult = getSoloistNote(
+                chord, 
+                nextChordData?.chord, 
+                s, 
+                sb.lastFreq, 
+                sb.octave, 
+                sb.style, 
+                stepInChord, 
+                bb.lastFreq
+            );
             
-            // Invoke generator to update sb state
-            getSoloistNote(chord, nextChordData?.chord, s, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
+            if (soloResult) {
+                const results = Array.isArray(soloResult) ? soloResult : [soloResult];
+                results.forEach(res => {
+                    if (res.freq || res.midi) {
+                         if (!res.freq) res.freq = 440 * Math.pow(2, (res.midi - 69) / 12);
+                         if (!res.isDoubleStop) sb.lastFreq = res.freq;
+                    }
+                });
+            }
         }
+    }
+    
+    const elapsed = performance.now() - start;
+    if (ctx.workerLogging) {
+        console.log(`[Worker] Priming complete in ${elapsed.toFixed(2)}ms`);
     }
 }

@@ -82,7 +82,10 @@ function togglePlay() {
         ctx.step = 0;
         flushBuffers();
         syncWorker();
-        primeWorker();
+        // Prime the soloist with 2 full passes of the progression to generate ideas
+        if (arranger.totalSteps > 0) {
+            primeWorker(arranger.totalSteps * 2);
+        }
         if (!iosAudioUnlocked) {
             silentAudio.play().catch(e => console.log("Audio unlock failed", e));
             iosAudioUnlocked = true;
