@@ -343,92 +343,81 @@ function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteSt
                             }
 
                             // --- Jazz Procedural Overrides ---
-
                             if (gb.genreFeel === 'Jazz' && !inst.muted) {
-
-                                const loopStep = step % 16; // Loop every measure (4/4 assumption for standard Jazz)
-
-                                
-
+                                const loopStep = step % 16;
                                 if (inst.name === 'Open') {
-
-                                    // Procedural Ride Pattern: "Hey, Swing-the-band"
-
                                     shouldPlay = false;
-
                                     if ([0, 4, 6, 8, 12, 14].includes(loopStep)) {
-
                                         shouldPlay = true;
-
-                                        // Consistent driving pulse on quarter notes
-
                                         if (loopStep % 4 === 0) velocity = 1.15; 
-
-                                        else velocity = 0.75; // Soft "skip" note
-
+                                        else velocity = 0.75; 
                                     }
-
                                 } else if (inst.name === 'HiHat') {
-
-                                    // Foot Chick on 2 & 4
-
                                     shouldPlay = false;
-
                                     if (loopStep === 4 || loopStep === 12) {
-
                                         shouldPlay = true;
-
                                         velocity = 0.8;
-
                                     }
-
-                            } else if (inst.name === 'Kick') {
+                                } else if (inst.name === 'Kick') {
                                     shouldPlay = false;
-                                    // 1. Feathering (Classic Bop technique) - Soft pulse on quarters
-                                    // Keeps the band together without being "Four-on-the-floor" dance style
-                                    if (loopStep % 4 === 0) {
-                                        shouldPlay = true;
-                                        velocity = 0.35; 
-                                    }
-                                    
-                                    // 2. "Bombs" (Accents) - Interactive punctuation
-                                    // Scale probability with intensity.
-                                    const bombProb = ctx.bandIntensity * 0.3; // 0.0 to 0.3
+                                    if (loopStep % 4 === 0) { shouldPlay = true; velocity = 0.35; }
+                                    const bombProb = ctx.bandIntensity * 0.3;
                                     if (Math.random() < bombProb) {
-                                        // Target "and" of 3 (10), "and" of 4 (14), or "let" of 4 (15) for anticipation
-                                        if ([10, 14, 15].includes(loopStep)) {
-                                            shouldPlay = true;
-                                            velocity = 0.9 + (Math.random() * 0.2);
-                                        }
+                                        if ([10, 14, 15].includes(loopStep)) { shouldPlay = true; velocity = 0.9 + (Math.random() * 0.2); }
                                     }
-
                                 } else if (inst.name === 'Snare') {
                                     shouldPlay = false;
-                                    
-                                    // Comping Logic: Toned down for "Metronome" stability
-                                    // 1. "Chatter" / Ghost Notes - Minimal texture
-                                    if (Math.random() < 0.08) { 
-                                        shouldPlay = true; 
-                                        velocity = 0.25; 
-                                    }
-
-                                    // 2. Accents - Structural Anchors
-                                    // Prioritize "And of 4" (Step 14) as the main rhythmic push
+                                    if (Math.random() < 0.08) { shouldPlay = true; velocity = 0.25; }
                                     if (loopStep === 14) {
-                                        if (Math.random() < 0.6 + (ctx.bandIntensity * 0.3)) {
-                                            shouldPlay = true;
-                                            velocity = 0.85;
-                                        }
-                                    }
-                                    // Secondary accent on "And of 2" (Step 6)
-                                    else if (loopStep === 6) {
-                                        if (Math.random() < 0.3 + (ctx.bandIntensity * 0.3)) {
-                                            shouldPlay = true;
-                                            velocity = 0.8;
-                                        }
+                                        if (Math.random() < 0.6 + (ctx.bandIntensity * 0.3)) { shouldPlay = true; velocity = 0.85; }
+                                    } else if (loopStep === 6) {
+                                        if (Math.random() < 0.3 + (ctx.bandIntensity * 0.3)) { shouldPlay = true; velocity = 0.8; }
                                     }
                                 }
+                            }
 
+                            // --- Blues Procedural Overrides ---
+                            if (gb.genreFeel === 'Blues' && !inst.muted) {
+                                const loopStep = step % 16;
+                                
+                                if (inst.name === 'HiHat') {
+                                    // Classic Foot Chick on 2 & 4
+                                    shouldPlay = false;
+                                    if (loopStep === 4 || loopStep === 12) {
+                                        shouldPlay = true;
+                                        velocity = 0.85;
+                                    }
+                                } else if (inst.name === 'Open') {
+                                    // Blues Shuffle Ride Pattern
+                                    // Use a combination of solid quarters and probabilistic "skip" notes
+                                    shouldPlay = false;
+                                    if (loopStep % 4 === 0) {
+                                        // Solid pulse on 1, 2, 3, 4
+                                        shouldPlay = true;
+                                        velocity = 1.1;
+                                    } else if (loopStep % 2 === 0) {
+                                        // The "skip" note (8th note upbeat)
+                                        // Probability increases with intensity/complexity
+                                        const skipProb = 0.4 + (ctx.bandIntensity * 0.5);
+                                        if (Math.random() < skipProb) {
+                                            shouldPlay = true;
+                                            velocity = 0.7;
+                                        }
+                                    }
+                                } else if (inst.name === 'Kick') {
+                                    // Traditional Blues: Heavy on 1, interactive elsewhere
+                                    // If not already scheduled by pattern, ensure 1 is there
+                                    if (loopStep === 0) {
+                                        shouldPlay = true;
+                                        velocity = 1.2;
+                                    }
+                                } else if (inst.name === 'Snare') {
+                                    // Shuffle "Backbeat" on 2 & 4
+                                    if (loopStep === 4 || loopStep === 12) {
+                                        shouldPlay = true;
+                                        velocity = 1.1;
+                                    }
+                                }
                             }
 
         if (shouldPlay && !inst.muted) {
