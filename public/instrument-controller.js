@@ -229,9 +229,6 @@ export function resetToDefaults() {
     ui.timeSigSelect.value = '4/4';
     ui.notationSelect.value = 'roman';
     ui.densitySelect.value = 'standard';
-    ui.octave.value = 65;
-    ui.bassOctave.value = 38;
-    ui.soloistOctave.value = 72;
     ui.chordVol.value = 0.5;
     ui.chordReverb.value = 0.3;
     ui.bassVol.value = 0.45;
@@ -283,10 +280,6 @@ export function resetToDefaults() {
         if (ui.complexityValue) ui.complexityValue.textContent = 'Low';
     }
 
-    updateOctaveLabel(ui.octaveLabel, cb.octave);
-    updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg);
-    updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
-    
     renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     analyzeFormUI();
     renderChordVisualizer();

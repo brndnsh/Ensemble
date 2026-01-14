@@ -511,21 +511,7 @@ export function setupUIHandlers(refs) {
         el.addEventListener('change', () => saveCurrentState());
     });
 
-    const octaveSliders = [
-        { el: ui.octave, state: cb, label: ui.octaveLabel, callback: validateAndAnalyze },
-        { el: ui.bassOctave, state: bb, label: ui.bassOctaveLabel, header: ui.bassHeaderReg },
-        { el: ui.soloistOctave, state: sb, label: ui.soloistOctaveLabel, header: ui.soloistHeaderReg }
-    ];
-    octaveSliders.forEach(({ el, state, label, header, callback }) => {
-        el.addEventListener('input', e => {
-            state.octave = parseInt(e.target.value);
-            updateOctaveLabel(label, state.octave, header);
-            if (callback) callback();
-            syncWorker();
-            flushBuffers();
-        });
-        el.addEventListener('change', () => saveCurrentState());
-    });
+    // --- Volume Sliders ---
 
     ui.swingSlider.addEventListener('input', e => { gb.swing = parseInt(e.target.value); saveCurrentState(); });
     ui.swingBase.addEventListener('change', e => { gb.swingSub = e.target.value; saveCurrentState(); });

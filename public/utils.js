@@ -37,6 +37,7 @@ export function midiToNote(midi) {
  * @returns {number} The MIDI note number.
  */
 export function getMidi(freq) {
+    if (!freq || freq <= 0) return null;
     return Math.round(12 * Math.log2(freq / 440) + 69);
 }
 

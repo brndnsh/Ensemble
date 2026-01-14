@@ -683,9 +683,24 @@ function init() {
             document.querySelectorAll('.genre-btn').forEach(btn => { btn.classList.toggle('active', btn.dataset.genre === gb.lastSmartGenre); });
             ui.notationSelect.value = arranger.notation; ui.densitySelect.value = cb.density; 
             if (ui.practiceModeCheck) ui.practiceModeCheck.checked = cb.practiceMode;
-            ui.octave.value = cb.octave; ui.bassOctave.value = bb.octave; ui.soloistOctave.value = sb.octave; ui.chordVol.value = cb.volume; ui.chordReverb.value = cb.reverb; ui.bassVol.value = bb.volume; ui.bassReverb.value = bb.reverb; ui.soloistVol.value = sb.volume; ui.soloistReverb.value = sb.reverb; ui.drumVol.value = gb.volume; ui.drumReverb.value = gb.reverb; ui.swingSlider.value = gb.swing; ui.swingBase.value = gb.swingSub; ui.humanizeSlider.value = gb.humanize; ui.drumBarsSelect.value = gb.measures; ui.metronome.checked = ctx.metronome; ui.applyPresetSettings.checked = ctx.applyPresetSettings;
-            applyTheme(ctx.theme); updateOctaveLabel(ui.octaveLabel, cb.octave); updateOctaveLabel(ui.bassOctaveLabel, bb.octave, ui.bassHeaderReg); updateOctaveLabel(ui.soloistOctaveLabel, sb.octave, ui.soloistHeaderReg);
-        } else { 
+                if (ui.chordVol) ui.chordVol.value = cb.volume;
+                if (ui.chordReverb) ui.chordReverb.value = cb.reverb;
+                if (ui.bassVol) ui.bassVol.value = bb.volume;
+                if (ui.bassReverb) ui.bassReverb.value = bb.reverb;
+                if (ui.soloistVol) ui.soloistVol.value = sb.volume;
+                if (ui.soloistReverb) ui.soloistReverb.value = sb.reverb;
+                if (ui.drumVol) ui.drumVol.value = gb.volume;
+                if (ui.drumReverb) ui.drumReverb.value = gb.reverb;
+                if (ui.swingSlider) ui.swingSlider.value = gb.swing;
+                if (ui.swingBase) ui.swingBase.value = gb.swingSub;
+                if (ui.humanizeSlider) ui.humanizeSlider.value = gb.humanize;
+                if (ui.drumBarsSelect) ui.drumBarsSelect.value = gb.measures;
+                if (ui.metronome) ui.metronome.checked = ctx.metronome;
+                if (ui.applyPresetSettings) ui.applyPresetSettings.checked = ctx.applyPresetSettings;
+                
+                applyTheme(ctx.theme); 
+            }
+             else { 
             applyTheme('auto'); 
             if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = true;
             if (ui.intensitySlider) {

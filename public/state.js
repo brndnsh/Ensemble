@@ -131,7 +131,7 @@ export const cb = {
     reverb: 0.3,
     octave: 65,
     density: 'standard', 
-    practiceMode: false,
+    practiceMode: true,
     lastActiveChordIndex: null,
     buffer: new Map(),
     activeTab: 'smart'

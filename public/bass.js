@@ -6,27 +6,46 @@ import { KEY_ORDER, TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
  * Determines the best scale for the bass based on chord and context.
  */
 function getScaleForBass(chord, nextChord, isMinor = false) {
-    const isV7toMinor = chord.intervals.includes(10) && chord.intervals.includes(4) && 
-                        nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
+    const isDominant = chord.quality.startsWith('7') || 
+                       ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(chord.quality) ||
+                       (chord.intervals.includes(10) && chord.intervals.includes(4));
+    
+    // Tension awareness from soloist logic
+    if (sb.tension > 0.7 && isDominant) {
+        return [0, 1, 3, 4, 6, 8, 10]; // Altered
+    }
 
+    const isV7toMinor = isDominant && nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
     if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
 
     // Mode-aware diatonic scaling
     if (isMinor) {
-        if (chord.quality === 'major') return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian (b7 common in minor)
+        if (chord.quality === 'major' || chord.quality === '7') return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian (b7 common in minor)
         if (chord.quality === 'minor') return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
     }
 
-    // Fallback to standard chord-scale
+    // Chord-scale logic mirroring soloist.js for consistency
     switch (chord.quality) {
-        case 'minor': return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+        case 'minor': 
+            if (gb.genreFeel === 'Jazz' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk') return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+            return [0, 2, 3, 5, 7, 8, 10]; 
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
         case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
+        case 'aug': return [0, 2, 4, 6, 8, 10];
         case 'maj7': return [0, 2, 4, 5, 7, 9, 11];
-        default: 
-            if (chord.intervals.includes(10)) return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
-            return [0, 2, 4, 5, 7, 9, 11]; // Major
+        case 'sus4': return [0, 2, 5, 7, 9, 10];
+        case '7alt': return [0, 1, 3, 4, 6, 8, 10];
+        case '7#9': return [0, 1, 3, 4, 6, 8, 10];
+        case '7b9': return [0, 1, 4, 5, 7, 8, 10];
+        case '7b13': return [0, 1, 4, 5, 7, 8, 10];
+        case '7#11': return [0, 2, 4, 6, 7, 9, 10];
+        case '9': return [0, 2, 4, 5, 7, 9, 10];
+        case '13': return [0, 2, 4, 5, 7, 9, 10];
     }
+
+    if (isDominant) return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian fallback
+
+    return chord.intervals.includes(11) ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 4, 5, 7, 9, 10];
 }
 
 /**
@@ -45,51 +64,37 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
     }
 
-    // --- Structural Energy Mapping (Intensity) ---
+    // --- Intensity Mapping ---
+    const globalIntensity = ctx.bandIntensity || 0.5;
     const loopStep = step % (arranger.totalSteps || 1);
-    let sectionStart = 0;
-    let sectionEnd = arranger.totalSteps;
-    const currentSectionId = currentChord.sectionId;
     
-    // Safeguard: Ensure stepMap exists to prevent infinite loop
+    let sectionProgress = 0;
     if (arranger.stepMap && arranger.stepMap.length > 0) {
-        for (let i = 0; i < arranger.stepMap.length; i++) {
-            if (arranger.stepMap[i].chord.sectionId === currentSectionId) {
-                sectionStart = arranger.stepMap[i].start;
-                let j = i;
-                let iterations = 0;
-                // Add safety limit to internal while loop
-                while (j < arranger.stepMap.length && arranger.stepMap[j].chord.sectionId === currentSectionId && iterations < 1000) {
-                    sectionEnd = arranger.stepMap[j].end;
-                    j++;
-                    iterations++;
-                }
-                break; // Found the section, no need to keep searching
-            }
+        const entry = arranger.stepMap.find(e => loopStep >= e.start && loopStep < e.end);
+        if (entry) {
+            const currentSectionId = entry.chord.sectionId;
+            const sectionEntries = arranger.stepMap.filter(e => e.chord.sectionId === currentSectionId);
+            const sectionStart = sectionEntries[0].start;
+            const sectionEnd = sectionEntries[sectionEntries.length - 1].end;
+            const sectionLength = sectionEnd - sectionStart;
+            sectionProgress = sectionLength > 0 ? (loopStep - sectionStart) / sectionLength : 0;
         }
     }
-    const sectionLength = sectionEnd - sectionStart;
-    const intensity = sectionLength > 0 ? (step - sectionStart) / sectionLength : 0;
     
+    const intensity = (globalIntensity * 0.7) + (sectionProgress * 0.3);
     let safeCenterMidi = (typeof centerMidi === 'number' && !isNaN(centerMidi)) ? centerMidi : 38;
 
     // --- Genre-Specific Register Offsets ---
     if (style === 'dub' || gb.genreFeel === 'Reggae') safeCenterMidi = 32;
     else if (style === 'disco' || gb.genreFeel === 'Disco') safeCenterMidi = 45;
 
+    // Shift center up as intensity builds (max +7 semitones)
+    safeCenterMidi += Math.floor(intensity * 7);
+
     const prevMidi = getMidi(prevFreq);
 
-    let absMin = Math.max(26, safeCenterMidi - 15); 
-    let absMax = safeCenterMidi + 15;
-
-    // --- Sweet Spot Constraints ---
-    if (style === 'rock' || style === 'funk') {
-        absMin = Math.max(28, absMin);
-        absMax = Math.min(52, absMax);
-    }
-    
-    // Final Range Safety
-    if (absMax < absMin) absMax = absMin + 1;
+    let absMin = Math.max(26, safeCenterMidi - 12); 
+    let absMax = safeCenterMidi + 12;
 
     const clampAndNormalize = (midi) => {
         if (!Number.isFinite(midi)) return safeCenterMidi;
@@ -114,29 +119,35 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     const normalizeToRange = (midi) => {
         if (!Number.isFinite(midi)) return safeCenterMidi;
         const useCommitment = (style === 'quarter' || style === 'funk') && prevMidi !== null;
-        const targetRef = useCommitment ? (prevMidi * 0.7 + safeCenterMidi * 0.3) : safeCenterMidi;
+        const targetRef = (prevMidi !== null) ? (useCommitment ? (prevMidi * 0.7 + safeCenterMidi * 0.3) : prevMidi) : safeCenterMidi;
         
-        let bestCandidate = 0;
-        let minDiff = 999999;
         const pc = ((midi % 12) + 12) % 12;
-        const baseOctave = Math.floor(targetRef / 12) * 12;
+        const octaves = [
+            Math.floor(targetRef / 12) * 12,
+            Math.floor(targetRef / 12) * 12 - 12,
+            Math.floor(targetRef / 12) * 12 + 12,
+            Math.floor(targetRef / 12) * 12 - 24,
+            Math.floor(targetRef / 12) * 12 + 24
+        ];
+        
+        let bestCandidate = octaves[0] + pc;
+        let minDiff = Math.abs(bestCandidate - targetRef);
+        
+        for (let i = 1; i < octaves.length; i++) {
+            const cand = octaves[i] + pc;
+            const diff = Math.abs(cand - targetRef);
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestCandidate = cand;
+            }
+        }
 
-        const check = (offset) => {
-             const val = baseOctave + offset + pc;
-             const diff = Math.abs(val - targetRef);
-             if (diff < minDiff) { minDiff = diff; bestCandidate = val; }
-        };
-        check(0); check(-12); check(12);
         return clampAndNormalize(bestCandidate);
     };
 
     // Use slash chord bass note if it exists, otherwise use chord root
-    let baseRoot = normalizeToRange(currentChord.bassMidi !== null && currentChord.bassMidi !== undefined ? currentChord.bassMidi : currentChord.rootMidi);
-
-    // Dynamic Register Shift: Move up slightly as intensity builds
-    if (intensity > 0.6 && (style === 'funk' || style === 'quarter')) {
-        baseRoot = clampAndNormalize(baseRoot + (Math.random() < 0.2 ? 12 : 0));
-    }
+    const rootToNormalize = (currentChord.bassMidi !== null && currentChord.bassMidi !== undefined) ? currentChord.bassMidi : currentChord.rootMidi;
+    let baseRoot = normalizeToRange(rootToNormalize);
 
     const isSameAsPrev = (midi) => {
         if (!prevMidi) return false;
@@ -153,23 +164,23 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return note;
     }
 
-    const result = (freq, durationMultiplier = null, velocity = 1.0, muted = false) => {
+    const result = (freq, durationMultiplier = null, velocity = 1.0, muted = false, bendStartInterval = 0) => {
         let timingOffset = 0;
         if (style === 'neo') timingOffset = 0.025; // 25ms laid-back "Dilla" feel
         
-        // Convert freq to midi
-        const midi = getMidi(freq);
+        // Intensity-based timing: Push slightly ahead during climaxes
+        if (intensity > 0.8) timingOffset -= 0.005;
         
-        // Calculate standard duration in steps if not provided
+        const midi = getMidi(freq);
         let durationSteps = durationMultiplier; 
         
         if (durationSteps === null) {
              if (style === 'whole') durationSteps = currentChord.beats * ts.stepsPerBeat;
              else if (style === 'half') durationSteps = (stepsPerMeasure / 2);
-             else if (style === 'arp') durationSteps = (ts.stepsPerBeat); // Quarter note
-             else if (style === 'rock') durationSteps = (ts.stepsPerBeat * 0.75); // Dotted 8th-ish
-             else if (style === 'funk') durationSteps = (ts.stepsPerBeat * 0.5); // 8th
-             else durationSteps = ts.stepsPerBeat; // Quarter default
+             else if (style === 'arp') durationSteps = (ts.stepsPerBeat); 
+             else if (style === 'rock') durationSteps = (ts.stepsPerBeat * 0.75); 
+             else if (style === 'funk') durationSteps = (ts.stepsPerBeat * 0.5); 
+             else durationSteps = ts.stepsPerBeat; 
         } else {
              if (style === 'rock') durationSteps = ts.stepsPerBeat * 0.7; 
              else if (style === 'funk') durationSteps = ts.stepsPerBeat * 0.4;
@@ -181,7 +192,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
             midi, 
             velocity, 
             durationSteps: durationSteps || ts.stepsPerBeat, 
-            bendStartInterval: 0, 
+            bendStartInterval, 
             ccEvents: [], 
             muted, 
             timingOffset 
@@ -204,8 +215,6 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- HARMONIC RESET ---
     // Beat 1 of a chord: Always land on Root or 5th
-    // Only force this for straight styles; syncopated styles (Bossa, Funk, Reggae) 
-    // should maintain their rhythmic integrity.
     const isStraightStyle = ['rock', 'half', 'whole', 'arp', 'quarter', 'disco'].includes(style);
     if (stepInChord === 0 && isStraightStyle && gb.genreFeel !== 'Reggae') {
         return result(getFrequency(baseRoot), null, 1.15);
@@ -397,48 +406,42 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         const nextTarget = nextChord.bassMidi !== null && nextChord.bassMidi !== undefined ? nextChord.bassMidi : nextChord.rootMidi;
         const targetRoot = normalizeToRange(nextTarget);
         
-        // Prioritize chromatic approach if distance is significant (>= 2 semitones)
         const diff = Math.abs(prevMidi - targetRoot);
         let approach;
+        let bend = 0;
 
-        if (diff >= 2 && Math.random() < 0.8) {
-            // Strong pull: pick chromatic neighbor (half-step away from target)
-            // Choose the direction that is most "on the way" or creates a nice contour
+        if (sb.tension > 0.6 || (diff >= 2 && Math.random() < 0.8)) {
             const below = targetRoot - 1;
             const above = targetRoot + 1;
             
             if (prevMidi < targetRoot) {
-                // Moving up: approach from below or above depending on leap
                 approach = (targetRoot - prevMidi > 5) ? above : below;
             } else {
-                // Moving down: approach from above or below
                 approach = (prevMidi - targetRoot > 5) ? below : above;
             }
             
-            // Validate range
             if (approach < absMin || approach > absMax) {
                  approach = (approach < absMin) ? targetRoot + 1 : targetRoot - 1;
             }
+            
+            if (Math.random() < 0.3) bend = (approach < targetRoot) ? -1 : 1;
         } else {
-            // Standard approach candidates
             let candidates = [targetRoot - 1, targetRoot + 1, targetRoot - 5, targetRoot + 7];
             let valid = candidates.filter(n => n >= absMin && n <= absMax && !isSameAsPrev(n));
             approach = valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : targetRoot - 5;
         }
         
-        return result(getFrequency(approach), null, velocity);
+        return result(getFrequency(approach), null, velocity, false, bend);
     }
 
     // Intermediate beats: Scale-aware walking
     if (intBeat > 0) {
-        // Landing on 5th on beat 3 is very common in walking bass
-        if (intBeat === 2 && Math.random() < 0.6) {
-            const hasFlat5 = currentChord.quality.includes('dim');
+        if (intBeat === 2 && Math.random() < 0.7) {
+            const hasFlat5 = scale.includes(6) && !scale.includes(7);
             return result(getFrequency(clampAndNormalize(baseRoot + (hasFlat5 ? 6 : 7))), null, velocity);
         }
 
-        // Otherwise, move stepwise using the scale
-        const dir = (prevMidi && prevMidi > baseRoot + 12) ? -1 : (prevMidi < baseRoot - 5 ? 1 : (Math.random() > 0.5 ? 1 : -1));
+        const dir = (prevMidi && prevMidi > baseRoot + 7) ? -1 : (prevMidi < baseRoot ? 1 : (Math.random() > 0.5 ? 1 : -1));
         const currentPC = (prevMidi - baseRoot + 120) % 12;
         const scaleIdx = scale.indexOf(currentPC);
         
@@ -447,7 +450,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
             const nextIdx = (scaleIdx + dir + scale.length) % scale.length;
             nextPC = scale[nextIdx];
         } else {
-            nextPC = scale[0];
+            nextPC = scale.reduce((prev, curr) => Math.abs(curr - currentPC) < Math.abs(prev - currentPC) ? curr : prev);
         }
         
         return result(getFrequency(clampAndNormalize(baseRoot + nextPC)), null, velocity);
@@ -473,7 +476,7 @@ export function isBassActive(style, step, stepInChord) {
     if (style === 'arp') return stepInChord % 4 === 0;
     if (style === 'rock') {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-        return stepInChord % (ts.stepsPerBeat / 2) === 0; // 8th notes
+        return stepInChord % (ts.stepsPerBeat / 2) === 0; 
     }
     if (style === 'bossa') {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
@@ -482,28 +485,21 @@ export function isBassActive(style, step, stepInChord) {
         const intensity = ctx.bandIntensity;
         
         if (intensity > 0.65) {
-            // Samba pattern steps: 1, 2, "&" of 2, 3, 4, "&" of 4
             const sambaSteps = [0, 4, 6, 8, 12, 14];
             if (sambaSteps.includes(mStep)) return true;
-            // Allow all 16ths at extremely high intensity for potential ghost notes
             if (intensity > 0.85) return true; 
         }
         
         return [0, 6, 8, 14].filter(s => s < stepsPerMeasure).includes(mStep);
     }
     
-    // For these styles, we largely rely on getBassNote to decide (return null for silence),
-    // but we can provide a broad filter to save cycles, or just return true to delegate.
-    
     if (style === 'quarter') {
-        // Quarter notes always, plus random 8ths
         if (stepInChord % 4 === 0) return true;
-        if (stepInChord % 2 === 0) return true; // Allow chance for 8ths
+        if (stepInChord % 2 === 0) return true; 
         return false;
     }
     
     if (style === 'funk') {
-        // Allow all 16ths to be potential candidates
         return true;
     }
 
@@ -514,7 +510,7 @@ export function isBassActive(style, step, stepInChord) {
     if (style === 'neo') {
         if (stepInChord === 0) return true;
         if (stepInChord % 8 === 0) return true;
-        if (step % 4 === 3) return true; // Syncopated 16ths
+        if (step % 4 === 3) return true; 
         return false;
     }
 
