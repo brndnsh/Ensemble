@@ -44,9 +44,10 @@ export function initUI() {
         'themeSelect', 'notationSelect', 'densitySelect', 'practiceModeCheck', 'swingSlider', 'exportMidiBtn',
         'settingsExportMidiBtn', 'exportOverlay', 'closeExportBtn', 'confirmExportBtn', 'exportChordsCheck',
         'exportBassCheck', 'exportSoloistCheck', 'exportDrumsCheck', 'exportDurationInput', 'exportDurationContainer',
+        'exportDurationDec', 'exportDurationInc', 'exportDurationStepper',
         'exportFilenameInput', 'installAppBtn', 'flashOverlay', 'resetSettingsBtn', 'refreshAppBtn', 'editorOverlay',
         'editArrangementBtn', 'closeEditorBtn', 'intensitySlider', 'complexitySlider', 'intensityValue',
-        'autoIntensityCheck', 'complexityValue', 'soloistDoubleStops'
+        'autoIntensityCheck', 'complexityValue', 'soloistDoubleStops', 'sessionTimerDec', 'sessionTimerInc', 'sessionTimerStepper'
     ];
 
     uiIds.forEach(id => ui[id] = document.getElementById(id));

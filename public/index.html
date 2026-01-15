@@ -528,7 +528,18 @@
                             <span>Session Timer</span>
                         </label>
                         <div id="sessionTimerDurationContainer" style="display: flex; align-items: center; gap: 0.5rem; opacity: 0.5; pointer-events: none; transition: all 0.2s ease;">
-                             <input type="number" id="sessionTimerInput" value="5" min="1" max="120" style="width: 70px; text-align: center; padding: 0.4rem; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; font-weight: bold; color: var(--text-color);">
+                             <div id="sessionTimerStepper" class="stepper-control" style="display: flex; align-items: center; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                <button id="sessionTimerDec" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">-</button>
+                                <input type="number" id="sessionTimerInput" value="5" min="1" max="20" readonly style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;">
+                                <button id="sessionTimerInc" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
+                             </div>
+                             <style>
+                                #sessionTimerInput::-webkit-outer-spin-button,
+                                #sessionTimerInput::-webkit-inner-spin-button {
+                                    -webkit-appearance: none;
+                                    margin: 0;
+                                }
+                             </style>
                              <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Minutes</span>
                         </div>
                     </div>
@@ -650,7 +661,11 @@
                         <span>Target Duration (Minutes)</span>
                     </label>
                     <div id="exportDurationContainer" style="margin-left: 1.8rem; opacity: 0.5; pointer-events: none; transition: opacity 0.2s;">
-                         <input type="number" id="exportDurationInput" value="3" min="1" max="10" style="width: 60px; text-align: left;">
+                         <div id="exportDurationStepper" class="stepper-control" style="display: flex; align-items: center; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; width: fit-content;">
+                            <button id="exportDurationDec" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">-</button>
+                            <input type="number" id="exportDurationInput" value="3" min="1" max="20" readonly style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;">
+                            <button id="exportDurationInc" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
+                         </div>
                     </div>
                 </div>
             </div>
