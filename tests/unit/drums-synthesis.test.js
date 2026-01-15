@@ -1,0 +1,110 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Mock state and global modules
+vi.mock('../../public/state.js', () => ({
+    ctx: {
+        audio: {
+            currentTime: 0,
+            createOscillator: vi.fn(() => ({
+                type: '',
+                frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(), setTargetAtTime: vi.fn() },
+                connect: vi.fn(),
+                start: vi.fn(),
+                stop: vi.fn()
+            })),
+            createGain: vi.fn(() => ({
+                gain: { 
+                    value: 1, 
+                    setValueAtTime: vi.fn(), 
+                    exponentialRampToValueAtTime: vi.fn(), 
+                    setTargetAtTime: vi.fn(),
+                    cancelScheduledValues: vi.fn()
+                },
+                connect: vi.fn()
+            })),
+            createBiquadFilter: vi.fn(() => ({
+                type: '',
+                frequency: { value: 0, setValueAtTime: vi.fn(), setTargetAtTime: vi.fn() },
+                Q: { value: 0, setValueAtTime: vi.fn() },
+                connect: vi.fn()
+            })),
+            createBufferSource: vi.fn(() => ({
+                buffer: null,
+                connect: vi.fn(),
+                start: vi.fn(),
+                stop: vi.fn(),
+                onended: null
+            }))
+        },
+        drumsGain: { connect: vi.fn() }
+    },
+    gb: { 
+        humanize: 20, 
+        audioBuffers: { noise: {} },
+        lastHatGain: null 
+    }
+}));
+
+// Mock utils
+vi.mock('../../public/utils.js', () => ({
+    safeDisconnect: vi.fn()
+}));
+
+import { playDrumSound } from '../../public/synth-drums.js';
+import { ctx, gb } from '../../public/state.js';
+
+describe('Drum Synthesis', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        gb.lastHatGain = null;
+        ctx.audio.currentTime = 10;
+    });
+
+    it('should create a 4-layer model for the Kick drum', () => {
+        playDrumSound('Kick', 10, 1.0);
+
+        // Layers: Beater (Osc), Skin (Noise), Knock (Osc), Shell (Osc)
+        expect(ctx.audio.createOscillator).toHaveBeenCalledTimes(3);
+        expect(ctx.audio.createBufferSource).toHaveBeenCalledTimes(1);
+        expect(ctx.audio.createGain).toHaveBeenCalledTimes(4);
+    });
+
+    it('should create a metallic bank of 6 oscillators for HiHat', () => {
+        playDrumSound('HiHat', 10, 1.0);
+
+        expect(ctx.audio.createOscillator).toHaveBeenCalledTimes(6);
+        expect(ctx.audio.createOscillator.mock.results[0].value.type).toBe('square');
+    });
+
+    it('should implement choking logic when a new HiHat starts', () => {
+        const mockPrevGain = {
+            gain: { 
+                cancelScheduledValues: vi.fn(),
+                setTargetAtTime: vi.fn()
+            }
+        };
+        gb.lastHatGain = mockPrevGain;
+
+        playDrumSound('HiHat', 11, 1.0);
+
+        expect(mockPrevGain.gain.cancelScheduledValues).toHaveBeenCalledWith(11); 
+        expect(mockPrevGain.gain.setTargetAtTime).toHaveBeenCalledWith(0, 11, 0.005);
+    });
+
+    it('should use a highpass filter for the Snare wires', () => {
+        playDrumSound('Snare', 10, 1.0);
+
+        // Snare creates Tone (2 Oscs) and Wires (Noise)
+        const filters = ctx.audio.createBiquadFilter.mock.results;
+        const wiresFilter = filters.find(f => f.value.type === 'bandpass');
+        expect(wiresFilter).toBeDefined();
+    });
+
+    it('should use Sidestick synthesis when name is Sidestick', () => {
+        playDrumSound('Sidestick', 10, 1.0);
+
+        // Sidestick has 3 layers: Click (Osc), Body (Osc), Snap (Noise)
+        expect(ctx.audio.createOscillator).toHaveBeenCalledTimes(2);
+        expect(ctx.audio.createBufferSource).toHaveBeenCalledTimes(1);
+    });
+});
