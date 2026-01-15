@@ -3,7 +3,7 @@ import { ui, updateGenreUI, triggerFlash, updateActiveChordUI, clearActiveVisual
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, updateSustain, killAllNotes, restoreGains } from './engine.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
-import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker } from './worker-client.js';
+import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker, requestResolution } from './worker-client.js';
 import { updateAutoConductor, checkSectionTransition } from './conductor.js';
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
 import { loadDrumPreset, flushBuffers, switchMeasure } from './instrument-controller.js';
@@ -11,6 +11,7 @@ import { draw } from './animation-loop.js';
 
 let isScheduling = false;
 let sessionStartTime = 0;
+let isResolutionTriggered = false;
 
 let iosAudioUnlocked = false;
 const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ");
@@ -60,6 +61,7 @@ export function togglePlay(viz) {
         }
 
         ctx.step = 0;
+        isResolutionTriggered = false;
         dispatch('RESET_SESSION'); // Reset warm-up counters
         dispatch('SET_ENDING_PENDING', false);
         sessionStartTime = performance.now();
@@ -95,10 +97,7 @@ export function togglePlay(viz) {
 
 function triggerResolution(time) {
     // 1. Tell worker to generate resolution
-    // We'll add a new message type 'requestResolution' to the worker
-    import('./worker-client.js').then(client => {
-        client.requestResolution(ctx.step);
-    });
+    requestResolution(ctx.step);
 
     // 2. We'll wait for the notes to come back via the worker-client callback
     // The worker-client already handles incoming 'notes' and puts them in buffers.
@@ -111,12 +110,12 @@ function triggerResolution(time) {
 function scheduleResolution(time) {
     // Schedule the final resolution measure (Tonic chord, Kick+Crash, etc.)
     const spb = 60.0 / ctx.bpm;
-    const measureDuration = 4 * spb; // Ring out for 4 beats
+    const measureDuration = 8 * spb; // Ring out for 2 bars (approx 5-6s)
 
     // 1. Manual Drum Resolution
     if (gb.enabled) {
-        playDrumSound('Kick', time, 1.15);
-        playDrumSound('Crash', time, 1.1);
+        playDrumSound('Kick', time, 1.0);
+        playDrumSound('Crash', time, 0.9);
     }
 
     // 2. Schedule notes that came from the worker (Bass, Chords, Soloist)
@@ -137,7 +136,12 @@ function scheduleResolution(time) {
         ctx.drawQueue.push({ type: 'flash', time: time, intensity: 0.4, beat: 1 });
     }
 
-    // 4. Stop playback after the ring-out
+    // 4. Graceful Sustain Release (at 1.5 bars)
+    setTimeout(() => {
+        if (ctx.isPlaying) updateSustain(false);
+    }, 6 * spb * 1000);
+
+    // 5. Stop playback after the full ring-out (2 bars)
     setTimeout(() => {
         if (ctx.isPlaying) togglePlay(); 
     }, measureDuration * 1000);
@@ -176,8 +180,12 @@ export function scheduler() {
                 // --- Resolution Trigger Logic ---
                 // If ending is pending or stopAtEnd is active, and we reach a loop boundary (Step 0)
                 if (ctx.step > 0 && (ctx.step % arranger.totalSteps === 0)) {
-                    if (ctx.isEndingPending || ctx.stopAtEnd) {
-                        triggerResolution(ctx.nextNoteTime);
+                    if (ctx.isEndingPending || ctx.stopAtEnd || isResolutionTriggered) {
+                        if (!isResolutionTriggered) {
+                            isResolutionTriggered = true;
+                            ctx.stopAtEnd = false;
+                            triggerResolution(ctx.nextNoteTime);
+                        }
                         return; // Stop scheduling
                     }
                 }

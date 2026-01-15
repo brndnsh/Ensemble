@@ -45,7 +45,7 @@ describe('Accessibility (A11y) & Interactive Integrity', () => {
             'refreshAppBtn', 'editorOverlay', 'editArrangementBtn', 'closeEditorBtn', 'intensitySlider', 'complexitySlider',
             'intensityValue', 'autoIntensityCheck', 'complexityValue', 'panel-visualizer', 'clearDrumsBtn', 'masterVolume',
             'countInCheck', 'metronomeCheck', 'visualFlashCheck', 'hapticCheck', 'applyPresetSettingsCheck', 'swingBaseSelect',
-            'closeSettingsBtn', 'sessionTimerSelect', 'stopAtEndCheck'
+            'closeSettingsBtn', 'sessionTimerSelect'
         ];
         mockIds.forEach(id => {
             if (!document.getElementById(id)) {

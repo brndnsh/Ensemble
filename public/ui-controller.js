@@ -541,13 +541,34 @@ export function setupUIHandlers(refs) {
         dispatch('SET_PARAM', { module: 'ctx', param: 'haptic', value: ui.haptic.checked });
     });
 
-    ui.sessionTimerSelect.addEventListener('change', () => {
-        dispatch('SET_SESSION_TIMER', parseInt(ui.sessionTimerSelect.value));
-    });
+    // --- Session Timer UI Logic ---
+    if (ui.sessionTimerCheck && ui.sessionTimerInput) {
+        const updateTimerUI = (isChecked) => {
+            ui.sessionTimerDurationContainer.style.opacity = isChecked ? '1' : '0.4';
+            ui.sessionTimerDurationContainer.style.pointerEvents = isChecked ? 'auto' : 'none';
+            ui.sessionTimerInput.style.borderColor = isChecked ? 'var(--accent-color)' : 'var(--border-color)';
+            ui.sessionTimerInput.style.backgroundColor = isChecked ? 'var(--card-bg)' : 'var(--input-bg)';
+        };
 
-    ui.stopAtEndCheck.addEventListener('change', () => {
-        dispatch('SET_STOP_AT_END', ui.stopAtEndCheck.checked);
-    });
+        // Initialize UI from State
+        const currentTimer = ctx.sessionTimer || 0;
+        ui.sessionTimerCheck.checked = currentTimer > 0;
+        ui.sessionTimerInput.value = currentTimer > 0 ? currentTimer : 5;
+        updateTimerUI(currentTimer > 0);
+
+        ui.sessionTimerCheck.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            const duration = isChecked ? parseFloat(ui.sessionTimerInput.value) : 0;
+            updateTimerUI(isChecked);
+            dispatch('SET_SESSION_TIMER', duration);
+        });
+
+        ui.sessionTimerInput.addEventListener('change', (e) => {
+            if (ui.sessionTimerCheck.checked) {
+                dispatch('SET_SESSION_TIMER', parseFloat(e.target.value));
+            }
+        });
+    }
 
     ui.applyPresetSettings.addEventListener('change', () => {
         dispatch('SET_PRESET_SETTINGS_MODE', ui.applyPresetSettings.checked);

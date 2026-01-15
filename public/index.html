@@ -522,26 +522,17 @@
 
                 <div class="performance-ending-section">
                     <h4>Performance Ending</h4>
-                    <div class="performance-ending-grid">
-                        <div>
-                            <label class="performance-ending-label">Session Timer</label>
-                            <select id="sessionTimerSelect" aria-label="Session Timer">
-                                <option value="0">Infinite Jam</option>
-                                <option value="1">1 Minute</option>
-                                <option value="2">2 Minutes</option>
-                                <option value="5">5 Minutes</option>
-                                <option value="10">10 Minutes</option>
-                                <option value="20">20 Minutes</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="performance-ending-toggle">
-                                <input type="checkbox" id="stopAtEndCheck">
-                                <span>Finish at End</span>
-                            </label>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 500;">
+                            <input type="checkbox" id="sessionTimerCheck">
+                            <span>Session Timer</span>
+                        </label>
+                        <div id="sessionTimerDurationContainer" style="display: flex; align-items: center; gap: 0.5rem; opacity: 0.5; pointer-events: none; transition: all 0.2s ease;">
+                             <input type="number" id="sessionTimerInput" value="5" min="1" max="120" style="width: 70px; text-align: center; padding: 0.4rem; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; font-weight: bold; color: var(--text-color);">
+                             <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Minutes</span>
                         </div>
                     </div>
-                    <p class="performance-ending-footer">When enabled, the band will perform a professional resolution instead of stopping abruptly.</p>
+                    <p class="performance-ending-footer" style="margin-top: 0.75rem;">The band will complete the current progression loop before performing the resolution.</p>
                 </div>
 
                 <div style="margin-bottom: 1rem;">

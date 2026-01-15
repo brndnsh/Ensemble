@@ -19,8 +19,11 @@ export function initUI() {
         metronome: 'metronomeCheck',
         visualFlash: 'visualFlashCheck',
         haptic: 'hapticCheck',
-        sessionTimerSelect: 'sessionTimerSelect',
-        stopAtEndCheck: 'stopAtEndCheck',
+        sessionTimerCheck: 'sessionTimerCheck',
+        sessionTimerInput: 'sessionTimerInput',
+        sessionTimerDurationContainer: 'sessionTimerDurationContainer',
+
+    // --- Export ---
         applyPresetSettings: 'applyPresetSettingsCheck',
         swingBase: 'swingBaseSelect',
         closeSettings: 'closeSettingsBtn'

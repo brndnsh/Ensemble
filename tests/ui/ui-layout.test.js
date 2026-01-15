@@ -47,7 +47,7 @@ describe('UI Layout Integrity', () => {
             'intensityValue', 'autoIntensityCheck', 'complexityValue', 'panel-visualizer', 'chordVolume', 'bassVolume',
             'soloistVolume', 'drumVolume', 'clearDrumsBtn', 'masterVolume', 'countInCheck', 'metronomeCheck',
             'visualFlashCheck', 'hapticCheck', 'applyPresetSettingsCheck', 'swingBaseSelect', 'closeSettingsBtn',
-            'sessionTimerSelect', 'stopAtEndCheck'
+            'sessionTimerSelect'
         ];
         
         mockIds.forEach(id => {

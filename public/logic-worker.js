@@ -1,6 +1,7 @@
 import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 import { getAccompanimentNotes, compingState } from './accompaniment.js';
+import { generateResolutionNotes } from './resolution.js';
 import { arranger, cb, bb, sb, gb, ctx } from './state.js';
 import { APP_VERSION, TIME_SIGNATURES, KEY_ORDER } from './config.js';
 import { getMidi, getStepInfo } from './utils.js';
@@ -508,52 +509,60 @@ export function handleExport(options) {
         // --- FINAL RESOLUTION MEASURE ---
         const resolutionStep = totalStepsWithoutEnding;
         const resTimeS = stepTimes[resolutionStep];
-        const resPulse = toPulses(resTimeS);
-        const keyPC = KEY_ORDER.indexOf(arranger.key);
-        const tonicMidi = keyPC + 60;
 
+        const resolutionNotes = generateResolutionNotes(resolutionStep, arranger, { 
+            bb: includedTracks.includes('bass'), 
+            cb: includedTracks.includes('chords'), 
+            sb: includedTracks.includes('soloist'), 
+            gb: includedTracks.includes('drums') 
+        });
+
+        resolutionNotes.forEach(n => {
+            let track;
+            let channel = 0;
+            if (n.module === 'bb') { track = bassTrack; channel = 1; }
+            else if (n.module === 'cb') { track = chordTrack; channel = 0; }
+            else if (n.module === 'sb') { track = soloistTrack; channel = 2; }
+            else if (n.module === 'gb') { track = drumTrack; channel = 9; }
+            
+            if (!track) return;
+
+            const offsetS = n.timingOffset || 0;
+            const notePulse = toPulses(resTimeS + offsetS);
+
+            if (n.ccEvents) {
+                n.ccEvents.forEach(cc => {
+                     track.cc(toPulses(resTimeS + (cc.timingOffset || 0)), channel, cc.controller, cc.value);
+                });
+            }
+
+            if (n.midi > 0) {
+                 if (n.module === 'sb' && n.bendStartInterval) {
+                     track.pitchBend(notePulse, channel, Math.round(-(n.bendStartInterval / 2) * 8192));
+                 }
+                 
+                 track.noteOn(notePulse, channel, n.midi, n.midiVelocity || 90);
+
+                 if (n.module === 'sb' && n.bendStartInterval) {
+                     track.pitchBend(toPulses(resTimeS + sixteenthSec), channel, 0);
+                 }
+                 
+                 const durationS = (n.durationSteps || 1) * sixteenthSec;
+                 track.noteOff(toPulses(resTimeS + offsetS + durationS), channel, n.midi);
+            } else if (n.module === 'gb' && n.name) {
+                const drumMap = { 'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46, 'Crash': 49 };
+                const midi = drumMap[n.name];
+                if (midi) {
+                    track.noteOn(notePulse, channel, midi, n.midiVelocity || 110);
+                    const durS = (n.name === 'Crash') ? 3.0 : 0.1;
+                    track.noteOff(toPulses(resTimeS + offsetS + durS), channel, midi);
+                }
+            }
+        });
+
+        // Cleanup: Release sustain for chords if they were active
         if (includedTracks.includes('chords')) {
-            chordTrack.cc(resPulse, 0, 64, 127); // Sustain On
-            const intervals = arranger.isMinor ? [0, 2, 3, 7, 10] : [0, 2, 4, 7, 9];
-            intervals.forEach((inter, i) => {
-                const midi = tonicMidi + inter;
-                // Slow strum in MIDI too
-                const notePulse = toPulses(resTimeS + (i * 0.025));
-                const midiVel = Math.max(1, Math.min(127, 85));
-                chordTrack.noteOn(notePulse, 0, midi, midiVel);
-                // Hold for 4 beats (16 steps)
-                chordTrack.noteOff(toPulses(resTimeS + (16 * sixteenthSec)), 0, midi);
-            });
-            // Release sustain at the very end
             chordTrack.cc(toPulses(resTimeS + (16.1 * sixteenthSec)), 0, 64, 0);
-        }
-
-        if (includedTracks.includes('bass')) {
-            const bassMidi = (keyPC % 12) + 24;
-            const midiVel = Math.max(1, Math.min(127, 115));
-            bassTrack.noteOn(resPulse, 1, bassMidi, midiVel);
-            bassTrack.noteOff(toPulses(resTimeS + (16 * sixteenthSec)), 1, bassMidi);
-        }
-
-        if (includedTracks.includes('soloist')) {
-            const isRoot = Math.random() < 0.7;
-            const soloMidi = (keyPC % 12) + (isRoot ? 72 : 79); 
-            const midiVel = Math.max(1, Math.min(127, 95));
-            
-            if (isRoot) soloistTrack.pitchBend(resPulse, 2, Math.round(-(0.5 / 2) * 8192));
-            soloistTrack.noteOn(resPulse, 2, soloMidi, midiVel);
-            if (isRoot) soloistTrack.pitchBend(toPulses(resTimeS + sixteenthSec), 2, 0);
-            
-            soloistTrack.noteOff(toPulses(resTimeS + (12 * sixteenthSec)), 2, soloMidi);
-        }
-
-        if (includedTracks.includes('drums')) {
-            const drumPulse = toPulses(resTimeS);
-            const drumMap = { 'Kick': 36, 'Crash': 49 };
-            drumTrack.noteOn(drumPulse, 9, drumMap['Kick'], 120);
-            drumTrack.noteOff(toPulses(resTimeS + 0.1), 9, drumMap['Kick']);
-            drumTrack.noteOn(drumPulse, 9, drumMap['Crash'], 115);
-            drumTrack.noteOff(toPulses(resTimeS + 3.0), 9, drumMap['Crash']);
         }
 
         const finalPulse = toPulses(stepTimes[totalStepsExport - 1] + sixteenthSec);
@@ -651,90 +660,7 @@ if (typeof self !== 'undefined') {
 }
 
 export function handleResolution(step) {
-    const notesToMain = [];
-    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-    
-    // 1. Identify Tonic Chord with Sophisticated Voicing
-    const keyPC = KEY_ORDER.indexOf(arranger.key);
-    const rootMidi = keyPC + 60;
-    
-    // Sophisticated Resolution Voicings
-    // Major: 6/9 (Root, 2, 3, 5, 6)
-    // Minor: m9 (Root, 2, b3, 5, b7)
-    const intervals = arranger.isMinor ? [0, 2, 3, 7, 10] : [0, 2, 4, 7, 9];
-    const tonicFreqs = intervals.map(i => {
-        return 440 * Math.pow(2, (rootMidi + i - 69) / 12);
-    });
-    
-    const tonicChord = {
-        rootMidi: rootMidi,
-        quality: arranger.isMinor ? 'minor' : 'major',
-        intervals: intervals,
-        freqs: tonicFreqs,
-        beats: 4,
-        sectionId: 'resolution',
-        sectionLabel: 'End'
-    };
-
-    // 2. Bass Resolution (Very low root - Octave 2)
-    if (bb.enabled) {
-        const bassMidi = (keyPC % 12) + 24; 
-        const midiVel = Math.max(1, Math.min(127, Math.round(1.15 * 127)));
-        notesToMain.push({
-            midi: bassMidi,
-            freq: 440 * Math.pow(2, (bassMidi - 69) / 12),
-            velocity: 1.15, // Keep for audio engine
-            midiVelocity: midiVel, // For MIDI export symmetry
-            durationSteps: 16, // Full 4 beats
-            module: 'bb',
-            step: step
-        });
-    }
-
-    // 3. Chord Resolution (Strummed Tonic Voicing)
-    if (cb.enabled) {
-        // Explicit Sustain Pedal On
-        notesToMain.push({
-            midi: 0,
-            module: 'cb',
-            step: step,
-            ccEvents: [{ controller: 64, value: 127, timingOffset: 0 }]
-        });
-
-        tonicFreqs.forEach((f, i) => {
-            const vel = 0.65;
-            const midiVel = Math.max(1, Math.min(127, Math.round(vel * 127)));
-            notesToMain.push({
-                midi: getMidi(f),
-                freq: f,
-                velocity: vel,
-                midiVelocity: midiVel,
-                durationSteps: 16,
-                module: 'cb',
-                step: step,
-                timingOffset: i * 0.025 // Professional slow strum
-            });
-        });
-    }
-
-    // 4. Soloist Resolution (Root or 5th with a curl)
-    if (sb.enabled) {
-        const isRoot = Math.random() < 0.7;
-        const soloMidi = (keyPC % 12) + (isRoot ? 72 : 79); 
-        const vel = 0.85;
-        const midiVel = Math.max(1, Math.min(127, Math.round(vel * 127)));
-        notesToMain.push({
-            midi: soloMidi,
-            freq: 440 * Math.pow(2, (soloMidi - 69) / 12),
-            velocity: vel,
-            midiVelocity: midiVel,
-            durationSteps: 12,
-            module: 'sb',
-            step: step,
-            bendStartInterval: isRoot ? 0.5 : 0 // Only curl if landing on root
-        });
-    }
-
+    const notesToMain = generateResolutionNotes(step, arranger, { bb: bb.enabled, cb: cb.enabled, sb: sb.enabled, gb: gb.enabled });
     postMessage({ type: 'notes', notes: notesToMain });
 }
 
