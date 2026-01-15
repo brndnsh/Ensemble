@@ -59,6 +59,6 @@ The project is currently transitioning from static loop-based accompaniment to "
 1.  **Soloist Engine (v1.99)**: COMPLETED implementation of advanced melodic devices including Bebop enclosures, quartal harmony (Neo-Soul), and rhythmic call-and-response logic.
 2.  **Bass Engine**: Implementing chromatic walking logic for Jazz, "Slap & Pop" synthesis for Funk, and micro-timing (Dilla feel) for Neo-Soul.
 3.  **Accompaniment Engine**: Transitioning to rootless jazz voicings, implementing Reggae "Bubble/Skank" dual-lane logic.
-4.  **Authenticity Verification**: Expanding the probabilistic testing suite (`tests/*.test.js`) to ensure genre-specific rhythmic and harmonic anchors are maintained over long durations.
+4.  **Authenticity Verification**: Expanding the probabilistic testing suite (`tests/**/*.test.js`) to ensure genre-specific rhythmic and harmonic anchors are maintained over long durations.
 5.  **Latin/Bossa Percussion**: Expand procedural percussion (shakers/agogo) for Latin styles.
 6.  **Reference-Driven Tuning**: Calibrating velocity maps and timing offsets against classic genre recordings to achieve a "pro-level" musical feel.
