@@ -234,13 +234,9 @@ export function getScaleForChord(chord, nextChord, style) {
 
     // 3. Chord Scale Logic (Prioritize Specific Qualities)
     switch (chord.quality) {
-        case 'minor': 
-            if (style === 'bird' || gb.genreFeel === 'Jazz' || style === 'neo' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk') return [0, 2, 3, 5, 7, 9, 10]; // Dorian
-            return [0, 2, 3, 5, 7, 8, 10]; 
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
         case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
         case 'aug': return [0, 2, 4, 6, 8, 10];
-        case 'maj7': return [0, 2, 4, 5, 7, 9, 11];
         case 'sus4': return [0, 2, 5, 7, 9, 10]; // Mixolydian sus4
         case '7alt': return [0, 1, 3, 4, 6, 8, 10];
         case '7#9': return [0, 1, 3, 4, 6, 8, 10]; // Altered
@@ -251,16 +247,31 @@ export function getScaleForChord(chord, nextChord, style) {
         case '13': return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
     }
 
-    const isV7toMinor = isDominant && nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
+    if (chord.quality === 'minor' && (style === 'bird' || gb.genreFeel === 'Jazz' || style === 'neo' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk')) {
+        return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+    }
+
+    const isV7toMinor = isDominant && nextChord && 
+                        (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim') &&
+                        ((nextChord.rootMidi - chord.rootMidi + 120) % 12 === 5); // Resolving down a 5th (or up a 4th)
     if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
 
-    if (isDominant) {
-        // If it's a "II7" (Major II), usually Lydian Dominant (#11) sounds better
+    if (isDominant || chord.quality === 'major') {
         const keyRoot = KEY_ORDER.indexOf(arranger.key);
         const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
-        if (relativeRoot === 2 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10]; 
 
-        return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian fallback
+        // V in Minor Key -> Phrygian Dominant
+        if (arranger.isMinor && relativeRoot === 7) return [0, 1, 4, 5, 7, 8, 10];
+
+        if (isDominant) {
+            // II7 (Major II) -> Lydian Dominant (#11)
+            if (relativeRoot === 2 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10]; 
+
+            // bVII7 (Backdoor Dominant) -> Lydian Dominant
+            if (relativeRoot === 10 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10];
+
+            return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian fallback
+        }
     }
     // 4. Diatonic Fallback (Only for simple triads that fit the key)
     const keyRoot = KEY_ORDER.indexOf(arranger.key);
