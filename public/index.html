@@ -520,6 +520,30 @@
                     </label>
                 </div>
 
+                <div class="performance-ending-section">
+                    <h4>Performance Ending</h4>
+                    <div class="performance-ending-grid">
+                        <div>
+                            <label class="performance-ending-label">Session Timer</label>
+                            <select id="sessionTimerSelect" aria-label="Session Timer">
+                                <option value="0">Infinite Jam</option>
+                                <option value="1">1 Minute</option>
+                                <option value="2">2 Minutes</option>
+                                <option value="5">5 Minutes</option>
+                                <option value="10">10 Minutes</option>
+                                <option value="20">20 Minutes</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="performance-ending-toggle">
+                                <input type="checkbox" id="stopAtEndCheck">
+                                <span>Finish at End</span>
+                            </label>
+                        </div>
+                    </div>
+                    <p class="performance-ending-footer">When enabled, the band will perform a professional resolution instead of stopping abruptly.</p>
+                </div>
+
                 <div style="margin-bottom: 1rem;">
                     <label style="display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" id="applyPresetSettingsCheck">

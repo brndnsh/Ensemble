@@ -533,17 +533,20 @@ export function setupUIHandlers(refs) {
     ui.drumBarsSelect.addEventListener('change', e => updateMeasures(e.target.value));
     ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
 
-    [ui.metronome, ui.countIn, ui.visualFlash, ui.haptic, ui.applyPresetSettings, ui.soloistDoubleStops].forEach(el => {
-        el.addEventListener('change', () => {
-            if (el === ui.metronome) ctx.metronome = el.checked;
-            if (el === ui.applyPresetSettings) ctx.applyPresetSettings = el.checked;
-            if (el === ui.soloistDoubleStops) {
-                dispatch('SET_DOUBLE_STOPS', el.checked);
-                syncWorker();
-                flushBuffers();
-            }
-            saveCurrentState();
-        });
+    ui.haptic.addEventListener('change', () => {
+        dispatch('SET_PARAM', { module: 'ctx', param: 'haptic', value: ui.haptic.checked });
+    });
+
+    ui.sessionTimerSelect.addEventListener('change', () => {
+        dispatch('SET_SESSION_TIMER', parseInt(ui.sessionTimerSelect.value));
+    });
+
+    ui.stopAtEndCheck.addEventListener('change', () => {
+        dispatch('SET_STOP_AT_END', ui.stopAtEndCheck.checked);
+    });
+
+    ui.applyPresetSettings.addEventListener('change', () => {
+        dispatch('SET_PRESET_SETTINGS_MODE', ui.applyPresetSettings.checked);
     });
 
     Object.keys(refs.POWER_CONFIG || {}).forEach(type => {

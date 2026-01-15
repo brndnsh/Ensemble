@@ -29,6 +29,7 @@ function init() {
     try {
         initUI();
         viz = new UnifiedVisualizer('unifiedVizContainer'); 
+        ctx.viz = viz;
         viz.addTrack('bass', 'var(--success-color)'); 
         viz.addTrack('soloist', 'var(--soloist-color)');
 

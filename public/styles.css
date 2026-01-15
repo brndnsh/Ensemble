@@ -1601,6 +1601,59 @@ h2 {
 .preset-chip.active[data-category="String"] { background: var(--orange); color: white; }
 .preset-chip.active[data-category="Experimental"] { background: var(--violet); color: white; }
 
+/* --- Performance Ending Section --- */
+.performance-ending-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba(38, 139, 210, 0.05); /* Solarized Blue tint */
+    border: 1px solid rgba(38, 139, 210, 0.1);
+    border-radius: 8px;
+}
+
+.performance-ending-section h4 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: none !important; /* Override standard panel h4 */
+}
+
+.performance-ending-grid {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.performance-ending-grid > div {
+    flex: 1;
+}
+
+.performance-ending-footer {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.performance-ending-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.performance-ending-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-top: 1rem;
+    color: var(--text-color);
+}
+
 .user-preset-chip {
     border-color: var(--border-color);
 }

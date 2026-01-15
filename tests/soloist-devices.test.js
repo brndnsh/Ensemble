@@ -2,25 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../public/state.js', () => ({
-    sb: { 
-        enabled: true, 
-        busySteps: 0, 
-        currentPhraseSteps: 0, 
-        notesInPhrase: 0,
-        qaState: 'Question',
-        isResting: false,
-        contourSteps: 0,
-        melodicTrend: 'Static',
-        tension: 0,
-        motifBuffer: [],
-        hookBuffer: [],
-        deviceBuffer: [],
-        lastFreq: 440,
-        hookRetentionProb: 0.5,
-        doubleStops: true,
-        currentCell: [1, 1, 1, 1]
-    },
-    cb: { enabled: true },
+        sb: {
+            enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
+            qaState: 'Question', isResting: false, contourSteps: 0,
+            melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
+            lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
+            sessionSteps: 1000
+        },    cb: { enabled: true },
     ctx: { bandIntensity: 0.5, bpm: 120 },
     arranger: { 
         key: 'C', 

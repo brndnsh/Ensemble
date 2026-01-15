@@ -112,11 +112,12 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
         // Monophonic Cutoff: Stop previous bass note if it's still ringing
         if (bb.lastBassGain && bb.lastBassGain !== gain) {
             try {
-                const g = bb.lastBassGain.gain;
-                const fadeOutStart = startTime;
-                g.cancelScheduledValues(fadeOutStart);
-                // Exponentially fade current note to zero
-                g.setTargetAtTime(0, fadeOutStart, 0.005);
+                const prevGain = bb.lastBassGain.gain;
+                // Add a very fast fade out (5ms) to the PREVIOUS note to prevent clicking
+                // without cutting off the CURRENT note's attack.
+                prevGain.cancelScheduledValues(startTime);
+                prevGain.setValueAtTime(prevGain.value, startTime);
+                prevGain.exponentialRampToValueAtTime(0.0001, startTime + 0.005);
             } catch (e) {}
         }
         bb.lastBassGain = gain;

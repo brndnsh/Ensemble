@@ -56,7 +56,7 @@ describe('Soloist Warm-up Logic (Guns-Blazing Prevention)', () => {
     it('should be more likely to rest at the very start of a session', () => {
         let startNotes = 0;
         let endNotes = 0;
-        const iterations = 2000;
+        const iterations = 5000;
 
         // 1. Check at start (sessionSteps reset every iteration)
         for (let i = 0; i < iterations; i++) {

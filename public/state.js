@@ -29,6 +29,9 @@
  * @property {boolean} metronome - Whether the metronome is active.
  * @property {boolean} applyPresetSettings - Whether to apply BPM/Style from presets.
  * @property {boolean} sustainActive - Whether the global sustain pedal is "pressed".
+ * @property {number} sessionTimer - Session timer in minutes (0 = infinite).
+ * @property {boolean} stopAtEnd - Whether to stop at the end of the current progression/loop.
+ * @property {boolean} isEndingPending - Whether the resolution sequence is about to trigger.
  * @property {Object} intent - Current rhythmic intent (syncopation, anticipation, etc).
  */
 export const ctx = {
@@ -61,6 +64,9 @@ export const ctx = {
     metronome: false,
     applyPresetSettings: false,
     sustainActive: false,
+    sessionTimer: 0,
+    stopAtEnd: false,
+    isEndingPending: false,
     intent: {
         syncopation: 0.2,
         anticipation: 0.1,
@@ -408,6 +414,15 @@ export function dispatch(action, payload) {
             break;
         case 'SET_NOTATION':
             arranger.notation = payload;
+            break;
+        case 'SET_SESSION_TIMER':
+            ctx.sessionTimer = payload;
+            break;
+        case 'SET_STOP_AT_END':
+            ctx.stopAtEnd = payload;
+            break;
+        case 'SET_ENDING_PENDING':
+            ctx.isEndingPending = payload;
             break;
     }
 
