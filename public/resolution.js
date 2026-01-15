@@ -29,11 +29,11 @@ export function generateResolutionNotes(step, arranger, enabled) {
     // 2. Bass Resolution (Very low root - Octave 2)
     if (enabled.bb) {
         const bassMidi = (keyPC % 12) + 24; 
-        const midiVel = Math.max(1, Math.min(127, Math.round(1.15 * 127)));
+        const midiVel = Math.max(1, Math.min(127, Math.round(0.95 * 127)));
         notes.push({
             midi: bassMidi,
             freq: 440 * Math.pow(2, (bassMidi - 69) / 12),
-            velocity: 1.15, // Keep for audio engine
+            velocity: 0.95, // Keep for audio engine
             midiVelocity: midiVel, // For MIDI export symmetry
             durationSteps: 16, // Full 4 beats
             module: 'bb',
@@ -72,7 +72,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
     if (enabled.sb) {
         const isRoot = Math.random() < 0.7;
         const soloMidi = (keyPC % 12) + (isRoot ? 72 : 79); 
-        const vel = 0.85;
+        const vel = 0.8;
         const midiVel = Math.max(1, Math.min(127, Math.round(vel * 127)));
         notes.push({
             midi: soloMidi,
@@ -93,7 +93,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
         notes.push({
             module: 'gb',
             name: 'Kick',
-            velocity: 1.15,
+            velocity: 0.85,
             midiVelocity: 120,
             step: step,
             timingOffset: 0
@@ -102,7 +102,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
         notes.push({
             module: 'gb',
             name: 'Crash',
-            velocity: 1.1,
+            velocity: 0.8,
             midiVelocity: 115,
             step: step,
             timingOffset: 0

@@ -118,8 +118,8 @@ function scheduleResolution(time) {
 
     // 1. Manual Drum Resolution
     if (gb.enabled) {
-        playDrumSound('Kick', time, 1.15);
-        playDrumSound('Crash', time, 1.1);
+        playDrumSound('Kick', time, 0.85);
+        playDrumSound('Crash', time, 0.8);
     }
 
     // 2. Schedule notes that came from the worker (Bass, Chords, Soloist)
