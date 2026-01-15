@@ -116,13 +116,12 @@ function prepareResolution(targetStep) {
 function scheduleResolution(time) {
     // Schedule the final resolution measure (Tonic chord, Kick+Crash, etc.)
     const spb = 60.0 / ctx.bpm;
-    const measureDuration = 4 * spb; // 1 bar ring out before fade
-    const fadeDuration = 3.0; // 3 second fade out
+    const measureDuration = 4 * spb; // Ring out for 4 beats
 
     // 1. Manual Drum Resolution
     if (gb.enabled) {
-        playDrumSound('Kick', time, 0.8);
-        playDrumSound('Crash', time, 0.7);
+        playDrumSound('Kick', time, 1.0);
+        playDrumSound('Crash', time, 0.9);
     }
 
     // 2. Schedule notes that came from the worker (Bass, Chords, Soloist)
@@ -143,22 +142,10 @@ function scheduleResolution(time) {
         ctx.drawQueue.push({ type: 'flash', time: time, intensity: 0.4, beat: 1 });
     }
 
-    // 4. Fade Out Master Gain
-    setTimeout(() => {
-        if (ctx.masterGain && ctx.audio) {
-            const now = ctx.audio.currentTime;
-            try {
-                ctx.masterGain.gain.cancelScheduledValues(now);
-                ctx.masterGain.gain.setValueAtTime(ctx.masterGain.gain.value, now);
-                ctx.masterGain.gain.exponentialRampToValueAtTime(0.001, now + fadeDuration);
-            } catch(e) {}
-        }
-    }, measureDuration * 1000);
-
-    // 5. Stop playback after fade is complete
+    // 4. Stop playback after the ring-out
     setTimeout(() => {
         if (ctx.isPlaying) togglePlay(); 
-    }, (measureDuration + fadeDuration) * 1000);
+    }, measureDuration * 1000);
 }
 
 export function scheduler() {
