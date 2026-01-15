@@ -1,4 +1,4 @@
-import { ctx, gb, cb, bb, sb, vizState, storage, arranger } from './state.js';
+import { ctx, gb, cb, bb, sb, vizState, storage, arranger, dispatch } from './state.js';
 import { ui, updateKeySelectLabels, updateRelKeyButton, updateGenreUI } from './ui.js';
 import { decompressSections, generateId, normalizeKey } from './utils.js';
 import { applyTheme, setBpm } from './app-controller.js';
@@ -137,6 +137,33 @@ export function loadFromUrl(viz) {
     if (params.get('ts')) { arranger.timeSignature = params.get('ts'); ui.timeSigSelect.value = arranger.timeSignature; }
     if (params.get('bpm')) { setBpm(params.get('bpm'), viz); }
     if (params.get('style')) updateStyle('chord', params.get('style'));
+    if (params.get('genre')) {
+        const genre = params.get('genre');
+        // Find the genre button and simulate a click to trigger all associated logic
+        const btn = document.querySelector(`.genre-btn[data-genre="${genre}"]`);
+        if (btn) {
+            btn.click();
+        } else {
+            // Fallback if UI not yet ready
+            gb.lastSmartGenre = genre;
+            gb.genreFeel = genre;
+        }
+    }
+    if (params.get('int')) {
+        const val = parseFloat(params.get('int'));
+        dispatch('SET_BAND_INTENSITY', val);
+        if (ui.intensitySlider) {
+            ui.intensitySlider.value = Math.round(val * 100);
+            if (ui.intensityValue) ui.intensityValue.textContent = `${ui.intensitySlider.value}%`;
+        }
+    }
+    if (params.get('comp')) {
+        const val = parseFloat(params.get('comp'));
+        dispatch('SET_COMPLEXITY', val);
+        if (ui.complexitySlider) {
+            ui.complexitySlider.value = Math.round(val * 100);
+        }
+    }
     if (params.get('notation')) { arranger.notation = params.get('notation'); ui.notationSelect.value = arranger.notation; }
 }
 

@@ -1,4 +1,4 @@
-import { arranger, cb, ctx } from './state.js';
+import { arranger, cb, gb, ctx } from './state.js';
 import { ui, showToast } from './ui.js';
 import { compressSections, normalizeKey } from './utils.js';
 
@@ -10,6 +10,9 @@ export function shareProgression() {
         params.set('ts', arranger.timeSignature);
         params.set('bpm', ui.bpmInput.value);
         params.set('style', cb.style);
+        params.set('genre', gb.genreFeel);
+        params.set('int', ctx.bandIntensity.toFixed(2));
+        params.set('comp', ctx.complexity.toFixed(2));
         params.set('notation', arranger.notation);
         const url = window.location.origin + window.location.pathname + '?' + params.toString();
         

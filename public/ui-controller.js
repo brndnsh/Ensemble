@@ -210,8 +210,12 @@ export function setupUIHandlers(refs) {
                 showToast(`Queued ${genre} for next measure...`);
             } else {
                 // Immediate change if not playing
-                document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('active', 'pending'));
+                document.querySelectorAll('.genre-btn').forEach(b => {
+                    b.classList.remove('active', 'pending');
+                    b.setAttribute('aria-pressed', 'false');
+                });
                 btn.classList.add('active');
+                btn.setAttribute('aria-pressed', 'true');
                 gb.lastSmartGenre = genre;
             }
             
