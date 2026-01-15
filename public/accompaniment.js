@@ -36,11 +36,39 @@ export const PIANO_CELLS = {
         [1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1]  // Push-heavy
     ],
     // GENRE-SPECIFIC POOLS
-    'Rock': [
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], // Straight 8ths
-        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight 4ths
-        [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1]  // Driving with builds
-    ],
+    'Rock': {
+        balanced: [
+            [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight 4ths
+            [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], // Straight 8ths
+            [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]  // Syncopated Pop
+        ],
+        sparse: [
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Just the One
+            [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // 1 and 3
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // Only 3
+        ],
+        active: [
+            [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1], // Driving with builds
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], // Constant 8ths
+            [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1]  // Driving triplet-feel
+        ]
+    },
+    'Acoustic': {
+        balanced: [
+            [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight Quarters (Strum)
+            [1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0], // Folk Pick pattern
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]  // 1 and &2
+        ],
+        sparse: [
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // One
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // Three
+        ],
+        active: [
+            [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], // Steady strum
+            [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1], // Driving folk
+            [1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1]  // Push-heavy strum
+        ]
+    },
     'Jazz': [
         [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Charleston
         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0], // &2, &3
@@ -66,11 +94,6 @@ export const PIANO_CELLS = {
         [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], // Skank on 2 & 4
         [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0], // Double Skank
         [0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0]  // The Bubble (rhythmic organ)
-    ],
-    'Acoustic': [
-        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight Quarters (Strum)
-        [1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0], // Folk Pick pattern
-        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]  // 1 and &2 (Pop/Folk)
     ],
     'Bossa': [
         [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], // Standard Bossa
@@ -147,16 +170,24 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
 
     let pool = PIANO_CELLS[genre] || PIANO_CELLS[compingState.currentVibe];
     
+    // Support nested intensity pools for some genres (Rock, Acoustic)
+    if (pool && !Array.isArray(pool)) {
+        pool = pool[compingState.currentVibe] || pool.balanced;
+    }
+
     // Force conversational spacing
     if (soloistBusy && cb.style === 'smart') {
         pool = PIANO_CELLS.sparse;
     } else if (PIANO_CELLS[genre]) {
-        if (compingState.currentVibe === 'sparse' && Math.random() < 0.3) {
-            pool = PIANO_CELLS.sparse;
-        } else if (compingState.currentVibe === 'active' && Math.random() < 0.3) {
-            pool = PIANO_CELLS.active;
-        } else if (Math.random() < 0.2) {
-            pool = PIANO_CELLS.balanced;
+        // If we are using a flat genre pool, we still allow random drifting to sparse/active
+        if (Array.isArray(PIANO_CELLS[genre])) {
+            if (compingState.currentVibe === 'sparse' && Math.random() < 0.3) {
+                pool = PIANO_CELLS.sparse;
+            } else if (compingState.currentVibe === 'active' && Math.random() < 0.3) {
+                pool = PIANO_CELLS.active;
+            } else if (Math.random() < 0.2) {
+                pool = PIANO_CELLS.balanced;
+            }
         }
     }
 

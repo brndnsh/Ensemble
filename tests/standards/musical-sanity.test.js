@@ -67,9 +67,16 @@ describe('Musical Sanity & Collision Detection', () => {
             bb.lastFreq = 65.41; // C2
             const bassMidi = 36;
 
-            const notes = getAccompanimentNotes(chord, 0, 0, 0, { isBeatStart: true, isGroupStart: true });
+            // Try multiple times to ensure we get a hit (it's probabilistic)
+            let notes = [];
+            for (let i = 0; i < 20; i++) {
+                compingState.lockedUntil = 0;
+                notes = getAccompanimentNotes(chord, i * 16, 0, 0, { isBeatStart: true, isGroupStart: true });
+                if (notes.some(n => n.midi > 0)) break;
+            }
             
             const pianoMidis = notes.filter(n => n.midi > 0).map(n => n.midi);
+            expect(pianoMidis.length).toBeGreaterThan(0);
             expect(pianoMidis[0]).toBeGreaterThanOrEqual(bassMidi + 12);
         });
 

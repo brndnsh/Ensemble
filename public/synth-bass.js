@@ -63,8 +63,9 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
         
         const midi = 12 * Math.log2(freq / 440) + 69;
         // Flatwounds have very little above 1.5kHz
-        const growlBase = 300 + (midi * 5);
-        const cutoff = muted ? 350 : (growlBase + (vol * 800));
+        const growlBase = 300 + (midi * 5) + (ctx.bandIntensity * 200); // Intensity adds up to 200Hz base
+        const growlDepth = 800 * (0.7 + ctx.bandIntensity * 0.6); // Depth scales from 0.7x to 1.3x
+        const cutoff = muted ? 350 : (growlBase + (vol * growlDepth));
         
         lp1.frequency.setValueAtTime(cutoff, startTime);
         lp2.frequency.setValueAtTime(cutoff, startTime);

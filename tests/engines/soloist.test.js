@@ -15,7 +15,8 @@ vi.mock('../../public/state.js', () => ({
         key: 'C', 
         isMinor: false, 
         progression: new Array(16).fill({}),
-        totalSteps: 64
+        totalSteps: 64,
+        stepMap: []
     },
     gb: { genreFeel: 'Rock' }
 }));

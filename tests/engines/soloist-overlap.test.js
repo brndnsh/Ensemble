@@ -20,14 +20,13 @@ vi.mock('../../public/state.js', () => ({
             sessionSteps: 1000
         },    cb: { enabled: true },
     ctx: { bandIntensity: 0.5, bpm: 120 },
-    arranger: { 
-        key: 'C', 
-        isMinor: false, 
-        progression: new Array(16).fill({}),
-        totalSteps: 64,
-        timeSignature: '4/4'
-    },
-    gb: { genreFeel: 'Rock' }
+        arranger: {
+            key: 'C',
+            isMinor: false,
+            progression: new Array(16).fill({}),
+            totalSteps: 64,
+            stepMap: []
+        },    gb: { genreFeel: 'Rock' }
 }));
 
 vi.mock('../../public/config.js', () => ({

@@ -105,7 +105,10 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         const stagger = index * (0.005 + Math.random() * 0.010) * staggerMult;
         const startTime = baseTime + stagger;
         
-        const velocityCutoff = preset.filterBase + (vol * preset.filterDepth);
+        // Intensity-aware brightness mapping
+        const intensityShift = (ctx.bandIntensity - 0.5) * 400; // Shift base up to 200Hz up/down
+        const intensityDepthMult = 0.8 + (ctx.bandIntensity * 0.4); // 0.8x to 1.2x depth
+        const velocityCutoff = (preset.filterBase + intensityShift) + (vol * preset.filterDepth * intensityDepthMult);
         
         // --- Component A: The Hammer Strike ---
         if (isPiano && !muted) {

@@ -92,7 +92,7 @@ function init() {
             if (ctx.isPlaying) scheduler(); 
         });
         
-        subscribe(() => syncWorker());
+        subscribe((action, payload) => syncWorker(action, payload));
         syncWorker(); 
 
         document.querySelector('.app-main-layout').classList.add('loaded');

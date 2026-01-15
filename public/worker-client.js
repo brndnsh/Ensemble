@@ -7,10 +7,16 @@ export function initWorker(onTick, onNotes) {
     timerWorker = new Worker('./logic-worker.js', { type: 'module' });
     
     timerWorker.onmessage = (e) => {
-        const { type, notes, data, stack, blob, filename } = e.data;
+        const { type, notes, data, stack, blob, filename, timestamp } = e.data;
         if (type === 'tick') {
             if (onTick) onTick();
         } else if (type === 'notes') {
+            if (timestamp) {
+                const latency = performance.now() - timestamp;
+                if (latency > 50) {
+                    console.warn(`[Worker] High Logic Latency: ${latency.toFixed(2)}ms`);
+                }
+            }
             if (onNotes) onNotes(notes);
         } else if (type === 'error') {
             console.error("[Worker Error]", data, stack);
@@ -43,26 +49,29 @@ export function stopWorker() {
 }
 
 export function flushWorker(step, syncData = null, primeSteps = 0) {
-    if (timerWorker) timerWorker.postMessage({ type: 'flush', data: { step, syncData, primeSteps } });
+    if (timerWorker) timerWorker.postMessage({ type: 'flush', data: { step, syncData, primeSteps, timestamp: performance.now() } });
 }
 
 export function requestBuffer(step) {
-    if (timerWorker) timerWorker.postMessage({ type: 'requestBuffer', data: { step } });
+    if (timerWorker) timerWorker.postMessage({ type: 'requestBuffer', data: { step, timestamp: performance.now() } });
 }
 
 export function requestResolution(step) {
-    if (timerWorker) timerWorker.postMessage({ type: 'resolution', data: { step } });
+    if (timerWorker) timerWorker.postMessage({ type: 'resolution', data: { step, timestamp: performance.now() } });
 }
 
 export function primeWorker(steps = 32) {
     if (timerWorker) timerWorker.postMessage({ type: 'prime', data: steps });
 }
 
-export function syncWorker() {
+export function syncWorker(action, payload) {
     if (!timerWorker) return;
-    timerWorker.postMessage({
-        type: 'syncState',
-        data: {
+
+    let data = {};
+
+    if (!action) {
+        // Full Sync
+        data = {
             arranger: { 
                 progression: arranger.progression, 
                 stepMap: arranger.stepMap, 
@@ -86,6 +95,58 @@ export function syncWorker() {
                 instruments: gb.instruments.map(i => ({ name: i.name, steps: [...i.steps], muted: i.muted }))
             },
             ctx: { bpm: ctx.bpm, bandIntensity: ctx.bandIntensity, complexity: ctx.complexity, autoIntensity: ctx.autoIntensity }
+        };
+    } else {
+        // Delta Sync
+        switch (action) {
+            case 'SET_BAND_INTENSITY': data.ctx = { bandIntensity: ctx.bandIntensity }; break;
+            case 'SET_COMPLEXITY': data.ctx = { complexity: ctx.complexity }; break;
+            case 'SET_AUTO_INTENSITY': data.ctx = { autoIntensity: ctx.autoIntensity }; break;
+            case 'SET_PARAM': 
+                if (payload.module) {
+                    data[payload.module] = { [payload.param]: payload.value };
+                }
+                break;
+            case 'UPDATE_CONDUCTOR_DECISION':
+                data.cb = { density: cb.density };
+                data.sb = { hookRetentionProb: sb.hookRetentionProb };
+                data.ctx = { conductorVelocity: ctx.conductorVelocity, intent: ctx.intent };
+                break;
+            case 'SET_STYLE':
+                if (payload.module) data[payload.module] = { style: payload.style };
+                break;
+            case 'SET_VOLUME':
+                if (payload.module) data[payload.module] = { volume: payload.value };
+                break;
+            case 'SET_OCTAVE':
+                if (payload.module) data[payload.module] = { octave: payload.value };
+                break;
+            case 'SET_GENRE_FEEL':
+                data.gb = { 
+                    genreFeel: gb.genreFeel, 
+                    swing: gb.swing, 
+                    swingSub: gb.swingSub 
+                };
+                break;
+            case 'SET_SWING': data.gb = { swing: payload }; break;
+            case 'SET_SWING_SUB': data.gb = { swingSub: payload }; break;
+            case 'SET_SESSION_STEPS': data.sb = { sessionSteps: payload }; break;
+            case 'SET_DOUBLE_STOPS': data.sb = { doubleStops: payload }; break;
+            case 'SET_BPM': data.ctx = { bpm: ctx.bpm }; break;
+            case 'ARRANGER_UPDATE': // Custom action for large structural changes
+                data.arranger = {
+                    progression: arranger.progression,
+                    stepMap: arranger.stepMap,
+                    totalSteps: arranger.totalSteps,
+                    key: arranger.key,
+                    isMinor: arranger.isMinor,
+                    timeSignature: arranger.timeSignature
+                };
+                break;
         }
-    });
+    }
+
+    if (Object.keys(data).length > 0) {
+        timerWorker.postMessage({ type: 'syncState', data });
+    }
 }

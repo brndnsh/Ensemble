@@ -44,8 +44,12 @@ export const ctx = {
     chordsReverb: null,
     chordsEQ: null,
     drumsReverb: null,
+    drumsGain: null,
     bassReverb: null,
+    bassGain: null,
+    bassEQ: null,
     soloistReverb: null,
+    soloistGain: null,
     isPlaying: false,
     bpm: 100,
     nextNoteTime: 0.0,
@@ -72,7 +76,15 @@ export const ctx = {
         anticipation: 0.1,
         layBack: 0.0,
         density: 0.5
-    }
+    },
+    // --- Performance & UI ---
+    lastActiveDrumElements: null,
+    lastPlayingStep: 0,
+    workerLogging: false,
+    viz: null,
+    suspendTimeout: null,
+    conductorVelocity: 1.0,
+    masterLimiter: null
 };
 
 /**
@@ -94,8 +106,6 @@ export const ctx = {
  * @property {boolean} valid - Whether the current progression is valid.
  * @property {number} totalSteps - Total number of 16th note steps in the song.
  * @property {Array<{start: number, end: number, chord: Object}>} stepMap - Map of steps to chord objects.
- * @property {Array<HTMLElement>} cachedCards - Cache of chord DOM elements.
- * @property {Array<number>} cardOffsets - Cache of chord card scroll positions.
  * @property {Array<string>} history - Undo history stack (JSON strings).
  * @property {string} lastInteractedSectionId - ID of the last edited section.
  * @property {string} lastChordPreset - Name of the last loaded chord preset.
@@ -111,9 +121,6 @@ export const arranger = {
     valid: false,
     totalSteps: 0,
     stepMap: [],
-    // UI Cache for Visualizer
-    cachedCards: [],
-    cardOffsets: [],
     // History for Undo
     history: [],
     lastInteractedSectionId: 's1',
@@ -165,7 +172,6 @@ export const cb = {
  * @property {string} swingSub - Swing subdivision ('8th' or '16th').
  * @property {string} lastDrumPreset - Name of the last loaded drum preset.
  * @property {Object} audioBuffers - Cache for decoded drum samples.
- * @property {Array<Array<HTMLElement>>} cachedSteps - DOM cache for sequencer grid.
  * @property {string} genreFeel - Active genre for procedural nuances ('Rock', 'Jazz', 'Funk').
  * @property {boolean} fillActive - Whether a drum fill is currently being played.
  * @property {Object} fillSteps - Transient storage for the generated fill pattern.
@@ -188,14 +194,17 @@ export const gb = {
     swingSub: '8th',
     lastDrumPreset: 'Basic Rock',
     audioBuffers: {},
-    cachedSteps: [],
     genreFeel: 'Rock',
     lastSmartGenre: 'Rock',
     pendingGenreFeel: null,
     fillActive: false,
     fillSteps: {},
     activeTab: 'smart',
-    mobileTab: 'chords'
+    mobileTab: 'chords',
+    lastHatGain: null,
+    fillStartStep: 0,
+    fillLength: 0,
+    pendingCrash: false
 };
 
 /**
@@ -222,7 +231,8 @@ export const bb = {
     style: 'smart',
     pocketOffset: 0.0,
     busySteps: 0,
-    activeTab: 'smart'
+    activeTab: 'smart',
+    lastBassGain: null
 };
 
 /**
@@ -282,7 +292,8 @@ export const sb = {
     activeVoices: [], // Track active gain nodes for voice stealing (duophonic limit)
     sessionSteps: 0, // Steps elapsed since playback start for warm-up logic
     deviceBuffer: [], // Buffer for multi-step melodic devices like enclosures
-    activeTab: 'smart'
+    activeTab: 'smart',
+    activeBuffer: null // Temporary buffer for lick replay
 };
 
 /**
@@ -423,6 +434,16 @@ export function dispatch(action, payload) {
             break;
         case 'SET_ENDING_PENDING':
             ctx.isEndingPending = payload;
+            break;
+        case 'TRIGGER_EMERGENCY_LOOKAHEAD':
+            if (ctx.scheduleAheadTime < 0.4) {
+                ctx.scheduleAheadTime *= 2.0;
+                console.warn(`[Performance] Emergency Lookahead Triggered: ${ctx.scheduleAheadTime}s`);
+                setTimeout(() => {
+                    ctx.scheduleAheadTime = 0.2;
+                    console.log("[Performance] Lookahead reset to normal.");
+                }, 10000); // Reset after 10s of stability
+            }
             break;
     }
 

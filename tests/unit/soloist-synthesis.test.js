@@ -119,4 +119,21 @@ describe('Soloist Synthesis', () => {
         expect(osc1.type).toBe('sawtooth');
         expect(osc2.type).toBe('triangle');
     });
+
+    it('should handle rapid note triggers (shredding) without exceeding voice limit', () => {
+        sb.doubleStops = false;
+        // Trigger 10 notes very rapidly
+        for(let i = 0; i < 10; i++) {
+            playSoloNote(440 + i*10, 10 + (i * 0.05), 0.1);
+        }
+
+        // Only 1 voice should be active at the end since they are all new gestures
+        expect(sb.activeVoices.length).toBe(1);
+        
+        // Old voices should have been told to ramp down
+        const mockGains = ctx.audio.createGain.mock.results;
+        // Each call creates ~2 gains (main + vibrato). Main is at 0, 2, 4...
+        expect(mockGains[0].value.gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), 0.01);
+        expect(mockGains[2].value.gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), 0.01);
+    });
 });

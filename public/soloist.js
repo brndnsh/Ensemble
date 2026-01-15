@@ -389,6 +389,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const measureIndex = Math.floor(cycleStep / stepsPerMeasure);
     let baseTension = (measureIndex / CYCLE_BARS) * (0.5 + intensity * 0.5); 
     
+    // --- Section Build-up Tracking ---
+    const totalStepsArr = arranger.totalSteps || 0;
+    const modStepArr = step % (totalStepsArr || 1);
+    const entry = (arranger.stepMap || []).find(e => modStepArr >= e.start && modStepArr < e.end);
+    const sectionProgress = entry ? (modStepArr - entry.start) / (entry.end - entry.start) : 0;
+    
+    // Solos should build tension towards the end of a section
+    baseTension += sectionProgress * 0.25 * intensity;
+
     const grouping = arranger.grouping || tsConfig.grouping || [tsConfig.beats];
     const isGroupStart = (() => {
         let accumulated = 0;
@@ -439,6 +448,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     
     // Scale rest probability based on warmup (Higher rest prob at start)
     restProb = restProb + (1.0 - warmupFactor) * 0.4;
+
+    // Decrease rest probability as section ends to build "Storytelling" energy
+    restProb -= sectionProgress * 0.25 * intensity;
 
     const tempoBudgetFactor = Math.max(0.5, 1.0 - (ctx.bpm - 100) * 0.004);
     if (sb.notesInPhrase >= config.maxNotesPerPhrase * tempoBudgetFactor) restProb += 0.4;
