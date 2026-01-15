@@ -13,7 +13,10 @@ export const compingState = {
     currentCell: new Array(16).fill(0),
     lockedUntil: 0,
     soloistActivity: 0,
-    lastChordIndex: -1
+    lastChordIndex: -1,
+    grooveRetentionCount: 0,
+    maxGrooveLength: 4,
+    lastSectionId: null
 };
 
 export const PIANO_CELLS = {
@@ -82,7 +85,15 @@ export const PIANO_CELLS = {
     ]
 };
 
-function updateRhythmicIntent(step, soloistBusy, spm = 16) {
+function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
+    
+    // --- Section Change Detection ---
+    if (sectionId && compingState.lastSectionId !== sectionId) {
+        compingState.grooveRetentionCount = 0;
+        compingState.lastSectionId = sectionId;
+        compingState.lockedUntil = 0; // Force update
+    }
+
     if (step < compingState.lockedUntil) return;
 
     // Detect Soloist Falling Edge (Busy -> Not Busy) for "Call & Response"
@@ -98,6 +109,28 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16) {
     if (cb.style === 'jazz') genre = 'Jazz';
     else if (cb.style === 'funk') genre = 'Funk';
     else if (cb.style === 'strum8') genre = 'Rock';
+
+    // --- Sticky Groove Logic ---
+    const stickyGenres = ['Funk', 'Soul', 'Reggae', 'Neo-Soul'];
+    if (stickyGenres.includes(genre)) {
+        compingState.grooveRetentionCount++;
+        
+        // Only retain if we are NOT on the first bar of the groove
+        if (compingState.grooveRetentionCount > 1 && compingState.grooveRetentionCount <= compingState.maxGrooveLength) {
+            // RETAIN PATTERN
+            compingState.lockedUntil = step + spm;
+            return; 
+        } 
+
+        // If we exceeded max length, reset and fall through to pick new cell
+        if (compingState.grooveRetentionCount > compingState.maxGrooveLength) {
+            compingState.grooveRetentionCount = 1; // Start new groove now
+            compingState.maxGrooveLength = 4 + Math.floor(Math.random() * 4); // 4-8 bars
+        }
+    } else {
+        // Non-sticky genres (Jazz, Rock, etc.) always refresh or have standard logic
+        compingState.grooveRetentionCount = 0;
+    }
 
     if (soloistBusy) {
         compingState.currentVibe = 'sparse';
@@ -196,7 +229,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
     const chordIndex = arranger.progression.indexOf(chord);
     const ccEvents = handleSustainEvents(step, measureStep, chordIndex, intensity, genre, stepInfo);
     
-    updateRhythmicIntent(step, (sb.enabled && sb.busySteps > 0), spm);
+    updateRhythmicIntent(step, (sb.enabled && sb.busySteps > 0), spm, chord.sectionId);
 
     // --- GENRE LANES ---
 
