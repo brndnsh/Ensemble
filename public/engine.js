@@ -97,7 +97,19 @@ export function initAudio() {
                 definition.frequency.setValueAtTime(2500, ctx.audio.currentTime);
                 definition.Q.setValueAtTime(1.2, ctx.audio.currentTime);
                 definition.gain.setValueAtTime(3, ctx.audio.currentTime);
-                gainNode.connect(weight); weight.connect(scoop); scoop.connect(definition); definition.connect(ctx.masterGain);
+
+                const comp = ctx.audio.createDynamicsCompressor();
+                comp.threshold.setValueAtTime(-16, ctx.audio.currentTime);
+                comp.knee.setValueAtTime(12, ctx.audio.currentTime);
+                comp.ratio.setValueAtTime(4, ctx.audio.currentTime);
+                comp.attack.setValueAtTime(0.005, ctx.audio.currentTime);
+                comp.release.setValueAtTime(0.125, ctx.audio.currentTime);
+
+                gainNode.connect(weight); 
+                weight.connect(scoop); 
+                scoop.connect(definition); 
+                definition.connect(comp);
+                comp.connect(ctx.masterGain);
                 ctx.bassEQ = weight; 
             } else {
                 gainNode.connect(ctx.masterGain);
