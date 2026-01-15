@@ -11,7 +11,6 @@ import { draw } from './animation-loop.js';
 
 let isScheduling = false;
 let sessionStartTime = 0;
-let isResolutionPrecalculated = false;
 let isResolutionTriggered = false;
 
 let iosAudioUnlocked = false;
@@ -62,7 +61,6 @@ export function togglePlay(viz) {
         }
 
         ctx.step = 0;
-        isResolutionPrecalculated = false;
         isResolutionTriggered = false;
         dispatch('RESET_SESSION'); // Reset warm-up counters
         dispatch('SET_ENDING_PENDING', false);
@@ -98,19 +96,15 @@ export function togglePlay(viz) {
 }
 
 function triggerResolution(time) {
-    // If we missed pre-calculation (e.g. short loop or race condition), fallback to request
-    if (!isResolutionPrecalculated) {
-        requestResolution(ctx.step);
-        // Fallback: Late request requires a small delay to ensure data arrives
-        setTimeout(() => scheduleResolution(time), 50);
-    } else {
-        // Pre-calculated: Data should be ready in buffers
-        scheduleResolution(time);
-    }
-}
+    // 1. Tell worker to generate resolution
+    requestResolution(ctx.step);
 
-function prepareResolution(targetStep) {
-    requestResolution(targetStep);
+    // 2. We'll wait for the notes to come back via the worker-client callback
+    // The worker-client already handles incoming 'notes' and puts them in buffers.
+    // We just need to wait a few ms and then schedule them.
+    setTimeout(() => {
+        scheduleResolution(time);
+    }, 50);
 }
 
 function scheduleResolution(time) {
@@ -181,14 +175,6 @@ export function scheduler() {
                     if (elapsedMins >= ctx.sessionTimer) {
                         dispatch('SET_ENDING_PENDING', true);
                     }
-                }
-
-                // --- Resolution Pre-Calculation ---
-                const stepsToEnd = arranger.totalSteps - (ctx.step % arranger.totalSteps);
-                // Pre-calculate 1 measure (16 steps approx) in advance
-                if (ctx.isEndingPending && stepsToEnd === spm && !isResolutionPrecalculated) {
-                     prepareResolution(ctx.step + stepsToEnd);
-                     isResolutionPrecalculated = true;
                 }
 
                 // --- Resolution Trigger Logic ---
