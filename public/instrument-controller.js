@@ -111,8 +111,33 @@ export function flushBuffers(primeSteps = 0) {
     killSoloistBus();
     killDrumBus();
 
-    // 3. Trigger a SINGLE worker flush
-    flushWorker(ctx.step, null, primeSteps);
+    // 3. Prepare sync data for atomicity
+    const syncData = {
+        arranger: { 
+            progression: arranger.progression, 
+            stepMap: arranger.stepMap, 
+            totalSteps: arranger.totalSteps,
+            key: arranger.key,
+            isMinor: arranger.isMinor,
+            timeSignature: arranger.timeSignature
+        },
+        cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled, volume: cb.volume },
+        bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq, volume: bb.volume },
+        sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume, doubleStops: sb.doubleStops, sessionSteps: sb.sessionSteps },
+        gb: { 
+            genreFeel: gb.genreFeel, 
+            enabled: gb.enabled, 
+            volume: gb.volume,
+            measures: gb.measures,
+            swing: gb.swing,
+            swingSub: gb.swingSub,
+            instruments: gb.instruments.map(i => ({ name: i.name, steps: [...i.steps], muted: i.muted }))
+        },
+        ctx: { bpm: ctx.bpm, bandIntensity: ctx.bandIntensity, complexity: ctx.complexity, autoIntensity: ctx.autoIntensity }
+    };
+
+    // 4. Trigger a BUNDLED worker flush
+    flushWorker(ctx.step, syncData, primeSteps);
     restoreGains();
 }
 

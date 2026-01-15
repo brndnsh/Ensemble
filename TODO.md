@@ -102,3 +102,27 @@
 - [x] **Phase 4: State & URL Hydration**
     - Create `public/state-hydration.js`: Extract the complex state recovery logic from `init()` and `loadFromUrl()`.
     - Ensure all initial UI synchronization is handled in this dedicated module.
+
+# Codebase Health & Scalability (v2.0 Audit Plan)
+
+## Architectural & State Management (Health Score: 8/10)
+- [x] **Decouple UI Caches**: Move `arranger.cachedCards` and `gb.cachedSteps` out of `state.js` into a non-reactive `UIStore` to prevent state bloat and unnecessary hydration overhead.
+- [x] **Delta-Based Syncing**: Optimize `syncWorker()` to transmit only changed parameters rather than the full state object to reduce message-passing overhead.
+- [x] **State Integrity**: Implement a "Strict Mode" for `dispatch` that prevents any property additions/deletions at runtime (using `Object.seal`).
+
+## Musical Intelligence & Expressive Depth (Health Score: 9/10)
+- [x] **Rock/Pop Proceduralism**: Refactor `accompaniment.js` to add "Expressive Phrasing" for Rock/Pop piano cells, moving away from static 16-step patterns toward intensity-aware variations.
+- [x] **Timbre-Intensity Mapping**: Link `ctx.bandIntensity` to instrument-specific filter cutoffs (e.g., darker piano for low intensity, brighter for climaxes).
+- [x] **Dynamic Solo Contours**: Improve the `Soloist` engine to follow the `Conductor`'s "Section Energy" map, ensuring solos build towards section transitions.
+
+## Performance & Precision Timing (Health Score: 9/10)
+- [x] **Logic Latency Monitoring**: Add `performance.now()` timestamps to worker messages to track "Logic Latency" (time from request to note generation) and log warnings if it exceeds 50ms.
+- [x] **Main Thread Resilience**: Implement an "Emergency Lookahead" that doubles the `scheduleAheadTime` if the frame budget is consistently missed.
+- [x] **Buffer Flush Atomicity**: Ensure `flushWorker` and `syncWorker` calls are bundled or atomic to prevent the worker from calculating a buffer measure using mixed BPM/Style state.
+
+## Testing Coverage & Reliability (Health Score: 7/10)
+- [x] **Congestion Stress Test**: Create `tests/system/congested-main-thread.test.js` to verify that audio scheduling remains glitch-free even when the UI thread is under 90% load.
+- [x] **Voice Stealing Audit**: Implement a "Soloist Shred" test to stress the duophonic limit and verify that gain-node recycling (voice stealing) occurs without clicks.
+- [x] **Harmonic Continuity Test**: Create `tests/system/harmonic-continuity.test.js` to ensure that mid-phrase genre/key switches result in atomic scale updates at Step 0.
+- [x] **Velocity Normalization Test**: Verify that the sum of `bandIntensity`, `accent`, and `conductorVelocity` never exceeds the MIDI 127 limit across any module.
+- [x] **Polychord Parser Stress**: Expand `tests/engines/chords.test.js` to include high-complexity jazz extensions (e.g., `C13(#11b9)`) and non-standard slash chords.

@@ -3,6 +3,7 @@ import { getStepsPerMeasure, midiToNote, getStepInfo } from './utils.js';
 import { saveCurrentState } from './persistence.js';
 import { clearDrumPresetHighlight } from './instrument-controller.js';
 import { TIME_SIGNATURES } from './config.js';
+import { UIStore } from './ui-store.js';
 
 export const ui = {};
 
@@ -393,7 +394,7 @@ export function renderGridState() {
     });
     
     // Cache active steps for high-performance visual updates
-    gb.cachedSteps = [];
+    UIStore.cachedSteps = [];
     for (let i = 0; i < totalSteps; i++) {
         const activeInStep = [];
         gb.instruments.forEach((inst, rowIdx) => {
@@ -402,7 +403,7 @@ export function renderGridState() {
                 if (stepEl) activeInStep.push(stepEl);
             }
         });
-        gb.cachedSteps[i] = activeInStep;
+        UIStore.cachedSteps[i] = activeInStep;
     }
 }
 
@@ -414,7 +415,7 @@ export function clearActiveVisuals(viz) {
 
 export function recalculateScrollOffsets() {
     const cards = document.querySelectorAll('.chord-card');
-    vizState.cardOffsets = Array.from(cards).map(card => {
+    UIStore.cardOffsets = Array.from(cards).map(card => {
         // Measure offset relative to the chordVisualizer container
         return card.offsetTop - (ui.chordVisualizer ? ui.chordVisualizer.offsetTop : 0);
     });

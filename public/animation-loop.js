@@ -4,6 +4,7 @@ import { getVisualTime } from './engine.js';
 import { getStepsPerMeasure } from './utils.js';
 import { switchMeasure } from './instrument-controller.js';
 import { TIME_SIGNATURES } from './config.js';
+import { UIStore } from './ui-store.js';
 
 export function updateDrumVis(ev) {
     if (ctx.lastActiveDrumElements) ctx.lastActiveDrumElements.forEach(s => s.classList.remove('playing'));
@@ -12,7 +13,7 @@ export function updateDrumVis(ev) {
     if (gb.followPlayback && stepMeasure !== gb.currentMeasure && ctx.isPlaying) switchMeasure(stepMeasure, true);
     const offset = gb.currentMeasure * spm;
     if (ev.step >= offset && ev.step < offset + spm) {
-        const activeSteps = gb.cachedSteps[ev.step - offset];
+        const activeSteps = UIStore.cachedSteps[ev.step - offset];
         if (activeSteps) { activeSteps.forEach(s => s.classList.add('playing')); ctx.lastActiveDrumElements = activeSteps; }
         else ctx.lastActiveDrumElements = null;
     } else ctx.lastActiveDrumElements = null;
@@ -21,8 +22,28 @@ export function updateDrumVis(ev) {
 
 export function updateChordVis(ev) { updateActiveChordUI(ev.index); }
 
+let lastFrameTime = 0;
+let missedFrames = 0;
+
 export function draw(viz) {
     if (!ctx.isDrawing) return;
+
+    // --- Performance Resilience Monitoring ---
+    const nowFrame = performance.now();
+    if (lastFrameTime > 0) {
+        const delta = nowFrame - lastFrameTime;
+        if (delta > 35) { // Missed at least 2 frames (at 60fps)
+            missedFrames++;
+            if (missedFrames > 15) {
+                dispatch('TRIGGER_EMERGENCY_LOOKAHEAD');
+                missedFrames = 0;
+            }
+        } else if (delta < 20) {
+            missedFrames = Math.max(0, missedFrames - 1);
+        }
+    }
+    lastFrameTime = nowFrame;
+
     if (!ctx.audio) {
         requestAnimationFrame(() => draw(viz));
         return;

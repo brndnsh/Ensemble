@@ -122,7 +122,7 @@ function getChordAtStep(step) {
     return null;
 }
 
-function fillBuffers(currentStep) {
+function fillBuffers(currentStep, timestamp = null) {
     const targetStep = currentStep + LOOKAHEAD;
     const notesToMain = [];
     if (bbBufferHead < currentStep) bbBufferHead = currentStep;
@@ -204,7 +204,7 @@ function fillBuffers(currentStep) {
         
         head++;
     }
-    if (notesToMain.length > 0) postMessage({ type: 'notes', notes: notesToMain });
+    if (notesToMain.length > 0) postMessage({ type: 'notes', notes: notesToMain, timestamp });
 }
 
 export function handleExport(options) {
@@ -595,6 +595,7 @@ if (typeof self !== 'undefined') {
     self.onmessage = (e) => {
         try {
             const { type, data } = e.data;
+            const timestamp = data?.timestamp || null;
             switch (type) {
                 case 'start': if (!timerID) { timerID = setInterval(() => { fillBuffers(Math.max(bbBufferHead, sbBufferHead, cbBufferHead)); postMessage({ type: 'tick' }); }, interval); } break;
                 case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
@@ -611,7 +612,7 @@ if (typeof self !== 'undefined') {
                     break;
                 case 'requestBuffer': 
                     if (ctx.workerLogging) console.log(`[Worker] requestBuffer: step=${data.step}, currentHeads=[bb:${bbBufferHead}, sb:${sbBufferHead}, cb:${cbBufferHead}]`);
-                    fillBuffers(data.step); 
+                    fillBuffers(data.step, timestamp); 
                     break;
                 case 'flush':
                     if (ctx.workerLogging) console.log(`[Worker] flush: step=${data.step}`);
@@ -645,13 +646,13 @@ if (typeof self !== 'undefined') {
                         handlePrime(data.primeSteps);
                     }
 
-                    fillBuffers(data.step);
+                    fillBuffers(data.step, timestamp);
                     break;
                 case 'prime':
                     handlePrime(data);
                     break;
                 case 'resolution':
-                    handleResolution(data.step);
+                    handleResolution(data.step, timestamp);
                     break;
                 case 'export': handleExport(data); break;
             }
@@ -659,9 +660,9 @@ if (typeof self !== 'undefined') {
     };
 }
 
-export function handleResolution(step) {
+export function handleResolution(step, timestamp = null) {
     const notesToMain = generateResolutionNotes(step, arranger, { bb: bb.enabled, cb: cb.enabled, sb: sb.enabled, gb: gb.enabled });
-    postMessage({ type: 'notes', notes: notesToMain });
+    postMessage({ type: 'notes', notes: notesToMain, timestamp });
 }
 
 function handlePrime(steps) {

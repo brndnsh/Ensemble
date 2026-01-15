@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global modules
 vi.mock('../../public/state.js', () => ({
-    arranger: { 
-        timeSignature: '4/4', 
-        progression: [], 
-        key: 'C',
-        isMinor: false 
-    },
-    gb: { genreFeel: 'Funk' },
+        arranger: {
+            key: 'C',
+            isMinor: false,
+            progression: new Array(16).fill({}),
+            totalSteps: 64,
+            stepMap: []
+        },    gb: { genreFeel: 'Funk' },
     ctx: { 
         bandIntensity: 0.8, // High intensity for Funk
         complexity: 0.5,
