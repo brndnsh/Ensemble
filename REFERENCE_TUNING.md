@@ -49,3 +49,11 @@ This document tracks specific reference recordings used to calibrate the Ensembl
     - **Reggae:** Clamped Dub Bass to ~0.8. Reduced Skank velocity to ~0.5.
     - **Neo-Soul:** Applied 0.75x global velocity dampener to drums.
 - **Next Steps:** Listen to output and verify against reference tracks.
+
+### [Date: 2026-01-15]
+- **Status:** v2.0 Codebase Health Audit completed.
+- **Action:**
+    - **Global:** Implemented intensity-brightness mapping. `ctx.bandIntensity` now modulates filter cutoffs for Chords and Bass, providing more dynamic timbral range.
+    - **Rock/Pop:** Refactored `accompaniment.js` with "Expressive Phrasing" pools. Piano cells now adapt to intensity and soloist activity (Call & Response).
+    - **Performance:** Verified stability with "Emergency Lookahead" and "Logic Latency" monitoring.
+    - **Verification:** 346 tests passing, including new stress tests for congestion and continuity.
