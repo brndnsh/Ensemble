@@ -1,0 +1,104 @@
+/**
+ * @vitest-environment happy-dom
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { conductorState, checkSectionTransition } from '../../public/conductor.js';
+import { ctx, gb, arranger, dispatch } from '../../public/state.js';
+
+vi.mock('../../public/state.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        dispatch: vi.fn((action, payload) => {
+            if (action === 'SET_BAND_INTENSITY') ctx.bandIntensity = payload;
+        })
+    };
+});
+
+vi.mock('../../public/ui.js', () => ({
+    ui: {
+        intensitySlider: { value: 0 },
+        densitySelect: { value: 'standard' }
+    },
+    triggerFlash: vi.fn()
+}));
+
+vi.mock('../../public/persistence.js', () => ({
+    debounceSaveState: vi.fn()
+}));
+
+vi.mock('../../public/fills.js', () => ({
+    generateProceduralFill: vi.fn(() => ({}))
+}));
+
+describe('Jazz Blues Intensity Bug', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        ctx.autoIntensity = true;
+        ctx.isPlaying = true;
+        ctx.bandIntensity = 0.5;
+        conductorState.target = 0.5;
+        conductorState.stepSize = 0;
+        conductorState.formIteration = 0;
+        gb.enabled = true;
+    });
+
+    it('should trigger intensity change for 12-bar blues (1 chord per measure)', () => {
+        // 12 bars of 16 steps = 192 steps
+        arranger.totalSteps = 192;
+        arranger.stepMap = [];
+        for (let i = 0; i < 12; i++) {
+            arranger.stepMap.push({
+                start: i * 16,
+                end: (i + 1) * 16,
+                chord: { sectionId: 's1', sectionLabel: 'Main' }
+            });
+        }
+
+        // Check at the start of the last measure (step 176)
+        checkSectionTransition(176, 16);
+        
+        // In 12-bar blues, step 176 should match fillStart (192 - 16 = 176)
+        expect(conductorState.formIteration).toBe(1);
+        expect(conductorState.target).not.toBe(0.5);
+    });
+
+    it('should trigger intensity change for Jazz Blues (2 chords in last measure)', () => {
+        // 12 bars total = 192 steps.
+        // Last bar (steps 176 to 192) has two chords.
+        arranger.totalSteps = 192;
+        arranger.stepMap = [];
+        // Bars 1-11
+        for (let i = 0; i < 11; i++) {
+            arranger.stepMap.push({
+                start: i * 16,
+                end: (i + 1) * 16,
+                chord: { sectionId: 's1', sectionLabel: 'Main' }
+            });
+        }
+        // Bar 12 (Last Bar): Two chords of 8 steps each
+        arranger.stepMap.push({
+            start: 176,
+            end: 184,
+            chord: { sectionId: 's1', sectionLabel: 'Main' }
+        });
+        arranger.stepMap.push({
+            start: 184,
+            end: 192,
+            chord: { sectionId: 's1', sectionLabel: 'Main' }
+        });
+
+        // We check every step in the last bar to see if it triggers
+        let triggered = false;
+        for (let step = 176; step < 192; step++) {
+            checkSectionTransition(step, 16);
+            if (conductorState.formIteration > 0) {
+                triggered = true;
+                break;
+            }
+        }
+        
+        // This is expected to FAIL currently because of the bug
+        expect(triggered).toBe(true);
+    });
+});
