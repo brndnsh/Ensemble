@@ -697,6 +697,28 @@ export const CHORD_PRESETS = [
         settings: { bpm: 140, style: 'jazz' }
     },
     { 
+        name: "Stella by Starlight", 
+        sections: [
+            { label: "A", value: "Em7b5 | A7alt | Cm7 | F7 | Fm7 | Bb7 | Ebmaj7 | Ab7" },
+            { label: "B", value: "Bbmaj7 | Em7b5 A7 | Dm7b5 | G7alt | Cm7b5 | F7alt | Bbmaj7 | Fm7 Bb7" },
+            { label: "C", value: "Ebmaj7 | Ab7#11 | Bbmaj7 | Em7b5 A7alt | Dm7b5 | G7alt | Cm7b5 | F7alt" },
+            { label: "D", value: "Bbmaj7 | Em7b5 A7alt | Dm7b5 | G7alt | Cm7b5 | F7alt | Bbmaj7 | Cm7 F7" }
+        ],
+        category: "Jazz",
+        settings: { bpm: 120, style: 'jazz' }
+    },
+    { 
+        name: "All The Things You Are", 
+        sections: [
+            { label: "A", value: "vi7 | ii7 | V7 | Imaj7 | IVmaj7 | V7/III | IIImaj7 | IIImaj7" },
+            { label: "A2", value: "iii7 | vi7 | II7 | Vmaj7 | Imaj7 | ii7/VII | VIImaj7 | VIImaj7" },
+            { label: "B", value: "ii7/VII | V7/VII | VIImaj7 | VIImaj7 | f#m7 | B7 | Emaj7 | C7alt" },
+            { label: "A3", value: "vi7 | ii7 | V7 | Imaj7 | IVmaj7 | iv7 | iii7 | biiio7 | ii7 | V7 | Imaj7 | Imaj7" }
+        ],
+        category: "Jazz",
+        settings: { bpm: 135, style: 'jazz' }
+    },
+    { 
         name: "Jazz Turnaround", 
         sections: [{ label: 'Main', value: "Imaj7 VI7 | ii7 V7 | Imaj7 VI7 | ii7 V7" }], 
         category: "Jazz",
