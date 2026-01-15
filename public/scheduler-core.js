@@ -116,7 +116,7 @@ function prepareResolution(targetStep) {
 function scheduleResolution(time) {
     // Schedule the final resolution measure (Tonic chord, Kick+Crash, etc.)
     const spb = 60.0 / ctx.bpm;
-    const measureDuration = 4 * spb; // Ring out for 4 beats
+    const measureDuration = 8 * spb; // Ring out for 2 bars (approx 5-6s)
 
     // 1. Manual Drum Resolution
     if (gb.enabled) {
@@ -142,7 +142,12 @@ function scheduleResolution(time) {
         ctx.drawQueue.push({ type: 'flash', time: time, intensity: 0.4, beat: 1 });
     }
 
-    // 4. Stop playback after the ring-out
+    // 4. Graceful Sustain Release (at 1.5 bars)
+    setTimeout(() => {
+        if (ctx.isPlaying) updateSustain(false);
+    }, 6 * spb * 1000);
+
+    // 5. Stop playback after the full ring-out (2 bars)
     setTimeout(() => {
         if (ctx.isPlaying) togglePlay(); 
     }, measureDuration * 1000);
