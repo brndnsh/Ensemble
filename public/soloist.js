@@ -66,6 +66,15 @@ const LICK_LIBRARY = {
         { name: 'Lyrical 3rd', notes: [{o:0, i:4, d:4}, {o:6, i:3, d:2}, {o:8, i:2, d:4}] },
         { name: 'Syncopated Triad', notes: [{o:0, i:0, d:2}, {o:3, i:4, d:2}, {o:6, i:7, d:4}] },
         { name: 'Descending 9th', notes: [{o:0, i:14, d:2}, {o:2, i:11, d:2}, {o:4, i:7, d:4}] }
+    ],
+    funk: [
+        { name: 'JB Stabs', notes: [{o:0, i:0, d:1}, {o:1, i:0, d:1}, {o:2, i:0, d:2}, {o:4, i:10, d:1}, {o:5, i:0, d:3}] },
+        { name: 'The Box', notes: [{o:0, i:10, d:1}, {o:1, i:0, d:1}, {o:2, i:3, d:1}, {o:3, i:0, d:1}] },
+        { name: 'Horn Line', notes: [{o:0, i:7, d:2}, {o:2, i:9, d:2}, {o:4, i:10, d:2}, {o:6, i:0, d:2}] }
+    ],
+    neo: [
+        { name: 'Dilla Drag', notes: [{o:0, i:2, d:2}, {o:2, i:0, d:4}, {o:6, i:10, d:2}] },
+        { name: 'Quartal Rise', notes: [{o:0, i:0, d:2}, {o:2, i:5, d:2}, {o:4, i:10, d:4}] }
     ]
 };
 
@@ -125,6 +134,20 @@ const STYLE_CONFIG = {
         targetExtensions: [2, 6, 9, 11],
         deviceProb: 0.25,
         allowedDevices: ['quartal', 'slide', 'guitarDouble']
+    },
+    funk: {
+        restBase: 0.35, // Balanced spacing
+        restGrowth: 0.08,
+        cells: [1, 10, 14, 0, 6], // 16ths, Offbeat 16ths, Syncopated 'e', 8ths
+        registerSoar: 5, // Stay in the pocket
+        tensionScale: 0.4,
+        timingJitter: 5, // Tight!
+        maxNotesPerPhrase: 16, // Busy bursts
+        doubleStopProb: 0.15,
+        anticipationProb: 0.2,
+        targetExtensions: [9, 13], // 2 (9) and 6 (13)
+        deviceProb: 0.2,
+        allowedDevices: ['slide', 'run']
     },
     minimal: {
         restBase: 0.65,
@@ -189,9 +212,9 @@ const STYLE_CONFIG = {
 export function getScaleForChord(chord, nextChord, style) {
     if (style === 'smart') {
         const mapping = { 
-            'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'neo', 'Blues': 'blues', 
+            'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 
             'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 
-            'Bossa Nova': 'bossa', 'Afrobeat': 'blues', 'Acoustic': 'minimal'
+            'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal'
         };
         style = mapping[gb.genreFeel] || 'scalar';
     }
@@ -207,14 +230,14 @@ export function getScaleForChord(chord, nextChord, style) {
     }
 
     // 2. Style Specifics
-    if (style === 'blues' || style === 'disco') {
+    if (style === 'blues' || style === 'disco' || style === 'funk') {
         const base = ['minor', 'halfdim', 'dim'].includes(chord.quality) 
             ? [0, 2, 3, 5, 6, 7, 10] 
             : [0, 2, 3, 4, 5, 6, 7, 9, 10];
         
         // BB Box Logic: Add Major 3rd (4) and 6th (9) availability over Major chords
         // allowing the soloist to choose between b3 (3) and 3 (4) for expression.
-        if (style === 'blues' && !['minor', 'halfdim', 'dim'].includes(chord.quality)) {
+        if ((style === 'blues' || style === 'funk') && !['minor', 'halfdim', 'dim'].includes(chord.quality)) {
             if (!base.includes(4)) base.push(4); // Major 3rd
             if (!base.includes(9)) base.push(9); // Major 6th
         }
@@ -305,13 +328,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             const mapping = { 
                 'Rock': 'scalar', 
                 'Jazz': 'bird', 
-                'Funk': 'neo', 
+                'Funk': 'funk', 
                 'Blues': 'blues', 
                 'Neo-Soul': 'neo', 
                 'Disco': 'disco', 
                 'Bossa': 'bossa', 
                 'Bossa Nova': 'bossa',
-                'Afrobeat': 'blues',
+                'Afrobeat': 'funk',
                 'Acoustic': 'minimal'
             };
             style = mapping[gb.genreFeel] || 'scalar';
@@ -676,17 +699,17 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     
     let bendStartInterval = 0;
     const intervalFromRoot = (selectedMidi - rootMidi + 120) % 12;
-    if (intervalFromRoot === 4 && ['blues', 'neo', 'bird', 'minimal'].includes(style)) {
+    if (intervalFromRoot === 4 && ['blues', 'neo', 'bird', 'minimal', 'funk'].includes(style)) {
         if (Math.random() < 0.4) bendStartInterval = 1; 
     }
     // Blues Curl: Bend b3 slightly sharp (Quarter tone or Half tone)
-    if (intervalFromRoot === 3 && style === 'blues') {
+    if (intervalFromRoot === 3 && (style === 'blues' || style === 'funk')) {
          if (Math.random() < 0.5) bendStartInterval = 0.5; // Quarter tone curl
     }
-    if (intervalFromRoot === 7 && style === 'blues') {
+    if (intervalFromRoot === 7 && (style === 'blues' || style === 'funk')) {
          if (Math.random() < 0.3) bendStartInterval = 1; 
     }
-    if (intervalFromRoot === 0 && ['neo', 'bird', 'blues'].includes(style) && isStrongBeat) {
+    if (intervalFromRoot === 0 && ['neo', 'bird', 'blues', 'funk'].includes(style) && isStrongBeat) {
          if (Math.random() < 0.35) bendStartInterval = 0.5; 
     }
     // Rock Unison Bend Simulation (Bend 4th to 5th or b7 to Root)
@@ -707,6 +730,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (style === 'bird' && !isStrongBeat && Math.random() < 0.25) {
         velocity *= 0.4; // Ghost note
     }
+    // Funk Ghost Notes (more frequent)
+    if (style === 'funk' && !isStrongBeat && Math.random() < 0.35) {
+        velocity *= 0.3; 
+    }
 
     let timingOffset = (Math.random() - 0.5) * config.timingJitter;
 
@@ -717,6 +744,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             '1101': 1, '0110': 1, '0101': 1, '10000000': 8, '0010': 2, '0100': 1
         };
         durationMultiplier = cellDurs[cellType] || 1;
+        
+        // FUNK/DISCO STACCATO ENFORCEMENT
+        if (style === 'funk' || style === 'disco') {
+            // Force short durations for that "pecking" sound
+            if (Math.random() < 0.8 && durationMultiplier > 1) {
+                durationMultiplier = 1;
+            }
+        }
+        
         if (durationMultiplier >= 2 && ['blues', 'neo', 'bossa', 'minimal', 'bird'].includes(style)) {
             if (Math.random() < 0.4) durationMultiplier *= 1.5;
         }
@@ -728,6 +764,25 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     
     if (!sb.isReplayingMotif && isStrongBeat && Math.random() < (config.deviceProb * warmupFactor)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
+        
+        // FUNK REPETITIVE STAB (The "James Brown" Hit)
+        // If we are playing Funk, sometimes we just want to hit the same note 3-4 times.
+        if (style === 'funk' && Math.random() < 0.35) {
+             const stabCount = 3 + Math.floor(Math.random() * 3); // 3-5 hits
+             sb.deviceBuffer = [];
+             for(let i=0; i<stabCount; i++) {
+                 sb.deviceBuffer.push({ 
+                     midi: selectedMidi, 
+                     velocity: velocity * (i===0 ? 1.1 : 0.9), 
+                     durationSteps: 1, 
+                     style, 
+                     timingOffset: 0 
+                 });
+             }
+             sb.busySteps = 0;
+             sb.lastFreq = getFrequency(selectedMidi);
+             return sb.deviceBuffer.shift();
+        }
         
         if (deviceType === 'enclosure') {
             const aboveMidi = selectedMidi + (Math.random() < 0.5 ? 1 : 2);
