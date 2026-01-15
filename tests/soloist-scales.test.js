@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 // Mock state
 vi.mock('../public/state.js', () => ({
-    sb: { tension: 0 },
+    sb: { tension: 0, sessionSteps: 1000 },
     cb: {},
     ctx: { bandIntensity: 0.5 },
     arranger: { key: 'C', isMinor: false, progression: [], grouping: null },

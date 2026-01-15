@@ -10,6 +10,7 @@ import { loadDrumPreset, flushBuffers, switchMeasure } from './instrument-contro
 import { draw } from './animation-loop.js';
 
 let isScheduling = false;
+let sessionStartTime = 0;
 
 let iosAudioUnlocked = false;
 const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ");
@@ -28,6 +29,7 @@ function releaseWakeLock() {
 }
 
 export function togglePlay(viz) {
+    const activeViz = viz || ctx.viz;
     if (ctx.isPlaying) {
         ctx.isPlaying = false;
         ui.playBtn.textContent = 'START';
@@ -39,7 +41,7 @@ export function togglePlay(viz) {
         ctx.drawQueue = [];
         ctx.lastActiveDrumElements = null;
         cb.lastActiveChordIndex = null;
-        clearActiveVisuals(viz);
+        clearActiveVisuals(activeViz);
         killAllNotes();
         flushBuffers();
         ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
@@ -59,6 +61,8 @@ export function togglePlay(viz) {
 
         ctx.step = 0;
         dispatch('RESET_SESSION'); // Reset warm-up counters
+        dispatch('SET_ENDING_PENDING', false);
+        sessionStartTime = performance.now();
         syncWorker(); 
         const primeSteps = (arranger.totalSteps > 0) ? arranger.totalSteps * 2 : 0;
         flushBuffers(primeSteps);
@@ -79,14 +83,64 @@ export function togglePlay(viz) {
         ctx.isCountingIn = ui.countIn.checked;
         ctx.countInBeat = 0;
         requestWakeLock();
-        if (viz) viz.setBeatReference(ctx.nextNoteTime);
+        if (activeViz) activeViz.setBeatReference(ctx.nextNoteTime);
         if (!ctx.isDrawing) {
             ctx.isDrawing = true;
-            requestAnimationFrame(() => draw(viz));
+            requestAnimationFrame(() => draw(activeViz));
         }
         startWorker();
         scheduler();
     }
+}
+
+function triggerResolution(time) {
+    // 1. Tell worker to generate resolution
+    // We'll add a new message type 'requestResolution' to the worker
+    import('./worker-client.js').then(client => {
+        client.requestResolution(ctx.step);
+    });
+
+    // 2. We'll wait for the notes to come back via the worker-client callback
+    // The worker-client already handles incoming 'notes' and puts them in buffers.
+    // We just need to wait a few ms and then schedule them.
+    setTimeout(() => {
+        scheduleResolution(time);
+    }, 50);
+}
+
+function scheduleResolution(time) {
+    // Schedule the final resolution measure (Tonic chord, Kick+Crash, etc.)
+    const spb = 60.0 / ctx.bpm;
+    const measureDuration = 4 * spb; // Ring out for 4 beats
+
+    // 1. Manual Drum Resolution
+    if (gb.enabled) {
+        playDrumSound('Kick', time, 1.15);
+        playDrumSound('Crash', time, 1.1);
+    }
+
+    // 2. Schedule notes that came from the worker (Bass, Chords, Soloist)
+    // The worker-client puts these in bb.buffer, cb.buffer, sb.buffer
+    // We manually trigger the scheduling for this specific step
+    const chordData = getChordAtStep(ctx.step); // This might return null or old chord
+    // Create a dummy chord data for visuals
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const stepInfo = getStepInfo(ctx.step, ts);
+    
+    // We use a simplified version of scheduleGlobalEvent logic
+    if (bb.enabled) scheduleBass({ chord: { freqs: [] } }, ctx.step, time);
+    if (sb.enabled) scheduleSoloist({ chord: { freqs: [] } }, ctx.step, time, time);
+    if (cb.enabled) scheduleChords({ chord: { freqs: [] } }, ctx.step, time, stepInfo);
+    
+    // 3. Add a final flash
+    if (ui.visualFlash.checked) {
+        ctx.drawQueue.push({ type: 'flash', time: time, intensity: 0.4, beat: 1 });
+    }
+
+    // 4. Stop playback after the ring-out
+    setTimeout(() => {
+        if (ctx.isPlaying) togglePlay(); 
+    }, measureDuration * 1000);
 }
 
 export function scheduler() {
@@ -110,6 +164,24 @@ export function scheduler() {
                 advanceCountIn();
             } else {
                 const spm = getStepsPerMeasure(arranger.timeSignature);
+                
+                // --- Session Timer Check ---
+                if (ctx.sessionTimer > 0 && !ctx.isEndingPending) {
+                    const elapsedMins = (performance.now() - sessionStartTime) / 60000;
+                    if (elapsedMins >= ctx.sessionTimer) {
+                        dispatch('SET_ENDING_PENDING', true);
+                    }
+                }
+
+                // --- Resolution Trigger Logic ---
+                // If ending is pending or stopAtEnd is active, and we reach a loop boundary (Step 0)
+                if (ctx.step > 0 && (ctx.step % arranger.totalSteps === 0)) {
+                    if (ctx.isEndingPending || ctx.stopAtEnd) {
+                        triggerResolution(ctx.nextNoteTime);
+                        return; // Stop scheduling
+                    }
+                }
+
                 if (ctx.step % spm === 0 && gb.pendingGenreFeel) {
                     applyPendingGenre();
                 }

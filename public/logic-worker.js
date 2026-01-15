@@ -2,7 +2,7 @@ import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 import { getAccompanimentNotes, compingState } from './accompaniment.js';
 import { arranger, cb, bb, sb, gb, ctx } from './state.js';
-import { APP_VERSION, TIME_SIGNATURES } from './config.js';
+import { APP_VERSION, TIME_SIGNATURES, KEY_ORDER } from './config.js';
 import { getMidi, getStepInfo } from './utils.js';
 import { generateProceduralFill } from './fills.js';
 import { analyzeForm, getSectionEnergy } from './form-analysis.js';
@@ -206,7 +206,7 @@ function fillBuffers(currentStep) {
     if (notesToMain.length > 0) postMessage({ type: 'notes', notes: notesToMain });
 }
 
-function handleExport(options) {
+export function handleExport(options) {
     try {
         const { includedTracks = ['chords', 'bass', 'soloist', 'drums'], targetDuration = 3, loopMode = 'time', filename } = options;
         if (arranger.progression.length === 0) { postMessage({ type: 'error', data: "No progression to export" }); return; }
@@ -216,7 +216,8 @@ function handleExport(options) {
         const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
         const loopSeconds = (totalStepsOneLoop / ts.stepsPerBeat) * (60 / ctx.bpm);
         let loopCount = (loopMode === 'once') ? 1 : Math.max(1, Math.min(100, Math.ceil((targetDuration * 60) / loopSeconds)));
-        const totalStepsExport = totalStepsOneLoop * loopCount;
+        const totalStepsWithoutEnding = totalStepsOneLoop * loopCount;
+        const totalStepsExport = totalStepsWithoutEnding + 16; // Add one resolution measure
 
         // --- 1:1 TIMING MAP GENERATION ---
         const stepTimes = new Array(totalStepsExport + 128);
@@ -321,7 +322,7 @@ function handleExport(options) {
             }
         };
 
-        for (let globalStep = 0; globalStep < totalStepsExport; globalStep++) {
+        for (let globalStep = 0; globalStep < totalStepsWithoutEnding; globalStep++) {
             checkWorkerTransition(globalStep);
 
             const stepTimeS = stepTimes[globalStep];
@@ -343,7 +344,13 @@ function handleExport(options) {
                         
                         if (n.midi > 0) {
                             n.ccEvents.forEach(cc => chordTrack.cc(notePulse, 0, cc.controller, cc.value));
-                            chordTrack.noteOn(notePulse, 0, n.midi, Math.round(n.velocity * 127));
+                            
+                            // Safe MIDI Velocity for Chords
+                            let finalVel = n.velocity;
+                            if (n.muted) finalVel *= 0.3; // Scale ghost "chucks"
+                            const midiVel = Math.max(1, Math.min(127, Math.round(finalVel * 127)));
+                            
+                            chordTrack.noteOn(notePulse, 0, n.midi, midiVel);
                             
                             let endTimeS;
                             if (n.durationSteps < 1) {
@@ -367,7 +374,12 @@ function handleExport(options) {
                         const noteTimeS = stepTimeS + (res.timingOffset || 0);
                         const notePulse = Math.max(0, toPulses(noteTimeS));
                         
-                        bassTrack.noteOn(notePulse, 1, res.midi, Math.round(res.velocity * 127));
+                        // Safe MIDI Velocity for Bass
+                        let finalVel = res.velocity;
+                        if (res.muted) finalVel *= 0.25; 
+                        const midiVel = Math.max(1, Math.min(127, Math.round(finalVel * 127)));
+
+                        bassTrack.noteOn(notePulse, 1, res.midi, midiVel);
                         
                         let endTimeS;
                         if (res.durationSteps < 1) {
@@ -379,7 +391,6 @@ function handleExport(options) {
                         if (endTimeS - noteTimeS < 0.05) endTimeS = noteTimeS + 0.05;
 
                         // Add small release tail (20ms) to bass notes to prevent "choked" sound 
-                        // and ensure legato overlap for walking lines.
                         endTimeS += 0.02;
 
                         bassTrack.noteOff(toPulses(endTimeS), 1, res.midi);
@@ -396,12 +407,15 @@ function handleExport(options) {
                                 const noteTimeS = stepTimeS + (res.timingOffset || 0);
                                 const notePulse = Math.max(0, toPulses(noteTimeS));
                                 
+                                // Safe MIDI Velocity for Soloist
+                                const midiVel = Math.max(1, Math.min(127, Math.round(res.velocity * 127)));
+
                                 if (res.bendStartInterval) {
                                     soloistTrack.pitchBend(notePulse, 2, Math.round(-(res.bendStartInterval / 2) * 8192));
-                                    soloistTrack.noteOn(notePulse, 2, res.midi, Math.round(res.velocity * 127));
+                                    soloistTrack.noteOn(notePulse, 2, res.midi, midiVel);
                                     soloistTrack.pitchBend(toPulses(stepTimeS + sixteenthSec), 2, 0);
                                 } else {
-                                    soloistTrack.noteOn(notePulse, 2, res.midi, Math.round(res.velocity * 127));
+                                    soloistTrack.noteOn(notePulse, 2, res.midi, midiVel);
                                 }
                                 
                                 let endTimeS;
@@ -412,6 +426,9 @@ function handleExport(options) {
                                     endTimeS = stepTimes[targetStepIdx] || (noteTimeS + (res.durationSteps * sixteenthSec));
                                 }
                                 if (endTimeS - noteTimeS < 0.05) endTimeS = noteTimeS + 0.05;
+
+                                // Add small release tail (15ms) for soloist
+                                endTimeS += 0.015;
 
                                 soloistTrack.noteOff(toPulses(endTimeS), 2, res.midi);
                                 if (!res.isDoubleStop) sb.lastFreq = 440 * Math.pow(2, (res.midi - 69) / 12);
@@ -450,7 +467,9 @@ function handleExport(options) {
                                     const midi = drumMap[n.name];
                                     if (midi) {
                                         const durS = n.name === 'Crash' ? secondsPerBeat : tightDurationS;
-                                        drumTrack.noteOn(drumPulse, 9, midi, Math.round(n.vel * 127));
+                                        // Safe MIDI Velocity for Drums (Fills)
+                                        const midiVel = Math.max(1, Math.min(127, Math.round(n.vel * 127)));
+                                        drumTrack.noteOn(drumPulse, 9, midi, midiVel);
                                         drumTrack.noteOff(toPulses(drumTimeS + durS), 9, midi);
                                     }
                                 });
@@ -474,7 +493,10 @@ function handleExport(options) {
                             const midi = drumMap[inst.name];
                             if (midi) {
                                 const durS = inst.name === 'Crash' ? secondsPerBeat : tightDurationS;
-                                drumTrack.noteOn(drumPulse, 9, midi, val === 2 ? 110 : 90);
+                                // Safe MIDI Velocity for Drums (Grid)
+                                const baseVel = val === 2 ? 110 : 90;
+                                const midiVel = Math.max(1, Math.min(127, baseVel));
+                                drumTrack.noteOn(drumPulse, 9, midi, midiVel);
                                 drumTrack.noteOff(toPulses(drumTimeS + durS), 9, midi);
                             }
                         }
@@ -483,7 +505,58 @@ function handleExport(options) {
             }
         }
 
-        const finalPulse = toPulses(stepTimes[totalStepsExport]);
+        // --- FINAL RESOLUTION MEASURE ---
+        const resolutionStep = totalStepsWithoutEnding;
+        const resTimeS = stepTimes[resolutionStep];
+        const resPulse = toPulses(resTimeS);
+        const keyPC = KEY_ORDER.indexOf(arranger.key);
+        const tonicMidi = keyPC + 60;
+
+        if (includedTracks.includes('chords')) {
+            chordTrack.cc(resPulse, 0, 64, 127); // Sustain On
+            const intervals = arranger.isMinor ? [0, 2, 3, 7, 10] : [0, 2, 4, 7, 9];
+            intervals.forEach((inter, i) => {
+                const midi = tonicMidi + inter;
+                // Slow strum in MIDI too
+                const notePulse = toPulses(resTimeS + (i * 0.025));
+                const midiVel = Math.max(1, Math.min(127, 85));
+                chordTrack.noteOn(notePulse, 0, midi, midiVel);
+                // Hold for 4 beats (16 steps)
+                chordTrack.noteOff(toPulses(resTimeS + (16 * sixteenthSec)), 0, midi);
+            });
+            // Release sustain at the very end
+            chordTrack.cc(toPulses(resTimeS + (16.1 * sixteenthSec)), 0, 64, 0);
+        }
+
+        if (includedTracks.includes('bass')) {
+            const bassMidi = (keyPC % 12) + 24;
+            const midiVel = Math.max(1, Math.min(127, 115));
+            bassTrack.noteOn(resPulse, 1, bassMidi, midiVel);
+            bassTrack.noteOff(toPulses(resTimeS + (16 * sixteenthSec)), 1, bassMidi);
+        }
+
+        if (includedTracks.includes('soloist')) {
+            const isRoot = Math.random() < 0.7;
+            const soloMidi = (keyPC % 12) + (isRoot ? 72 : 79); 
+            const midiVel = Math.max(1, Math.min(127, 95));
+            
+            if (isRoot) soloistTrack.pitchBend(resPulse, 2, Math.round(-(0.5 / 2) * 8192));
+            soloistTrack.noteOn(resPulse, 2, soloMidi, midiVel);
+            if (isRoot) soloistTrack.pitchBend(toPulses(resTimeS + sixteenthSec), 2, 0);
+            
+            soloistTrack.noteOff(toPulses(resTimeS + (12 * sixteenthSec)), 2, soloMidi);
+        }
+
+        if (includedTracks.includes('drums')) {
+            const drumPulse = toPulses(resTimeS);
+            const drumMap = { 'Kick': 36, 'Crash': 49 };
+            drumTrack.noteOn(drumPulse, 9, drumMap['Kick'], 120);
+            drumTrack.noteOff(toPulses(resTimeS + 0.1), 9, drumMap['Kick']);
+            drumTrack.noteOn(drumPulse, 9, drumMap['Crash'], 115);
+            drumTrack.noteOff(toPulses(resTimeS + 3.0), 9, drumMap['Crash']);
+        }
+
+        const finalPulse = toPulses(stepTimes[totalStepsExport - 1] + sixteenthSec);
         const finalTrackList = [metaTrack];
         const trackRefs = { chords: chordTrack, bass: bassTrack, soloist: soloistTrack, drums: drumTrack };
         ['chords', 'bass', 'soloist', 'drums'].forEach(key => {
@@ -509,68 +582,161 @@ function handleExport(options) {
     } catch (e) { postMessage({ type: 'error', data: e.message, stack: e.stack }); }
 }
 
-self.onmessage = (e) => {
-    try {
-        const { type, data } = e.data;
-        switch (type) {
-            case 'start': if (!timerID) { timerID = setInterval(() => { fillBuffers(Math.max(bbBufferHead, sbBufferHead, cbBufferHead)); postMessage({ type: 'tick' }); }, interval); } break;
-            case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
-            case 'syncState':
-                if (data.arranger) { Object.assign(arranger, data.arranger); arranger.totalSteps = data.arranger.totalSteps; arranger.stepMap = data.arranger.stepMap; }
-                if (data.cb) Object.assign(cb, data.cb);
-                if (data.bb) Object.assign(bb, data.bb);
-                if (data.sb) Object.assign(sb, data.sb);
-                if (data.gb) {
-                    Object.assign(gb, data.gb);
-                    if (data.gb.instruments) { data.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
-                }
-                if (data.ctx) Object.assign(ctx, data.ctx);
-                break;
-            case 'requestBuffer': 
-                if (ctx.workerLogging) console.log(`[Worker] requestBuffer: step=${data.step}, currentHeads=[bb:${bbBufferHead}, sb:${sbBufferHead}, cb:${cbBufferHead}]`);
-                fillBuffers(data.step); 
-                break;
-            case 'flush':
-                if (ctx.workerLogging) console.log(`[Worker] flush: step=${data.step}`);
-                // Sync first if data is provided to ensure correct style/genre
-                if (data.syncData) {
-                    const syncData = data.syncData;
-                    if (syncData.arranger) { Object.assign(arranger, syncData.arranger); arranger.totalSteps = syncData.arranger.totalSteps; arranger.stepMap = syncData.arranger.stepMap; }
-                    if (syncData.cb) Object.assign(cb, syncData.cb);
-                    if (syncData.bb) Object.assign(bb, syncData.bb);
-                    if (syncData.sb) Object.assign(sb, syncData.sb);
-                    if (syncData.gb) {
-                        Object.assign(gb, syncData.gb);
-                        if (syncData.gb.instruments) { syncData.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
+if (typeof self !== 'undefined') {
+    self.onmessage = (e) => {
+        try {
+            const { type, data } = e.data;
+            switch (type) {
+                case 'start': if (!timerID) { timerID = setInterval(() => { fillBuffers(Math.max(bbBufferHead, sbBufferHead, cbBufferHead)); postMessage({ type: 'tick' }); }, interval); } break;
+                case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
+                case 'syncState':
+                    if (data.arranger) { Object.assign(arranger, data.arranger); arranger.totalSteps = data.arranger.totalSteps; arranger.stepMap = data.arranger.stepMap; }
+                    if (data.cb) Object.assign(cb, data.cb);
+                    if (data.bb) Object.assign(bb, data.bb);
+                    if (data.sb) Object.assign(sb, data.sb);
+                    if (data.gb) {
+                        Object.assign(gb, data.gb);
+                        if (data.gb.instruments) { data.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
                     }
-                    if (syncData.ctx) Object.assign(ctx, syncData.ctx);
-                }
-                
-                bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step;
-                sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
-                sb.sessionSteps = 0;
-                sb.deviceBuffer = [];
-                bb.busySteps = 0;
-                sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;
-                
-                // Reset accompaniment memory
-                compingState.lastChordIndex = -1;
-                compingState.lockedUntil = 0;
-                compingState.rhythmPattern = [];
+                    if (data.ctx) Object.assign(ctx, data.ctx);
+                    break;
+                case 'requestBuffer': 
+                    if (ctx.workerLogging) console.log(`[Worker] requestBuffer: step=${data.step}, currentHeads=[bb:${bbBufferHead}, sb:${sbBufferHead}, cb:${cbBufferHead}]`);
+                    fillBuffers(data.step); 
+                    break;
+                case 'flush':
+                    if (ctx.workerLogging) console.log(`[Worker] flush: step=${data.step}`);
+                    // Sync first if data is provided to ensure correct style/genre
+                    if (data.syncData) {
+                        const syncData = data.syncData;
+                        if (syncData.arranger) { Object.assign(arranger, syncData.arranger); arranger.totalSteps = syncData.arranger.totalSteps; arranger.stepMap = syncData.arranger.stepMap; }
+                        if (syncData.cb) Object.assign(cb, syncData.cb);
+                        if (syncData.bb) Object.assign(bb, syncData.bb);
+                        if (syncData.sb) Object.assign(sb, syncData.sb);
+                        if (syncData.gb) {
+                            Object.assign(gb, syncData.gb);
+                            if (syncData.gb.instruments) { syncData.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
+                        }
+                        if (syncData.ctx) Object.assign(ctx, syncData.ctx);
+                    }
+                    
+                    bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step;
+                    sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
+                    sb.sessionSteps = 0;
+                    sb.deviceBuffer = [];
+                    bb.busySteps = 0;
+                    sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;
+                    
+                    // Reset accompaniment memory
+                    compingState.lastChordIndex = -1;
+                    compingState.lockedUntil = 0;
+                    compingState.rhythmPattern = [];
 
-                if (data.primeSteps > 0) {
-                    handlePrime(data.primeSteps);
-                }
+                    if (data.primeSteps > 0) {
+                        handlePrime(data.primeSteps);
+                    }
 
-                fillBuffers(data.step);
-                break;
-            case 'prime':
-                handlePrime(data);
-                break;
-            case 'export': handleExport(data); break;
-        }
-    } catch (err) { postMessage({ type: 'error', data: err.message, stack: err.stack }); }
-};
+                    fillBuffers(data.step);
+                    break;
+                case 'prime':
+                    handlePrime(data);
+                    break;
+                case 'resolution':
+                    handleResolution(data.step);
+                    break;
+                case 'export': handleExport(data); break;
+            }
+        } catch (err) { postMessage({ type: 'error', data: err.message, stack: err.stack }); }
+    };
+}
+
+export function handleResolution(step) {
+    const notesToMain = [];
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    
+    // 1. Identify Tonic Chord with Sophisticated Voicing
+    const keyPC = KEY_ORDER.indexOf(arranger.key);
+    const rootMidi = keyPC + 60;
+    
+    // Sophisticated Resolution Voicings
+    // Major: 6/9 (Root, 2, 3, 5, 6)
+    // Minor: m9 (Root, 2, b3, 5, b7)
+    const intervals = arranger.isMinor ? [0, 2, 3, 7, 10] : [0, 2, 4, 7, 9];
+    const tonicFreqs = intervals.map(i => {
+        return 440 * Math.pow(2, (rootMidi + i - 69) / 12);
+    });
+    
+    const tonicChord = {
+        rootMidi: rootMidi,
+        quality: arranger.isMinor ? 'minor' : 'major',
+        intervals: intervals,
+        freqs: tonicFreqs,
+        beats: 4,
+        sectionId: 'resolution',
+        sectionLabel: 'End'
+    };
+
+    // 2. Bass Resolution (Very low root - Octave 2)
+    if (bb.enabled) {
+        const bassMidi = (keyPC % 12) + 24; 
+        const midiVel = Math.max(1, Math.min(127, Math.round(1.15 * 127)));
+        notesToMain.push({
+            midi: bassMidi,
+            freq: 440 * Math.pow(2, (bassMidi - 69) / 12),
+            velocity: 1.15, // Keep for audio engine
+            midiVelocity: midiVel, // For MIDI export symmetry
+            durationSteps: 16, // Full 4 beats
+            module: 'bb',
+            step: step
+        });
+    }
+
+    // 3. Chord Resolution (Strummed Tonic Voicing)
+    if (cb.enabled) {
+        // Explicit Sustain Pedal On
+        notesToMain.push({
+            midi: 0,
+            module: 'cb',
+            step: step,
+            ccEvents: [{ controller: 64, value: 127, timingOffset: 0 }]
+        });
+
+        tonicFreqs.forEach((f, i) => {
+            const vel = 0.65;
+            const midiVel = Math.max(1, Math.min(127, Math.round(vel * 127)));
+            notesToMain.push({
+                midi: getMidi(f),
+                freq: f,
+                velocity: vel,
+                midiVelocity: midiVel,
+                durationSteps: 16,
+                module: 'cb',
+                step: step,
+                timingOffset: i * 0.025 // Professional slow strum
+            });
+        });
+    }
+
+    // 4. Soloist Resolution (Root or 5th with a curl)
+    if (sb.enabled) {
+        const isRoot = Math.random() < 0.7;
+        const soloMidi = (keyPC % 12) + (isRoot ? 72 : 79); 
+        const vel = 0.85;
+        const midiVel = Math.max(1, Math.min(127, Math.round(vel * 127)));
+        notesToMain.push({
+            midi: soloMidi,
+            freq: 440 * Math.pow(2, (soloMidi - 69) / 12),
+            velocity: vel,
+            midiVelocity: midiVel,
+            durationSteps: 12,
+            module: 'sb',
+            step: step,
+            bendStartInterval: isRoot ? 0.5 : 0 // Only curl if landing on root
+        });
+    }
+
+    postMessage({ type: 'notes', notes: notesToMain });
+}
 
 function handlePrime(steps) {
     if (!sb.enabled || arranger.totalSteps === 0) return;

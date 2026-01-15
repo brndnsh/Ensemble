@@ -6,7 +6,8 @@ vi.mock('../public/state.js', () => ({
         enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
         qaState: 'Question', isResting: false, contourSteps: 0,
         melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
-        lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true
+        lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
+        sessionSteps: 1000
     },
     cb: { enabled: true, octave: 60, density: 'standard', practiceMode: false },
     ctx: { bandIntensity: 0.5, bpm: 180, audio: { currentTime: 0 } },

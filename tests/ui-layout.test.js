@@ -46,7 +46,8 @@ describe('UI Layout Integrity', () => {
             'refreshAppBtn', 'editorOverlay', 'editArrangementBtn', 'closeEditorBtn', 'intensitySlider', 'complexitySlider',
             'intensityValue', 'autoIntensityCheck', 'complexityValue', 'panel-visualizer', 'chordVolume', 'bassVolume',
             'soloistVolume', 'drumVolume', 'clearDrumsBtn', 'masterVolume', 'countInCheck', 'metronomeCheck',
-            'visualFlashCheck', 'hapticCheck', 'applyPresetSettingsCheck', 'swingBaseSelect', 'closeSettingsBtn'
+            'visualFlashCheck', 'hapticCheck', 'applyPresetSettingsCheck', 'swingBaseSelect', 'closeSettingsBtn',
+            'sessionTimerSelect', 'stopAtEndCheck'
         ];
         
         mockIds.forEach(id => {
