@@ -700,7 +700,9 @@ export const CHORD_PRESETS = [
         name: "Stella by Starlight", 
         sections: [
             { label: "A", value: "Em7b5 | A7alt | Cm7 | F7 | Fm7 | Bb7 | Ebmaj7 | Ab7" },
-            { label: "B", value: "Bbmaj7 | Em7b5 A7 | Dm7b5 | G7alt | Cm7b5 | F7alt | Bbmaj7 | Fm7 Bb7" }
+            { label: "B", value: "Bbmaj7 | Em7b5 A7 | Dm7b5 | G7alt | Cm7b5 | F7alt | Bbmaj7 | Fm7 Bb7" },
+            { label: "C", value: "Ebmaj7 | Ab7#11 | Bbmaj7 | Em7b5 A7alt | Dm7b5 | G7alt | Cm7b5 | F7alt" },
+            { label: "D", value: "Bbmaj7 | Em7b5 A7alt | Dm7b5 | G7alt | Cm7b5 | F7alt | Bbmaj7 | Cm7 F7" }
         ],
         category: "Jazz",
         settings: { bpm: 120, style: 'jazz' }

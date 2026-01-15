@@ -50,9 +50,12 @@ describe('Jazz Standard Test: Stella by Starlight', () => {
     beforeEach(() => {
         arranger.key = 'Bb';
         arranger.isMinor = false;
-        // A Section: Em7b5 | A7alt | Cm7 | F7 | Fm7 | Bb7 | Ebmaj7 | Ab7
+        // Full 32-bar form
         arranger.sections = [
-            { id: 'A', label: 'A', value: "Em7b5 | A7alt | Cm7 | F7 | Fm7 | Bb7 | Ebmaj7 | Ab7" }
+            { id: 'A', label: 'A', value: "Em7b5 | A7alt | Cm7 | F7 | Fm7 | Bb7 | Ebmaj7 | Ab7" },
+            { id: 'B', label: 'B', value: "Bbmaj7 | Em7b5 A7 | Dm7b5 | G7alt | Cm7b5 | F7alt | Bbmaj7 | Fm7 Bb7" },
+            { id: 'C', label: 'C', value: "Ebmaj7 | Ab7#11 | Bbmaj7 | Em7b5 A7alt | Dm7b5 | G7alt | Cm7b5 | F7alt" },
+            { id: 'D', label: 'D', value: "Bbmaj7 | Em7b5 A7alt | Dm7b5 | G7alt | Cm7b5 | F7alt | Bbmaj7 | Cm7 F7" }
         ];
         validateProgression();
         
