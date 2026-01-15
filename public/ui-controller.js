@@ -543,20 +543,23 @@ export function setupUIHandlers(refs) {
 
     // --- Session Timer UI Logic ---
     if (ui.sessionTimerCheck && ui.sessionTimerInput) {
+        const updateTimerUI = (isChecked) => {
+            ui.sessionTimerDurationContainer.style.opacity = isChecked ? '1' : '0.4';
+            ui.sessionTimerDurationContainer.style.pointerEvents = isChecked ? 'auto' : 'none';
+            ui.sessionTimerInput.style.borderColor = isChecked ? 'var(--accent-color)' : 'var(--border-color)';
+            ui.sessionTimerInput.style.backgroundColor = isChecked ? 'var(--card-bg)' : 'var(--input-bg)';
+        };
+
         // Initialize UI from State
         const currentTimer = ctx.sessionTimer || 0;
         ui.sessionTimerCheck.checked = currentTimer > 0;
         ui.sessionTimerInput.value = currentTimer > 0 ? currentTimer : 5;
-        ui.sessionTimerDurationContainer.style.opacity = currentTimer > 0 ? '1' : '0.5';
-        ui.sessionTimerDurationContainer.style.pointerEvents = currentTimer > 0 ? 'auto' : 'none';
+        updateTimerUI(currentTimer > 0);
 
         ui.sessionTimerCheck.addEventListener('change', (e) => {
             const isChecked = e.target.checked;
             const duration = isChecked ? parseFloat(ui.sessionTimerInput.value) : 0;
-            
-            ui.sessionTimerDurationContainer.style.opacity = isChecked ? '1' : '0.5';
-            ui.sessionTimerDurationContainer.style.pointerEvents = isChecked ? 'auto' : 'none';
-            
+            updateTimerUI(isChecked);
             dispatch('SET_SESSION_TIMER', duration);
         });
 
