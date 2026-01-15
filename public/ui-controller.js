@@ -545,10 +545,6 @@ export function setupUIHandlers(refs) {
         dispatch('SET_SESSION_TIMER', parseInt(ui.sessionTimerSelect.value));
     });
 
-    ui.stopAtEndCheck.addEventListener('change', () => {
-        dispatch('SET_STOP_AT_END', ui.stopAtEndCheck.checked);
-    });
-
     ui.applyPresetSettings.addEventListener('change', () => {
         dispatch('SET_PRESET_SETTINGS_MODE', ui.applyPresetSettings.checked);
     });

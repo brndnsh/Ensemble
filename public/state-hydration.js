@@ -21,7 +21,7 @@ export function hydrateState(viz) {
         ctx.autoIntensity = savedState.autoIntensity !== undefined ? savedState.autoIntensity : true; 
         ctx.metronome = savedState.metronome || false; 
         ctx.sessionTimer = savedState.sessionTimer || 0;
-        ctx.stopAtEnd = savedState.stopAtEnd || false;
+        ctx.stopAtEnd = false;
         ctx.applyPresetSettings = savedState.applyPresetSettings !== undefined ? savedState.applyPresetSettings : false; 
         vizState.enabled = savedState.vizEnabled !== undefined ? savedState.vizEnabled : false;
         
@@ -111,7 +111,6 @@ export function hydrateState(viz) {
         if (ui.drumBarsSelect) ui.drumBarsSelect.value = gb.measures;
         if (ui.metronome) ui.metronome.checked = ctx.metronome;
         if (ui.sessionTimerSelect) ui.sessionTimerSelect.value = ctx.sessionTimer;
-        if (ui.stopAtEndCheck) ui.stopAtEndCheck.checked = ctx.stopAtEnd;
         if (ui.applyPresetSettings) ui.applyPresetSettings.checked = ctx.applyPresetSettings;
         
         applyTheme(ctx.theme); 
