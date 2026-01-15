@@ -3,7 +3,7 @@ import { ui, updateGenreUI, triggerFlash, updateActiveChordUI, clearActiveVisual
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, updateSustain, killAllNotes, restoreGains } from './engine.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
-import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker } from './worker-client.js';
+import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker, requestResolution } from './worker-client.js';
 import { updateAutoConductor, checkSectionTransition } from './conductor.js';
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
 import { loadDrumPreset, flushBuffers, switchMeasure } from './instrument-controller.js';
@@ -11,6 +11,7 @@ import { draw } from './animation-loop.js';
 
 let isScheduling = false;
 let sessionStartTime = 0;
+let isResolutionPrecalculated = false;
 
 let iosAudioUnlocked = false;
 const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ");
@@ -60,6 +61,7 @@ export function togglePlay(viz) {
         }
 
         ctx.step = 0;
+        isResolutionPrecalculated = false;
         dispatch('RESET_SESSION'); // Reset warm-up counters
         dispatch('SET_ENDING_PENDING', false);
         sessionStartTime = performance.now();
@@ -94,18 +96,19 @@ export function togglePlay(viz) {
 }
 
 function triggerResolution(time) {
-    // 1. Tell worker to generate resolution
-    // We'll add a new message type 'requestResolution' to the worker
-    import('./worker-client.js').then(client => {
-        client.requestResolution(ctx.step);
-    });
-
-    // 2. We'll wait for the notes to come back via the worker-client callback
-    // The worker-client already handles incoming 'notes' and puts them in buffers.
-    // We just need to wait a few ms and then schedule them.
-    setTimeout(() => {
+    // If we missed pre-calculation (e.g. short loop or race condition), fallback to request
+    if (!isResolutionPrecalculated) {
+        requestResolution(ctx.step);
+        // Fallback: Late request requires a small delay to ensure data arrives
+        setTimeout(() => scheduleResolution(time), 50);
+    } else {
+        // Pre-calculated: Data should be ready in buffers
         scheduleResolution(time);
-    }, 50);
+    }
+}
+
+function prepareResolution(targetStep) {
+    requestResolution(targetStep);
 }
 
 function scheduleResolution(time) {
@@ -171,6 +174,14 @@ export function scheduler() {
                     if (elapsedMins >= ctx.sessionTimer) {
                         dispatch('SET_ENDING_PENDING', true);
                     }
+                }
+
+                // --- Resolution Pre-Calculation ---
+                const stepsToEnd = arranger.totalSteps - (ctx.step % arranger.totalSteps);
+                // Pre-calculate 1 measure (16 steps approx) in advance
+                if (ctx.isEndingPending && stepsToEnd === spm && !isResolutionPrecalculated) {
+                     prepareResolution(ctx.step + stepsToEnd);
+                     isResolutionPrecalculated = true;
                 }
 
                 // --- Resolution Trigger Logic ---
