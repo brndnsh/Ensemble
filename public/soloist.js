@@ -248,7 +248,20 @@ export function getScaleForChord(chord, nextChord, style) {
     }
     
     if (style === 'neo') {
-        if (chord.quality.startsWith('maj') || chord.quality === 'major') return [0, 2, 4, 6, 7, 9, 11]; // Lydian
+        const keyRoot = KEY_ORDER.indexOf(arranger.key);
+        const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
+
+        if (chord.quality.startsWith('maj') || chord.quality === 'major') {
+            // Tonic Maj7 in Neo-Soul often sounds better with Ionian than Lydian to avoid #11 clash with melody
+            if (relativeRoot === 0 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; 
+            return [0, 2, 4, 6, 7, 9, 11]; // Lydian for others (like IV)
+        }
+        
+        if (chord.quality === 'minor') {
+            // Natural Minor (Aeolian) for the vi chord, Dorian for ii/iii/v
+            if (relativeRoot === 9 && !arranger.isMinor) return [0, 2, 3, 5, 7, 8, 10];
+            return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+        }
     }
 
     if (style === 'bossa' && (chord.quality.startsWith('maj') || chord.quality === 'major')) {
@@ -270,17 +283,29 @@ export function getScaleForChord(chord, nextChord, style) {
         case '13': return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
     }
 
+    // 4. Resolution Logic (Secondary Dominants)
+    // Only apply generic resolution logic to plain dominant 7ths.
+    // Specific qualities handled above (like 7alt) should keep their intended flavor.
+    const isMinorQuality = (q) => (q.startsWith('m') && !q.startsWith('maj')) || q.includes('minor') || q.includes('dim') || q.includes('halfdim');
+    
+    if (chord.quality === '7' && nextChord) {
+        const resolvingDownFifth = ((nextChord.rootMidi - chord.rootMidi + 120) % 12 === 5);
+        
+        if (resolvingDownFifth) {
+            // V7 -> im7 (or iiø7) resolution
+            if (isMinorQuality(nextChord.quality)) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
+            
+            // V7 -> Imaj7 resolution (ensure Mixolydian for secondary doms)
+            return [0, 2, 4, 5, 7, 9, 10]; 
+        }
+    }
+
     if (chord.quality === 'minor') {
         if (style === 'bird' || gb.genreFeel === 'Jazz' || style === 'neo' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk' || style === 'bossa' || gb.genreFeel === 'Bossa Nova') {
             return [0, 2, 3, 5, 7, 9, 10]; // Dorian
         }
         // Fall through to Diatonic check
     }
-
-    const isV7toMinor = isDominant && nextChord && 
-                        (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim') &&
-                        ((nextChord.rootMidi - chord.rootMidi + 120) % 12 === 5); // Resolving down a 5th (or up a 4th)
-    if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
 
     if (isDominant || chord.quality === 'major') {
         const keyRoot = KEY_ORDER.indexOf(arranger.key);
@@ -555,6 +580,30 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                     interval = (interval - pc) + best;
                 }
             }
+
+            // MOTIF RESOLUTION: If replaying a motif during an "Answer" phase on a tonic chord,
+            // ensure any spicy extensions from the original motif are nudged to diatonic tones.
+            const keyRoot = KEY_ORDER.indexOf(arranger.key);
+            const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
+            const pc = (interval % 12 + 12) % 12;
+            const isDiatonic = keyIntervals.includes((pc + targetChord.rootMidi - keyRoot + 120) % 12);
+            const relativeRoot = (targetChord.rootMidi - keyRoot + 120) % 12;
+            const isTonicChord = relativeRoot === 0 || (arranger.isMinor && relativeRoot === 9) || (!arranger.isMinor && relativeRoot === 4);
+
+            if (sb.qaState === 'Answer' && isTonicChord && !isDiatonic) {
+                 // Nudge to nearest diatonic scale tone within the current chord scale
+                 let best = pc;
+                 let minDiff = 12;
+                 const chordScale = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
+                 for (const s of chordScale) {
+                     const isSInKey = keyIntervals.includes((s + targetChord.rootMidi - keyRoot + 120) % 12);
+                     if (!isSInKey) continue;
+                     const diff = Math.min(Math.abs(s - pc), 12 - Math.abs(s - pc));
+                     if (diff < minDiff) { minDiff = diff; best = s; }
+                 }
+                 interval = (interval - pc) + best;
+            }
+
             selectedMidi = targetChord.rootMidi + interval;
         }
     }
@@ -680,11 +729,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             const distFromCenter = Math.abs(m - dynamicCenter);
             if (distFromCenter > 7) weight -= (distFromCenter - 7) * 3; 
             
-            if (restProb > 0.3 && isChordTone) {
-                if (interval === 0 || interval === 4 || interval === 7 || interval === 3) {
-                    weight += 25;
-                    if (sb.qaState === 'Answer' && (interval === 0 || interval === 3 || interval === 4)) weight += 15;
-                }
+            // 4. Harmonic Role Awareness (Key-based Filtering)
+            // Penalize non-diatonic notes on Tonic/Resolution chords during "Answer" phrases.
+            const keyRoot = KEY_ORDER.indexOf(arranger.key);
+            const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
+            const isDiatonic = keyIntervals.includes((pc - keyRoot + 12) % 12);
+            const relativeRoot = (targetChord.rootMidi - keyRoot + 120) % 12;
+            const isTonicChord = relativeRoot === 0 || (arranger.isMinor && relativeRoot === 9) || (!arranger.isMinor && relativeRoot === 4);
+
+            if (sb.qaState === 'Answer' && isTonicChord && !isDiatonic) {
+                weight -= 40; // Heavy penalty for non-diatonic tones on resolution
             }
 
             candidates.push({ midi: m, weight: Math.max(0.1, weight) });
@@ -799,13 +853,23 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (deviceType === 'enclosure') {
             const aboveMidi = selectedMidi + (Math.random() < 0.5 ? 1 : 2);
             const belowMidi = selectedMidi - 1;
+            
+            // SCALE CHECK: Ensure enclosure notes are either in-scale or chromatic leading tones
+            const scaleIntervals = getScaleForChord(targetChord, nextChord, style);
+            const isNoteSafe = (m) => {
+                const pc = (m % 12 + 12) % 12;
+                const rootPC = (targetChord.rootMidi % 12 + 12) % 12;
+                const interval = (pc - rootPC + 12) % 12;
+                return scaleIntervals.includes(interval);
+            };
+
             sb.deviceBuffer = [
-                { midi: belowMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: 0 },
+                { midi: isNoteSafe(belowMidi) ? belowMidi : selectedMidi - 1, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: 0 },
                 { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, bendStartInterval, style, timingOffset: 0 }
             ];
             sb.busySteps = 0;
-            sb.lastFreq = getFrequency(aboveMidi);
-            return { midi: aboveMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
+            sb.lastFreq = getFrequency(isNoteSafe(aboveMidi) ? aboveMidi : selectedMidi + 1);
+            return { midi: isNoteSafe(aboveMidi) ? aboveMidi : selectedMidi + 1, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
         } 
         
         if (deviceType === 'quartal' && sb.doubleStops) {
@@ -839,6 +903,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
         if (deviceType === 'slide') {
             // Chromatic slide/grace note (Blues/Rock)
+            // SCALE CHECK: For non-blues styles, ensure grace note is in scale or a half-step below target
             const graceMidi = selectedMidi - 1;
             sb.deviceBuffer = [
                 { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0 }
@@ -850,7 +915,21 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
         if (deviceType === 'guitarDouble' && sb.doubleStops) {
             const rand = Math.random();
-            const dsInterval = (style === 'blues' || style === 'scalar') ? (Math.random() < 0.7 ? 5 : 7) : (Math.random() < 0.5 ? 3 : 4);
+            const currentScale = getScaleForChord(targetChord, nextChord, style);
+            let dsInterval = (style === 'blues' || style === 'scalar') ? (Math.random() < 0.7 ? 5 : 7) : (Math.random() < 0.5 ? 3 : 4);
+            
+            // SCALE CHECK: Ensure the second note is in the scale
+            if (!currentScale.includes((dsInterval) % 12)) {
+                 // Nudge to nearest scale tone
+                 let best = dsInterval;
+                 let minDiff = 12;
+                 for (const s of currentScale) {
+                     const diff = Math.min(Math.abs(s - (dsInterval % 12)), 12 - Math.abs(s - (dsInterval % 12)));
+                     if (diff < minDiff) { minDiff = diff; best = s; }
+                 }
+                 dsInterval = best;
+            }
+
             const secondMidi = selectedMidi + dsInterval;
 
             if (rand < 0.4) {
