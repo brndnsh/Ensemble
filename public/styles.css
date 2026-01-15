@@ -112,6 +112,22 @@ body {
 }
 
 /* --- Layout --- */
+.stepper-btn:hover {
+    background: rgba(147, 161, 161, 0.1) !important;
+}
+
+.stepper-btn:active {
+    background: rgba(147, 161, 161, 0.2) !important;
+}
+
+.stepper-control {
+    transition: border-color 0.2s;
+}
+
+.stepper-control:focus-within {
+    border-color: var(--accent-color) !important;
+}
+
 header {
     background: var(--panel-color);
     backdrop-filter: blur(12px);

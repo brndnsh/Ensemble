@@ -391,16 +391,24 @@ export function setupUIHandlers(refs) {
 
     document.querySelectorAll('input[name="exportMode"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
-             if (e.target.value === 'time') {
-                 ui.exportDurationContainer.style.opacity = '1';
-                 ui.exportDurationContainer.style.pointerEvents = 'auto';
-                 ui.exportDurationInput.focus();
-             } else {
-                 ui.exportDurationContainer.style.opacity = '0.5';
-                 ui.exportDurationContainer.style.pointerEvents = 'none';
+             const isTime = e.target.value === 'time';
+             ui.exportDurationContainer.style.opacity = isTime ? '1' : '0.5';
+             ui.exportDurationContainer.style.pointerEvents = isTime ? 'auto' : 'none';
+             if (ui.exportDurationStepper) {
+                 ui.exportDurationStepper.style.borderColor = isTime ? 'var(--accent-color)' : 'var(--border-color)';
+                 ui.exportDurationStepper.style.backgroundColor = isTime ? 'var(--card-bg)' : 'var(--input-bg)';
              }
         });
     });
+
+    const adjustExportDuration = (delta) => {
+        const current = parseInt(ui.exportDurationInput.value);
+        const next = Math.max(1, Math.min(20, current + delta));
+        ui.exportDurationInput.value = next;
+    };
+
+    ui.exportDurationDec.addEventListener('click', () => adjustExportDuration(-1));
+    ui.exportDurationInc.addEventListener('click', () => adjustExportDuration(1));
 
     if (ui.editArrangementBtn) {
         ui.editArrangementBtn.addEventListener('click', () => {
@@ -546,8 +554,10 @@ export function setupUIHandlers(refs) {
         const updateTimerUI = (isChecked) => {
             ui.sessionTimerDurationContainer.style.opacity = isChecked ? '1' : '0.4';
             ui.sessionTimerDurationContainer.style.pointerEvents = isChecked ? 'auto' : 'none';
-            ui.sessionTimerInput.style.borderColor = isChecked ? 'var(--accent-color)' : 'var(--border-color)';
-            ui.sessionTimerInput.style.backgroundColor = isChecked ? 'var(--card-bg)' : 'var(--input-bg)';
+            if (ui.sessionTimerStepper) {
+                ui.sessionTimerStepper.style.borderColor = isChecked ? 'var(--accent-color)' : 'var(--border-color)';
+                ui.sessionTimerStepper.style.backgroundColor = isChecked ? 'var(--card-bg)' : 'var(--input-bg)';
+            }
         };
 
         // Initialize UI from State
@@ -568,6 +578,18 @@ export function setupUIHandlers(refs) {
                 dispatch('SET_SESSION_TIMER', parseFloat(e.target.value));
             }
         });
+
+        const adjustTimer = (delta) => {
+            const current = parseInt(ui.sessionTimerInput.value);
+            const next = Math.max(1, Math.min(20, current + delta));
+            ui.sessionTimerInput.value = next;
+            if (ui.sessionTimerCheck.checked) {
+                dispatch('SET_SESSION_TIMER', next);
+            }
+        };
+
+        ui.sessionTimerDec.addEventListener('click', () => adjustTimer(-1));
+        ui.sessionTimerInc.addEventListener('click', () => adjustTimer(1));
     }
 
     ui.applyPresetSettings.addEventListener('change', () => {
