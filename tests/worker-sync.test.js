@@ -72,6 +72,25 @@ describe('Worker Synchronization Integrity', () => {
         expect(sentSteps[0]).toBe(1);
     });
 
+    it('should trigger onNotes callback when worker sends notes', () => {
+        const onNotes = vi.fn();
+        initWorker(null, onNotes);
+        
+        const mockNotes = [{ midi: 60, step: 0, module: 'bb' }];
+        lastWorkerInstance.onmessage({ data: { type: 'notes', notes: mockNotes } });
+        
+        expect(onNotes).toHaveBeenCalledWith(mockNotes);
+    });
+
+    it('should trigger onTick callback when worker sends tick', () => {
+        const onTick = vi.fn();
+        initWorker(onTick, null);
+        
+        lastWorkerInstance.onmessage({ data: { type: 'tick' } });
+        
+        expect(onTick).toHaveBeenCalled();
+    });
+
     it('should not throw if called before worker is initialized', () => {
         lastWorkerInstance = null;
         // Reset the local timerWorker in the module is hard without re-importing 

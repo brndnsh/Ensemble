@@ -26,9 +26,9 @@
         <button id="playBtn" class="primary-btn">START</button>
         
         <div class="control-group">
-            <span class="control-label">BPM</span>
-            <input type="number" id="bpmInput" value="100" min="40" max="240">
-            <button id="tapBtn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; height: auto;">TAP</button>
+            <span class="control-label" id="bpm-label">BPM</span>
+            <input type="number" id="bpmInput" value="100" min="40" max="240" aria-labelledby="bpm-label" aria-label="Tempo in BPM">
+            <button id="tapBtn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; height: auto;" aria-label="Tap Tempo">TAP</button>
         </div>
 
         <button id="settingsBtn" style="padding: 0.5rem; background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" aria-label="Settings">⚙️</button>
@@ -84,7 +84,7 @@
                 </div>
             </div>
 
-            <div class="display-area" id="chordVisualizer"></div>
+            <div class="display-area" id="chordVisualizer" aria-live="polite"></div>
             <div id="activeSectionLabel" class="active-section-label"></div>
 
             <div style="margin-bottom: 1.5rem;">
@@ -271,7 +271,7 @@
                         <button id="cloneMeasureBtn" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2);">⧉ Copy to All</button>
                     </div>
 
-                    <div class="sequencer-grid" id="sequencerGrid"></div>
+                    <div class="sequencer-grid" id="sequencerGrid" role="grid" aria-label="Drum Sequencer"></div>
                 </div>
             </div>
 
@@ -280,22 +280,22 @@
                 <div class="smart-control-group" style="margin-bottom: 1.5rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Genre</label>
                     <div class="genre-selector">
-                        <button class="genre-btn" data-genre="Rock">Rock</button>
-                        <button class="genre-btn" data-genre="Jazz">Jazz</button>
-                        <button class="genre-btn" data-genre="Funk">Funk</button>
-                        <button class="genre-btn" data-genre="Disco">Disco</button>
-                        <button class="genre-btn" data-genre="Hip Hop">Hip Hop</button>
-                        <button class="genre-btn" data-genre="Blues">Blues</button>
-                        <button class="genre-btn" data-genre="Neo-Soul">Neo-Soul</button>
-                        <button class="genre-btn" data-genre="Reggae">Reggae</button>
-                        <button class="genre-btn" data-genre="Acoustic">Acoustic</button>
-                        <button class="genre-btn" data-genre="Bossa">Bossa</button>
+                        <button class="genre-btn" data-genre="Rock" role="button" aria-pressed="false">Rock</button>
+                        <button class="genre-btn" data-genre="Jazz" role="button" aria-pressed="false">Jazz</button>
+                        <button class="genre-btn" data-genre="Funk" role="button" aria-pressed="false">Funk</button>
+                        <button class="genre-btn" data-genre="Disco" role="button" aria-pressed="false">Disco</button>
+                        <button class="genre-btn" data-genre="Hip Hop" role="button" aria-pressed="false">Hip Hop</button>
+                        <button class="genre-btn" data-genre="Blues" role="button" aria-pressed="false">Blues</button>
+                        <button class="genre-btn" data-genre="Neo-Soul" role="button" aria-pressed="false">Neo-Soul</button>
+                        <button class="genre-btn" data-genre="Reggae" role="button" aria-pressed="false">Reggae</button>
+                        <button class="genre-btn" data-genre="Acoustic" role="button" aria-pressed="false">Acoustic</button>
+                        <button class="genre-btn" data-genre="Bossa" role="button" aria-pressed="false">Bossa</button>
                     </div>
                 </div>
 
                 <div class="smart-control-group" style="margin-bottom: 1.5rem;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
-                        <label style="font-size: 0.9rem; color: #94a3b8;">Intensity (Global)</label>
+                        <label style="font-size: 0.9rem; color: #94a3b8;" id="intensity-label">Intensity (Global)</label>
                         <div style="display: flex; gap: 1rem; align-items: center;">
                             <label style="font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;" title="Automatically vary intensity over time">
                                 <input type="checkbox" id="autoIntensityCheck" checked> Auto
@@ -303,7 +303,7 @@
                             <span id="intensityValue" style="color: var(--accent-color); font-weight: bold; font-size: 0.9rem;">50%</span>
                         </div>
                     </div>
-                    <input type="range" id="intensitySlider" min="0" max="100" value="50" style="width: 100%; height: 6px;">
+                    <input type="range" id="intensitySlider" min="0" max="100" value="50" style="width: 100%; height: 6px;" aria-labelledby="intensity-label">
                     <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">
                         <span>Chill</span>
                         <span>Full Band</span>
@@ -311,11 +311,11 @@
                 </div>
 
                 <div class="smart-control-group" style="margin-bottom: 1rem;">
-                    <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">
+                    <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;" id="complexity-label">
                         <span>Complexity</span>
                         <span id="complexityValue" style="color: var(--accent-color); font-weight: bold;">Low</span>
                     </label>
-                    <input type="range" id="complexitySlider" min="0" max="100" value="30" style="width: 100%; height: 6px;">
+                    <input type="range" id="complexitySlider" min="0" max="100" value="30" style="width: 100%; height: 6px;" aria-labelledby="complexity-label">
                 </div>
             </div>
 

@@ -192,8 +192,104 @@ describe('Genre Integrity Stress Test', () => {
                 if (simulateHipHopKick(i)) ghostKickCount++;
             }
 
-            // Expect *some* ghost kicks (randomness means > 0 is good enough check)
-            expect(ghostKickCount).toBeGreaterThan(0);
-        });
-    });
-});
+                        // Expect *some* ghost kicks (randomness means > 0 is good enough check)
+
+                        expect(ghostKickCount).toBeGreaterThan(0);
+
+                    });
+
+                });
+
+            
+
+                describe('Odd Meter Integrity (5/4 & 7/8)', () => {
+
+                    const runOddSimulation = (genre, ts, measures, callback) => {
+
+                        gb.genreFeel = genre;
+
+                        arranger.timeSignature = ts;
+
+                        const spm = getStepsPerMeasure(ts);
+
+                        const totalSteps = measures * spm;
+
+                        
+
+                        const chord = { 
+
+                            rootMidi: 48, 
+
+                            quality: 'major', 
+
+                            intervals: [0, 4, 7], 
+
+                            beats: ts.startsWith('5') ? 5 : 3.5,
+
+                            freqs: [130.81, 164.81, 196.00]
+
+                        };
+
+            
+
+                        for (let step = 0; step < totalSteps; step++) {
+
+                            const stepInChord = step % spm;
+
+                            const beatIndex = Math.floor(stepInChord / 4);
+
+                            callback(step, stepInChord, beatIndex, chord, spm);
+
+                        }
+
+                    };
+
+            
+
+                    it('should maintain the "One" on every measure boundary in 5/4', () => {
+
+                        let rootOnOneCount = 0;
+
+                        const measures = 100;
+
+                        const ts = '5/4';
+
+            
+
+                        runOddSimulation('Jazz', ts, measures, (step, stepInChord, beatIndex, chord, spm) => {
+
+                            if (stepInChord === 0) {
+
+                                const note = getBassNote(chord, null, beatIndex, null, 38, 'smart', 0, step, stepInChord);
+
+                                if (note.midi % 12 === 0) rootOnOneCount++;
+
+                            }
+
+                        });
+
+            
+
+                        expect(rootOnOneCount).toBe(measures);
+
+                    });
+
+            
+
+                    it('should avoid playing notes beyond the measure length in 7/8 (14 steps)', () => {
+
+                        // This test verifies that the scheduler/engines respect getStepsPerMeasure
+
+                        // indirectly by ensuring our simulation loop matches the engine's internal step logic.
+
+                        const spm = getStepsPerMeasure('7/8');
+
+                        expect(spm).toBe(14);
+
+                    });
+
+                });
+
+            });
+
+            

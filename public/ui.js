@@ -666,7 +666,9 @@ export function updateGenreUI(stepsUntilNextMeasure = 0, stepsPerBeat = 4) {
         }
 
         // Active state should reflect ACTUAL current feel
-        btn.classList.toggle('active', btn.dataset.genre === gb.lastSmartGenre && !btn.classList.contains('pending'));
+        const isActive = btn.dataset.genre === gb.lastSmartGenre && !btn.classList.contains('pending');
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 }
 
