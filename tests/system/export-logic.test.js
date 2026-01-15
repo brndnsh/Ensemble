@@ -18,7 +18,7 @@ vi.mock('../../public/state.js', () => ({
     },
     cb: { enabled: true },
     bb: { enabled: true, lastFreq: 110, pocketOffset: 0 },
-    ctx: { bandIntensity: 0.5, bpm: 120 },
+    ctx: { bandIntensity: 0.5, bpm: 120, intent: {} },
     arranger: { 
         key: 'C', 
         isMinor: false, 
@@ -39,7 +39,7 @@ vi.mock('../../public/config.js', () => ({
 }));
 
 import { arranger } from '../../public/state.js';
-import { handleResolution } from '../../public/logic-worker.js';
+import { handleResolution, handleExport } from '../../public/logic-worker.js';
 
 describe('Export and Resolution Logic Validation', () => {
     
@@ -47,6 +47,20 @@ describe('Export and Resolution Logic Validation', () => {
         capturedMessages.length = 0;
         arranger.key = 'C';
         arranger.isMinor = false;
+        const mockChord = { 
+            root: 'C', 
+            beats: 4, 
+            sectionId: 's1', 
+            sectionLabel: 'Verse',
+            freqs: [261.63, 329.63, 392.00],
+            intervals: [0, 4, 7],
+            rootMidi: 60,
+            value: 'C',
+            quality: 'Major'
+        };
+        arranger.progression = [{ chord: mockChord, start: 0, end: 16 }];
+        arranger.totalSteps = 16;
+        arranger.stepMap = [{ start: 0, end: 16, chord: mockChord, chordIndex: 0 }];
     });
 
     it('should generate a 6/9 voicing for Major keys in resolution', () => {
@@ -114,5 +128,14 @@ describe('Export and Resolution Logic Validation', () => {
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
         const bass = noteMsg.notes.find(n => n.module === 'bb');
         expect(bass.midiVelocity).toBeLessThanOrEqual(127);
+    });
+
+    it('should complete MIDI export including resolution', () => {
+        handleExport({ includedTracks: ['chords', 'bass', 'soloist', 'drums'], targetDuration: 0.1 }); // Short duration
+        
+        const exportMsg = capturedMessages.find(m => m.type === 'exportComplete');
+        expect(exportMsg).toBeDefined();
+        expect(exportMsg.blob).toBeInstanceOf(Uint8Array);
+        expect(exportMsg.filename).toContain('.mid');
     });
 });
