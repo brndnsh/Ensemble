@@ -541,9 +541,31 @@ export function setupUIHandlers(refs) {
         dispatch('SET_PARAM', { module: 'ctx', param: 'haptic', value: ui.haptic.checked });
     });
 
-    ui.sessionTimerSelect.addEventListener('change', () => {
-        dispatch('SET_SESSION_TIMER', parseFloat(ui.sessionTimerSelect.value));
-    });
+    // --- Session Timer UI Logic ---
+    if (ui.sessionTimerCheck && ui.sessionTimerInput) {
+        // Initialize UI from State
+        const currentTimer = ctx.sessionTimer || 0;
+        ui.sessionTimerCheck.checked = currentTimer > 0;
+        ui.sessionTimerInput.value = currentTimer > 0 ? currentTimer : 5;
+        ui.sessionTimerDurationContainer.style.opacity = currentTimer > 0 ? '1' : '0.5';
+        ui.sessionTimerDurationContainer.style.pointerEvents = currentTimer > 0 ? 'auto' : 'none';
+
+        ui.sessionTimerCheck.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            const duration = isChecked ? parseFloat(ui.sessionTimerInput.value) : 0;
+            
+            ui.sessionTimerDurationContainer.style.opacity = isChecked ? '1' : '0.5';
+            ui.sessionTimerDurationContainer.style.pointerEvents = isChecked ? 'auto' : 'none';
+            
+            dispatch('SET_SESSION_TIMER', duration);
+        });
+
+        ui.sessionTimerInput.addEventListener('change', (e) => {
+            if (ui.sessionTimerCheck.checked) {
+                dispatch('SET_SESSION_TIMER', parseFloat(e.target.value));
+            }
+        });
+    }
 
     ui.applyPresetSettings.addEventListener('change', () => {
         dispatch('SET_PRESET_SETTINGS_MODE', ui.applyPresetSettings.checked);
