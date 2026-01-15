@@ -542,7 +542,7 @@ export function setupUIHandlers(refs) {
     });
 
     ui.sessionTimerSelect.addEventListener('change', () => {
-        dispatch('SET_SESSION_TIMER', parseInt(ui.sessionTimerSelect.value));
+        dispatch('SET_SESSION_TIMER', parseFloat(ui.sessionTimerSelect.value));
     });
 
     ui.applyPresetSettings.addEventListener('change', () => {

@@ -201,6 +201,9 @@ export function scheduler() {
                 // If ending is pending or stopAtEnd is active, and we reach a loop boundary (Step 0)
                 if (ctx.step > 0 && (ctx.step % arranger.totalSteps === 0)) {
                     if (ctx.isEndingPending || ctx.stopAtEnd) {
+                        // Clear the flags immediately to prevent multiple triggers in subsequent ticks
+                        dispatch('SET_ENDING_PENDING', false);
+                        ctx.stopAtEnd = false;
                         triggerResolution(ctx.nextNoteTime);
                         return; // Stop scheduling
                     }
