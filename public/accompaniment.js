@@ -343,8 +343,19 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         const useClarity = soloistMidi > 72;
 
         if (cb.style === 'smart') {
+            // Jazz Shell Lesson: If things are hot and harmony is complex, stick to shells (3 & 7)
+            const isComplex = chord.quality === '7alt' || chord.quality === 'halfdim' || chord.quality === 'dim';
+            if (genre === 'Jazz' && intensity > 0.6 && isComplex) {
+                // Find 3rd and 7th
+                const third = chord.intervals.find(i => i === 3 || i === 4);
+                const seventh = chord.intervals.find(i => i === 10 || i === 11 || i === 9 || i === 6); // 6 for dim
+                if (third !== undefined && seventh !== undefined) {
+                    voicing = [getFrequency(chord.rootMidi + third), getFrequency(chord.rootMidi + seventh)];
+                }
+            }
+
             // Soloist Pocket: Reduce density or drop velocity when soloist is high
-            if (useClarity && Math.random() < 0.7) {
+            else if (useClarity && Math.random() < 0.7) {
                 if (voicing.length > 3) voicing = voicing.slice(0, 3);
             }
 

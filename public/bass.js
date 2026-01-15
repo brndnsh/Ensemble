@@ -419,6 +419,21 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- QUARTER NOTE (WALKING) STYLE ---
     
+    // Jazz Two-Feel Lesson: At low intensity (Head/Intro), play Half Notes
+    if (style === 'quarter' && gb.genreFeel === 'Jazz' && intensity < 0.3) {
+        // Play on Beat 1 (Root) and Beat 3 (Fifth/Color)
+        const isHalfPulse = stepInMeasure % (ts.stepsPerBeat * 2) === 0;
+        if (!isHalfPulse) return null;
+
+        const isBeatOne = stepInMeasure === 0 || (stepInMeasure % stepsPerMeasure === 0);
+        if (isBeatOne) return result(getFrequency(baseRoot), 2, 1.05);
+        
+        // On Beat 3, play the 5th (or b5 if dim)
+        const hasFlat5 = currentChord.quality === 'dim' || currentChord.quality === 'halfdim';
+        const fifth = baseRoot + (hasFlat5 ? 6 : 7);
+        return result(getFrequency(clampAndNormalize(fifth)), 2, 1.05);
+    }
+
     // Check for eighth-note skip ("and" of a beat)
     if (beatIndex % 1 !== 0) {
         // If soloist is busy, never play eighth-note skips (even ghost notes)
