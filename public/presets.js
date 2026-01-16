@@ -711,11 +711,11 @@ export const CHORD_PRESETS = [
         name: "All The Things You Are", 
         sections: [
             { label: "A (Ab)", key: "Ab", value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7" },
-            { label: "A (C)", key: "C", value: "Dm7 | G7 | Cmaj7" },
+            { label: "A (C)", key: "C", value: "Dm7 | G7 | Cmaj7", seamless: true },
             { label: "A2 (Eb)", key: "Eb", value: "Cm7 | Fm7 | Bb7 | Ebmaj7 | Abmaj7" },
-            { label: "A2 (G)", key: "G", value: "Am7 | D7 | Gmaj7" },
+            { label: "A2 (G)", key: "G", value: "Am7 | D7 | Gmaj7", seamless: true },
             { label: "B (G)", key: "G", value: "Am7 | D7 | Gmaj7 | Gmaj7" },
-            { label: "B (E)", key: "E", value: "F#m7b5 | B7 | Emaj7 | C7alt" },
+            { label: "B (E)", key: "E", value: "F#m7b5 | B7 | Emaj7 | C7alt", seamless: true },
             { label: "A3 (Ab)", key: "Ab", value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7 | Dbm7 | Cm7 | Bdim7 | Bbm7 | Eb7 | Abmaj7 | Abmaj7" }
         ],
         category: "Jazz",
@@ -775,9 +775,9 @@ export const CHORD_PRESETS = [
             { label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Cm7 F7" },
             { label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Bbmaj7" },
             { label: "B (B)", key: "B", value: "C#m7 | F#7 | Bmaj7 | Bmaj7" },
-            { label: "B (A)", key: "A", value: "Bm7 | E7 | Amaj7 | Amaj7" },
-            { label: "B (G)", key: "G", value: "Am7 | D7 | Gmaj7 | Gmaj7" },
-            { label: "B (Bb)", key: "Bb", value: "Gm7 C7 | Cm7 F7" },
+            { label: "B (A)", key: "A", value: "Bm7 | E7 | Amaj7 | Amaj7", seamless: true },
+            { label: "B (G)", key: "G", value: "Am7 | D7 | Gmaj7 | Gmaj7", seamless: true },
+            { label: "B (Bb)", key: "Bb", value: "Gm7 C7 | Cm7 F7", seamless: true },
             { label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Bbmaj7" }
         ],
         category: "Jazz",
