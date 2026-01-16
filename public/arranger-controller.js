@@ -81,6 +81,13 @@ export function onSectionUpdate(id, field, value) {
 
 export function onSectionDelete(id) {
     if (arranger.sections.length <= 1) return;
+    
+    const section = arranger.sections.find(s => s.id === id);
+    // Prompt if section has content (ignoring the default 'I' for new sections)
+    if (section && section.value && section.value.trim() !== '' && section.value.trim() !== 'I') {
+        if (!confirm(`Delete section "${section.label || 'Untitled'}" and its chords?`)) return;
+    }
+
     arranger.sections = arranger.sections.filter(s => s.id !== id);
     arranger.isDirty = true;
     clearChordPresetHighlight();
