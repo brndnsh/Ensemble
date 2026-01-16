@@ -1052,6 +1052,7 @@ h2 {
     text-align: center;
     color: var(--text-color);
     font-weight: 600;
+    text-transform: none;
 }
 
 .chord-card.minor {
