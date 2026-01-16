@@ -14,8 +14,8 @@ let sessionStartTime = 0;
 let isResolutionTriggered = false;
 
 let iosAudioUnlocked = false;
-const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ");
-silentAudio.loop = true;
+const silentAudio = (typeof Audio !== 'undefined') ? new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== ") : { pause:()=>{}, play:()=>Promise.resolve(), currentTime: 0 };
+if (silentAudio.loop !== undefined) silentAudio.loop = true;
 
 async function requestWakeLock() {
     if (!('wakeLock' in navigator)) return;
@@ -477,6 +477,10 @@ export function scheduleGlobalEvent(step, swungTime) {
 
     const chordData = getChordAtStep(step);
     if (chordData) {
+        if (chordData.chord.key && chordData.chord.key !== ctx.currentKey) {
+            ctx.currentKey = chordData.chord.key;
+            window.dispatchEvent(new CustomEvent('key-change', { detail: { key: ctx.currentKey } }));
+        }
         scheduleChordVisuals(chordData, t);
         if (bb.enabled) scheduleBass(chordData, step, t);
         if (sb.enabled) scheduleSoloist(chordData, step, t, soloistTime);
