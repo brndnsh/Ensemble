@@ -19,97 +19,111 @@ export const compingState = {
     lastSectionId: null
 };
 
-export const PIANO_CELLS = {
-    balanced: [
-        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // The "Charleston"
-        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Downbeats 1 & 2
-        [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // 1 & 3
-    ],
-    sparse: [
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Just the One
-        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Just the &2
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Silence
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  // More silence
-    ],
-    active: [
-        [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Syncopated 16ths
-        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], // 8th note pulse
-        [1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1]  // Push-heavy
-    ],
-    // GENRE-SPECIFIC POOLS
-    'Rock': {
-        balanced: [
-            [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight 4ths
-            [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], // Straight 8ths
-            [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]  // Syncopated Pop
-        ],
-        sparse: [
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Just the One
-            [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // 1 and 3
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // Only 3
-        ],
-        active: [
-            [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1], // Driving with builds
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], // Constant 8ths
-            [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1]  // Driving triplet-feel
-        ]
-    },
-    'Acoustic': {
-        balanced: [
-            [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight Quarters (Strum)
-            [1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0], // Folk Pick pattern
-            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]  // 1 and &2
-        ],
-        sparse: [
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // One
-            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // Three
-        ],
-        active: [
-            [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], // Steady strum
-            [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1], // Driving folk
-            [1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1]  // Push-heavy strum
-        ]
-    },
-    'Jazz': [
-        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Charleston
-        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0], // &2, &3
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Anticipation (&4)
-        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Quarter notes
-        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Just the 2
-        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // Just the 3
-    ],
-    'Funk': [
-        [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Syncopated Upbeats
-        [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1], // Interlocking 16ths
-        [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0]  // The "e" of the beat
-    ],
-    'Disco': [
-        [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Offbeat stabs (on the 'and')
-        [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0], // Sparse stabs
-        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]  // Charleston with driving end
-    ],
-    'Blues': [
-        [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1], // Triplet-esque shuffle
-        [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // Stabs on 1 & 3
-        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]  // Backbeat stabs
-    ],
-    'Reggae': [
-        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], // Skank on 2 & 4
-        [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0], // Double Skank
-        [0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0]  // The Bubble (rhythmic organ)
-    ],
-    'Bossa': [
-        [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0], // Standard Bossa
-        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0], // Sparse Bossa
-        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]  // Second-bar feel
-    ],
-    'Neo-Soul': [
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Pushed Anticipation
-        [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // The "Dilla" Lag
-        [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0], // Lazy 1, &2, 4
-        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // Minimalist Backbeat
-    ]
-};
+/**
+ * Algorithmic Pattern Generator
+ * Replaces static PIANO_CELLS table to save space and increase variety.
+ */
+export function generateCompingPattern(genre, vibe, length = 16) {
+    const pattern = new Array(length).fill(0);
+    const intensity = ctx.bandIntensity;
+    
+    // Helper to set a beat if it's within bounds
+    const hit = (step) => { if (step < length) pattern[step] = 1; };
+    
+    // --- GENRE ARCHETYPES ---
+    
+    if (genre === 'Reggae') {
+        // Skank on 2 and 4 (Steps 4 and 12 in 16th grid)
+        if (length >= 5) hit(4);
+        if (length >= 13) hit(12);
+        // Sometimes double skank if active
+        if (vibe === 'active' || intensity > 0.7) {
+            if (length >= 7) hit(6); // The "and" of 2
+            if (length >= 15) hit(14); // The "and" of 4
+        }
+        return pattern;
+    }
+    
+    if (genre === 'Disco') {
+        // Offbeats (and of every beat)
+        for (let i = 2; i < length; i += 4) hit(i);
+        // Active: Add 16th syncopation
+        if (vibe === 'active') {
+            if (length >= 15) hit(14);
+            if (length >= 7) hit(6);
+        }
+        return pattern;
+    }
+    
+    if (genre === 'Funk') {
+        // The "One" is often rest in piano comping for Funk to leave space for Bass
+        // Focus on "e" and "a" (16th subdivisions)
+        if (Math.random() > 0.6) hit(0); // Optional 1
+        
+        // E and A placements
+        const slots = [3, 4, 6, 7, 10, 12, 13, 15];
+        let density = 2;
+        if (vibe === 'active') density = 5;
+        if (vibe === 'sparse') density = 1;
+        
+        for (let i = 0; i < density; i++) {
+            const slot = slots[Math.floor(Math.random() * slots.length)];
+            hit(slot);
+        }
+        return pattern;
+    }
+    
+    if (genre === 'Jazz' || genre === 'Bossa') {
+        // Charleston: 1 and &2 (Steps 0 and 7)
+        // Reverse Charleston: &1 and 3 (Steps 3 and 8)
+        const isCharleston = Math.random() > 0.3;
+        
+        if (isCharleston) {
+            hit(0);
+            if (vibe !== 'sparse') hit(7); // The "and" of 2
+        } else {
+            // Anticipation
+            if (length >= 15) hit(14); // "and" of 4
+            if (length >= 8) hit(8); // Beat 3
+        }
+        
+        if (vibe === 'active') {
+            // Add comping chatter
+            if (length >= 4 && Math.random() > 0.5) hit(4);
+            if (length >= 10 && Math.random() > 0.5) hit(10);
+        }
+        return pattern;
+    }
+    
+    // --- ROCK / POP / DEFAULT ---
+    // Downbeat focus
+    hit(0); // The One
+    
+    if (vibe === 'sparse') return pattern;
+    
+    // Backbeat support
+    if (length >= 5) hit(4); // Beat 2
+    if (length >= 9) hit(8); // Beat 3
+    if (length >= 13) hit(12); // Beat 4
+    
+    if (vibe === 'active' || intensity > 0.6) {
+        // 8th notes
+        for (let i = 2; i < length; i += 2) {
+            if (Math.random() > 0.4) hit(i);
+        }
+    }
+    
+    // Syncopation
+    if (ctx.complexity > 0.6 && Math.random() > 0.5) {
+        // Remove a downbeat and shift it
+        if (pattern[8] === 1) {
+            pattern[8] = 0;
+            hit(7); // Push to &2
+        }
+    }
+
+    return pattern;
+}
 
 function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
     
@@ -171,31 +185,8 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
         compingState.currentVibe = 'balanced';
     }
 
-    let pool = PIANO_CELLS[genre] || PIANO_CELLS[compingState.currentVibe];
-    
-    // Support nested intensity pools for some genres (Rock, Acoustic)
-    if (pool && !Array.isArray(pool)) {
-        pool = pool[compingState.currentVibe] || pool.balanced;
-    }
-
-    // Force conversational spacing
-    if (soloistBusy && cb.style === 'smart') {
-        pool = PIANO_CELLS.sparse;
-    } else if (PIANO_CELLS[genre]) {
-        // If we are using a flat genre pool, we still allow random drifting to sparse/active
-        if (Array.isArray(PIANO_CELLS[genre])) {
-            if (compingState.currentVibe === 'sparse' && Math.random() < 0.3) {
-                pool = PIANO_CELLS.sparse;
-            } else if (compingState.currentVibe === 'active' && Math.random() < 0.3) {
-                pool = PIANO_CELLS.active;
-            } else if (Math.random() < 0.2) {
-                pool = PIANO_CELLS.balanced;
-            }
-        }
-    }
-
-    const rawCell = pool[Math.floor(Math.random() * pool.length)];
-    compingState.currentCell = new Array(spm).fill(0).map((_, i) => rawCell[i % rawCell.length]);
+    // Replace static lookup with procedural generation
+    compingState.currentCell = generateCompingPattern(genre, compingState.currentVibe, spm);
 
     ctx.intent.anticipation = (intensity * 0.2);
     if (genre === 'Jazz' || genre === 'Bossa') ctx.intent.anticipation += 0.15;

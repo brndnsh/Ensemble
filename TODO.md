@@ -136,7 +136,7 @@
 
 # Performance Optimization (v2.1)
 
-- [ ] **Synth Bass Optimization**: Cache `createSoftClipCurve` in `engine.js` or `utils.js` to avoid re-calculating it on every bass note (currently 44k ops/note).
-- [ ] **Drum Synth Optimization**: Optimize HiHat synthesis in `synth-drums.js` to reduce oscillator count (currently 6 per hit) or use pre-baked buffers.
-- [ ] **UI Performance**: Implement DOM recycling/diffing for `renderGrid` and `renderChordVisualizer` in `ui.js` to prevent layout thrashing on updates.
-- [ ] **Soloist Optimization**: Optimize `getSoloistNote` in `soloist.js` to reduce object allocation and heavy loops in candidate selection.
+- [x] **Synth Bass Optimization**: Cache `createSoftClipCurve` in `engine.js` or `utils.js` to avoid re-calculating it on every bass note (currently 44k ops/note).
+- [x] **Drum Synth Optimization**: Optimize HiHat synthesis in `synth-drums.js` to reduce oscillator count (currently 6 per hit) or use pre-baked buffers.
+- [x] **UI Performance**: Implement DOM recycling/diffing for `renderGrid` and `renderChordVisualizer` in `ui.js` to prevent layout thrashing on updates.
+- [x] **Soloist Optimization**: Optimize `getSoloistNote` in `soloist.js` to reduce object allocation and heavy loops in candidate selection.
