@@ -124,7 +124,8 @@ export function setupPresets(refs = {}) {
             value: s.value,
             repeat: s.repeat || 1,
             key: s.key || '',
-            timeSignature: s.timeSignature || ''
+            timeSignature: s.timeSignature || '',
+            seamless: !!s.seamless
         }));
         
         arranger.isDirty = false;
@@ -295,7 +296,8 @@ export function setupUIHandlers(refs) {
                     value: s.value,
                     repeat: s.repeat || 1,
                     key: s.key || '',
-                    timeSignature: s.timeSignature || ''
+                    timeSignature: s.timeSignature || '',
+                    seamless: !!s.seamless
                 }));
                 
                 arranger.isDirty = false;

@@ -368,6 +368,7 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         delBtn.title = 'Delete';
         delBtn.onclick = () => onDelete(s.id);
         
+        actions.appendChild(linkBtn); // Add the Link button
         actions.appendChild(moveUpBtn);
         actions.appendChild(moveDownBtn);
         actions.appendChild(dupBtn);

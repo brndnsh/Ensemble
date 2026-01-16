@@ -54,7 +54,14 @@ export function generateId() {
  * @returns {string}
  */
 export function compressSections(sections) {
-    const minified = sections.map(s => ({ l: s.label, v: s.value }));
+    const minified = sections.map(s => {
+        const m = { l: s.label, v: s.value };
+        if (s.key) m.k = s.key;
+        if (s.repeat && s.repeat > 1) m.r = s.repeat;
+        if (s.timeSignature) m.t = s.timeSignature;
+        if (s.seamless) m.s = 1;
+        return m;
+    });
     const json = JSON.stringify(minified);
     const bytes = new TextEncoder().encode(json);
     const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
@@ -75,7 +82,11 @@ export function decompressSections(str) {
         return minified.map((s, i) => ({ 
             id: generateId(), 
             label: s.l || `Section ${i+1}`, 
-            value: s.v || '' 
+            value: s.v || '',
+            key: s.k || '',
+            repeat: s.r || 1,
+            timeSignature: s.t || '',
+            seamless: !!s.s
         }));
     } catch (e) {
         console.error("Failed to decompress sections", e);
