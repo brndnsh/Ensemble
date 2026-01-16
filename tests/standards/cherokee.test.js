@@ -48,11 +48,13 @@ describe('Jazz Standard Test: Cherokee', () => {
     beforeEach(() => {
         arranger.key = 'Bb';
         arranger.sections = [
-            { id: 'A', label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Cm7 F7" },
+            { id: 'A1', label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Cm7 F7" },
+            { id: 'A2', label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Bbmaj7" },
             { id: 'B1', label: "B (B)", key: "B", value: "C#m7 | F#7 | Bmaj7 | Bmaj7" },
-            { id: 'B2', label: "B (A)", key: "A", value: "Bm7 | E7 | Amaj7 | Amaj7" },
-            { id: 'B3', label: "B (G)", key: "G", value: "Am7 | D7 | Gmaj7 | Gmaj7" },
-            { id: 'B4', label: "B (Bb)", key: "Bb", value: "Gm7 C7 | Cm7 F7" }
+            { id: 'B2', label: "B (A)", key: "A", value: "Bm7 | E7 | Amaj7 | Amaj7", seamless: true },
+            { id: 'B3', label: "B (G)", key: "G", value: "Am7 | D7 | Gmaj7 | Gmaj7", seamless: true },
+            { id: 'B4', label: "B (Bb)", key: "Bb", value: "Gm7 C7 | Cm7 F7", seamless: true },
+            { id: 'A3', label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Bbmaj7" }
         ];
         validateProgression();
     });

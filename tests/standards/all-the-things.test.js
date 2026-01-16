@@ -49,15 +49,16 @@ describe('Jazz Standard Test: All The Things You Are', () => {
     beforeEach(() => {
         arranger.key = 'Ab';
         arranger.isMinor = false;
-        // Constructing the progression explicitly to test specific modulations
-        // A Section: Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7 | Dm7 G7 | Cmaj7 | Cmaj7
-        // A2 Section: Cm7 | Fm7 | Bb7 | Ebmaj7 | Abmaj7 | Am7 D7 | Gmaj7 | Gmaj7
-        // Bridge: Am7 | D7 | Gmaj7 | Gmaj7 | F#m7 | B7 | Emaj7 | C7alt
         
+        // Using the new multi-section format with seamless transitions for key changes
         arranger.sections = [
-            { id: 'A', label: 'A', value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7 | Dm7 G7 | Cmaj7 | Cmaj7" },
-            { id: 'A2', label: 'A2', value: "Cm7 | Fm7 | Bb7 | Ebmaj7 | Abmaj7 | Am7 D7 | Gmaj7 | Gmaj7" },
-            { id: 'B', label: 'B', value: "Am7 | D7 | Gmaj7 | Gmaj7 | F#m7 | B7 | Emaj7 | C7alt" }
+            { id: 'A1', label: "A (Ab)", key: "Ab", value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7" },
+            { id: 'A2', label: "A (C)", key: "C", value: "Dm7 | G7 | Cmaj7", seamless: true },
+            { id: 'A3', label: "A2 (Eb)", key: "Eb", value: "Cm7 | Fm7 | Bb7 | Ebmaj7 | Abmaj7" },
+            { id: 'A4', label: "A2 (G)", key: "G", value: "Am7 | D7 | Gmaj7", seamless: true },
+            { id: 'B1', label: "B (G)", key: "G", value: "Am7 | D7 | Gmaj7 | Gmaj7" },
+            { id: 'B2', label: "B (E)", key: "E", value: "F#m7b5 | B7 | Emaj7 | C7alt", seamless: true },
+            { id: 'A5', label: "A3 (Ab)", key: "Ab", value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7 | Dbm7 | Cm7 | Bdim7 | Bbm7 | Eb7 | Abmaj7 | Abmaj7" }
         ];
         validateProgression();
         
