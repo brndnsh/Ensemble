@@ -257,7 +257,7 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
     ui.sectionList.innerHTML = '';
     sections.forEach((s, idx) => {
         const card = document.createElement('div');
-        card.className = 'section-card';
+        card.className = `section-card ${s.seamless ? 'linked' : ''}`;
         card.dataset.id = s.id;
         card.draggable = true;
         
@@ -283,11 +283,18 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         const header = document.createElement('div');
         header.className = 'section-header';
         
+        const titleRow = document.createElement('div');
+        titleRow.className = 'section-title-row';
+
         const label = document.createElement('input');
         label.className = 'section-label-input';
         label.value = s.label;
         label.onchange = (e) => onUpdate(s.id, 'label', e.target.value);
+        titleRow.appendChild(label);
         
+        const controlsRow = document.createElement('div');
+        controlsRow.className = 'section-controls-row';
+
         const sectionSettings = document.createElement('div');
         sectionSettings.className = 'section-settings-row';
 
@@ -381,9 +388,12 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         actions.appendChild(dupBtn);
         actions.appendChild(kebabBtn);
         actions.appendChild(delBtn);
-        header.appendChild(label);
-        header.appendChild(sectionSettings);
-        header.appendChild(actions);
+
+        controlsRow.appendChild(sectionSettings);
+        controlsRow.appendChild(actions);
+
+        header.appendChild(titleRow);
+        header.appendChild(controlsRow);
         
         const input = document.createElement('textarea');
         input.className = 'section-prog-input';

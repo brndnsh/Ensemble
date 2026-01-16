@@ -2261,13 +2261,78 @@ select option {
 }
 
 .section-link-btn.active {
-    color: var(--blue);
-    background: rgba(37, 99, 235, 0.1);
+    color: white;
+    background: var(--accent-color);
+    box-shadow: 0 0 8px var(--accent-color);
+}
+
+.section-link-btn.active:hover {
+    background: var(--accent-hover);
 }
 
 .section-delete-btn:hover {
     color: var(--red);
     background: rgba(239, 68, 68, 0.1);
+}
+
+/* Visual Connection for Linked Sections */
+.section-card.linked {
+    margin-top: -1.2rem; /* Pull up to touch previous card (compensate for gap) */
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: 2px dashed var(--accent-color);
+    position: relative;
+    z-index: 2; /* Ensure border-top is visible over previous card's bottom */
+}
+
+.section-card:has(+ .section-card.linked) {
+    margin-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Header Row Stacking */
+.section-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.section-title-row {
+    width: 100%;
+}
+
+.section-controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.section-label-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-size: 1.1rem;
+    font-weight: bold;
+    padding: 0.2rem 0;
+    transition: border-color 0.2s;
+}
+
+.section-label-input:focus {
+    outline: none;
+    border-bottom-color: var(--accent-color);
+}
+
+.section-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .symbol-dropdown {
