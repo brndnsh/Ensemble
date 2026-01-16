@@ -317,16 +317,19 @@ export function resolveChordRoot(part, keyRootMidi, baseOctave) {
     
     let rootMidi = keyRootMidi; 
     let rootPart = "";
+    let rootRomanBase = "";
 
     if (romanMatch) {
         rootPart = romanMatch[0];
         const accidental = romanMatch[1] || "", numeral = romanMatch[2];
+        rootRomanBase = numeral;
         let rootOffset = ROMAN_VALS[numeral.toUpperCase()];
         if (accidental === 'b') rootOffset -= 1;
         if (accidental === '#') rootOffset += 1;
         rootMidi = keyRootMidi + rootOffset;
     } else if (nnsMatch) {
         rootPart = nnsMatch[0];
+        rootRomanBase = "I"; // Fallback
         const accidental = nnsMatch[1] || "", number = parseInt(nnsMatch[2]);
         let rootOffset = NNS_OFFSETS[number - 1];
         if (accidental === 'b') rootOffset -= 1;
@@ -334,11 +337,12 @@ export function resolveChordRoot(part, keyRootMidi, baseOctave) {
         rootMidi = keyRootMidi + rootOffset;
     } else if (noteMatch) {
         rootPart = noteMatch[0];
+        rootRomanBase = "I"; // Fallback
         const note = normalizeKey(noteMatch[1].charAt(0).toUpperCase() + noteMatch[1].slice(1).toLowerCase());
         rootMidi = baseOctave + KEY_ORDER.indexOf(note);
     }
 
-    return { rootMidi, rootPart, romanMatch, nnsMatch, noteMatch };
+    return { rootMidi, rootPart, romanMatch, nnsMatch, noteMatch, rootRomanBase };
 }
 
 /**
@@ -608,7 +612,10 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                 let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot);
                 if (bassMidi !== null) {
                     const bassPC = bassMidi % 12;
-                    currentMidis = currentMidis.filter(m => m % 12 !== bassPC);
+                    const filtered = currentMidis.filter(m => m % 12 !== bassPC);
+                    if (filtered.length > 0) {
+                        currentMidis = filtered;
+                    }
                     currentMidis.unshift(bassMidi);
                     currentMidis.sort((a, b) => a - b);
                 }

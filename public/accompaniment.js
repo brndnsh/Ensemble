@@ -28,7 +28,8 @@ export const PIANO_CELLS = {
     sparse: [
         [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Just the One
         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Just the &2
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  // Silence
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Silence
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  // More silence
     ],
     active: [
         [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Syncopated 16ths
@@ -73,7 +74,9 @@ export const PIANO_CELLS = {
         [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Charleston
         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0], // &2, &3
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Anticipation (&4)
-        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]  // Quarter notes
+        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Quarter notes
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Just the 2
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // Just the 3
     ],
     'Funk': [
         [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Syncopated Upbeats
@@ -427,13 +430,17 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             
             // Frequency Slotting: Avoid masking the bass
             if (bb.enabled && voicing.length > 0) {
+                // Ensure sorted for predictable slotting
+                voicing.sort((a, b) => getMidi(a) - getMidi(b));
+                
                 let lowestMidi = getMidi(voicing[0]);
                 if (lowestMidi <= bassMidi + 12) {
                     voicing[0] = getFrequency(lowestMidi + 12);
+                    voicing.sort((a, b) => getMidi(a) - getMidi(b));
                 }
 
                 if (voicing.length > 3) {
-                    voicing.shift();
+                    voicing.shift(); // Drop the lowest note (often the root) to leave space for bass
                     if ((chord.is7th || chord.quality.includes('9')) && voicing.length > 3) {
                         const rootPC = chord.rootMidi % 12;
                         const fifthPC = (rootPC + 7) % 12;
