@@ -1718,9 +1718,17 @@ h2 {
 }
 
 /* --- Editor Modal Redesign --- */
+#editorOverlay .settings-content {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    border: none;
+}
+
 .editor-modal {
     padding: 0 !important;
-    max-height: 90vh;
     overflow: hidden;
     transition: width 0.3s ease, max-width 0.3s ease;
 }
@@ -1745,7 +1753,7 @@ h2 {
 .editor-scroll-area {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 1.5rem;
+    padding: 0.75rem;
     background: var(--bg-color);
 }
 
@@ -1778,6 +1786,7 @@ h2 {
 }
 
 .templates-container {
+    display: none;
     margin-top: 2rem;
     padding: 1.5rem;
     background: rgba(255, 255, 255, 0.03);
@@ -1789,23 +1798,49 @@ h2 {
     width: 100%;
     font-size: 0.8rem;
     color: var(--text-muted);
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
     text-align: center;
 }
 
 .template-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.75rem;
     justify-content: center;
+    width: 100%;
+    min-height: 40px;
+}
+
+.template-chip {
+    padding: 0.6rem 1rem !important;
+    font-size: 0.9rem !important;
+    border-radius: 20px !important;
+    background: var(--panel-color) !important;
+    border: 1px solid var(--accent-color) !important;
+    color: var(--text-color) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.template-chip:hover {
+    background: var(--accent-color) !important;
+    color: white !important;
+    transform: translateY(-2px);
 }
 
 /* Desktop Enhancements */
 @media (min-width: 900px) {
-    .editor-modal {
+    #editorOverlay .settings-content {
         width: 95%;
         max-width: 1200px;
         height: 85vh;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .editor-modal {
+        margin: 0 !important;
     }
 
     .modal-header {
@@ -2035,18 +2070,6 @@ select option {
 #toast.show {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
-}
-
-/* --- Templates Container --- */
-.templates-container {
-    display: none;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    background: var(--input-bg);
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
 }
 
 /* Section Editor Styles */
@@ -2373,4 +2396,51 @@ select option {
     pointer-events: none;
     filter: grayscale(1);
     transition: all 0.3s ease;
+}
+/* Arrangement Editor: Section Settings */
+.section-settings-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0.5rem 0;
+    flex-wrap: wrap;
+}
+
+.section-setting-item {
+    display: flex;
+    align-items: center;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    height: 28px;
+}
+
+.section-repeat-input {
+    width: 35px;
+    background: transparent;
+    border: none;
+    color: var(--accent-color);
+    font-weight: bold;
+    font-size: 0.9rem;
+    padding: 0;
+    text-align: center;
+}
+
+.section-repeat-input:focus {
+    outline: none;
+}
+
+.section-key-select, .section-ts-select {
+    height: 28px;
+    padding: 0 0.4rem;
+    font-size: 0.8rem;
+    width: auto;
+    min-width: 80px;
+}
+
+.setting-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-right: 2px;
 }

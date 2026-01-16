@@ -270,7 +270,9 @@ function advanceGlobalStep() {
     const sixteenth = 0.25 * (60.0 / ctx.bpm);
     let duration = sixteenth;
     if (gb.swing > 0) {
-        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        // Find current time signature for swing logic
+        const stepInfo = getStepInfo(ctx.step, TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'], arranger.measureMap, TIME_SIGNATURES);
+        const ts = TIME_SIGNATURES[stepInfo.tsName] || TIME_SIGNATURES['4/4'];
         if (ts.stepsPerBeat === 4) {
             const shift = (sixteenth / 3) * (gb.swing / 100);
             duration += (gb.swingSub === '16th') ? ((ctx.step % 2 === 0) ? shift : -shift) : (((ctx.step % 4) < 2) ? shift : -shift);
@@ -426,11 +428,14 @@ export function scheduleChords(chordData, step, time, stepInfo) {
 }
 
 export function scheduleGlobalEvent(step, swungTime) {
-    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-    const spm = getStepsPerMeasure(arranger.timeSignature);
-    const stepInfo = getStepInfo(step, ts);
+    const globalTS = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const stepInfo = getStepInfo(step, globalTS, arranger.measureMap, TIME_SIGNATURES);
+    const ts = TIME_SIGNATURES[stepInfo.tsName] || globalTS;
     
     updateAutoConductor();
+    
+    // Using global arranger.totalSteps for looping, which is correct
+    const spm = getStepsPerMeasure(stepInfo.tsName);
     checkSectionTransition(step, spm);
     
     const drumStep = step % (gb.measures * spm);

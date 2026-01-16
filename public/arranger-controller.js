@@ -67,6 +67,7 @@ export function onSectionUpdate(id, field, value) {
             section[field] = value;
         }
     }
+    arranger.isDirty = true;
     if (field === 'reorder' || field === 'move') {
         renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     }
@@ -81,6 +82,7 @@ export function onSectionUpdate(id, field, value) {
 export function onSectionDelete(id) {
     if (arranger.sections.length <= 1) return;
     arranger.sections = arranger.sections.filter(s => s.id !== id);
+    arranger.isDirty = true;
     clearChordPresetHighlight();
     refreshArrangerUI();
 }
@@ -92,12 +94,14 @@ export function onSectionDuplicate(id) {
     const newSection = { ...section, id: generateId(), label: `${section.label} (Copy)` };
     const index = arranger.sections.findIndex(s => s.id === id);
     arranger.sections.splice(index + 1, 0, newSection);
+    arranger.isDirty = true;
     clearChordPresetHighlight();
     refreshArrangerUI();
 }
 
 export function addSection() {
-    arranger.sections.push({ id: generateId(), label: `Section ${arranger.sections.length + 1}`, value: 'I' });
+    arranger.sections.push({ id: generateId(), label: `Section ${arranger.sections.length + 1}`, value: 'I', repeat: 1 });
+    arranger.isDirty = true;
     clearChordPresetHighlight();
     refreshArrangerUI();
 }
@@ -131,6 +135,7 @@ export function transposeKey(delta, updateRelKeyButton) {
         section.value = transposed.join('');
     });
     
+    arranger.isDirty = true;
     clearChordPresetHighlight();
     refreshArrangerUI();
     if (updateRelKeyButton) updateRelKeyButton();
@@ -157,6 +162,7 @@ export function switchToRelativeKey(updateRelKeyButton) {
         section.value = transformRelativeProgression(section.value, shift, arranger.isMinor);
     });
     
+    arranger.isDirty = true;
     if (typeof updateRelKeyButton === 'function') {
         updateRelKeyButton();
     } else {

@@ -2,7 +2,7 @@ import { arranger, cb, ctx, gb, bb, sb, vizState } from './state.js';
 import { getStepsPerMeasure, midiToNote, getStepInfo } from './utils.js';
 import { saveCurrentState } from './persistence.js';
 import { clearDrumPresetHighlight } from './instrument-controller.js';
-import { TIME_SIGNATURES } from './config.js';
+import { TIME_SIGNATURES, KEY_ORDER } from './config.js';
 import { UIStore } from './ui-store.js';
 
 export const ui = {};
@@ -195,6 +195,50 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         label.value = s.label;
         label.onchange = (e) => onUpdate(s.id, 'label', e.target.value);
         
+        const sectionSettings = document.createElement('div');
+        sectionSettings.className = 'section-settings-row';
+
+        // Repeat Control
+        const repeatContainer = document.createElement('div');
+        repeatContainer.className = 'section-setting-item';
+        repeatContainer.innerHTML = `<span class="setting-label">x</span>`;
+        const repeatInput = document.createElement('input');
+        repeatInput.type = 'number';
+        repeatInput.className = 'section-repeat-input';
+        repeatInput.value = s.repeat || 1;
+        repeatInput.min = 1;
+        repeatInput.max = 8;
+        repeatInput.onchange = (e) => onUpdate(s.id, 'repeat', parseInt(e.target.value));
+        repeatContainer.appendChild(repeatInput);
+
+        // Key Control
+        const keySelect = document.createElement('select');
+        keySelect.className = 'section-key-select';
+        ['Default', ...KEY_ORDER].forEach(k => {
+            const opt = document.createElement('option');
+            opt.value = k === 'Default' ? '' : k;
+            opt.textContent = k === 'Default' ? 'Key: Auto' : `Key: ${k}${arranger.isMinor ? 'm' : ''}`;
+            if (opt.value === (s.key || '')) opt.selected = true;
+            keySelect.appendChild(opt);
+        });
+        keySelect.onchange = (e) => onUpdate(s.id, 'key', e.target.value);
+
+        // Time Signature Control
+        const tsSelect = document.createElement('select');
+        tsSelect.className = 'section-ts-select';
+        ['Default', ...Object.keys(TIME_SIGNATURES)].forEach(ts => {
+            const opt = document.createElement('option');
+            opt.value = ts === 'Default' ? '' : ts;
+            opt.textContent = ts === 'Default' ? 'TS: Auto' : `TS: ${ts}`;
+            if (opt.value === (s.timeSignature || '')) opt.selected = true;
+            tsSelect.appendChild(opt);
+        });
+        tsSelect.onchange = (e) => onUpdate(s.id, 'timeSignature', e.target.value);
+
+        sectionSettings.appendChild(repeatContainer);
+        sectionSettings.appendChild(keySelect);
+        sectionSettings.appendChild(tsSelect);
+
         const actions = document.createElement('div');
         actions.className = 'section-actions';
 
@@ -234,6 +278,7 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         actions.appendChild(kebabBtn);
         actions.appendChild(delBtn);
         header.appendChild(label);
+        header.appendChild(sectionSettings);
         header.appendChild(actions);
         
         const input = document.createElement('textarea');
@@ -530,14 +575,23 @@ export function setupPanelMenus() {
 }
 
 export function renderTemplates(templates, onApply) {
-    if (!ui.templateChips) return;
-    ui.templateChips.innerHTML = '';
+    const container = document.getElementById('templateChips');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    if (!templates || !Array.isArray(templates)) return;
+
     templates.forEach(t => {
-        const chip = document.createElement('div');
-        chip.className = 'template-chip';
+        const chip = document.createElement('button');
+        chip.className = 'preset-chip template-chip';
+        chip.type = 'button';
         chip.textContent = t.name;
-        chip.onclick = () => onApply(t);
-        ui.templateChips.appendChild(chip);
+        chip.dataset.category = t.category || 'Basic';
+        chip.onclick = (e) => {
+            e.stopPropagation();
+            onApply(t);
+        };
+        container.appendChild(chip);
     });
 }
 
