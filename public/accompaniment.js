@@ -77,25 +77,25 @@ export function generateCompingPattern(genre, vibe, length = 16) {
         const type = Math.random();
         
         if (type > 0.75) { 
-            // Charleston: 1 and &2 (Steps 0 and 6)
+            // Charleston: 1 and &2 (Steps 0 and 7)
             hit(0);
-            if (vibe !== 'sparse') hit(6); 
+            if (vibe !== 'sparse') hit(7); 
         } else if (type > 0.5) {
-            // Reverse Charleston: &1 and 3 (Steps 2 and 8)
-            hit(2);
+            // Reverse Charleston: &1 and 3 (Steps 3 and 8)
+            hit(3);
             if (vibe !== 'sparse') hit(8);
         } else if (type > 0.25) {
-            // Syncopated "Ands": &2 and &4 (Steps 6 and 14)
-            hit(6);
-            if (vibe !== 'sparse') hit(14);
+            // Syncopated "Ands": &2 and &4 (Steps 7 and 15)
+            hit(7);
+            if (vibe !== 'sparse') hit(15);
         } else if (type > 0.1) {
-            // Red Garland Lite: 1, &2, &3 (Steps 0, 6, 10)
+            // Red Garland Lite: 1, &2, &3 (Steps 0, 7, 11)
             hit(0);
-            hit(6);
-            if (vibe === 'active') hit(10);
+            hit(7);
+            if (vibe === 'active') hit(11);
         } else {
-            // Sparse Anticipation: &4 (Step 14)
-            hit(14);
+            // Sparse Anticipation: &4 (Step 15)
+            hit(15);
         }
         
         if (vibe === 'active') {
@@ -198,7 +198,15 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
     }
 
     // Replace static lookup with procedural generation
-    compingState.currentCell = generateCompingPattern(genre, compingState.currentVibe, spm);
+    // IMPLEMENT NO-REPEAT RULE: Keep trying until we get a different pattern (up to 3 times)
+    let newCell = generateCompingPattern(genre, compingState.currentVibe, spm);
+    if (JSON.stringify(newCell) === JSON.stringify(compingState.currentCell)) {
+        newCell = generateCompingPattern(genre, compingState.currentVibe, spm);
+        if (JSON.stringify(newCell) === JSON.stringify(compingState.currentCell)) {
+            newCell = generateCompingPattern(genre, compingState.currentVibe, spm);
+        }
+    }
+    compingState.currentCell = newCell;
 
     ctx.intent.anticipation = (intensity * 0.2);
     if (genre === 'Jazz' || genre === 'Bossa') ctx.intent.anticipation += 0.15;
