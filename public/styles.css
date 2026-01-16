@@ -1029,6 +1029,26 @@ h2 {
 .chord-maximized .section-block.seamless {
     margin-top: 0 !important;
 }
+.key-change-marker {
+    width: 100%;
+    font-size: 0.7rem;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: bold;
+    margin: 0.5rem 0 0.2rem 0;
+    padding-left: 0.25rem;
+    border-bottom: 1px solid rgba(147, 161, 161, 0.1);
+}
+
+.chord-maximized .key-change-marker {
+    grid-column: 1 / -1; /* Span all columns */
+    color: var(--text-muted);
+    margin: 0.5rem 0;
+    text-align: center;
+    border: none;
+    opacity: 0.5;
+}
 
 .section-block-content {
     display: flex;

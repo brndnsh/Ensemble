@@ -169,24 +169,47 @@ export function renderChordVisualizer() {
 
     // FALLBACK: Full Rebuild
     ui.chordVisualizer.innerHTML = '';
-    sections.forEach(section => {
+    
+    let activeBlockContent = null;
+
+    sections.forEach((section, index) => {
         const sectionData = arranger.sections.find(s => s.id === section.id);
-        const block = document.createElement('div');
-        block.className = 'section-block';
-        if (sectionData && sectionData.seamless) block.classList.add('seamless');
+        const isSeamless = sectionData && sectionData.seamless;
+        
+        let content;
 
-        block.onclick = () => {
-            const detail = { detail: { sectionId: section.id } };
-            document.dispatchEvent(new CustomEvent('open-editor', detail));
-        };
+        if (isSeamless && activeBlockContent) {
+            // MERGE into existing block
+            content = activeBlockContent;
 
-        const header = document.createElement('div');
-        header.className = 'section-block-header';
-        header.textContent = section.label;
-        block.appendChild(header);
+            // Add Key Change Label
+            const marker = document.createElement('div');
+            marker.className = 'key-change-marker';
+            marker.textContent = section.label; // Use the section label (e.g. "A (C)") as the marker
+            content.appendChild(marker);
 
-        const content = document.createElement('div');
-        content.className = 'section-block-content';
+        } else {
+            // NEW Block
+            const block = document.createElement('div');
+            block.className = 'section-block';
+            
+            block.onclick = () => {
+                const detail = { detail: { sectionId: section.id } };
+                document.dispatchEvent(new CustomEvent('open-editor', detail));
+            };
+
+            const header = document.createElement('div');
+            header.className = 'section-block-header';
+            header.textContent = section.label;
+            block.appendChild(header);
+
+            content = document.createElement('div');
+            content.className = 'section-block-content';
+            block.appendChild(content);
+            ui.chordVisualizer.appendChild(block);
+            
+            activeBlockContent = content;
+        }
 
         section.measures.forEach(measure => {
             const mBox = document.createElement('div');
@@ -219,9 +242,6 @@ export function renderChordVisualizer() {
             });
             content.appendChild(mBox);
         });
-
-        block.appendChild(content);
-        ui.chordVisualizer.appendChild(block);
     });
 }
 
