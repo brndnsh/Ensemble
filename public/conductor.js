@@ -112,7 +112,15 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
 
         if (nextEntry && (isLoopEnd || nextEntry.chord.sectionId !== entry.chord.sectionId)) {
             let shouldFill = true;
-            if (isLoopEnd) {
+
+            // CHECK FOR SEAMLESS TRANSITION
+            const nextSectionId = nextEntry.chord.sectionId;
+            const nextSection = arranger.sections.find(s => s.id === nextSectionId);
+            if (nextSection && nextSection.seamless) {
+                shouldFill = false;
+            }
+
+            if (isLoopEnd && shouldFill) {
                 conductorState.loopCount++;
                 conductorState.formIteration++;
                 

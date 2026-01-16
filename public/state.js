@@ -96,6 +96,7 @@ export const ctx = {
  * @property {number} [repeat] - Number of times to repeat this section (default 1).
  * @property {string} [key] - Local key for this section (e.g., "G").
  * @property {string} [timeSignature] - Local time signature for this section (e.g., "3/4").
+ * @property {boolean} [seamless] - Whether this section transitions seamlessly from the previous one (suppresses fills).
  */
 
 /**

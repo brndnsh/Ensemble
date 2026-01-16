@@ -96,5 +96,29 @@ describe('Conductor Logic', () => {
             checkSectionTransition(0, 16);
             expect(conductorState.target).toBeGreaterThanOrEqual(0.6 - 0.15);
         });
+
+        it('should suppress fills if the next section is seamless', () => {
+            gb.enabled = true;
+            // Setup: End of Section 1 (steps 0-16), transitioning to Section 2
+            arranger.stepMap = [
+                { start: 0, end: 16, chord: { sectionId: 's1', sectionLabel: 'Verse' } },
+                { start: 16, end: 32, chord: { sectionId: 's2', sectionLabel: 'Chorus' } }
+            ];
+            arranger.totalSteps = 32;
+            arranger.sections = [
+                { id: 's1', seamless: false },
+                { id: 's2', seamless: true } // Target has seamless flag
+            ];
+
+            // Trigger at step 0 (which maps to s1, looking ahead to s2 at step 16)
+            // Wait, checkSectionTransition logic: "if (modStep % stepsPerMeasure === 0)"
+            // If currentStep is 0. measureEnd is 16.
+            // entry found for 0. entry is s1.
+            // nextEntry found for 16. nextEntry is s2.
+            // s2 is seamless. Should suppress fill.
+            
+            checkSectionTransition(0, 16);
+            expect(dispatch).not.toHaveBeenCalledWith('TRIGGER_FILL', expect.anything());
+        });
     });
 });

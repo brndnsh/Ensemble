@@ -170,8 +170,11 @@ export function renderChordVisualizer() {
     // FALLBACK: Full Rebuild
     ui.chordVisualizer.innerHTML = '';
     sections.forEach(section => {
+        const sectionData = arranger.sections.find(s => s.id === section.id);
         const block = document.createElement('div');
         block.className = 'section-block';
+        if (sectionData && sectionData.seamless) block.classList.add('seamless');
+
         block.onclick = () => {
             const detail = { detail: { sectionId: section.id } };
             document.dispatchEvent(new CustomEvent('open-editor', detail));
@@ -304,6 +307,16 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
 
         const actions = document.createElement('div');
         actions.className = 'section-actions';
+
+        // Seamless Toggle (Link)
+        const linkBtn = document.createElement('button');
+        linkBtn.className = `section-link-btn ${s.seamless ? 'active' : ''}`;
+        linkBtn.innerHTML = '🔗'; // Link icon
+        linkBtn.title = s.seamless ? 'Unlink from previous (Enable Fills)' : 'Link to previous (Seamless Transition)';
+        linkBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            onUpdate(s.id, 'seamless', !s.seamless); 
+        };
 
         // Move Up/Down Buttons
         const moveUpBtn = document.createElement('button');
