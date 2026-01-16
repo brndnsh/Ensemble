@@ -68,7 +68,7 @@ export function onSectionUpdate(id, field, value) {
         }
     }
     arranger.isDirty = true;
-    if (field === 'reorder' || field === 'move') {
+    if (field === 'reorder' || field === 'move' || field === 'seamless') {
         renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     }
     if (field === 'reorder' || field === 'move' || field === 'value') {

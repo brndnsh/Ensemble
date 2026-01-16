@@ -2277,18 +2277,43 @@ select option {
 
 /* Visual Connection for Linked Sections */
 .section-card.linked {
-    margin-top: -1.2rem; /* Pull up to touch previous card (compensate for gap) */
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-    border-top: 2px dashed var(--accent-color);
+    border-left: 4px solid var(--accent-color);
     position: relative;
-    z-index: 2; /* Ensure border-top is visible over previous card's bottom */
+    margin-top: 1.5rem !important; /* Space for the link badge and line */
 }
 
+.section-card.linked::before {
+    content: 'LINKED';
+    position: absolute;
+    top: -1.2rem;
+    left: -1px;
+    font-size: 0.6rem;
+    font-weight: 900;
+    color: white;
+    background: var(--accent-color);
+    padding: 2px 6px;
+    border-radius: 4px 4px 0 0;
+    letter-spacing: 0.05em;
+}
+
+/* The connecting line - works better across dynamic layouts */
+.section-card.linked::after {
+    content: '';
+    position: absolute;
+    top: -1rem;
+    left: 10px;
+    width: 2px;
+    height: 1rem;
+    background: var(--accent-color);
+    box-shadow: 0 0 4px var(--accent-color);
+    z-index: -1;
+}
+
+/* Remove the previous experimental 'pull up' logic that broke horizontal layouts */
 .section-card:has(+ .section-card.linked) {
-    margin-bottom: 0;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+    margin-bottom: inherit;
+    border-bottom-left-radius: inherit;
+    border-bottom-right-radius: inherit;
 }
 
 /* Header Row Stacking */
