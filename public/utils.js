@@ -298,57 +298,36 @@ export function getStepInfo(step, tsConfig, measureMap, allTSConfigs) {
 
     
 
+let cachedSoftClipCurve = null;
+
     /**
 
-    
-
      * Creates a soft-clipping curve for the WaveShaperNode.
-
-    
+     * Cached for performance.
 
      * @returns {Float32Array}
 
-    
-
      */
 
-    
-
     export function createSoftClipCurve() {
-
-    
+        if (cachedSoftClipCurve) return cachedSoftClipCurve;
 
         const n_samples = 44100;
 
-    
-
         const curve = new Float32Array(n_samples);
-
-    
 
         for (let i = 0; i < n_samples; ++i) {
 
-    
-
             const x = (i * 2) / n_samples - 1;
-
-    
 
             // Normalized monotonic cubic: f(x) = (3x - x^3) / 2
 
-    
-
             curve[i] = (3 * x - Math.pow(x, 3)) / 2;
-
-    
 
         }
 
-    
-
+        cachedSoftClipCurve = curve;
         return curve;
-
-    
 
     }
 

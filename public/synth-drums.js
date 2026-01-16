@@ -226,24 +226,22 @@ export function playDrumSound(name, time, velocity = 1.0) {
             try {
                 const g = gb.lastHatGain.gain;
                 g.cancelScheduledValues(playTime);
-                // Very fast exponential ramp (0.005s) to zero to prevent clicks
                 g.setTargetAtTime(0, playTime, 0.005);
             } catch (e) {}
         }
-        
-        // 2. Metallic Bank (TR-808 Inharmonicity)
-        // 6 Square wave oscillators with specific non-integer ratios
-        const ratios = [2, 3, 4.16, 5.43, 6.79, 8.21];
-        const baseFreq = 40 * rr();
-        const oscs = ratios.map(r => {
-            const o = ctx.audio.createOscillator();
-            o.type = 'square';
-            o.frequency.setValueAtTime(baseFreq * r, playTime);
-            return o;
-        });
 
-        // 3. Tone Shaping
-        // Bandpass (10kHz) followed by Highpass (7kHz) to remove low-frequency hiss
+        // 2. Pre-render / Cache the Metallic Buffer (Lazy Load)
+        if (!gb.audioBuffers.hihatMetal) {
+            gb.audioBuffers.hihatMetal = createMetallicBuffer(ctx.audio);
+        }
+
+        // 3. Playback with variation
+        const source = ctx.audio.createBufferSource();
+        source.buffer = gb.audioBuffers.hihatMetal;
+        // Re-introduce the random pitch variation using playbackRate
+        source.playbackRate.value = rr(0.05); 
+
+        // 4. Tone Shaping
         const bpFilter = ctx.audio.createBiquadFilter();
         bpFilter.type = 'bandpass';
         bpFilter.frequency.setValueAtTime(10000, playTime);
@@ -253,40 +251,33 @@ export function playDrumSound(name, time, velocity = 1.0) {
         hpFilter.type = 'highpass';
         hpFilter.frequency.setValueAtTime(7000, playTime);
 
-        // 4. Envelope & Gain
+        // 5. Envelope & Gain
         const gain = ctx.audio.createGain();
         gain.gain.value = 0;
         gain.gain.setValueAtTime(0, playTime);
         
         if (isOpen) {
-            // "Blooming" attack: slightly slower
             gain.gain.setTargetAtTime(vol, playTime, 0.015);
-            // Longer decay (around 0.3s to 0.5s)
             gain.gain.setTargetAtTime(0, playTime + 0.02, 0.35 * rr());
         } else {
-            // Fast attack for closed hat
             gain.gain.setTargetAtTime(vol, playTime, 0.002);
-            // Tight decay
             gain.gain.setTargetAtTime(0, playTime + 0.005, 0.05 * rr());
         }
 
         gb.lastHatGain = gain;
 
-        // Connections: Oscs -> BP -> HP -> Gain -> Master
-        oscs.forEach(o => {
-            o.connect(bpFilter);
-            o.start(playTime);
-            // Generous stop time to allow for decay tails
-            o.stop(playTime + (isOpen ? 2.0 : 0.4));
-        });
-
+        // Connections: Source -> BP -> HP -> Gain -> Master
+        source.connect(bpFilter);
         bpFilter.connect(hpFilter);
         hpFilter.connect(gain);
         gain.connect(ctx.drumsGain);
 
-        oscs[0].onended = () => {
+        source.start(playTime);
+        source.stop(playTime + (isOpen ? 2.0 : 0.4));
+
+        source.onended = () => {
             if (gb.lastHatGain === gain) gb.lastHatGain = null;
-            safeDisconnect([...oscs, bpFilter, hpFilter, gain]);
+            safeDisconnect([source, bpFilter, hpFilter, gain]);
         };
 
     } else if (name === 'Crash') {
@@ -344,4 +335,33 @@ export function playDrumSound(name, time, velocity = 1.0) {
 
         oscs[0].onended = () => safeDisconnect([...oscs, noise, hpFilter, gain]);
     }
+}
+
+/**
+ * Generates a 2-second buffer of the metallic oscillator stack.
+ * Used for HiHats to avoid creating 6 oscillators per hit.
+ */
+function createMetallicBuffer(audioCtx) {
+    const duration = 2.0;
+    const sampleRate = audioCtx.sampleRate;
+    const length = sampleRate * duration;
+    const buffer = audioCtx.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    // TR-808 Ratios
+    const ratios = [2, 3, 4.16, 5.43, 6.79, 8.21];
+    const baseFreq = 40; // Fixed base frequency
+
+    for (let i = 0; i < length; i++) {
+        let sample = 0;
+        const t = i / sampleRate;
+        for (const r of ratios) {
+            const freq = baseFreq * r;
+            // Square wave approximation
+            const phase = (t * freq) % 1;
+            sample += (phase < 0.5 ? 1 : -1);
+        }
+        data[i] = sample / ratios.length; // Normalize
+    }
+    return buffer;
 }

@@ -33,8 +33,13 @@ vi.mock('../../public/state.js', () => ({
                 connect: vi.fn(),
                 start: vi.fn(),
                 stop: vi.fn(),
-                onended: null
-            }))
+                onended: null,
+                playbackRate: { value: 1 }
+            })),
+            createBuffer: vi.fn(() => ({
+                getChannelData: vi.fn(() => new Float32Array(100))
+            })),
+            sampleRate: 44100
         },
         drumsGain: { connect: vi.fn() }
     },
@@ -58,6 +63,7 @@ describe('Drum Synthesis', () => {
         vi.clearAllMocks();
         gb.lastHatGain = null;
         ctx.audio.currentTime = 10;
+        gb.audioBuffers = { noise: {} };
     });
 
     it('should create a 4-layer model for the Kick drum', () => {
@@ -69,11 +75,16 @@ describe('Drum Synthesis', () => {
         expect(ctx.audio.createGain).toHaveBeenCalledTimes(4);
     });
 
-    it('should create a metallic bank of 6 oscillators for HiHat', () => {
+    it('should use a pre-rendered AudioBuffer for HiHat to optimize CPU', () => {
         playDrumSound('HiHat', 10, 1.0);
 
-        expect(ctx.audio.createOscillator).toHaveBeenCalledTimes(6);
-        expect(ctx.audio.createOscillator.mock.results[0].value.type).toBe('square');
+        // Should create buffer ONCE (if not cached) and use BufferSource
+        expect(ctx.audio.createBuffer).toHaveBeenCalled(); 
+        expect(ctx.audio.createBufferSource).toHaveBeenCalled();
+        
+        // Should use playbackRate for variation
+        const source = ctx.audio.createBufferSource.mock.results[0].value;
+        expect(source.playbackRate.value).not.toBe(1.0); // Should be jittered
     });
 
     it('should implement choking logic when a new HiHat starts', () => {

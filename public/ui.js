@@ -81,7 +81,6 @@ export function updateOctaveLabel(labelEl, octave, headerEl) {
 
 export function renderChordVisualizer() {
     if (!ui.chordVisualizer) return;
-    ui.chordVisualizer.innerHTML = '';
     
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const sections = [];
@@ -106,6 +105,67 @@ export function renderChordVisualizer() {
         currentMeasureBeats += chord.beats;
     });
 
+    // DOM RECYCLING STRATEGY
+    // 1. Flatten existing cards to check against new progression
+    const existingCards = Array.from(ui.chordVisualizer.querySelectorAll('.chord-card'));
+    const progressionChanged = existingCards.length !== arranger.progression.length;
+    
+    // Check if section structure matches (simple heuristic: count of section blocks)
+    const existingBlocks = ui.chordVisualizer.querySelectorAll('.section-block');
+    const structureChanged = existingBlocks.length !== sections.length;
+
+    // If structure matches and card count matches, fast update!
+    if (!progressionChanged && !structureChanged) {
+        let cardIndex = 0;
+        sections.forEach((section, sIdx) => {
+            const block = existingBlocks[sIdx];
+            // Update Header if changed
+            const header = block.querySelector('.section-block-header');
+            if (header.textContent !== section.label) header.textContent = section.label;
+
+            section.measures.forEach(measure => {
+                measure.chords.forEach(chord => {
+                    const card = existingCards[cardIndex];
+                    
+                    // Update Classes
+                    const isMinor = chord.isMinor;
+                    const isActive = chord.globalIndex === cb.lastActiveChordIndex;
+                    
+                    if (card.classList.contains('minor') !== isMinor) card.classList.toggle('minor', isMinor);
+                    if (card.classList.contains('active') !== isActive) card.classList.toggle('active', isActive);
+
+                    // Update Content
+                    const notation = arranger.notation || 'roman';
+                    const disp = chord.display ? chord.display[notation] : null;
+                    let html = '';
+                    
+                    if (disp) {
+                        html = `<span class="root">${disp.root}</span><span class="suffix">${disp.suffix}</span>`;
+                        if (disp.bass) {
+                            html += `<span class="bass-note">/${disp.bass}</span>`;
+                        }
+                    } else {
+                        html = chord.absName || '...';
+                    }
+                    
+                    // Only write innerHTML if changed to avoid reflows
+                    if (card.innerHTML !== html) card.innerHTML = html;
+                    
+                    // Re-bind click (or rely on stable index closure? No, closures are stale. Rebind.)
+                    card.onclick = (e) => {
+                        e.stopPropagation();
+                        if (window.previewChord) window.previewChord(chord.globalIndex);
+                    };
+
+                    cardIndex++;
+                });
+            });
+        });
+        return; // Done!
+    }
+
+    // FALLBACK: Full Rebuild
+    ui.chordVisualizer.innerHTML = '';
     sections.forEach(section => {
         const block = document.createElement('div');
         block.className = 'section-block';
@@ -342,32 +402,72 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
 export function renderGrid(skipScroll = false) {
     if (!ui.sequencerGrid) return;
     const currentScroll = ui.sequencerGrid.scrollLeft;
-    ui.sequencerGrid.innerHTML = '';
+    // Removed: ui.sequencerGrid.innerHTML = ''; 
     const spm = getStepsPerMeasure(arranger.timeSignature);
     const totalSteps = gb.measures * spm;
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     
-    gb.instruments.forEach(inst => {
-        const row = document.createElement('div');
-        row.className = 'track';
-        
-        const label = document.createElement('div');
-        label.className = 'track-header';
+    // Get existing track rows (excluding the label row)
+    const existingTracks = Array.from(ui.sequencerGrid.querySelectorAll('.track:not(.label-row)'));
+    
+    // --- 1. RENDER INSTRUMENT TRACKS ---
+    gb.instruments.forEach((inst, idx) => {
+        let row = existingTracks[idx];
+        let stepsContainer;
+
+        if (!row) {
+            // Create new row if needed
+            row = document.createElement('div');
+            row.className = 'track';
+            
+            const label = document.createElement('div');
+            label.className = 'track-header';
+            row.appendChild(label);
+            
+            stepsContainer = document.createElement('div');
+            stepsContainer.className = 'steps';
+            row.appendChild(stepsContainer);
+            
+            ui.sequencerGrid.insertBefore(row, ui.sequencerGrid.lastElementChild); // Insert before label row if exists
+        } else {
+            stepsContainer = row.querySelector('.steps');
+        }
+
+        // Update Track Header
+        const label = row.querySelector('.track-header');
         label.textContent = inst.symbol || inst.name.charAt(0);
         label.title = inst.name;
         label.onclick = () => {
             inst.muted = !inst.muted;
             label.classList.toggle('muted', inst.muted);
         };
+        // Reset classes
+        label.className = 'track-header';
         if (inst.muted) label.classList.add('muted');
+
+        // Update Grid Layout
+        stepsContainer.style.gridTemplateColumns = `repeat(${totalSteps}, 1fr)`;
+
+        // Update Steps
+        const existingSteps = Array.from(stepsContainer.children);
         
-        const steps = document.createElement('div');
-        steps.className = 'steps';
-        steps.style.gridTemplateColumns = `repeat(${totalSteps}, 1fr)`;
+        // If step count mismatch, rebuild steps for this track (simpler than partial diffing for resizing)
+        if (existingSteps.length !== totalSteps) {
+            stepsContainer.innerHTML = '';
+            for (let i = 0; i < totalSteps; i++) {
+                const step = document.createElement('div');
+                step.className = 'step';
+                stepsContainer.appendChild(step);
+            }
+        }
+
+        const steps = Array.from(stepsContainer.children);
         
         for (let i = 0; i < totalSteps; i++) {
-            const step = document.createElement('div');
+            const step = steps[i];
+            // Reset base classes
             step.className = 'step';
+            
             const stepInfo = getStepInfo(i, ts);
             if (stepInfo.isGroupStart) step.classList.add('group-marker');
             if (stepInfo.isBeatStart) step.classList.add('beat-marker');
@@ -384,27 +484,42 @@ export function renderGrid(skipScroll = false) {
                 step.classList.toggle('accented', inst.steps[i] === 2);
                 clearDrumPresetHighlight();
             };
-            steps.appendChild(step);
         }
-        
-        row.appendChild(label);
-        row.appendChild(steps);
-        ui.sequencerGrid.appendChild(row);
     });
+
+    // Remove extra tracks if any
+    while (existingTracks.length > gb.instruments.length) {
+        existingTracks.pop().remove();
+    }
     
-    // Add subdivision labels at the bottom
-    const labelRow = document.createElement('div');
-    labelRow.className = 'track label-row';
-    const spacer = document.createElement('div');
-    spacer.className = 'track-header label-header';
-    labelRow.appendChild(spacer);
+    // --- 2. RENDER LABEL ROW ---
+    let labelRow = ui.sequencerGrid.querySelector('.label-row');
+    if (!labelRow) {
+        labelRow = document.createElement('div');
+        labelRow.className = 'track label-row';
+        const spacer = document.createElement('div');
+        spacer.className = 'track-header label-header';
+        labelRow.appendChild(spacer);
+        const labelSteps = document.createElement('div');
+        labelSteps.className = 'steps';
+        labelRow.appendChild(labelSteps);
+        ui.sequencerGrid.appendChild(labelRow);
+    }
     
-    const labelSteps = document.createElement('div');
-    labelSteps.className = 'steps';
-    labelSteps.style.gridTemplateColumns = `repeat(${totalSteps}, 1fr)`;
+    const labelStepsContainer = labelRow.querySelector('.steps');
+    labelStepsContainer.style.gridTemplateColumns = `repeat(${totalSteps}, 1fr)`;
     
+    const existingLabels = Array.from(labelStepsContainer.children);
+    if (existingLabels.length !== totalSteps) {
+        labelStepsContainer.innerHTML = '';
+        for (let i = 0; i < totalSteps; i++) {
+            labelStepsContainer.appendChild(document.createElement('div'));
+        }
+    }
+    
+    const labels = Array.from(labelStepsContainer.children);
     for (let i = 0; i < totalSteps; i++) {
-        const lbl = document.createElement('div');
+        const lbl = labels[i];
         lbl.className = 'step-label';
         const stepInfo = getStepInfo(i, ts);
         if (stepInfo.isBeatStart) {
@@ -414,10 +529,7 @@ export function renderGrid(skipScroll = false) {
         } else {
             lbl.textContent = (i % ts.stepsPerBeat) + 1;
         }
-        labelSteps.appendChild(lbl);
     }
-    labelRow.appendChild(labelSteps);
-    ui.sequencerGrid.appendChild(labelRow);
 
     if (skipScroll) {
         ui.sequencerGrid.scrollLeft = currentScroll;

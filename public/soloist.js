@@ -2,6 +2,8 @@ import { getFrequency, getMidi } from './utils.js';
 import { sb, cb, ctx, arranger, gb } from './state.js';
 import { KEY_ORDER, TIME_SIGNATURES } from './config.js';
 
+const CANDIDATE_WEIGHTS = new Float32Array(128);
+
 /**
  * SOLOIST.JS
  * 
@@ -641,12 +643,17 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         const scaleTones = scaleIntervals.map(i => rootMidi + i);
         const soarAmount = config.registerSoar * (0.5 + intensity); 
         const dynamicCenter = centerMidi + Math.floor(sb.tension * soarAmount);
-        const minMidi = dynamicCenter - 15; 
-        const maxMidi = dynamicCenter + 15;
+        const minMidi = Math.max(0, dynamicCenter - 15); 
+        const maxMidi = Math.min(127, dynamicCenter + 15);
         const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
 
-        let candidates = [];
+        // Optimization: Use static Float32Array instead of allocating objects
+        let totalWeight = 0;
+        
+        // 1. Calculate Weights
         for (let m = minMidi; m <= maxMidi; m++) {
+            CANDIDATE_WEIGHTS[m] = 0; // Reset
+            
             const pc = (m % 12 + 12) % 12;
             const rootPC = (rootMidi % 12 + 12) % 12;
             const interval = (pc - rootPC + 12) % 12;
@@ -742,15 +749,21 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                 weight -= 40; // Heavy penalty for non-diatonic tones on resolution
             }
 
-            candidates.push({ midi: m, weight: Math.max(0.1, weight) });
+            weight = Math.max(0.1, weight);
+            CANDIDATE_WEIGHTS[m] = weight;
+            totalWeight += weight;
         }
 
-        let totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
+        // 2. Select Weighted Random
         let randomVal = Math.random() * totalWeight;
         selectedMidi = lastMidi;
-        for (const cand of candidates) {
-            randomVal -= cand.weight;
-            if (randomVal <= 0) { selectedMidi = cand.midi; break; }
+        
+        for (let m = minMidi; m <= maxMidi; m++) {
+            const w = CANDIDATE_WEIGHTS[m];
+            if (w > 0) {
+                randomVal -= w;
+                if (randomVal <= 0) { selectedMidi = m; break; }
+            }
         }
         
         if (cycleStep === 0 && isStrongBeat) {

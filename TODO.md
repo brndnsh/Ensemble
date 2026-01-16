@@ -133,3 +133,10 @@
 - [x] **Harmonic Continuity Test**: Create `tests/system/harmonic-continuity.test.js` to ensure that mid-phrase genre/key switches result in atomic scale updates at Step 0.
 - [x] **Velocity Normalization Test**: Verify that the sum of `bandIntensity`, `accent`, and `conductorVelocity` never exceeds the MIDI 127 limit across any module.
 - [x] **Polychord Parser Stress**: Expand `tests/engines/chords.test.js` to include high-complexity jazz extensions (e.g., `C13(#11b9)`) and non-standard slash chords.
+
+# Performance Optimization (v2.1)
+
+- [ ] **Synth Bass Optimization**: Cache `createSoftClipCurve` in `engine.js` or `utils.js` to avoid re-calculating it on every bass note (currently 44k ops/note).
+- [ ] **Drum Synth Optimization**: Optimize HiHat synthesis in `synth-drums.js` to reduce oscillator count (currently 6 per hit) or use pre-baked buffers.
+- [ ] **UI Performance**: Implement DOM recycling/diffing for `renderGrid` and `renderChordVisualizer` in `ui.js` to prevent layout thrashing on updates.
+- [ ] **Soloist Optimization**: Optimize `getSoloistNote` in `soloist.js` to reduce object allocation and heavy loops in candidate selection.
