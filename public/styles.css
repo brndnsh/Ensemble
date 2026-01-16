@@ -983,7 +983,7 @@ h2 {
 .section-block-header {
     font-size: 0.65rem;
     font-weight: 900;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.1em;
     margin-bottom: 0.4rem;
     opacity: 0.6;
