@@ -58,9 +58,9 @@ Ensemble is a zero-dependency project and requires no build step.
 
 The project has completed the **v2.0 Codebase Health Audit**, achieving high architectural modularity, performance resilience, and expressive depth.
 
-1.  **Soloist Engine (v1.99)**: COMPLETED implementation of advanced melodic devices and tension-building logic.
-2.  **Bass Engine**: Implementing chromatic walking logic for Jazz, "Slap & Pop" synthesis for Funk, and micro-timing (Dilla feel) for Neo-Soul.
+1.  **Soloist Engine (v2.0)**: COMPLETED implementation of advanced melodic devices (Enclosures, Quartal Harmony) and tension-building logic.
+2.  **Bass Engine (v2.1)**: COMPLETED chromatic walking logic, "Slap & Pop" synthesis for Funk, and micro-timing (Dilla feel) for Neo-Soul.
 3.  **Accompaniment Engine**: COMPLETED "Expressive Phrasing" for Rock/Pop/Acoustic and conversational "Call & Response" logic.
-4.  **Authenticity Verification**: Expanded the probabilistic testing suite with integration tests for congestion, continuity, and velocity normalization.
-5.  **Latin/Bossa Percussion**: Expand procedural percussion (shakers/agogo) for Latin styles.
+4.  **Authenticity Verification**: COMPLETED expansion of the probabilistic testing suite with integration tests for congestion, continuity, and velocity normalization.
+5.  **Latin/Bossa Percussion**: Expand procedural percussion synthesis (Shakers/Agogo/Guiro) for Latin styles to complement the existing Bossa kit.
 6.  **Reference-Driven Tuning**: Calibrating velocity maps and timing offsets against classic genre recordings to achieve a "pro-level" musical feel.
