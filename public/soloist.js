@@ -583,7 +583,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
             // MOTIF RESOLUTION: If replaying a motif during an "Answer" phase on a tonic chord,
             // ensure any spicy extensions from the original motif are nudged to diatonic tones.
-            const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
+            const keyRoot = KEY_ORDER.indexOf(currentChord.key || arranger.key);
             const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
             const pc = (interval % 12 + 12) % 12;
             const isDiatonic = keyIntervals.includes((pc + targetChord.rootMidi - keyRoot + 120) % 12);

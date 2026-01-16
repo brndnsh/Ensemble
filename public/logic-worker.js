@@ -151,7 +151,7 @@ function fillBuffers(currentStep, timestamp = null) {
                 const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
                 if (isBassActive(bb.style, step, stepInChord)) {
-                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord, arranger.isMinor);
+                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord);
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
                         if (!bassResult.midi) bassResult.midi = getMidi(bassResult.freq);
                         if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
@@ -370,7 +370,7 @@ export function handleExport(options) {
                 }
 
                 if (includedTracks.includes('bass') && isBassActive(bb.style, globalStep, stepInChord)) {
-                    const res = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, globalStep, stepInChord, arranger.isMinor);
+                    const res = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, globalStep, stepInChord);
                     if (res && res.midi) {
                         const noteTimeS = stepTimeS + (res.timingOffset || 0);
                         const notePulse = Math.max(0, toPulses(noteTimeS));
@@ -710,7 +710,6 @@ function handlePrime(steps) {
                         chordData.chordIndex, 
                         s, 
                         stepInChord, 
-                        arranger.isMinor,
                         true // isPriming
                     );
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
