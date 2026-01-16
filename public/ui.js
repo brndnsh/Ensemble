@@ -171,6 +171,7 @@ export function renderChordVisualizer() {
     ui.chordVisualizer.innerHTML = '';
     
     let activeBlockContent = null;
+    let pendingKeyLabel = null;
 
     sections.forEach((section, index) => {
         const sectionData = arranger.sections.find(s => s.id === section.id);
@@ -181,13 +182,8 @@ export function renderChordVisualizer() {
         if (isSeamless && activeBlockContent) {
             // MERGE into existing block
             content = activeBlockContent;
-
-            // Add Key Change Label
-            const marker = document.createElement('div');
-            marker.className = 'key-change-marker';
-            marker.textContent = section.label; // Use the section label (e.g. "A (C)") as the marker
-            content.appendChild(marker);
-
+            // Queue label for the next measure
+            pendingKeyLabel = section.label; 
         } else {
             // NEW Block
             const block = document.createElement('div');
@@ -209,11 +205,22 @@ export function renderChordVisualizer() {
             ui.chordVisualizer.appendChild(block);
             
             activeBlockContent = content;
+            pendingKeyLabel = null;
         }
 
-        section.measures.forEach(measure => {
+        section.measures.forEach((measure, mIdx) => {
             const mBox = document.createElement('div');
             mBox.className = 'measure-box';
+
+            // Inject Key Label if pending (start of seamless section)
+            if (pendingKeyLabel && mIdx === 0) {
+                const label = document.createElement('div');
+                label.className = 'key-label';
+                label.textContent = pendingKeyLabel;
+                mBox.appendChild(label);
+                mBox.classList.add('has-key-label');
+                pendingKeyLabel = null;
+            }
 
             measure.chords.forEach(chord => {
                 const card = document.createElement('div');
