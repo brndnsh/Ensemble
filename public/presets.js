@@ -768,6 +768,31 @@ export const CHORD_PRESETS = [
         name: "Plagal Flow", 
         sections: [{ label: 'Main', value: "I | IV | I | IV" }], 
         category: "Theory" 
+    },
+    {
+        name: "Cherokee",
+        sections: [
+            { label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Cm7 F7" },
+            { label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Bbmaj7" },
+            { label: "B (B)", key: "B", value: "C#m7 | F#7 | Bmaj7 | Bmaj7" },
+            { label: "B (A)", key: "A", value: "Bm7 | E7 | Amaj7 | Amaj7" },
+            { label: "B (G)", key: "G", value: "Am7 | D7 | Gmaj7 | Gmaj7" },
+            { label: "B (Bb)", key: "Bb", value: "Gm7 C7 | Cm7 F7" },
+            { label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Bbmaj7" }
+        ],
+        category: "Jazz",
+        settings: { bpm: 240, style: 'jazz' }
+    },
+    {
+        name: "Blue Bossa",
+        sections: [
+            { label: "Main", key: "C", value: "Cm7 | Cm7 | Fm7 | Fm7 | Dm7b5 | G7alt | Cm7 | Cm7" },
+            { label: "Modulation", key: "Db", value: "Ebm7 | Ab7 | Dbmaj7 | Dbmaj7" },
+            { label: "Turnaround", key: "C", value: "Dm7b5 | G7alt | Cm7 | Dm7b5 G7alt" }
+        ],
+        category: "Jazz",
+        isMinor: true,
+        settings: { bpm: 140, style: 'bossa' }
     }
 ];
 // Post-process DRUM_PRESETS to expand string patterns into arrays
