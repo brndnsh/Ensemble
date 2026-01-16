@@ -278,38 +278,34 @@ export function setupUIHandlers(refs) {
         }],
         [ui.templatesBtn, 'click', (e) => {
             e.stopPropagation();
-            const container = document.getElementById('templatesContainer');
-            if (!container) return;
-
-            const isHidden = container.style.display === 'none' || container.style.display === '';
-            
-            if (isHidden) {
-                container.style.display = 'block';
-                renderTemplates(SONG_TEMPLATES, (template) => {
-                    if (arranger.isDirty) {
-                        if (!confirm("Discard your custom arrangement and load this template?")) return;
-                    }
-                    
-                    arranger.sections = template.sections.map(s => ({
-                        id: generateId(),
-                        label: s.label,
-                        value: s.value,
-                        repeat: s.repeat || 1,
-                        key: s.key || '',
-                        timeSignature: s.timeSignature || ''
-                    }));
-                    
-                    arranger.isDirty = false;
-                    refreshArrangerUI();
-                    showToast(`Applied template: ${template.name}`);
-                });
-
-                setTimeout(() => {
-                    container.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                }, 50);
-            } else {
-                container.style.display = 'none';
+            if (window.innerWidth < 900) {
+                ui.arrangerActionMenu.classList.remove('open');
+                ui.arrangerActionTrigger.classList.remove('active');
             }
+            
+            ui.templatesOverlay.classList.add('active');
+            renderTemplates(SONG_TEMPLATES, (template) => {
+                if (arranger.isDirty) {
+                    if (!confirm("Discard your custom arrangement and load this template?")) return;
+                }
+                
+                arranger.sections = template.sections.map(s => ({
+                    id: generateId(),
+                    label: s.label,
+                    value: s.value,
+                    repeat: s.repeat || 1,
+                    key: s.key || '',
+                    timeSignature: s.timeSignature || ''
+                }));
+                
+                arranger.isDirty = false;
+                refreshArrangerUI();
+                ui.templatesOverlay.classList.remove('active');
+                showToast(`Applied template: ${template.name}`);
+            });
+        }],
+        [ui.closeTemplatesBtn, 'click', () => {
+            ui.templatesOverlay.classList.remove('active');
         }],
         [ui.undoBtn, 'click', () => undo(refreshArrangerUI)],
         [ui.arrangerActionTrigger, 'click', (e) => {
@@ -469,6 +465,7 @@ export function setupUIHandlers(refs) {
     }
 
     ui.settingsOverlay.addEventListener('click', e => e.target === ui.settingsOverlay && ui.settingsOverlay.classList.remove('active'));
+    ui.templatesOverlay.addEventListener('click', e => e.target === ui.templatesOverlay && ui.templatesOverlay.classList.remove('active'));
     ui.keySelect.addEventListener('change', () => {
         arranger.key = ui.keySelect.value;
         updateRelKeyButton();
@@ -695,6 +692,7 @@ export function setupUIHandlers(refs) {
         if (e.key === 'Escape') {
             if (document.body.classList.contains('chord-maximized')) { document.body.classList.remove('chord-maximized'); ui.maximizeChordBtn.textContent = '⛶'; ui.maximizeChordBtn.title = 'Maximize'; renderChordVisualizer(); }
             if (ui.settingsOverlay.classList.contains('active')) ui.settingsOverlay.classList.remove('active');
+            if (ui.templatesOverlay.classList.contains('active')) ui.templatesOverlay.classList.remove('active');
             if (ui.editorOverlay.classList.contains('active')) ui.editorOverlay.classList.remove('active');
         }
     });

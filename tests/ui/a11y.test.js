@@ -21,7 +21,7 @@ describe('Accessibility (A11y) & Interactive Integrity', () => {
                 <input id="bassVolume" type="range" aria-label="Bass Volume">
             </div>
 
-            <div id="templatesContainer" style="display:none"></div>
+            <div id="templatesOverlay" class="overlay"></div>
             <div id="settingsOverlay" class="overlay"></div>
             <button id="settingsBtn" aria-label="Open Settings">Settings</button>
         `;
@@ -32,7 +32,7 @@ describe('Accessibility (A11y) & Interactive Integrity', () => {
             'tapBtn', 'relKeyBtn', 'transUpBtn', 'transDownBtn', 'maximizeChordBtn',
             'chordPowerBtn', 'groovePowerBtn', 'bassPowerBtn', 'soloistPowerBtn',
             'chordPowerBtnDesktop', 'groovePowerBtnDesktop', 'bassPowerBtnDesktop', 'soloistPowerBtnDesktop',
-            'vizPowerBtn', 'addSectionBtn', 'templatesBtn', 'templateChips', 'activeSectionLabel',
+            'vizPowerBtn', 'addSectionBtn', 'templatesBtn', 'templatesOverlay', 'templateChips', 'closeTemplatesBtn', 'activeSectionLabel',
             'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
             'clearProgBtn', 'saveBtn', 'shareBtn', 'chordPresets', 'userPresetsContainer',
             'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'groupingToggle', 'groupingLabel',
