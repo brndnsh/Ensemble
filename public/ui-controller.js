@@ -112,14 +112,23 @@ export function setupPresets(refs = {}) {
     }
 
     renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', arranger.lastChordPreset, (item, chip) => {
+        if (arranger.isDirty) {
+            if (!confirm("Discard your custom arrangement and load this preset?")) return;
+        }
+
         if (ctx.isPlaying && togglePlay) togglePlay();
         
         arranger.sections = item.sections.map(s => ({
             id: generateId(),
             label: s.label,
-            value: s.value
+            value: s.value,
+            repeat: s.repeat || 1,
+            key: s.key || '',
+            timeSignature: s.timeSignature || ''
         }));
         
+        arranger.isDirty = false;
+
         if (item.settings) {
             if (ctx.applyPresetSettings) {
                 if (item.settings.bpm) setBpm(item.settings.bpm, null);
@@ -267,9 +276,40 @@ export function setupUIHandlers(refs) {
             ui.arrangerActionTrigger.classList.remove('active');
             addSection();
         }],
-        [ui.templatesBtn, 'click', () => {
-            const isVisible = ui.templatesContainer.style.display === 'flex';
-            ui.templatesContainer.style.display = isVisible ? 'none' : 'flex';
+        [ui.templatesBtn, 'click', (e) => {
+            e.stopPropagation();
+            const container = document.getElementById('templatesContainer');
+            if (!container) return;
+
+            const isHidden = container.style.display === 'none' || container.style.display === '';
+            
+            if (isHidden) {
+                container.style.display = 'block';
+                renderTemplates(SONG_TEMPLATES, (template) => {
+                    if (arranger.isDirty) {
+                        if (!confirm("Discard your custom arrangement and load this template?")) return;
+                    }
+                    
+                    arranger.sections = template.sections.map(s => ({
+                        id: generateId(),
+                        label: s.label,
+                        value: s.value,
+                        repeat: s.repeat || 1,
+                        key: s.key || '',
+                        timeSignature: s.timeSignature || ''
+                    }));
+                    
+                    arranger.isDirty = false;
+                    refreshArrangerUI();
+                    showToast(`Applied template: ${template.name}`);
+                });
+
+                setTimeout(() => {
+                    container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 50);
+            } else {
+                container.style.display = 'none';
+            }
         }],
         [ui.undoBtn, 'click', () => undo(refreshArrangerUI)],
         [ui.arrangerActionTrigger, 'click', (e) => {

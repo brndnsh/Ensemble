@@ -4,27 +4,6 @@ import { cb, arranger, gb, bb } from './state.js';
 import { ui } from './ui.js';
 import { syncWorker } from './worker-client.js';
 
-/**
- * Caches progression metadata to avoid redundant calculations in the scheduler.
- */
-export function updateProgressionCache() {
-    if (!arranger.progression.length) {
-        arranger.totalSteps = 0;
-        arranger.stepMap = [];
-        return;
-    }
-
-    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-    let current = 0;
-    arranger.stepMap = arranger.progression.map(chord => {
-        const steps = Math.round(chord.beats * ts.stepsPerBeat);
-        const entry = { start: current, end: current + steps, chord };
-        current += steps;
-        return entry;
-    });
-    arranger.totalSteps = current;
-}
-
 const ROMAN_REGEX = /^([#b])?(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v)/;
 const NNS_REGEX = /^([#b])?([1-7])/;
 const NOTE_REGEX = /^([A-G][#b]?)/i;
@@ -550,10 +529,11 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
  * Parses a single progression string part (e.g., from one section).
  * @param {string} input 
  * @param {string} key 
+ * @param {string} timeSignature
  * @param {number[]} initialMidis 
  * @returns {{chords: Array, finalMidis: number[]}}
  */
-function parseProgressionPart(input, key, initialMidis) {
+function parseProgressionPart(input, key, timeSignature, initialMidis) {
     const parsed = [];
     const baseOctave = Math.floor(cb.octave / 12) * 12;
     const keyRootMidi = baseOctave + KEY_ORDER.indexOf(normalizeKey(key));
@@ -572,7 +552,7 @@ function parseProgressionPart(input, key, initialMidis) {
         const chordTokens = barText.split(/(\s+)/);
         const actualChordParts = chordTokens.filter(t => t.trim() && t !== '|');
         
-        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const ts = TIME_SIGNATURES[timeSignature] || TIME_SIGNATURES['4/4'];
         const beatsPerChord = actualChordParts.length > 0 ? ts.beats / actualChordParts.length : 0;
         
         let barInternalOffset = 0;
@@ -663,7 +643,8 @@ function parseProgressionPart(input, key, initialMidis) {
                     freqs: currentMidis.map(getFrequency),
                     rootMidi: rootMidi, bassMidi: bassMidi, intervals: intervals, quality: quality, is7th: is7th,
                     charStart: charOffset + barInternalOffset,
-                    charEnd: charOffset + barInternalOffset + token.length
+                    charEnd: charOffset + barInternalOffset + token.length,
+                    timeSignature: timeSignature
                 });
             }
             barInternalOffset += token.length;
@@ -683,19 +664,86 @@ export function validateProgression(renderCallback) {
     let lastMidis = [];
 
     arranger.sections.forEach(section => {
-        const { chords, finalMidis } = parseProgressionPart(section.value, arranger.key, lastMidis);
-        const taggedChords = chords.map((c, idx) => ({
-            ...c,
-            sectionId: section.id,
-            sectionLabel: section.label,
-            localIndex: idx
-        }));
-        allChords = allChords.concat(taggedChords);
-        lastMidis = finalMidis;
+        const repeats = section.repeat || 1;
+        const sectionKey = section.key || arranger.key;
+        const sectionTS = section.timeSignature || arranger.timeSignature;
+
+        for (let r = 0; r < repeats; r++) {
+            const { chords, finalMidis } = parseProgressionPart(section.value, sectionKey, sectionTS, lastMidis);
+            const taggedChords = chords.map((c, idx) => ({
+                ...c,
+                sectionId: section.id,
+                sectionLabel: section.label,
+                localIndex: idx,
+                repeatIndex: r
+            }));
+            allChords = allChords.concat(taggedChords);
+            lastMidis = finalMidis;
+        }
     });
 
     arranger.progression = allChords;
     updateProgressionCache();
     syncWorker();
     if (renderCallback) renderCallback();
+}
+
+/**
+ * Caches progression metadata to avoid redundant calculations in the scheduler.
+ */
+export function updateProgressionCache() {
+    if (!arranger.progression.length) {
+        arranger.totalSteps = 0;
+        arranger.stepMap = [];
+        arranger.measureMap = [];
+        return;
+    }
+
+    let current = 0;
+    arranger.stepMap = arranger.progression.map(chord => {
+        const tsName = chord.timeSignature || arranger.timeSignature;
+        const ts = TIME_SIGNATURES[tsName] || TIME_SIGNATURES['4/4'];
+        const steps = Math.round(chord.beats * ts.stepsPerBeat);
+        const entry = { start: current, end: current + steps, chord };
+        current += steps;
+        return entry;
+    });
+    arranger.totalSteps = current;
+
+    // Build Measure Map for absolute step tracking with variable time signatures
+    let mAcc = 0;
+    arranger.measureMap = [];
+    
+    // Group chords by their "measure boundaries"
+    // This is tricky because chords might not align perfectly with measures if user enters weird beat counts.
+    // We'll iterate through sections and their repeats.
+    let stepAcc = 0;
+    arranger.sections.forEach(section => {
+        const repeats = section.repeat || 1;
+        const tsName = section.timeSignature || arranger.timeSignature;
+        const ts = TIME_SIGNATURES[tsName] || TIME_SIGNATURES['4/4'];
+        const stepsPerMeasure = Math.round(ts.beats * ts.stepsPerBeat);
+        
+        // Find chords for this section (already flattened in arranger.progression)
+        // We actually just need to know how many steps THIS section takes in one iteration.
+        const { chords: singleIterationChords } = parseProgressionPart(section.value, section.key || arranger.key, tsName, []);
+        let iterationSteps = 0;
+        singleIterationChords.forEach(c => {
+            iterationSteps += Math.round(c.beats * ts.stepsPerBeat);
+        });
+
+        for (let r = 0; r < repeats; r++) {
+            let sectionStep = 0;
+            while (sectionStep < iterationSteps) {
+                const measureEnd = Math.min(sectionStep + stepsPerMeasure, iterationSteps);
+                arranger.measureMap.push({
+                    start: stepAcc + sectionStep,
+                    end: stepAcc + measureEnd,
+                    ts: tsName
+                });
+                sectionStep += stepsPerMeasure;
+            }
+            stepAcc += iterationSteps;
+        }
+    });
 }

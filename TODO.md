@@ -35,6 +35,13 @@
 
 
 
+# Arrangement Editor Enhancements
+
+- [x] **x2 Marker for Repeating Sections**: Allow sections to be looped within the arrangement.
+- [x] **Preset Overwrite Warning**: Prevent accidental loss of custom arrangements.
+- [x] **Per-Section Key Changes**: Support modulation between sections.
+- [x] **Per-Section Time Signatures**: Support mixed meter arrangements.
+
 # Future Instrument-Specific Stylistic Refinements
 
 

@@ -101,17 +101,39 @@ export function getStepsPerMeasure(ts) {
 
 /**
  * Returns detailed structural information about a specific step in a measure.
- * @param {number} step - The global or measure-relative step.
- * @param {Object} tsConfig - The time signature configuration from config.js.
- * @returns {Object} { isMeasureStart, isGroupStart, isBeatStart, groupIndex, beatInGroup }
+ * @param {number} step - The global step counter.
+ * @param {Object} tsConfig - The global time signature configuration (fallback).
+ * @param {Array} [measureMap] - Optional map of measure boundaries for variable time signatures.
+ * @param {Object} [allTSConfigs] - Map of all available time signature configurations.
+ * @returns {Object} { isMeasureStart, isGroupStart, isBeatStart, groupIndex, beatInGroup, tsName }
  */
-export function getStepInfo(step, tsConfig) {
-    const spm = getStepsPerMeasure(`${tsConfig.beats}/${tsConfig.stepsPerBeat === 4 ? 4 : 8}`);
-    const mStep = step % spm;
-    const isMeasureStart = mStep === 0;
+export function getStepInfo(step, tsConfig, measureMap, allTSConfigs) {
+    let currentTS = tsConfig;
+    let tsName = `${tsConfig.beats}/${tsConfig.stepsPerBeat === 4 ? 4 : 8}`;
+    let mStep = step;
+    let isMeasureStart = false;
+
+    if (measureMap && measureMap.length > 0) {
+        const measure = measureMap.find(m => step >= m.start && step < m.end);
+        if (measure) {
+            tsName = measure.ts;
+            currentTS = allTSConfigs ? allTSConfigs[tsName] : tsConfig;
+            mStep = step - measure.start;
+            if (mStep === 0) isMeasureStart = true;
+        } else {
+            // Fallback for steps beyond the map
+            const spm = getStepsPerMeasure(tsName);
+            mStep = step % spm;
+            isMeasureStart = mStep === 0;
+        }
+    } else {
+        const spm = getStepsPerMeasure(tsName);
+        mStep = step % spm;
+        isMeasureStart = mStep === 0;
+    }
     
-    const grouping = tsConfig.grouping || [tsConfig.beats];
-    const stepsPerBeat = tsConfig.stepsPerBeat;
+    const grouping = currentTS.grouping || [currentTS.beats];
+    const stepsPerBeat = currentTS.stepsPerBeat;
     
     let accumulatedSteps = 0;
     let isGroupStart = false;
@@ -134,25 +156,17 @@ export function getStepInfo(step, tsConfig) {
     const isBeatStart = (mStep % stepsPerBeat === 0);
     const beatIndex = Math.floor(mStep / stepsPerBeat);
 
-        return {
-
-            isMeasureStart,
-
-            isGroupStart,
-
-            isBeatStart,
-
-            groupIndex,
-
-            stepInGroup,
-
-            beatIndex,
-
-            mStep
-
-        };
-
-    }
+    return {
+        isMeasureStart,
+        isGroupStart,
+        isBeatStart,
+        groupIndex,
+        stepInGroup,
+        beatIndex,
+        mStep,
+        tsName
+    };
+}
 
     
 
