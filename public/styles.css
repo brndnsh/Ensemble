@@ -2279,8 +2279,6 @@ select option {
 .section-card.linked {
     border-left: 4px solid var(--accent-color);
     position: relative;
-    margin-top: -0.25rem !important; /* Pull slightly closer to emphasize link */
-    transition: margin 0.2s ease;
 }
 
 .section-card.linked::before {
@@ -2297,20 +2295,6 @@ select option {
     letter-spacing: 0.08em;
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-/* The connecting line - bridges the gap to previous card */
-.section-card.linked::after {
-    content: '';
-    position: absolute;
-    top: -1.2rem;
-    left: -4px; /* Align with blue border */
-    width: 4px;
-    height: 1.3rem;
-    background: var(--accent-color);
-    box-shadow: 0 0 10px rgba(38, 139, 210, 0.5);
-    z-index: -1;
-    border-radius: 2px;
 }
 
 /* Ensure previous card doesn't hide the connection */
