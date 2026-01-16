@@ -1002,22 +1002,32 @@ h2 {
 }
 
 /* Seamless Section Merging */
+.section-block:has(+ .section-block.seamless) {
+    margin-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+    padding-bottom: 0.2rem; /* Keep a little padding for content */
+}
+
 .section-block.seamless {
     margin-top: 0;
     padding-top: 0;
     border-top: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 .section-block.seamless .section-block-header {
-    display: none; /* Hide header to merge visually */
-    /* Alternatively, keep it but make it very subtle:
-    opacity: 0.5;
-    font-size: 0.7rem; 
-    */
+    display: none;
+}
+
+.chord-maximized .section-block:has(+ .section-block.seamless) {
+    margin-bottom: 0 !important;
 }
 
 .chord-maximized .section-block.seamless {
-    margin-top: 0 !important; /* Override maximized spacing */
+    margin-top: 0 !important;
 }
 
 .section-block-content {
@@ -1044,6 +1054,7 @@ h2 {
     min-width: 0; 
     overflow: hidden;
     position: relative;
+    flex: 1 1 auto; /* Allow measures to grow to fill the row */
 }
 
 /* Vertical line between chords in a measure */
@@ -1301,7 +1312,7 @@ h2 {
     line-height: 1; /* Tighten line height to ensure precise centering */
 }
 
-.chord-maximized .chord-card.minor {
+.chord-maximized #chordVisualizer .chord-card.minor {
     color: var(--soloist-color);
 }
 
