@@ -14,6 +14,7 @@ export const compingState = {
     lockedUntil: 0,
     soloistActivity: 0,
     lastChordIndex: -1,
+    lastChordQuality: null, // Track quality for tension resolution
     grooveRetentionCount: 0,
     maxGrooveLength: 4,
     lastSectionId: null
@@ -220,7 +221,7 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
     compingState.lockedUntil = step + spm;
 }
 
-function handleSustainEvents(step, measureStep, chordIndex, intensity, genre, stepInfo) {
+function handleSustainEvents(step, measureStep, chordIndex, intensity, genre, stepInfo, currentQuality) {
     const events = [];
     const isNewChord = chordIndex !== compingState.lastChordIndex;
     const isNewMeasure = measureStep === 0;
@@ -231,11 +232,20 @@ function handleSustainEvents(step, measureStep, chordIndex, intensity, genre, st
     }
 
     if (isNewMeasure || isNewChord) {
-        events.push({ type: 'cc', controller: 64, value: 0, timingOffset: 0 }); // Off
+        // BREATH STRATEGY: If coming from a high-tension chord, cut sustain early to clear the air.
+        const wasTense = ['7alt', 'dim', 'halfdim', '7b9', '7#9'].includes(compingState.lastChordQuality);
+        const clearOffset = wasTense ? -0.15 : 0; // 150ms breath for tension resolution
+
+        events.push({ type: 'cc', controller: 64, value: 0, timingOffset: clearOffset }); // Off
         events.push({ type: 'cc', controller: 64, value: 127, timingOffset: 0.01 }); // On
+        
         compingState.lastChordIndex = chordIndex;
+        compingState.lastChordQuality = currentQuality;
         return events;
     }
+    
+    // Update quality tracker even if not new chord (in case of init)
+    compingState.lastChordQuality = currentQuality;
 
     if (stepInfo && stepInfo.isGroupStart && Math.random() < (intensity * 0.5)) {
         events.push({ type: 'cc', controller: 64, value: 0, timingOffset: -0.01 });
@@ -272,7 +282,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
     
     // --- Sustain / CC Handling ---
     const chordIndex = arranger.progression.indexOf(chord);
-    const ccEvents = handleSustainEvents(step, measureStep, chordIndex, intensity, genre, stepInfo);
+    const ccEvents = handleSustainEvents(step, measureStep, chordIndex, intensity, genre, stepInfo, chord.quality);
     
     updateRhythmicIntent(step, (sb.enabled && sb.busySteps > 0), spm, chord.sectionId);
 
