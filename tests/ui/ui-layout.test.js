@@ -33,7 +33,7 @@ describe('UI Layout Integrity', () => {
             'tapBtn', 'relKeyBtn', 'transUpBtn', 'transDownBtn',
             'maximizeChordBtn', 'chordPowerBtn', 'groovePowerBtn', 'bassPowerBtn', 'soloistPowerBtn',
             'chordPowerBtnDesktop', 'groovePowerBtnDesktop', 'bassPowerBtnDesktop', 'soloistPowerBtnDesktop',
-            'vizPowerBtn', 'addSectionBtn', 'templatesBtn', 'templatesContainer', 'templateChips',
+            'vizPowerBtn', 'addSectionBtn', 'templatesBtn', 'templatesOverlay', 'templateChips', 'closeTemplatesBtn',
             'activeSectionLabel', 'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
             'clearProgBtn', 'saveBtn', 'shareBtn', 'chordPresets', 'userPresetsContainer',
             'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'groupingToggle', 'groupingLabel',

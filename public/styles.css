@@ -1680,24 +1680,23 @@ h2 {
 }
 
 /* --- Settings Overlay --- */
-#settingsOverlay, #editorOverlay, #exportOverlay {
+#settingsOverlay, #editorOverlay, #exportOverlay, #templatesOverlay {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s;
-    backdrop-filter: blur(4px);
+    transition: opacity 0.2s ease-out;
 }
 
-#settingsOverlay.active, #editorOverlay.active, #exportOverlay.active {
+#settingsOverlay.active, #editorOverlay.active, #exportOverlay.active, #templatesOverlay.active {
     opacity: 1;
     pointer-events: auto;
 }
@@ -1785,21 +1784,12 @@ h2 {
     margin-bottom: 2rem;
 }
 
-.templates-container {
-    display: none;
-    margin-top: 2rem;
-    padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
-    border: 1px dashed var(--border-color);
-}
-
-.templates-label {
-    width: 100%;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    margin-bottom: 1rem;
+.templates-modal-label {
+    padding: 1rem 1.5rem;
     text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    width: 100%;
 }
 
 .template-chips {
@@ -1809,6 +1799,7 @@ h2 {
     justify-content: center;
     width: 100%;
     min-height: 40px;
+    padding-bottom: 2rem;
 }
 
 .template-chip {

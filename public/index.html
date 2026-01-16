@@ -689,11 +689,6 @@
         
         <div class="editor-scroll-area">
             <div id="sectionList" class="section-list"></div>
-            
-            <div id="templatesContainer" class="templates-container">
-                <div class="templates-label">Select a structure template (replaces current):</div>
-                <div id="templateChips" class="template-chips"></div>
-            </div>
         </div>
 
         <div class="modal-footer">
@@ -720,6 +715,20 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Templates Overlay -->
+<div id="templatesOverlay" class="settings-overlay">
+    <div class="settings-content">
+        <div class="modal-header">
+            <h2>Song Templates</h2>
+            <button id="closeTemplatesBtn" class="primary-btn">Cancel</button>
+        </div>
+        <div class="templates-modal-label">
+            Select a template to replace your current arrangement:
+        </div>
+        <div id="templateChips" class="template-chips"></div>
     </div>
 </div>
 

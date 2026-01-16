@@ -34,7 +34,7 @@ export function initUI() {
         'playBtn', 'bpmInput', 'timeSigSelect', 'tapBtn', 'keySelect', 'relKeyBtn', 'transUpBtn', 'transDownBtn',
         'maximizeChordBtn', 'chordPowerBtn', 'groovePowerBtn', 'bassPowerBtn', 'soloistPowerBtn',
         'chordPowerBtnDesktop', 'groovePowerBtnDesktop', 'bassPowerBtnDesktop', 'soloistPowerBtnDesktop',
-        'vizPowerBtn', 'sectionList', 'addSectionBtn', 'templatesBtn', 'templatesContainer', 'templateChips',
+        'vizPowerBtn', 'sectionList', 'addSectionBtn', 'templatesBtn', 'templatesOverlay', 'templateChips', 'closeTemplatesBtn',
         'activeSectionLabel', 'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
         'clearProgBtn', 'saveBtn', 'shareBtn', 'chordVisualizer', 'chordPresets', 'userPresetsContainer',
         'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'groupingToggle', 'groupingLabel',
