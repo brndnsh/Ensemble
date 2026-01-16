@@ -60,7 +60,7 @@ describe('Jazz Walking Bass Logic', () => {
 
     it('should use a chromatic approach on beat 4 leading to the next chord', () => {
         let chromaticCount = 0;
-        const total = 100;
+        const total = 500;
         for (let i = 0; i < total; i++) {
             // Force high tension to guarantee chromatic approach
             sb.tension = 0.8;
@@ -68,7 +68,8 @@ describe('Jazz Walking Bass Logic', () => {
             const pc = result.midi % 12;
             if (pc === 4 || pc === 6) chromaticCount++;
         }
-        expect(chromaticCount).toBeGreaterThan(50);
+        // Expected prob ~64%. Threshold 50% of total (250).
+        expect(chromaticCount).toBeGreaterThan(250);
     });
 
     it('should prefer stepwise movement on intermediate beats', () => {
