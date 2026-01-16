@@ -1057,14 +1057,14 @@ h2 {
 }
 
 .section-block-content {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
     gap: 0.5rem;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 600px) {
     .section-block-content {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, 1fr); /* 4 columns on tablets/desktop */
         gap: 0.4rem;
     }
 }
@@ -1080,7 +1080,7 @@ h2 {
     min-width: 0; 
     overflow: hidden;
     position: relative;
-    flex: 1 1 auto; /* Allow measures to grow to fill the row */
+    width: 100%; /* Fill the grid cell */
 }
 
 /* Vertical line between chords in a measure */
