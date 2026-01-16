@@ -248,7 +248,7 @@ export function getScaleForChord(chord, nextChord, style) {
     }
     
     if (style === 'neo') {
-        const keyRoot = KEY_ORDER.indexOf(arranger.key);
+        const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
         const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
 
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
@@ -308,7 +308,7 @@ export function getScaleForChord(chord, nextChord, style) {
     }
 
     if (isDominant || chord.quality === 'major') {
-        const keyRoot = KEY_ORDER.indexOf(arranger.key);
+        const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
         const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
 
         // V in Minor Key -> Phrygian Dominant
@@ -325,7 +325,7 @@ export function getScaleForChord(chord, nextChord, style) {
         }
     }
     // 4. Diatonic Fallback (Only for simple triads that fit the key)
-    const keyRoot = KEY_ORDER.indexOf(arranger.key);
+    const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
     const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
     const keyNotes = keyIntervals.map(i => (keyRoot + i) % 12);
     const chordRoot = chord.rootMidi % 12;
@@ -583,7 +583,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
             // MOTIF RESOLUTION: If replaying a motif during an "Answer" phase on a tonic chord,
             // ensure any spicy extensions from the original motif are nudged to diatonic tones.
-            const keyRoot = KEY_ORDER.indexOf(arranger.key);
+            const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
             const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
             const pc = (interval % 12 + 12) % 12;
             const isDiatonic = keyIntervals.includes((pc + targetChord.rootMidi - keyRoot + 120) % 12);
@@ -729,9 +729,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
             const distFromCenter = Math.abs(m - dynamicCenter);
             if (distFromCenter > 7) weight -= (distFromCenter - 7) * 3; 
             
+            
             // 4. Harmonic Role Awareness (Key-based Filtering)
             // Penalize non-diatonic notes on Tonic/Resolution chords during "Answer" phrases.
-            const keyRoot = KEY_ORDER.indexOf(arranger.key);
+            const keyRoot = KEY_ORDER.indexOf(targetChord.key || arranger.key);
             const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
             const isDiatonic = keyIntervals.includes((pc - keyRoot + 12) % 12);
             const relativeRoot = (targetChord.rootMidi - keyRoot + 120) % 12;
