@@ -105,6 +105,9 @@ export function renderChordVisualizer() {
         currentMeasureBeats += chord.beats;
     });
 
+    const totalMeasures = sections.reduce((acc, s) => acc + s.measures.length, 0);
+    ui.chordVisualizer.dataset.totalMeasures = totalMeasures;
+
     // DOM RECYCLING STRATEGY
     // 1. Flatten existing cards to check against new progression
     const existingCards = Array.from(ui.chordVisualizer.querySelectorAll('.chord-card'));
