@@ -983,7 +983,7 @@ h2 {
 .section-block-header {
     font-size: 0.65rem;
     font-weight: 900;
-    text-transform: uppercase;
+    text-transform: none;
     letter-spacing: 0.1em;
     margin-bottom: 0.4rem;
     opacity: 0.6;
@@ -1052,6 +1052,7 @@ h2 {
     text-align: center;
     color: var(--text-color);
     font-weight: 600;
+    text-transform: none;
 }
 
 .chord-card.minor {

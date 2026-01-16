@@ -651,7 +651,8 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                     rootMidi: rootMidi, bassMidi: bassMidi, intervals: intervals, quality: quality, is7th: is7th,
                     charStart: charOffset + barInternalOffset,
                     charEnd: charOffset + barInternalOffset + token.length,
-                    timeSignature: timeSignature
+                    timeSignature: timeSignature,
+                    key: key
                 });
             }
             barInternalOffset += token.length;

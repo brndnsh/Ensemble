@@ -5,7 +5,8 @@ import { KEY_ORDER, TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
 /**
  * Determines the best scale for the bass based on chord and context.
  */
-function getScaleForBass(chord, nextChord, isMinor = false) {
+function getScaleForBass(chord, nextChord) {
+    const isMinor = chord.isMinor !== undefined ? chord.isMinor : arranger.isMinor;
     const isDominant = chord.quality.startsWith('7') || 
                        ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(chord.quality) ||
                        (chord.intervals.includes(10) && chord.intervals.includes(4));
@@ -20,7 +21,14 @@ function getScaleForBass(chord, nextChord, isMinor = false) {
 
     // Mode-aware diatonic scaling
     if (isMinor) {
-        if (chord.quality === 'major' || chord.quality === '7') return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian (b7 common in minor)
+        const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
+        const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
+
+        if (chord.quality === 'major' || chord.quality === '7') {
+            // V7 in minor should be Phrygian Dominant if resolving to tonic, 
+            // but we'll use Mixolydian as a general case for other major chords in minor.
+            return [0, 2, 4, 5, 7, 9, 10]; 
+        }
         if (chord.quality === 'minor') return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
     }
 
@@ -462,7 +470,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     const velocity = (intBeat % 2 === 1) ? 1.15 : 1.0;
 
     // Use smarter scale logic
-    const scale = getScaleForBass(currentChord, nextChord, isMinor);
+    const scale = getScaleForBass(currentChord, nextChord);
 
     // Final Beat of Chord: Smart Approach Note (Harmonic Pull)
     if (intBeat === beatsInChord - 1 && nextChord) {

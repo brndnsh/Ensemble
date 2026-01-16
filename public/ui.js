@@ -686,7 +686,6 @@ export function updateKeySelectLabels() {
         console.warn("[UI] keySelect not found");
         return;
     }
-    console.log("[UI] Updating key labels, isMinor:", arranger.isMinor);
     const currentValue = ui.keySelect.value;
     Array.from(ui.keySelect.options).forEach(opt => {
         const root = opt.value;
@@ -702,7 +701,6 @@ export function updateRelKeyButton() {
         return;
     }
     const label = arranger.isMinor ? 'min' : 'maj';
-    console.log("[UI] updateRelKeyButton: isMinor =", arranger.isMinor, "-> label =", label);
     ui.relKeyBtn.textContent = label;
 }
 

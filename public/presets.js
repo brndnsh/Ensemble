@@ -710,10 +710,13 @@ export const CHORD_PRESETS = [
     { 
         name: "All The Things You Are", 
         sections: [
-            { label: "A", value: "vi7 | ii7 | V7 | Imaj7 | IVmaj7 | V7/III | IIImaj7 | IIImaj7" },
-            { label: "A2", value: "iii7 | vi7 | II7 | Vmaj7 | Imaj7 | ii7/VII | VIImaj7 | VIImaj7" },
-            { label: "B", value: "ii7/VII | V7/VII | VIImaj7 | VIImaj7 | f#m7 | B7 | Emaj7 | C7alt" },
-            { label: "A3", value: "vi7 | ii7 | V7 | Imaj7 | IVmaj7 | iv7 | iii7 | biiio7 | ii7 | V7 | Imaj7 | Imaj7" }
+            { label: "A (Ab)", key: "Ab", value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7" },
+            { label: "A (C)", key: "C", value: "Dm7 | G7 | Cmaj7" },
+            { label: "A2 (Eb)", key: "Eb", value: "Cm7 | Fm7 | Bb7 | Ebmaj7 | Abmaj7" },
+            { label: "A2 (G)", key: "G", value: "Am7 | D7 | Gmaj7" },
+            { label: "B (G)", key: "G", value: "Am7 | D7 | Gmaj7 | Gmaj7" },
+            { label: "B (E)", key: "E", value: "F#m7b5 | B7 | Emaj7 | C7alt" },
+            { label: "A3 (Ab)", key: "Ab", value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7 | Dbm7 | Cm7 | Bdim7 | Bbm7 | Eb7 | Abmaj7 | Abmaj7" }
         ],
         category: "Jazz",
         settings: { bpm: 135, style: 'jazz' }
