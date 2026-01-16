@@ -74,23 +74,35 @@ export function generateCompingPattern(genre, vibe, length = 16) {
     }
     
     if (genre === 'Jazz' || genre === 'Bossa') {
-        // Charleston: 1 and &2 (Steps 0 and 7)
-        // Reverse Charleston: &1 and 3 (Steps 3 and 8)
-        const isCharleston = Math.random() > 0.3;
+        const type = Math.random();
         
-        if (isCharleston) {
+        if (type > 0.75) { 
+            // Charleston: 1 and &2 (Steps 0 and 6)
             hit(0);
-            if (vibe !== 'sparse') hit(7); // The "and" of 2
+            if (vibe !== 'sparse') hit(6); 
+        } else if (type > 0.5) {
+            // Reverse Charleston: &1 and 3 (Steps 2 and 8)
+            hit(2);
+            if (vibe !== 'sparse') hit(8);
+        } else if (type > 0.25) {
+            // Syncopated "Ands": &2 and &4 (Steps 6 and 14)
+            hit(6);
+            if (vibe !== 'sparse') hit(14);
+        } else if (type > 0.1) {
+            // Red Garland Lite: 1, &2, &3 (Steps 0, 6, 10)
+            hit(0);
+            hit(6);
+            if (vibe === 'active') hit(10);
         } else {
-            // Anticipation
-            if (length >= 15) hit(14); // "and" of 4
-            if (length >= 8) hit(8); // Beat 3
+            // Sparse Anticipation: &4 (Step 14)
+            hit(14);
         }
         
         if (vibe === 'active') {
             // Add comping chatter
             if (length >= 4 && Math.random() > 0.5) hit(4);
             if (length >= 10 && Math.random() > 0.5) hit(10);
+            if (length >= 13 && Math.random() > 0.7) hit(12);
         }
         return pattern;
     }

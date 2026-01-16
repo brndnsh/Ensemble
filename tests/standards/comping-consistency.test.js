@@ -74,26 +74,17 @@ describe('Accompaniment Consistency Standards', () => {
     it('Scenario B: The Jazz Conversation - Should vary patterns frequently', () => {
         gb.genreFeel = 'Jazz';
 
-        // Measure 1
-        getAccompanimentNotes(mockChord, 0, 0, 0, { isBeatStart: true });
-        const patternM1 = [...compingState.currentCell];
-        
-        // Force unlock to allow change (Jazz logic should naturally allow this, 
-        // but we want to ensure it doesn't get stuck if we accidentally applied sticky logic)
-        
-        // Measure 2
-        getAccompanimentNotes(mockChord, 16, 0, 0, { isBeatStart: true });
-        const patternM2 = [...compingState.currentCell];
-        
-        // Measure 3
-        getAccompanimentNotes(mockChord, 32, 0, 0, { isBeatStart: true });
-        const patternM3 = [...compingState.currentCell];
+        // Collect patterns over 5 measures
+        const patterns = [];
+        for (let i = 0; i < 5; i++) {
+            getAccompanimentNotes(mockChord, i * 16, 0, 0, { isBeatStart: true });
+            patterns.push(JSON.stringify(compingState.currentCell));
+        }
 
-        // In Jazz, we expect *some* variation. 
-        // It's statistically unlikely to pick the exact same 16-step cell 3 times in a row 
+        // We expect some variation. 
+        // It's statistically extremely unlikely to pick the exact same 16-step cell 5 times in a row 
         // unless the pool is tiny or logic is sticky.
-        const allSame = (JSON.stringify(patternM1) === JSON.stringify(patternM2)) && 
-                        (JSON.stringify(patternM2) === JSON.stringify(patternM3));
+        const allSame = patterns.every(p => p === patterns[0]);
         
         expect(allSame).toBe(false);
     });
