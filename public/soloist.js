@@ -88,7 +88,7 @@ const STYLE_CONFIG = {
     },
     neo: {
         restBase: 0.45, restGrowth: 0.12, cells: [11, 2, 6, 10, 12, 14], registerSoar: 6,
-        tensionScale: 0.7, timingJitter: 45, maxNotesPerPhrase: 8,
+        tensionScale: 0.7, timingJitter: 25, maxNotesPerPhrase: 8,
         doubleStopProb: 0.15, anticipationProb: 0.45, targetExtensions: [2, 6, 9, 11],
         deviceProb: 0.25, allowedDevices: ['quartal', 'slide', 'guitarDouble']
     },
@@ -100,7 +100,7 @@ const STYLE_CONFIG = {
     },
     minimal: {
         restBase: 0.65, restGrowth: 0.2, cells: [11, 2, 12], registerSoar: 10,
-        tensionScale: 0.9, timingJitter: 35, maxNotesPerPhrase: 4,
+        tensionScale: 0.9, timingJitter: 20, maxNotesPerPhrase: 4,
         doubleStopProb: 0.0, anticipationProb: 0.1, targetExtensions: [2, 7],
         deviceProb: 0.1, allowedDevices: ['slide']
     },
@@ -398,7 +398,29 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     }
 
     sb.lastFreq = getFrequency(selectedMidi);
-    const result = { midi: selectedMidi, velocity: 0.8, durationSteps: 1, bendStartInterval: 0, ccEvents: [], timingOffset: 0, style, isDoubleStop: false };
+
+    // --- Dynamic Duration & Bending ---
+    let durationSteps = 1;
+    let bendStartInterval = 0;
+
+    // Sustained Notes: Longer durations on downbeats or when intensity is high
+    const isImportantStep = stepInBeat === 0 || (stepInBeat === 2 && Math.random() < 0.3);
+    if (isImportantStep && (style === 'neo' || style === 'blues' || style === 'minimal' || style === 'bossa')) {
+        // Sustain for a half note (8 steps) or a quarter (4 steps)
+        durationSteps = Math.random() < 0.4 ? 8 : 4;
+    } else if (style === 'scalar' && stepInBeat === 0 && Math.random() < 0.15) {
+        durationSteps = 4; // Occasional sustained rock note
+    } else if (style === 'neo' && Math.random() < 0.2) {
+        durationSteps = 2; // Subtle syncopated sustain
+    }
+
+    // Soulful Scoops: Bend into the note
+    if (durationSteps >= 4 && Math.random() < 0.3) {
+        // Bend from 1 or 2 semitones below
+        bendStartInterval = Math.random() < 0.7 ? 1 : 2;
+    }
+
+    const result = { midi: selectedMidi, velocity: 0.8, durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style, isDoubleStop: false };
     if (notes.length > 0 && sb.doubleStops) return [...notes.map(n => ({...result, ...n})), result];
     return result;
 }

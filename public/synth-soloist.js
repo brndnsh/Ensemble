@@ -100,6 +100,12 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     if (style === 'blues') {
         vibSpeed = 4.8 + Math.random() * 0.5; // Slower, wider
         depthFactor = 0.012;
+    } else if (style === 'neo') {
+        vibSpeed = 4.2 + Math.random() * 0.4; // Slower, soulful
+        depthFactor = 0.015; // Deeper for expressive sustain
+    } else if (style === 'bossa') {
+        vibSpeed = 5.2; // Smooth, lyrical
+        depthFactor = 0.008; // Moderate depth
     } else if (style === 'shred') {
         vibSpeed = 6.5 + Math.random() * 1.0; // Faster, tighter
         depthFactor = 0.004;

@@ -473,7 +473,7 @@ export function scheduleGlobalEvent(step, swungTime) {
         osc.onended = () => { g.disconnect(); osc.disconnect(); };
     }
 
-    const straightness = (sb.style === 'neo') ? 0.35 : ((sb.style === 'blues') ? 0.45 : 0.65);
+    const straightness = (sb.style === 'neo') ? 0.65 : ((sb.style === 'blues') ? 0.55 : (sb.style === 'bossa' ? 0.75 : 0.65));
     const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + (Math.random() - 0.5) * (gb.humanize / 100) * 0.025;
     
     if (gb.enabled) {
