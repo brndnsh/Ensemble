@@ -181,6 +181,8 @@ export const cb = {
  * @property {string} lastDrumPreset - Name of the last loaded drum preset.
  * @property {Object} audioBuffers - Cache for decoded drum samples.
  * @property {string} genreFeel - Active genre for procedural nuances ('Rock', 'Jazz', 'Funk').
+ * @property {boolean} larsMode - Whether "Lars Mode" (tempo drift) is active.
+ * @property {number} larsIntensity - Intensity of tempo drift (0.0 - 1.0).
  * @property {boolean} fillActive - Whether a drum fill is currently being played.
  * @property {Object} fillSteps - Transient storage for the generated fill pattern.
  */
@@ -203,6 +205,8 @@ export const gb = {
     lastDrumPreset: 'Basic Rock',
     audioBuffers: {},
     genreFeel: 'Rock',
+    larsMode: false,
+    larsIntensity: 0.5,
     lastSmartGenre: 'Rock',
     pendingGenreFeel: null,
     fillActive: false,
@@ -429,6 +433,12 @@ export function dispatch(action, payload) {
             break;
         case 'SET_FOLLOW_PLAYBACK':
             gb.followPlayback = payload;
+            break;
+        case 'SET_LARS_MODE':
+            gb.larsMode = !!payload;
+            break;
+        case 'SET_LARS_INTENSITY':
+            gb.larsIntensity = Math.max(0, Math.min(1, payload));
             break;
         case 'SET_GENRE_FEEL':
             // payload: { feel: 'Rock', swing: 0, sub: '8th', drum: '...', ... }

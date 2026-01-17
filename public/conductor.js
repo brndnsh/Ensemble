@@ -10,7 +10,8 @@ export const conductorState = {
     stepSize: 0.0005,
     loopCount: 0,
     formIteration: 0, // Tracks how many times the ENTIRE song has looped
-    form: null
+    form: null,
+    larsBpmOffset: 0
 };
 
 export function applyConductor() {
@@ -86,6 +87,77 @@ export function updateAutoConductor() {
             }
         }
         applyConductor();
+    }
+}
+
+/**
+ * Calculates and applies tempo drift for "Lars Mode".
+ */
+export function updateLarsTempo(currentStep) {
+    if (!gb.larsMode || !ctx.isPlaying) {
+        if (conductorState.larsBpmOffset !== 0) {
+            conductorState.larsBpmOffset = 0;
+            updateBpmUI();
+        }
+        return;
+    }
+
+    // 1. Determine target drift based on current section energy
+    const total = arranger.totalSteps;
+    if (total === 0) return;
+    const modStep = currentStep % total;
+    const entry = arranger.stepMap.find(e => modStep >= e.start && modStep < e.end);
+    if (!entry) {
+        return;
+    }
+
+    // Use section label energy as a base (-0.5 to +0.5 normalized drift)
+    const sectionEnergy = getSectionEnergy(entry.chord.sectionLabel); // 0.1 to 0.9
+    
+    // Lars Mode Intensity scales the maximum drift. 
+    // Max drift at 100% intensity is +/- 4 BPM.
+    const maxDrift = 4 * gb.larsIntensity;
+    const targetOffset = (sectionEnergy - 0.5) * 2 * maxDrift;
+
+    // 2. Smoothly ramp towards target offset
+    const lerpFactor = 0.005; // Very slow transition for musicality
+    conductorState.larsBpmOffset += (targetOffset - conductorState.larsBpmOffset) * lerpFactor;
+
+    if (Math.abs(conductorState.larsBpmOffset) < 0.01) {
+        // Only reset if we are very close to zero AND the target is zero
+        if (Math.abs(targetOffset) < 0.01) {
+            conductorState.larsBpmOffset = 0;
+        }
+    }
+
+    updateBpmUI();
+}
+
+function updateBpmUI() {
+    if (!ui.bpmInput) return;
+    
+    const baseBpm = ctx.bpm;
+    const offset = conductorState.larsBpmOffset;
+    const effectiveBpm = Math.round((baseBpm + offset) * 10) / 10;
+
+    if (gb.larsMode && Math.abs(offset) > 0.1) {
+        const direction = offset > 0 ? '↗' : '↘';
+        const color = offset > 0 ? 'var(--orange)' : 'var(--blue)';
+        ui.bpmInput.style.color = color;
+        // We don't change the input value itself to avoid fighting user input,
+        // but we can indicate it in the label or a separate element.
+        // For now, let's use a subtle color shift and an indicator if we had one.
+        // Actually, let's update the control-label if it exists.
+        if (ui.bpmLabel) {
+            ui.bpmLabel.textContent = `BPM ${direction}`;
+            ui.bpmLabel.style.color = color;
+        }
+    } else {
+        ui.bpmInput.style.color = '';
+        if (ui.bpmLabel) {
+            ui.bpmLabel.textContent = 'BPM';
+            ui.bpmLabel.style.color = '';
+        }
     }
 }
 

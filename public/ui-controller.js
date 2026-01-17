@@ -637,6 +637,36 @@ export function setupUIHandlers(refs) {
         dispatch('SET_PRESET_SETTINGS_MODE', ui.applyPresetSettings.checked);
     });
 
+    if (ui.larsModeCheck) {
+        const updateLarsUI = (enabled) => {
+            if (ui.larsIntensityContainer) {
+                ui.larsIntensityContainer.style.opacity = enabled ? '1' : '0.5';
+                ui.larsIntensityContainer.style.pointerEvents = enabled ? 'auto' : 'none';
+            }
+        };
+
+        ui.larsModeCheck.checked = gb.larsMode;
+        updateLarsUI(gb.larsMode);
+        
+        ui.larsModeCheck.addEventListener('change', (e) => {
+            dispatch('SET_LARS_MODE', e.target.checked);
+            updateLarsUI(e.target.checked);
+            saveCurrentState();
+        });
+    }
+
+    if (ui.larsIntensitySlider) {
+        ui.larsIntensitySlider.value = Math.round(gb.larsIntensity * 100);
+        if (ui.larsIntensityValue) ui.larsIntensityValue.textContent = `${ui.larsIntensitySlider.value}%`;
+
+        ui.larsIntensitySlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            dispatch('SET_LARS_INTENSITY', val / 100);
+            if (ui.larsIntensityValue) ui.larsIntensityValue.textContent = `${val}%`;
+        });
+        ui.larsIntensitySlider.addEventListener('change', () => saveCurrentState());
+    }
+
     Object.keys(refs.POWER_CONFIG || {}).forEach(type => {
         const c = refs.POWER_CONFIG[type];
         c.els.forEach(el => {

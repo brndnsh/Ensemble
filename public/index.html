@@ -337,6 +337,19 @@
                             <label class="control-label" style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Humanize</label>
                             <input type="range" id="humanizeSlider" min="0" max="100" value="20" style="width: 100%; height: 4px;" aria-label="Humanize Amount">
                         </div>
+                        <div style="margin-bottom: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                            <label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8; cursor: pointer;">
+                                <span>Lars Mode</span>
+                                <input type="checkbox" id="larsModeCheck">
+                            </label>
+                            <div id="larsIntensityContainer" style="opacity: 0.5; pointer-events: none;">
+                                <label style="display: flex; justify-content: space-between; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">
+                                    <span>Lars Intensity</span>
+                                    <span id="larsIntensityValue">50%</span>
+                                </label>
+                                <input type="range" id="larsIntensitySlider" min="0" max="100" value="50" style="width: 100%; height: 4px;" aria-label="Lars Mode Intensity">
+                            </div>
+                        </div>
                         <div style="display: flex; gap: 0.5rem; height: 32px;">
                             <button id="clearDrumsBtn" style="font-size: 0.75rem; flex: 1; height: 100%;">Clear</button>
                             <button id="saveDrumBtn" title="Save Pattern" style="font-size: 0.75rem; flex: 1; height: 100%;">💾 Save</button>

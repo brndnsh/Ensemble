@@ -4,7 +4,7 @@ import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, updateS
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
 import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker, requestResolution } from './worker-client.js';
-import { updateAutoConductor, checkSectionTransition } from './conductor.js';
+import { updateAutoConductor, checkSectionTransition, updateLarsTempo, conductorState } from './conductor.js';
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
 import { loadDrumPreset, flushBuffers, switchMeasure } from './instrument-controller.js';
 import { draw } from './animation-loop.js';
@@ -111,7 +111,8 @@ function triggerResolution(time) {
 
 function scheduleResolution(time) {
     // Schedule the final resolution measure (Tonic chord, Kick+Crash, etc.)
-    const spb = 60.0 / ctx.bpm;
+    const effectiveBpm = ctx.bpm + (conductorState.larsBpmOffset || 0);
+    const spb = 60.0 / effectiveBpm;
     const measureDuration = 8 * spb; // Ring out for 2 bars (approx 5-6s)
 
     // 1. Manual Drum Resolution
@@ -228,7 +229,8 @@ function applyPendingGenre() {
 }
 
 function advanceCountIn() {
-    const beatDuration = 60.0 / ctx.bpm;
+    const effectiveBpm = ctx.bpm + (conductorState.larsBpmOffset || 0);
+    const beatDuration = 60.0 / effectiveBpm;
     ctx.nextNoteTime += beatDuration;
     ctx.unswungNextNoteTime += beatDuration;
     ctx.countInBeat++;
@@ -269,7 +271,9 @@ function scheduleCountIn(beat, time) {
 }
 
 function advanceGlobalStep() {
-    const sixteenth = 0.25 * (60.0 / ctx.bpm);
+    updateLarsTempo(ctx.step);
+    const effectiveBpm = ctx.bpm + (conductorState.larsBpmOffset || 0);
+    const sixteenth = 0.25 * (60.0 / effectiveBpm);
     let duration = sixteenth;
     if (gb.swing > 0) {
         // Find current time signature for swing logic

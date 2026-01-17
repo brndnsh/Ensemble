@@ -31,6 +31,8 @@ export function saveCurrentState() {
                         followPlayback: gb.followPlayback,
                         humanize: gb.humanize,            lastDrumPreset: gb.lastDrumPreset,
             genreFeel: gb.genreFeel,
+            larsMode: gb.larsMode,
+            larsIntensity: gb.larsIntensity,
             lastSmartGenre: gb.lastSmartGenre,
             activeTab: gb.activeTab,
             mobileTab: gb.mobileTab,

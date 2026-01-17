@@ -14,6 +14,7 @@ export function initUI() {
         bassVol: 'bassVolume',
         soloistVol: 'soloistVolume',
         drumVol: 'drumVolume',
+        bpmLabel: 'bpm-label',
         clearDrums: 'clearDrumsBtn',
         masterVol: 'masterVolume',
         countIn: 'countInCheck',
@@ -51,7 +52,8 @@ export function initUI() {
         'midiEnableCheck', 'midiMuteLocalCheck', 'midiOutputSelect', 'midiChordsChannel', 'midiBassChannel', 
         'midiSoloistChannel', 'midiDrumsChannel', 'midiLatencySlider', 'midiLatencyValue', 'midiControls',
         'midiChordsOctave', 'midiBassOctave', 'midiSoloistOctave', 'midiDrumsOctave',
-        'midiVelocitySlider', 'midiVelocityValue'
+        'midiVelocitySlider', 'midiVelocityValue',
+        'larsModeCheck', 'larsIntensitySlider', 'larsIntensityValue', 'larsIntensityContainer'
     ];
 
     uiIds.forEach(id => ui[id] = document.getElementById(id));

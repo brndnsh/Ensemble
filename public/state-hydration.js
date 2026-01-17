@@ -67,6 +67,8 @@ export function hydrateState(viz) {
                 }); 
             } 
             gb.genreFeel = savedState.gb.genreFeel || 'Rock'; 
+            gb.larsMode = savedState.gb.larsMode || false;
+            gb.larsIntensity = savedState.gb.larsIntensity !== undefined ? savedState.gb.larsIntensity : 0.5;
             gb.lastSmartGenre = savedState.gb.lastSmartGenre || 'Rock'; 
             gb.activeTab = savedState.gb.activeTab || 'smart'; 
             gb.mobileTab = savedState.gb.mobileTab || 'chords'; 
