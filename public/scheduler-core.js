@@ -8,7 +8,7 @@ import { updateAutoConductor, checkSectionTransition, updateLarsTempo, conductor
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
 import { loadDrumPreset, flushBuffers, switchMeasure } from './instrument-controller.js';
 import { draw } from './animation-loop.js';
-import { sendMIDINote, sendMIDIDrum, sendMIDICC, normalizeMidiVelocity, panic } from './midi-controller.js';
+import { sendMIDINote, sendMIDIDrum, sendMIDICC, normalizeMidiVelocity, panic, sendMIDITransport } from './midi-controller.js';
 import { midi as midiState } from './state.js';
 
 let isScheduling = false;
@@ -46,7 +46,8 @@ export function togglePlay(viz) {
         cb.lastActiveChordIndex = null;
         clearActiveVisuals(activeViz);
         killAllNotes();
-        panic(); // Immediate MIDI panic
+        panic(true); // Full MIDI reset
+        sendMIDITransport('stop', ctx.audio.currentTime);
         flushBuffers();
         ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
         if (ctx.audio) {
@@ -93,6 +94,11 @@ export function togglePlay(viz) {
             ctx.isDrawing = true;
             requestAnimationFrame(() => draw(activeViz));
         }
+        
+        // Initial MIDI cleanup
+        panic(true);
+        sendMIDITransport('start', startTime);
+
         startWorker();
         scheduler();
     }
@@ -480,6 +486,17 @@ export function scheduleGlobalEvent(step, swungTime) {
     const spm = getStepsPerMeasure(stepInfo.tsName);
     checkSectionTransition(step, spm);
     
+    // MIDI Automation
+    if (midiState.enabled && midiState.selectedOutputId && step % 4 === 0) {
+        const intensityCC = Math.floor(ctx.bandIntensity * 127);
+        const soloistTensionCC = Math.floor(sb.tension * 127);
+        
+        sendMIDICC(midiState.soloistChannel, 1, soloistTensionCC, swungTime);
+        sendMIDICC(midiState.soloistChannel, 11, intensityCC, swungTime);
+        sendMIDICC(midiState.chordsChannel, 11, intensityCC, swungTime);
+        sendMIDICC(midiState.bassChannel, 11, intensityCC, swungTime);
+    }
+
     const drumStep = step % (gb.measures * spm);
     const t = swungTime + (Math.random() - 0.5) * (gb.humanize / 100) * 0.025;
 

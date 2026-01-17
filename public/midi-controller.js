@@ -288,9 +288,25 @@ export function sendMIDIDrum(instrumentName, time, velocity, octaveOffset = 0) {
 }
 
 /**
- * All Notes Off for all channels.
+ * Sends a MIDI Transport message (Start/Stop).
+ * @param {string} type - 'start' (0xFA) or 'stop' (0xFC)
+ * @param {number} time - AudioContext time
  */
-export function panic() {
+export function sendMIDITransport(type, time) {
+    if (!midi.enabled || !midi.selectedOutputId || !midiAccess) return;
+    const output = midiAccess.outputs.get(midi.selectedOutputId);
+    if (!output) return;
+
+    const midiTime = (time - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency;
+    const msg = type === 'start' ? 0xFA : 0xFC;
+    output.send([msg], midiTime);
+}
+
+/**
+ * All Notes Off for all channels.
+ * @param {boolean} resetAll - If true, sends Reset All Controllers (CC 121) to all channels.
+ */
+export function panic(resetAll = false) {
     // 1. Clear future Note Offs (they are no longer needed as we'll kill now)
     for (const [key, value] of activeNoteOffs) {
         clearTimeout(value.id);
@@ -307,8 +323,6 @@ export function panic() {
         const ch = parseInt(chStr);
         const note = parseInt(noteStr);
         
-        // Send Note Off (0x80) immediate
-        // Status: 0x80 | (ch - 1)
         const status = 0x80 | (ch - 1);
         output.send([status, note, 0]); // Immediate
     }
@@ -317,6 +331,10 @@ export function panic() {
     // 3. Send All Notes Off / Reset Controllers as backup
     for (let ch = 0; ch < 16; ch++) {
         output.send([0xB0 | ch, 123, 0]); // All Notes Off
-        output.send([0xB0 | ch, 121, 0]); // Reset All Controllers
+        if (resetAll) {
+            output.send([0xB0 | ch, 121, 0]); // Reset All Controllers
+            output.send([0xB0 | ch, 64, 0]);  // Sustain Off
+            output.send([0xB0 | ch, 1, 0]);   // Mod Wheel Zero
+        }
     }
 }
