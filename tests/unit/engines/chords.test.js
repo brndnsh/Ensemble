@@ -8,6 +8,7 @@ vi.mock('../../../public/worker-client.js', () => ({
     syncWorker: vi.fn()
 }));
 vi.mock('../../../public/state.js', () => ({
+    ctx: { bandIntensity: 0.5 },
     cb: { octave: 60, density: 'standard', practiceMode: false },
     arranger: { timeSignature: '4/4' },
     gb: { genreFeel: 'Rock' },

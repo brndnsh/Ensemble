@@ -112,7 +112,13 @@ export function generateCompingPattern(genre, vibe, length = 16) {
     // Downbeat focus
     hit(0); // The One
     
-    if (vibe === 'sparse') return pattern;
+    if (vibe === 'sparse') {
+        // If low intensity, use arpeggio-style hits on 8ths or 16ths
+        if (intensity < 0.4) {
+            for (let i = 0; i < length; i += 2) hit(i); // 8th note arpeggio
+        }
+        return pattern;
+    }
     
     // Backbeat support
     if (length >= 5) hit(4); // Beat 2
@@ -403,6 +409,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         let timingOffset = 0;
         const isDownbeat = stepInfo ? stepInfo.isBeatStart : (measureStep % 4 === 0);
         const isStructural = stepInfo ? stepInfo.isGroupStart : (measureStep % 8 === 0);
+        const intensity = ctx.bandIntensity;
 
         if (cb.style === 'smart') {
             const pushProb = 0.15 + (intensity * 0.2);
@@ -425,6 +432,15 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
 
         let voicing = [...chord.freqs];
         
+        // --- Low Intensity Arpeggiation (0.0 - 0.3) ---
+        if (intensity < 0.4 && cb.style === 'smart' && genre !== 'Reggae') {
+            // Pick a single note from the voicing based on the step in the beat
+            const stepInBeat = measureStep % ts.stepsPerBeat;
+            const noteIdx = stepInBeat % voicing.length;
+            voicing = [voicing[noteIdx]];
+            durationSteps = ts.stepsPerBeat; // Sustain for the beat
+        }
+
         // --- Frequency Slotting & Soloist Pocket ---
         const soloistMidi = sb.enabled ? getMidi(sb.lastFreq) : 0;
         const bassMidi = bb.enabled ? getMidi(bb.lastFreq) : 0;

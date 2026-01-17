@@ -5,8 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and other modules
 vi.mock('../../../public/state.js', () => ({
+    ctx: { bandIntensity: 0.5 },
     cb: { octave: 60, density: 'standard', practiceMode: false },
-    arranger: { 
+    arranger: {
         sections: [],
         progression: [],
         key: 'C',
@@ -17,7 +18,6 @@ vi.mock('../../../public/state.js', () => ({
     gb: { genreFeel: 'Jazz' },
     bb: { enabled: true }
 }));
-
 vi.mock('../../../public/ui.js', () => ({
     ui: {
         chordVisualizer: { innerHTML: '', dataset: {} }

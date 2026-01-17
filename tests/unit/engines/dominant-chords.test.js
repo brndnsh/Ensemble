@@ -4,10 +4,11 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../public/ui.js', () => ({ ui: {} }));
 vi.mock('../../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('../../../public/state.js', () => ({
-    cb: { octave: 60, density: 'standard', practiceMode: false },
+    ctx: { bandIntensity: 0.5 },
+    cb: { density: 'standard', practiceMode: false },
     arranger: { timeSignature: '4/4' },
     gb: { genreFeel: 'Jazz' },
-    bb: { enabled: true } // Trigger rootless
+    bb: { enabled: true }
 }));
 
 import { getChordDetails, getIntervals } from '../../../public/chords.js';

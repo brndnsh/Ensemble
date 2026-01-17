@@ -4,9 +4,10 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../../public/ui.js', () => ({ ui: {} }));
 vi.mock('../../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('../../../public/state.js', () => ({
+    ctx: { bandIntensity: 0.5 },
     cb: { octave: 60, density: 'standard', practiceMode: false },
-    arranger: { timeSignature: '4/4' },
-    gb: { genreFeel: 'Jazz' },
+    arranger: { key: 'C', isMinor: false, notation: 'roman', timeSignature: '4/4' },
+    gb: { genreFeel: 'Rock' },
     bb: { enabled: false }
 }));
 

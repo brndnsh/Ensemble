@@ -105,10 +105,11 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         const stagger = index * (0.005 + Math.random() * 0.010) * staggerMult;
         const startTime = baseTime + stagger;
         
-        // Intensity-aware brightness mapping
-        const intensityShift = (ctx.bandIntensity - 0.5) * 400; // Shift base up to 200Hz up/down
-        const intensityDepthMult = 0.8 + (ctx.bandIntensity * 0.4); // 0.8x to 1.2x depth
-        const velocityCutoff = (preset.filterBase + intensityShift) + (vol * preset.filterDepth * intensityDepthMult);
+        // Intensity-aware brightness mapping (Wide Range for Alternative Loop)
+        const intensity = ctx.bandIntensity;
+        const intensityShift = (intensity - 0.5) * 1200; // Increased from 400
+        const intensityDepthMult = 0.5 + (intensity * 1.5); // 0.5x to 2.0x depth
+        const velocityCutoff = Math.max(150, (preset.filterBase + intensityShift) + (vol * preset.filterDepth * intensityDepthMult));
         
         // --- Component A: The Hammer Strike ---
         if (isPiano && !muted) {
@@ -178,7 +179,25 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         }
 
         osc.connect(filter);
-        filter.connect(mainGain);
+        
+        // --- Intensity-driven Crunch (>= 0.8) ---
+        let lastNode = filter;
+        if (intensity >= 0.8 && !muted) {
+            const shaper = ctx.audio.createWaveShaper();
+            const n_samples = 44100;
+            const curve = new Float32Array(n_samples);
+            const drive = 1.0 + (intensity - 0.8) * 10.0; // 1.0 to 3.0
+            for (let i = 0; i < n_samples; ++i) {
+                const x = (i * 2) / n_samples - 1;
+                curve[i] = (Math.PI + drive) * x / (Math.PI + drive * Math.abs(x));
+            }
+            shaper.curve = curve;
+            shaper.oversample = '2x';
+            filter.connect(shaper);
+            lastNode = shaper;
+        }
+
+        lastNode.connect(mainGain);
         mainGain.connect(ctx.chordsGain);
 
         osc.start(startTime);

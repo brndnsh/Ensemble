@@ -1,6 +1,8 @@
 import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN, TIME_SIGNATURES } from './config.js';
 import { normalizeKey, getFrequency } from './utils.js';
-import { cb, arranger, gb, bb } from './state.js';
+import * as stateModule from './state.js';
+const { cb, arranger, gb, bb } = stateModule;
+const ctx = stateModule.ctx || { bandIntensity: 0.5 };
 import { ui } from './ui.js';
 import { syncWorker } from './worker-client.js';
 
@@ -405,74 +407,84 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     const isPractice = cb.practiceMode;
     const shouldBeRootless = bassEnabled || isPractice;
     const isRich = density === 'rich';
+    const intensity = ctx.bandIntensity;
 
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
     if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
-        const rootless = getRootlessVoicing(quality, is7th, isRich);
+        const rootless = getRootlessVoicing(quality, is7th, isRich || intensity > 0.6);
         if (rootless) return rootless;
     }
 
+    let intervals = [0, 4, 7]; // Default Major
+
     // 2. POP & ROCK: SPREAD 10ths
     if (genre === 'Rock' || (genre === 'Bossa' && !shouldBeRootless)) {
-        if (quality === 'major') return [0, 7, 16, 19]; // 1, 5, 10, 12
-        if (quality === 'minor') return [0, 7, 15, 19]; // 1, 5, b10, 12
+        if (quality === 'major') intervals = [0, 7, 16, 19]; // 1, 5, 10, 12
+        else if (quality === 'minor') intervals = [0, 7, 15, 19]; // 1, 5, b10, 12
+    } else {
+        // Standard Triad Fallback for others
+        const isMinorQuality = (quality.startsWith('m') && !quality.startsWith('maj')) || quality === 'minor' || quality === 'halfdim';
+        if (isMinorQuality) intervals = [0, 3, 7];
+        
+        if (quality === 'dim') intervals = [0, 3, 6];
+        else if (quality === 'halfdim') intervals = [0, 3, 6, 10]; 
+        else if (quality === 'aug') intervals = [0, 4, 8];
+        else if (quality === 'sus4') intervals = [0, 5, 7];
+        else if (quality === 'sus2') intervals = [0, 2, 7];
+        else if (quality === 'add9') intervals = [0, 4, 7, 14];
+        else if (quality === '6') intervals = [0, 4, 7, 9];
+        else if (quality === 'm6') intervals = [0, 3, 7, 9];
+        else if (quality === '9') intervals = [0, 4, 7, 10, 14];
+        else if (quality === 'maj9') intervals = [0, 4, 7, 11, 14];
+        else if (quality === 'm9') intervals = [0, 3, 7, 10, 14];
+        else if (quality === '11') intervals = [0, 5, 7, 10, 14, 17]; 
+        else if (quality === 'm11') intervals = [0, 3, 7, 10, 14, 17];
+        else if (quality === 'maj11') intervals = [0, 4, 7, 11, 14, 17];
+        else if (quality === 'maj7#11') intervals = [0, 4, 7, 11, 14, 18];
+        else if (quality === '13') intervals = [0, 4, 7, 10, 14, 21];
+        else if (quality === 'm13') intervals = [0, 3, 7, 10, 14, 21];
+        else if (quality === 'maj13') intervals = [0, 4, 7, 11, 14, 21];
+        else if (quality === '7alt') intervals = [0, 4, 10, 13, 15, 18, 20];
+        else if (quality === '7b13') intervals = [0, 4, 7, 10, 14, 20];
+        else if (quality === '7#11') intervals = [0, 4, 7, 10, 14, 18];
+        else if (quality === '7b9') intervals = [0, 4, 7, 10, 13];
+        else if (quality === '7#9') intervals = [0, 4, 7, 10, 15];
+        else if (quality === '5') intervals = [0, 7];
     }
 
-    // 3. FALLBACK: STANDARD TRIADS/EXTENSIONS
-    let intervals = [0, 4, 7];
-    const isMinorQuality = (quality.startsWith('m') && !quality.startsWith('maj')) || quality === 'minor' || quality === 'halfdim';
-    if (isMinorQuality) {
-        intervals = [0, 3, 7];
-    }
-    
-    if (quality === 'dim') intervals = [0, 3, 6];
-    else if (quality === 'halfdim') intervals = [0, 3, 6, 10]; // 1, b3, b5, b7
-    else if (quality === 'aug') intervals = [0, 4, 8];
-    else if (quality === 'sus4') intervals = [0, 5, 7];
-    else if (quality === 'sus2') intervals = [0, 2, 7];
-    else if (quality === 'add9') intervals = [0, 4, 7, 14];
-    else if (quality === '6') intervals = [0, 4, 7, 9];
-    else if (quality === 'm6') intervals = [0, 3, 7, 9];
-    else if (quality === '9') intervals = [0, 4, 7, 10, 14];
-    else if (quality === 'maj9') intervals = [0, 4, 7, 11, 14];
-    else if (quality === 'm9') intervals = [0, 3, 7, 10, 14];
-    else if (quality === '11') intervals = [0, 5, 7, 10, 14, 17]; // No 3rd to avoid clash
-    else if (quality === 'm11') intervals = [0, 3, 7, 10, 14, 17];
-    else if (quality === 'maj11') intervals = [0, 4, 7, 11, 14, 17];
-    else if (quality === 'maj7#11') intervals = [0, 4, 7, 11, 14, 18];
-    else if (quality === '13') intervals = [0, 4, 7, 10, 14, 21];
-    else if (quality === 'm13') intervals = [0, 3, 7, 10, 14, 21];
-    else if (quality === 'maj13') intervals = [0, 4, 7, 11, 14, 21];
-    else if (quality === '7alt') intervals = [0, 4, 10, 13, 15, 18, 20]; // 1, 3, b7, b9, #9, #11, b13
-    else if (quality === '7b13') intervals = [0, 4, 7, 10, 14, 20];
-    else if (quality === '7#11') intervals = [0, 4, 7, 10, 14, 18];
-    else if (quality === '7b9') intervals = [0, 4, 7, 10, 13];
-    else if (quality === '7#9') intervals = [0, 4, 7, 10, 15];
-    else if (quality === '5') intervals = [0, 7];
-
-    if (is7th || quality === 'halfdim') {
-        const isMajor7th = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
-        if (isMajor7th) intervals.push(11);
-        else if (quality === 'dim') { if (!intervals.includes(9)) intervals.push(9); }
-        else if (quality === 'halfdim') { 
-            // b7 already added above for halfdim
+    // 3. INTENSITY-BASED EXTENSIONS
+    // 0.6 - 0.7: Add 7ths/9ths (Targeting Pop/Rock/Acoustic)
+    if (intensity >= 0.6 && quality !== '5' && !['Rock', 'Jazz', 'Funk'].includes(genre)) {
+        if (!is7th && quality !== '6' && quality !== 'm6') {
+            const isMajor7th = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
+            const seven = isMajor7th ? 11 : 10;
+            if (!intervals.includes(seven)) intervals.push(seven);
         }
-        else if (!intervals.includes(10) && !isMajor7th && quality !== '5' && quality !== '6' && quality !== 'm6') {
-            intervals.push(10); 
+        if (!intervals.includes(14)) intervals.push(14); // 9th
+    }
+
+    // 0.8 - 1.0: Full Octave (add Root an octave up)
+    if (intensity >= 0.8) {
+        if (!intervals.includes(12)) intervals.push(12);
+        // Also ensure 5th is there for "Wall of Sound"
+        if (!intervals.includes(7)) intervals.push(7);
+        // For Rock, if high intensity, also add the 7th for more "grit"
+        if (genre === 'Rock' && !intervals.includes(10) && quality !== 'maj7') {
+            if (!intervals.includes(10)) intervals.push(10);
         }
     }
 
+    // 4. DENSITY-BASED MODIFICATIONS
     if (density === 'thin' && intervals.length >= 4) {
         if (intervals.includes(7)) intervals = intervals.filter(i => i !== 7);
     } else if (isRich && intervals.length <= 5 && quality !== '5') {
-        // SMART EXTENSIONS: Add safe tensions based on chord quality
         const safeExtensions = {
             'major': [14],      // 9
             'maj7': [14, 18],   // 9, #11
             'minor': [14, 17],   // 9, 11
             'm7': [14, 17],     // 9, 11
             '7': [14, 21],      // 9, 13
-            'halfdim': [17],    // 11 (Natural 9 is dangerous)
+            'halfdim': [17],    // 11
             '7alt': [13, 15, 20], // b9, #9, b13
             '9': [21],          // 13
             '13': [18]          // #11
@@ -482,10 +494,17 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
         for (const ext of potential) {
             if (!intervals.includes(ext) && !intervals.includes(ext % 12)) {
                 intervals.push(ext);
-                if (intervals.length >= 5) break; // Don't over-clutter
+                if (intervals.length >= 5) break; 
             }
         }
     }
+
+    // 5. ENSURE 7th if requested but not present
+    if (is7th && !['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11', 'halfdim', '7b9', '7#9', '7alt', '9', 'dim'].includes(quality)) {
+        if (!intervals.includes(10)) intervals.push(10);
+    }
+    if (quality === 'dim' && is7th && !intervals.includes(9)) intervals.push(9);
+
     return intervals;
 }
 

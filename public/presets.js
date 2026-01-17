@@ -32,6 +32,13 @@ export const SONG_TEMPLATES = [
             { label: 'Drop', value: 'vi | IV | I | V' }
         ],
         isMinor: false
+    },
+    {
+        name: 'Alternative Loop',
+        sections: [
+            { label: 'Loop', value: 'I | I | III | III | IV | IV | iv | iv' }
+        ],
+        isMinor: false
     }
 ];
 
@@ -783,19 +790,24 @@ export const CHORD_PRESETS = [
         category: "Jazz",
         settings: { bpm: 240, style: 'jazz' }
     },
-    {
-        name: "Blue Bossa",
-        sections: [
-            { label: "Main", key: "C", value: "Cm7 | Cm7 | Fm7 | Fm7 | Dm7b5 | G7alt | Cm7 | Cm7" },
-            { label: "Modulation", key: "Db", value: "Ebm7 | Ab7 | Dbmaj7 | Dbmaj7" },
-            { label: "Turnaround", key: "C", value: "Dm7b5 | G7alt | Cm7 | Dm7b5 G7alt" }
-        ],
-        category: "Jazz",
-        isMinor: true,
-        settings: { bpm: 140, style: 'bossa' }
-    }
-];
-// Post-process DRUM_PRESETS to expand string patterns into arrays
+        {
+            name: "Blue Bossa",
+            sections: [
+                { label: "Main", key: "C", value: "Cm7 | Cm7 | Fm7 | Fm7 | Dm7b5 | G7alt | Cm7 | Cm7" },
+                { label: "Modulation", key: "Db", value: "Ebm7 | Ab7 | Dbmaj7 | Dbmaj7" },
+                { label: "Turnaround", key: "C", value: "Dm7b5 | G7alt | Cm7 | Dm7b5 G7alt" }
+            ],
+            category: "Jazz",
+            isMinor: true,
+            settings: { bpm: 140, style: 'bossa' }
+        },
+        {
+            name: "Alternative Loop",
+            sections: [{ label: 'Loop', value: "I | I | III | III | IV | IV | iv | iv" }],
+            category: "Pop/Rock",
+            settings: { bpm: 120, style: 'smart' }
+        }
+    ];// Post-process DRUM_PRESETS to expand string patterns into arrays
 for (const p of Object.values(DRUM_PRESETS)) {
     const expand = (obj) => {
         for (const [key, val] of Object.entries(obj)) {

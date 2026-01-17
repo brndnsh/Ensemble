@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global modules
 vi.mock('../../../public/state.js', () => ({
-    cb: { octave: 60, density: 'standard', practiceMode: false },
-    arranger: { timeSignature: '4/4', key: 'C', isMinor: false },
+    ctx: { bandIntensity: 0.5 },
+    cb: { practiceMode: true, density: 'standard' },
+    arranger: { timeSignature: '4/4' },
     gb: { genreFeel: 'Jazz' },
     bb: { enabled: true }
 }));
