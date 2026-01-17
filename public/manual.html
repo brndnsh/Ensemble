@@ -47,24 +47,25 @@
             color: var(--accent-hover);
         }
         section {
-            margin-bottom: 4rem;
+            margin-bottom: 3rem;
             scroll-margin-top: 2rem;
         }
         h2 {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             color: var(--accent-color);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 0.5rem;
         }
         h3 {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             color: var(--text-color);
-            margin: 2rem 0 1rem;
+            margin: 1.5rem 0 0.5rem;
         }
         p {
             margin-bottom: 1rem;
             color: var(--text-secondary);
+            font-size: 0.95rem;
         }
         code {
             background: var(--input-bg);
@@ -76,14 +77,14 @@
         }
         .toc {
             background: var(--panel-color);
-            padding: 1.5rem;
+            padding: 1rem 1.5rem;
             border-radius: 12px;
             margin-bottom: 3rem;
             border: 1px solid var(--border-color);
         }
         .toc h4 {
             margin-top: 0;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             color: var(--text-color);
             text-transform: uppercase;
             font-size: 0.8rem;
@@ -93,7 +94,7 @@
             list-style: none;
             padding: 0;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 0.5rem;
         }
         @media (max-width: 600px) {
@@ -112,9 +113,9 @@
         .feature-card {
             background: var(--panel-color);
             border: 1px solid var(--border-color);
-            padding: 1.5rem;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
         }
         .feature-card h4 {
             margin-top: 0;
@@ -122,13 +123,15 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            font-size: 1rem;
         }
         ul.list-detailed {
             padding-left: 1.2rem;
             color: var(--text-secondary);
+            font-size: 0.9rem;
         }
         ul.list-detailed li {
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
         .shortcut-grid {
             display: grid;
@@ -145,16 +148,17 @@
             font-weight: bold;
             box-shadow: 0 2px 0 var(--panel-color);
             font-size: 0.85rem;
+            white-space: nowrap;
         }
         .notation-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 1.5rem 0;
+            margin: 1rem 0;
             font-size: 0.9rem;
         }
         .notation-table th, .notation-table td {
             text-align: left;
-            padding: 0.75rem;
+            padding: 0.5rem;
             border-bottom: 1px solid var(--border-color);
         }
         .notation-table th {
@@ -171,318 +175,107 @@
         </header>
 
         <nav class="toc">
-            <h4>Table of Contents</h4>
+            <h4>Contents</h4>
             <ul>
-                <li><a href="#intro">Introduction</a></li>
-                <li><a href="#examples">Interactive Examples</a></li>
-                <li><a href="#chords">Chords & Notation</a></li>
-                <li><a href="#grooves">Grooves & Rhythm</a></li>
-                <li><a href="#bassist">Algorithmic Bassist</a></li>
-                <li><a href="#soloist">Algorithmic Soloist</a></li>
-                <li><a href="#visualizer">Unified Visualizer</a></li>
-                <li><a href="#midi">MIDI & DAW Connection</a></li>
+                <li><a href="#intro">Overview</a></li>
+                <li><a href="#chords">Arranger & Chords</a></li>
+                <li><a href="#instruments">Instruments</a></li>
+                <li><a href="#midi">MIDI & Export</a></li>
+                <li><a href="#examples">Examples</a></li>
                 <li><a href="#shortcuts">Shortcuts</a></li>
-                <li><a href="#advanced">Diagnostics & Advanced</a></li>
             </ul>
         </nav>
 
         <section id="intro">
-            <h2>Introduction</h2>
-            <p>Ensemble is a high-performance generative musical accompaniment engine. It coordinates an intelligent virtual band that reacts to your arrangements in real-time. The app is divided into two primary areas:</p>
+            <h2>Overview</h2>
+            <p>Ensemble is a generative accompaniment engine. It coordinates a virtual band that adapts to your arrangement in real-time using two core systems:</p>
             <ul class="list-detailed">
-                <li><strong>Arranger:</strong> Define your song's structure, harmonic progression, key, and time signature.</li>
-                <li><strong>Accompanist:</strong> Fine-tune the "Smart Grooves" system, individual instrument styles, and performance dynamics.</li>
+                <li><strong>Smart Grooves:</strong> Automatically recalibrates the rhythmic feel (swing, micro-timing) and synthesis parameters based on the selected Genre (Jazz, Funk, Neo-Soul, etc.).</li>
+                <li><strong>The Conductor:</strong> A global signal controlling <strong>Band Intensity</strong> (energy/density) and <strong>Complexity</strong> (syncopation/harmony).</li>
             </ul>
-            <p>Built with <strong>Vanilla JS</strong> and the <strong>Web Audio API</strong>, Ensemble uses background workers to ensure high-precision timing and glitch-free audio even during complex visual rendering.</p>
+        </section>
+
+        <section id="chords">
+            <h2>Arranger & Chords</h2>
             
-            <h3>Solarized Themes</h3>
-            <p>Ensemble includes professional <strong>Solarized Dark</strong> and <strong>Solarized Light</strong> themes. You can choose your preferred theme in the Settings menu or set it to <strong>Auto</strong> to sync with your system preferences.</p>
+            <h3>Notation & Time</h3>
+            <p>Toggle notation styles in Settings (Names, Roman, Nashville). Supports time signatures from <strong>2/4</strong> to <strong>12/8</strong>, including odd meters (5/4, 7/8).</p>
 
-            <h3>The Smart Grooves System</h3>
-            <p>The "brain" of Ensemble is the <strong>Smart Grooves</strong> coordinator. When you select a genre feel (e.g., Jazz, Funk, Disco, Hip Hop, Reggae), the app automatically recalibrates every instrument's rhythmic feel, micro-timing, and synthesis parameters to ensure an authentic performance.</p>
-
-            <h3>Band Dynamics (The Conductor)</h3>
-            <p>Ensemble features a global "Conductor" signal that influences every instrument simultaneously:</p>
+            <h3>Editing</h3>
             <ul class="list-detailed">
-                <li><strong>Band Intensity:</strong> Controls the overall energy. Higher intensity leads to more aggressive drum fills, higher-register bass lines, and busier soloing.</li>
-                <li><strong>Complexity:</strong> Adjusts how "advanced" the virtual band plays. High complexity introduces more syncopation, chromaticism, and sophisticated chord voicings.</li>
-                <li><strong>Auto-Intensity:</strong> When enabled, the band will naturally build and release tension over the course of the song form, peaking during "Chorus" sections.</li>
+                <li><strong>Actions Menu (🪄):</strong> Randomize progressions, mutate existing chords, or load genre templates.</li>
+                <li><strong>Link Sections (🔗):</strong> Merge sections to create continuous phrases without drum fills.</li>
+                <li><strong>Practice Mode:</strong> Enabling this simplifies the display for students and switches to "Rootless Voicings" for the piano.</li>
+            </ul>
+        </section>
+
+        <section id="instruments">
+            <h2>Instruments</h2>
+
+            <div class="feature-card">
+                <h4 style="color: var(--yellow);">Grooves (Drums)</h4>
+                <p style="font-size: 0.9rem; margin: 0;">16-step sequencer with auto-generated fills based on Band Intensity. Features specific "feels" like <strong>Dilla</strong> (Neo-Soul), <strong>One Drop</strong> (Reggae), and <strong>Swing</strong>.</p>
+            </div>
+
+            <div class="feature-card">
+                <h4 style="color: var(--success-color);">Bass</h4>
+                <p style="font-size: 0.9rem; margin: 0;">Generates lines based on style (Walking, Funk, Disco, etc.). Automatically handles slash chords (e.g., <code>C/G</code>) and register shifts.</p>
+            </div>
+
+            <div class="feature-card">
+                <h4 style="color: var(--soloist-color);">Soloist</h4>
+                <p style="font-size: 0.9rem; margin: 0;">Phrasing-aware improvisation. Includes style-specific logic like <strong>Double Stops</strong>, <strong>Enclosures</strong> (Bebop), and <strong>Motif Retention</strong>.</p>
+            </div>
+
+            <div class="feature-card">
+                <h4 style="color: var(--accent-color);">Visualizer</h4>
+                <p style="font-size: 0.9rem; margin: 0;">Real-time view using harmonic colors: <strong>Root</strong> (Blue), <strong>3rd</strong> (Green), <strong>5th</strong> (Orange), <strong>7th+</strong> (Violet).</p>
+            </div>
+        </section>
+
+        <section id="midi">
+            <h2>MIDI & Export</h2>
+            <p>Route performance to external DAWs (Logic, Ableton, etc.) or export standard MIDI files.</p>
+            <ul class="list-detailed">
+                <li><strong>Enable:</strong> Settings > Enable Web MIDI Output.</li>
+                <li><strong>Channels:</strong> Chords (1), Bass (2), Soloist (3), Drums (10).</li>
+                <li><strong>Local Mute:</strong> Browser audio is muted by default when MIDI is active.</li>
+                <li><strong>Export:</strong> Download a multi-track .mid file for offline editing.</li>
             </ul>
         </section>
 
         <section id="examples">
             <h2>Interactive Examples</h2>
-            <p>Load curated setups directly into the app to explore different genres and features.</p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
-                <a href="index.html?prog=I+vi+IV+V&style=rock&bpm=120" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s;">
-                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Stadium Rock</h4>
-                    <p style="font-size: 0.8rem; margin: 0;">Driving 8th notes with palm-muted bass and powerful drum fills.</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.5rem;">
+                <a href="index.html?prog=I+vi+IV+V&style=rock&bpm=120" class="feature-card" style="text-decoration: none; margin:0; padding: 0.8rem; text-align: center;">
+                    <strong style="color: var(--accent-color);">Stadium Rock</strong>
                 </a>
-                <a href="index.html?prog=ii7+V7+Imaj7&style=jazz&bpm=110" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s;">
-                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Bebop Jam</h4>
-                    <p style="font-size: 0.8rem; margin: 0;">Walking bass and syncopated "Bird" soloist over classic changes.</p>
+                <a href="index.html?prog=ii7+V7+Imaj7&style=jazz&bpm=110" class="feature-card" style="text-decoration: none; margin:0; padding: 0.8rem; text-align: center;">
+                    <strong style="color: var(--accent-color);">Bebop Jazz</strong>
                 </a>
-                <a href="index.html?prog=IVmaj7+iii7+ii7+Imaj7&style=neo&bpm=85" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s;">
-                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Neo-Soul Chill</h4>
-                    <p style="font-size: 0.8rem; margin: 0;">"Dilla-feel" micro-timing with lush, laid-back quartal voicings.</p>
+                <a href="index.html?prog=IVmaj7+iii7+ii7+Imaj7&style=neo&bpm=85" class="feature-card" style="text-decoration: none; margin:0; padding: 0.8rem; text-align: center;">
+                    <strong style="color: var(--accent-color);">Neo-Soul</strong>
                 </a>
-                <a href="index.html?prog=i7+IV7&style=disco&bpm=124" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s;">
-                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Disco Fever</h4>
-                    <p style="font-size: 0.8rem; margin: 0;">Classic four-on-the-floor rhythm with an octave-jumping bass line.</p>
-                </a>
-                <a href="index.html?prog=i+v+i+IV&style=reggae&bpm=72" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s;">
-                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-color);">Reggae/Dub</h4>
-                    <p style="font-size: 0.8rem; margin: 0;">Heavy sub-bass riddims with syncopated "Bubble/Skank" piano chords.</p>
+                <a href="index.html?prog=i7+IV7&style=disco&bpm=124" class="feature-card" style="text-decoration: none; margin:0; padding: 0.8rem; text-align: center;">
+                    <strong style="color: var(--accent-color);">Disco</strong>
                 </a>
             </div>
-
-            <h3>Jazz Standards Library</h3>
-            <p>Load <strong>full song forms</strong> of iconic standards directly into the Arranger.</p>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem;">
-                <a href="index.html?s=W3sibCI6IkEiLCJ2IjoiQW03IHwgRG03IHwgRzcgfCBDbWFqNyB8IEZtYWo3IHwgQm03YjUgfCBFNyB8IEFtNyJ9LHsibCI6IkIiLCJ2IjoiRG03IHwgRzcgfCBDbWFqNyB8IEE3IHwgRG03IHwgRzcgfCBDbWFqNyB8IEU3In0seyJsIjoiQSIsInYiOiJBbTcgfCBEbTcgfCBHNyB8IENtYWo3IHwgRm1hai4gfCBCbTdiNSB8IEU3IHwgQW03In0seyJsIjoiQyIsInYiOiJEbTcgfCBHNyB8IEVtNyB8IEE3IHwgRG03IHwgRzcgfCBDbWFqNyB8IEU3In1d&key=C&style=jazz&bpm=130" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s; padding: 1rem;">
-                    <h5 style="margin: 0; color: white;">Fly Me To The Moon</h5>
-                    <p style="font-size: 0.75rem; margin: 0.25rem 0 0; color: #94a3b8;">32-bar ABAC (Am)</p>
-                </a>
-                <a href="index.html?s=W3sibCI6IkEiLCJ2IjoiQ21hai4gfCBDbWFqNyB8IEQ3IHwgRDcgfCBEbTcgfCBHNyB8IENtYWo3IHwgRG03IEc3In0seyJsIjoiQSIsInYiOiJDbWFqNyB8IENtYWo3IHwgRDcgfCBENyB8IERtNyB8IEc3IHwgQ21hai4gfCBDNyJ9LHsibCI6IkIiLCJ2IjoiRm1hai4gfCBGbWFqNyB8IEZtYWo3IHwgRm1hai4gfCBENyB8IEQ3IHwgRG03IHwgRzcifSx7ImwiOiJBIiwidiI6IkNtYWo3IHwgQ21hai4gfCBENyB8IEQ3IHwgRG03IHwgRzcgfCBDbWFqNyB8IENtYWo3In1d&key=C&style=jazz&bpm=160" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s; padding: 1rem;">
-                    <h5 style="margin: 0; color: white;">Take the 'A' Train</h5>
-                    <p style="font-size: 0.75rem; margin: 0.25rem 0 0; color: #94a3b8;">32-bar AABA (C)</p>
-                </a>
-                <a href="index.html?s=W3sibCI6IkEiLCJ2IjoiQW03IHwgQm03YjUgRTcgfCBBbTcgfCBCbTdiNSBFNyB8IERtNyB8IEc3IHwgQ21hai4gfCBGbWFqNyJ9LHsibCI6IkIiLCJ2IjoiQm03YjUgfCBFNyB8IEFtNyB8IEFtNyB8IEJtN2I1IHwgRTcgfCBBbTcgfCBBbTcifSx7ImwiOiJDIiwidiI6IkRtNyB8IEc3IHwgQ21hai4gfCBGbWFqNyB8IEJtN2I1IHwgRTcgfCBBbTcgfCBBNyJ9LHsibCI6IkQiLCJ2IjoiRG03IHwgRzcgfCBDbWFqNyB8IEZtYWo3IHwgQm03YjUgfCBFNyB8IEFtNyB8IEJtN2I1IEU3In1d&key=A&style=bossa&bpm=140" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s; padding: 1rem;">
-                    <h5 style="margin: 0; color: white;">Black Orpheus</h5>
-                    <p style="font-size: 0.75rem; margin: 0.25rem 0 0; color: #94a3b8;">32-bar Bossa (Am)</p>
-                </a>
-                <a href="index.html?s=W3sibCI6IkEiLCJ2IjoiRG03IHwgRG03IHwgRG03IHwgRG03IHwgRG03IHwgRG03IHwgRG03IHwgRG03In0seyJsIjoiQSIsInYiOiJEbTcgfCBEbTcgfCBEbTcgfCBEbTcgfCBEbTcgfCBEbTcgfCBEbTcgfCBEbTcifSx7ImwiOiJCIiwidiI6IkVibTcgfCBFYm03IHwgRWVibTcgfCBFYm03IHwgRWVibTcgfCBFYm03IHwgRWVibTcgfCBFYm03In0seyJsIjoiQSIsInYiOiJEbTcgfCBEbTcgfCBEbTcgfCBEbTcgfCBEbTcgfCBEbTcgfCBEbTcgfCBEbTcifV0=&key=D&style=jazz&bpm=135" class="feature-card" style="text-decoration: none; display: block; transition: transform 0.2s; padding: 1rem;">
-                    <h5 style="margin: 0; color: white;">So What</h5>
-                    <p style="font-size: 0.75rem; margin: 0.25rem 0 0; color: #94a3b8;">32-bar Modal (Dm/Ebm)</p>
-                </a>
-            </div>
-        </section>
-
-        <section id="chords">
-            <h2>Chords & Notation</h2>
-            <p>Ensemble automatically parses your input and generates smooth, musical voicings with intelligent voice-leading.</p>
-            
-            <h3>Notation Systems</h3>
-            <p>Toggle between three primary systems in the Settings menu:</p>
-            
-            <table class="notation-table">
-                <thead>
-                    <tr>
-                        <th>System</th>
-                        <th>Example</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>Names</strong></td>
-                        <td><code>Cmaj7 Am9</code></td>
-                        <td>Standard absolute chord names.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Roman</strong></td>
-                        <td><code>ii7 V7 Imaj7</code></td>
-                        <td>Functional harmony. Automatically transposes with key changes.</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Nashville</strong></td>
-                        <td><code>2-7 57 1maj7</code></td>
-                        <td>Professional number system. Use <code>-</code> for minor.</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h3>Time Signatures & Grouping</h3>
-            <p>Ensemble supports <strong>2/4, 3/4, 4/4, 5/4, 6/8, 7/8, 7/4, and 12/8</strong> time signatures. For odd meters (like 5/4 or 7/8), you can specify rhythmic groupings (e.g., <strong>3+2</strong> or <strong>2+2+3</strong>) to change how the virtual band feels the pulse.</p>
-
-            <h3>Relative Major/Minor Toggle</h3>
-            <p>The <code>maj</code> / <code>min</code> button allows you to switch the analytical context of your song. Toggling to <code>min</code> automatically rewrites Roman Numerals and Nashville Numbers (e.g., <code>vi</code> becomes <code>i</code>) and cues the band to use minor-key phrases and scales.</p>
-
-            <h3>Arranger & Song Form</h3>
-            <p>Organize your song into sections (Verse, Chorus, Bridge) using the <strong>✏️ Edit Arrangement</strong> tool:</p>
-            <ul class="list-detailed">
-                <li><strong>Practice Mode:</strong> Enable this in the Chords tab to use <strong>Rootless Jazz Voicings</strong> (perfect for piano students practicing with the virtual bassist).</li>
-                <li><strong>Actions Menu (🪄):</strong> Access templates (Pop, Jazz, Blues), 🎲 Randomize, or ✨ Mutate your progression.</li>
-                <li><strong>Drag-and-Drop:</strong> Reorder sections intuitively using the handle (⠿).</li>
-                <li><strong>Link Sections (🔗):</strong> Merge two sections seamlessly to suppress drum fills and create continuous musical phrases (e.g., for key changes within a Verse).</li>
-                <li><strong>Musical Mutation:</strong> Subtly evolve a section by swapping chords for functional substitutions.</li>
-                <li><strong>Per-Section Settings:</strong> Independent Key and Time Signature settings for complex forms (e.g. modulating bridges).</li>
-                <li><strong>Symbol Palette:</strong> Insert bar lines (<code>|</code>), qualities (<code>maj7</code>, <code>ø</code>), and accidentals quickly.</li>
-            </ul>
-        </section>
-
-        <section id="grooves">
-            <h2>Grooves & Rhythm</h2>
-            <p>The Grooves module features a high-precision 16-step drum sequencer with Kick, Snare, Hi-Hat, and Open Hat.</p>
-            
-            <div class="feature-card">
-                <h4>Smart Fills</h4>
-                <p style="font-size: 0.9rem; margin-bottom: 0;">Ensemble automatically generates procedural drum fills during section transitions. The complexity of the fill is dynamically calculated based on the <strong>Band Intensity</strong>, ensuring a natural reaction to the song's energy.</p>
-            </div>
-
-            <h3>Pattern Management</h3>
-            <ul class="list-detailed">
-                <li><strong>Multi-Measure Support:</strong> Create loops of 1, 2, 4, or 8 measures.</li>
-                <li><strong>Copy to All:</strong> Duplicate your current measure to all others instantly.</li>
-                <li><strong>Auto-follow Genre:</strong> Enabling this allows the drum sequencer to sync its grid and style with the global genre feel.</li>
-            </ul>
-
-            <h3>Swing & Feel</h3>
-            <ul class="list-detailed">
-                <li><strong>Swing:</strong> Adjust the "shuffle" intensity and toggle between 1/8 and 1/16 note bases.</li>
-                <li><strong>Humanize:</strong> Adds subtle timing jitter to simulate a real drummer.</li>
-                <li><strong>Dilla Feel:</strong> Automatically enabled in <strong>Neo-Soul</strong> and <strong>Hip Hop</strong> genres.</li>
-                <li><strong>Reggae Riddims:</strong> Supports specialized patterns like <strong>One Drop</strong>, <strong>Steppers</strong>, and <strong>Stalag</strong>.</li>
-            </ul>
-        </section>
-
-        <section id="bassist">
-            <h2>Algorithmic Bassist</h2>
-            <p>The Bassist generates human-like lines based on your chord progression and selected style.</p>
-            <ul class="list-detailed">
-                <li><strong>Walking:</strong> Quarter-note jazz lines featuring scalar, arpeggio, and chromatic approach notes. Always lands on the <strong>Root</strong> at chord changes.</li>
-                <li><strong>Funk:</strong> Syncopated 16th-note grooves with percussive ghost notes and octave pops.</li>
-                <li><strong>Rocco:</strong> Dense finger-funk 16th-note textures inspired by Tower of Power.</li>
-                <li><strong>Disco:</strong> Pumping "four-on-the-floor" octave-jumping performance.</li>
-                <li><strong>Neo-Soul:</strong> Deep register with 10th intervals and "laid-back" micro-timing.</li>
-                <li><strong>Reggae (Dub):</strong> Deep, sub-heavy lines featuring authentic syncopated riddims.</li>
-                <li><strong>Bossa Nova:</strong> Authentic syncopated Brazilian rhythm alternating Root and Fifth.</li>
-                <li><strong>Whole / Half / Arp:</strong> Fundamental foundational styles for pads and folk.</li>
-            </ul>
-            <div class="feature-card">
-                <h4>Dynamic Register & Intensity</h4>
-                <p style="font-size: 0.9rem; margin-bottom: 0;">The bassist automatically shifts its playing register based on the genre (e.g., deeper for Dub, higher for Disco) and builds energy by adding complexity as <strong>Band Intensity</strong> increases.</p>
-            </div>
-            <div class="feature-card">
-                <h4>Slash Chord Support</h4>
-                <p style="font-size: 0.9rem; margin-bottom: 0;">The bassist respects slash notation (e.g., <code>C/G</code>) by prioritizing the specified bass note as the harmonic foundation.</p>
-            </div>
-        </section>
-
-        <section id="soloist">
-            <h2>Algorithmic Soloist</h2>
-            <p>The Soloist thinks in phrases and "rhythmic cells" rather than just random notes.</p>
-            <ul class="list-detailed">
-                <li><strong>Bird:</strong> Sophisticated Bebop style with chromatic enclosures and high-density 8th-note streams.</li>
-                <li><strong>Shreddy:</strong> High-energy legato-style attacks and wide arpeggio sweeps.</li>
-                <li><strong>Neo-Soul:</strong> Quartal double-stops, lazy timing, and percussive ghost notes.</li>
-                <li><strong>Blues:</strong> Minor pentatonic focus with authentic string bends and turnaround awareness.</li>
-                <li><strong>Minimal:</strong> Thoughtful, sparse playing with expressive vibrato and full-step bends.</li>
-            </ul>
-
-            <div class="feature-card">
-                <h4>Advanced Expressive Logic</h4>
-                <ul class="list-detailed" style="margin-bottom:0; font-size: 0.9rem;">
-                    <li><strong>Double Stops:</strong> Toggle between single-note horn/vocal lines and guitar-style harmonized intervals.</li>
-                    <li><strong>Motif Retention:</strong> The soloist identifies "hooky" phrases and intelligently repeats or varies them throughout a section.</li>
-                    <li><strong>Melodic Devices:</strong> Incorporates Bebop enclosures, Blue note curls, and rhythmic call-and-response patterns.</li>
-                </ul>
-            </div>
-        </section>
-
-        <section id="visualizer">
-            <h2>Unified Visualizer</h2>
-            <p>The real-time "Piano Roll" view uses a <strong>Harmonic Color Scheme</strong> to visualize note function:</p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0;">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 20px; height: 20px; border-radius: 4px; background: var(--blue);"></div>
-                    <span style="color: var(--text-color); font-size: 0.85rem;">Root</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 20px; height: 20px; border-radius: 4px; background: var(--green);"></div>
-                    <span style="color: var(--text-color); font-size: 0.85rem;">3rd (Quality)</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 20px; height: 20px; border-radius: 4px; background: var(--orange);"></div>
-                    <span style="color: var(--text-color); font-size: 0.85rem;">5th (Stability)</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 20px; height: 20px; border-radius: 4px; background: var(--violet);"></div>
-                    <span style="color: var(--text-color); font-size: 0.85rem;">7th+ (Color)</span>
-                </div>
-            </div>
-            <p><strong>Note:</strong> To save resources, the visualizer is disabled by default. Enable it with the ⏻ power button in the visualizer panel.</p>
-        </section>
-
-        <section id="midi">
-            <h2>MIDI & DAW Connection</h2>
-            <p>Ensemble supports both high-quality file exports and real-time connectivity to professional DAWs like Logic Pro, Ableton Live, and Cubase.</p>
-            
-            <h3>Real-Time DAW Connection</h3>
-            <p>Route Ensemble's generative performances directly into your DAW to use your own virtual instruments and high-end plugins.</p>
-            <ul class="list-detailed">
-                <li><strong>Enable Output:</strong> Go to Settings (⚙️) and check <strong>Enable Web MIDI Output</strong>.</li>
-                <li><strong>Port Selection:</strong> Select a virtual MIDI bus (like <strong>IAC Driver</strong> on macOS) or a hardware output.</li>
-                <li><strong>Channel Mapping:</strong> Assign each instrument to a specific MIDI channel (Defaults: Chords 1, Bass 2, Soloist 3, Drums 10).</li>
-                <li><strong>Velocity Compression:</strong> Use the <strong>Velocity Sensitivity</strong> slider to calibrate how hard the band plays your DAW's instruments. A setting of 1.0 maps a standard note to MIDI 85, leaving headroom for accents.</li>
-                <li><strong>Local Muting:</strong> By default, browser audio is muted when MIDI is enabled so you only hear your DAW.</li>
-            </ul>
-
-            <div class="feature-card">
-                <h4>Logic Pro Quick Start</h4>
-                <ol class="list-detailed" style="margin-bottom:0; font-size: 0.9rem;">
-                    <li>Enable <strong>IAC Driver</strong> in Audio MIDI Setup.</li>
-                    <li>In Logic, create tracks for each instrument.</li>
-                    <li>In the Track Inspector, set <strong>MIDI Input</strong> to the specific channel (e.g., Bass = Ch. 2) instead of "All".</li>
-                    <li>Enable <strong>Allow multitrack recording</strong> in Project Settings.</li>
-                    <li>Record-arm all tracks and press Start in Ensemble.</li>
-                </ol>
-            </div>
-
-            <h3>MIDI File Export</h3>
-            <p>Export your progression as a Standard MIDI File (SMF) for offline editing. The export includes:</p>
-            <ul class="list-detailed">
-                <li><strong>Track 1:</strong> Chords (with naming markers)</li>
-                <li><strong>Track 2:</strong> Bass performance</li>
-                <li><strong>Track 3:</strong> Soloist (including pitch bends)</li>
-                <li><strong>Track 10:</strong> Drums (GM Compatible)</li>
-            </ul>
         </section>
 
         <section id="shortcuts">
             <h2>Shortcuts</h2>
             <div class="shortcut-grid">
-                <span class="shortcut-key">Space</span>
-                <span>Start / Stop Playback</span>
-
-                <span class="shortcut-key">E</span>
-                <span>Toggle Arrangement Editor</span>
-
-                <span class="shortcut-key">Esc</span>
-                <span>Close Settings / Editor / Maximize</span>
-
-                <span class="shortcut-key">1-4</span>
-                <span>Switch Instrument Tabs</span>
-
-                <span class="shortcut-key">[</span>
-                <span>Previous Drum Measure</span>
-
-                <span class="shortcut-key">]</span>
-                <span>Next Drum Measure</span>
-
-                <span class="shortcut-key">⛶</span>
-                <span>Maximize Chords (Practice Mode)</span>
-
-                <span class="shortcut-key">⚙️</span>
-                <span>Open Settings</span>
-            </div>
-        </section>
-
-        <section id="advanced">
-            <h2>Diagnostics & Advanced</h2>
-            <div class="feature-card">
-                <h4>Console Commands</h4>
-                <ul class="list-detailed" style="margin-bottom:0;">
-                    <li><code>window.bypassMaster(true)</code>: Bypass master saturator/limiter.</li>
-                    <li><code>window.bypassVisuals(true)</code>: Disable all UI rendering to troubleshoot audio stutter.</li>
-                    <li><code>monitorMasterLimiter()</code>: Print real-time gain reduction values.</li>
-                </ul>
+                <span class="shortcut-key">Space</span> <span>Start / Stop</span>
+                <span class="shortcut-key">E</span> <span>Arrangement Editor</span>
+                <span class="shortcut-key">Esc</span> <span>Close / Back</span>
+                <span class="shortcut-key">1-4</span> <span>Instrument Tabs</span>
+                <span class="shortcut-key">[ ]</span> <span>Drum Measures</span>
+                <span class="shortcut-key">⛶</span> <span>Maximize Chords</span>
             </div>
         </section>
 
         <footer style="text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 5rem;">
-            Ensemble &copy; 2026. All rights reserved.
+            Ensemble &copy; 2026
         </footer>
     </div>
 
