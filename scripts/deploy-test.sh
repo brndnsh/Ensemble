@@ -21,7 +21,7 @@ rsync -av --exclude='*.js' public/ dist/
 
 # 4. Deploy to TEST server
 echo "🚚 Uploading to ensembletest..."
-scp -r dist/* ensembletest:/var/www/html/
+scp -r dist/* root@ensembletest:/var/www/html/
 
 # 5. Cleanup
 echo "🧹 Cleaning up..."

@@ -21,7 +21,7 @@ rsync -av --exclude='*.js' public/ dist/
 
 # 4. Deploy to PROD server
 echo "🚚 Uploading to ensemble..."
-scp -r dist/* ensemble:/var/www/html/
+scp -r dist/* root@ensemble:/var/www/html/
 
 # 5. Cleanup
 echo "🧹 Cleaning up..."
