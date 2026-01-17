@@ -360,7 +360,10 @@ export function scheduleBass(chordData, step, time) {
         const spb = 60.0 / ctx.bpm;
         const duration = (durationSteps || 4) * 0.25 * spb;
         const finalVel = (velocity || 1.0) * (ctx.conductorVelocity || 1.0);
-        if (vizState.enabled) ctx.drawQueue.push({ type: 'bass_vis', name, octave, midi, time: adjustedTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration });
+        if (vizState.enabled && ctx.viz) {
+            ctx.viz.truncateNotes('bass', adjustedTime);
+            ctx.drawQueue.push({ type: 'bass_vis', name, octave, midi, time: adjustedTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration });
+        }
         playBassNote(freq, adjustedTime, duration, finalVel, muted);
         if (!muted) {
             // Bass is strictly monophonic, so we force Mono mode to kill previous notes
@@ -374,7 +377,11 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
     sb.buffer.delete(step);
     
     if (notes && notes.length > 0) {
-        notes.forEach(noteEntry => {
+        // Enforce monophony at the scheduler level if double stops are disabled.
+        // This acts as a safety net if the worker sends overlapping notes.
+        const notesToPlay = sb.doubleStops ? notes : [notes[0]];
+
+        notesToPlay.forEach(noteEntry => {
             if (noteEntry && noteEntry.freq) {
                 const { freq, durationSteps, velocity, bendStartInterval, style, timingOffset, noteType } = noteEntry;
                 const { chord } = chordData;
@@ -395,9 +402,21 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
                 
                 // Soloist is monophonic UNLESS double stops are enabled
                 const isMono = !sb.doubleStops;
-                sendMIDINote(midiState.soloistChannel, midi + (midiState.soloistOctave * 12), normalizeMidiVelocity(vel), playTime, duration, isMono);
                 
-                if (vizState.enabled) {
+                // Support Pitch Bend for MIDI scoops
+                let bend = 0;
+                if (bendStartInterval !== 0) {
+                    // Map semitones to 14-bit value (-8192 to 8191)
+                    // Assuming standard 2-semitone range.
+                    bend = Math.round(-(bendStartInterval / 2) * 8192);
+                }
+
+                sendMIDINote(midiState.soloistChannel, midi + (midiState.soloistOctave * 12), normalizeMidiVelocity(vel), playTime, duration, { isMono, bend });
+                
+                if (vizState.enabled && ctx.viz) {
+                    if (isMono) {
+                        ctx.viz.truncateNotes('soloist', playTime);
+                    }
                     ctx.drawQueue.push({ type: 'soloist_vis', name, octave, midi, time: playTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration, noteType });
                 }
                 sb.lastNoteEnd = playTime + duration;

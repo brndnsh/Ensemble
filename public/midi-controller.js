@@ -122,6 +122,27 @@ export function normalizeMidiVelocity(internalVel) {
 }
 
 /**
+ * Sends a MIDI Pitch Bend message.
+ * @param {number} channel - 1-16
+ * @param {number} value - -8192 to 8191 (Center 0)
+ * @param {number} time - AudioContext time
+ */
+export function sendMIDIPitchBend(channel, value, time) {
+    if (!midi.enabled || !midi.selectedOutputId || !midiAccess) return;
+    const output = midiAccess.outputs.get(midi.selectedOutputId);
+    if (!output) return;
+
+    const midiTime = (time - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency;
+    const status = 0xE0 | (channel - 1);
+    
+    const normalized = Math.max(0, Math.min(16383, value + 8192));
+    const lsb = normalized & 0x7F;
+    const msb = (normalized >> 7) & 0x7F;
+    
+    output.send([status, lsb, msb], midiTime);
+}
+
+/**
  * Convenience helper to send a note with a duration.
  * Includes a small safety gap to ensure Note Offs occur before the next Note On.
  * intelligently handles overlaps by truncating previous notes if they overlap with new ones.
@@ -130,73 +151,53 @@ export function normalizeMidiVelocity(internalVel) {
  * @param {number} velocity 
  * @param {number} time 
  * @param {number} duration 
- * @param {boolean} [isMono=false] - If true, kills any other active notes on this channel before playing (Strict Monophony).
+ * @param {boolean|Object} [options=false] - If true, enforces monophony. Or pass object { isMono, bend }
  */
-export function sendMIDINote(channel, note, velocity, time, duration, isMono = false) {
+export function sendMIDINote(channel, note, velocity, time, duration, options = false) {
+    const isMono = typeof options === 'boolean' ? options : !!options.isMono;
+    const bend = typeof options === 'object' ? options.bend : 0;
+
     const key = `${channel}_${note}`;
     const now = ctx.audio.currentTime;
 
     // 0. Strict Monophony Enforcement (Voice Stealing at MIDI level)
-    // If this channel is monophonic, we must kill ANY other active note on this channel
-    // to prevent "choked" notes on synths that don't handle overlapping Note Offs well.
     if (isMono) {
         for (const activeKey of activeNotes) {
             const [chStr, nStr] = activeKey.split('_');
             const activeCh = parseInt(chStr);
             const activeNote = parseInt(nStr);
 
-            if (activeCh === channel) {
-                // Found an active note on this channel.
-                // Is it the same note? (Handled by overlap logic below, but we can kill it here too)
-                // Actually, if it's the same note, the overlap logic below handles "retriggering" better (timing-wise).
-                // But for DIFFERENT notes (e.g. legato run), we want to kill the previous one NOW.
-                
-                // If it's a different note, kill it immediately.
-                if (activeNote !== note) {
-                    // Send Off
-                    const output = midiAccess?.outputs.get(midi.selectedOutputId);
-                    if (output) {
-                        const status = 0x80 | (channel - 1);
-                        // Send immediately (with minimal timestamp lookahead to ensure order)
-                        // Actually, if we are scheduling a FUTURE note (time > now), we should probably
-                        // schedule this Kill to happen just before `time`.
-                        // BUT, if we assume isMono means "only one voice at a time", then starting a NEW scheduling
-                        // implies we are moving to a new note.
-                        
-                        // If we are scheduling for 100ms in future...
-                        // And current note is playing...
-                        // We should probably let current note play until 100ms!
-                        
-                        // So we need to Find the pending Off for this active note and TRUNCATE it to `time`.
-                        if (activeNoteOffs.has(activeKey)) {
-                            const prev = activeNoteOffs.get(activeKey);
-                            if (prev.endTime > time) {
-                                clearTimeout(prev.id);
-                                // Reschedule Off for `time`
-                                const cutoffTime = Math.max(now, time - 0.005);
-                                const delayToCutoff = Math.max(0, (cutoffTime - now) * 1000);
-                                const out = output; // capture closure
-                                setTimeout(() => {
-                                    if (activeNotes.has(activeKey)) {
-                                        out.send([status, activeNote, 0], (cutoffTime - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency);
-                                        activeNotes.delete(activeKey);
-                                    }
-                                }, delayToCutoff);
-                                
-                                // Update/Remove from maps? 
-                                // We leave it in activeNotes until the timeout fires (or we deleted it just now?)
-                                // We should probably update activeNoteOffs to reflect this change if we want to be clean,
-                                // but deleting it prevents panic() from clearing the timeout? 
-                                // No, panic uses activeNoteOffs. We cleared the old timeout. We made a new one.
-                                // We aren't storing the NEW timeout in activeNoteOffs. That's a minor leak of panic control.
-                                // But acceptable for now.
-                                activeNoteOffs.delete(activeKey);
-                            }
+            if (activeCh === channel && activeNote !== note) {
+                const output = midiAccess?.outputs.get(midi.selectedOutputId);
+                if (output) {
+                    const status = 0x80 | (channel - 1);
+                    if (activeNoteOffs.has(activeKey)) {
+                        const prev = activeNoteOffs.get(activeKey);
+                        if (prev.endTime > time) {
+                            clearTimeout(prev.id);
+                            const cutoffTime = Math.max(now, time - 0.005);
+                            const delayToCutoff = Math.max(0, (cutoffTime - now) * 1000);
+                            const out = output;
+                            const ak = activeKey;
+                            setTimeout(() => {
+                                if (activeNotes.has(ak)) {
+                                    out.send([status, activeNote, 0], (cutoffTime - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency);
+                                    activeNotes.delete(ak);
+                                }
+                            }, delayToCutoff);
+                            activeNoteOffs.delete(ak);
                         }
                     }
                 }
             }
         }
+    }
+
+    // Support Pitch Bend
+    if (bend !== 0) {
+        sendMIDIPitchBend(channel, bend, time);
+        // Reset bend after a short duration (e.g. 100ms)
+        sendMIDIPitchBend(channel, 0, time + 0.1);
     }
 
     // 1. Check for overlapping previous note on the same channel/pitch

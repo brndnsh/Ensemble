@@ -173,4 +173,29 @@ describe('MIDI Note Overlap Logic', () => {
         // msgOn62 timestamp ~1000.5
         expect(msgOff60[1]).toBeLessThan(msgOn62[1]);
     });
+
+    it('should send Pitch Bend message when bend option is provided', () => {
+        // Bend -4096 (approx 1 semitone down assuming 2-semitone range)
+        sendMIDINote(1, 60, 0.8, 1000, 1.0, { bend: -4096 });
+        
+        const calls = mockOutput.send.mock.calls;
+        
+        // Expect: Pitch Bend (Val), Pitch Bend (Reset), Note On
+        // All are sent synchronously to the driver with different timestamps.
+        
+        expect(calls.length).toBe(3);
+        
+        // 1. Pitch Bend (Requested)
+        // Value: -4096 + 8192 = 4096. 
+        // 4096 in 7-bit: LSB=0, MSB=32 (0x20)
+        expect(calls[0][0]).toEqual([0xE0, 0, 0x20]);
+        
+        // 2. Pitch Bend (Reset)
+        // Value: 0 + 8192 = 8192.
+        // 8192 in 7-bit: LSB=0, MSB=64 (0x40)
+        expect(calls[1][0]).toEqual([0xE0, 0, 0x40]);
+        
+        // 3. Note On
+        expect(calls[2][0]).toEqual([0x90, 60, 0.8]);
+    });
 });
