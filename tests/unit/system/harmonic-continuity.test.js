@@ -48,7 +48,9 @@ vi.mock('../../../public/engine.js', () => ({
 // Mock conductor
 vi.mock('../../../public/conductor.js', () => ({
     updateAutoConductor: vi.fn(),
-    checkSectionTransition: vi.fn()
+    checkSectionTransition: vi.fn(),
+    updateLarsTempo: vi.fn(),
+    conductorState: { larsBpmOffset: 0 }
 }));
 
 // Mock ui
