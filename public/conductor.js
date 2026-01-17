@@ -133,7 +133,7 @@ export function updateLarsTempo(currentStep) {
     updateBpmUI();
 }
 
-function updateBpmUI() {
+export function updateBpmUI() {
     if (!ui.bpmInput || !ui.bpmControlGroup) return;
     
     const baseBpm = ctx.bpm;
