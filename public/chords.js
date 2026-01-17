@@ -467,7 +467,8 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     if (intensity >= 0.8) {
         if (!intervals.includes(12)) intervals.push(12);
         // Also ensure 5th is there for "Wall of Sound"
-        if (!intervals.includes(7)) intervals.push(7);
+        const isAltered5 = ['dim', 'halfdim', 'aug'].includes(quality) || quality.includes('b5') || quality.includes('#5') || quality.includes('alt');
+        if (!isAltered5 && !intervals.includes(7)) intervals.push(7);
         // For Rock, if high intensity, also add the 7th for more "grit"
         if (genre === 'Rock' && !intervals.includes(10) && quality !== 'maj7') {
             if (!intervals.includes(10)) intervals.push(10);
