@@ -421,6 +421,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     }
 
     const result = { midi: selectedMidi, velocity: 0.8, durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style, isDoubleStop: false };
+    
+    // Update busySteps to prevent generating new notes while this one is sustaining
+    // We allow a 1-step overlap for legato if duration is > 1, otherwise strict
+    if (durationSteps > 1) {
+        sb.busySteps = durationSteps - 1;
+    }
+
     if (notes.length > 0 && sb.doubleStops) return [...notes.map(n => ({...result, ...n})), result];
     return result;
 }
