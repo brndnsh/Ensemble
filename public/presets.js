@@ -729,18 +729,6 @@ export const CHORD_PRESETS = [
         settings: { bpm: 135, style: 'jazz' }
     },
     { 
-        name: "Jazz Turnaround", 
-        sections: [{ label: 'Main', value: "Imaj7 VI7 | ii7 V7 | Imaj7 VI7 | ii7 V7" }], 
-        category: "Jazz",
-        settings: { bpm: 150, style: 'jazz' }
-    },
-    { 
-        name: "Jazz Cycle", 
-        sections: [{ label: 'Main', value: "iii7 | VI7#9 | ii9 | V9 | Imaj9" }], 
-        category: "Jazz",
-        settings: { bpm: 120, style: 'jazz' }
-    },
-    { 
         name: "Neo-Soul", 
         sections: [{ label: 'Main', value: "IVmaj7 | iii7 | ii7 | Imaj7" }], 
         category: "Soul/R&B",
