@@ -746,11 +746,11 @@ export const CHORD_PRESETS = [
         settings: { bpm: 85, style: 'neo' }
     },
     { 
-        name: "Acid Jazz Vamp", 
-        sections: [{ label: 'Main', value: "i9 | IV9 | i9 | V7#9" }], 
-        category: "Soul/Funk", 
+        name: "Acid Jazz (London)", 
+        sections: [{ label: 'Loop', value: "im9 | IV13 | bviim9 | bIII13 | bVImaj7 | bIImaj7 | im9 | V7alt" }], 
+        category: "Soul/R&B", 
         isMinor: true,
-        settings: { bpm: 105, style: 'funk' }
+        settings: { bpm: 115, style: 'funk' }
     },
     { 
         name: "Funk (i-IV)", 

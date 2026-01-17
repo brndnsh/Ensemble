@@ -302,9 +302,12 @@ export function getScaleForChord(chord, nextChord, style) {
         }
     }
 
-    if (chord.quality === 'minor') {
-        if (style === 'bird' || gb.genreFeel === 'Jazz' || style === 'neo' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk' || style === 'bossa' || gb.genreFeel === 'Bossa Nova') {
-            return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+    if (chord.quality === 'minor' || chord.quality.startsWith('m')) {
+        const isActuallyMinor = chord.quality.startsWith('m') && !chord.quality.startsWith('maj');
+        if (isActuallyMinor) {
+            if (style === 'bird' || gb.genreFeel === 'Jazz' || style === 'neo' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk' || style === 'bossa' || gb.genreFeel === 'Bossa Nova') {
+                return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+            }
         }
         // Fall through to Diatonic check
     }
@@ -339,7 +342,7 @@ export function getScaleForChord(chord, nextChord, style) {
     }
 
     // 5. Final Fallback
-    if (chord.quality === 'minor') return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
+    if (chord.quality === 'minor' || (chord.quality.startsWith('m') && !chord.quality.startsWith('maj'))) return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
     return chord.intervals.includes(11) ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 4, 5, 7, 9, 10];
 }
 
