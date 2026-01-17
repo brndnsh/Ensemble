@@ -14,6 +14,7 @@ const CANDIDATE_WEIGHTS = new Float32Array(128);
  * - Harmonic Context (Beat Strength & Tension Cycles)
  * - Dynamic Arcs (Storytelling Velocity)
  * - Blue Note Curls (Soulful Articulation)
+ * - Melodic Contour Resolution (Skip-Step Rule)
  */
 
 // --- Constants ---
@@ -32,14 +33,10 @@ const RHYTHMIC_CELLS = [
     [0, 1, 0, 1], // 10: Pure offbeats (16th offbeats)
     [1, 0, 0, 0, 0, 0, 0, 0], // 11: Half note (if 8 steps used)
     [0, 0, 1, 0], // 12: Single Offbeat 8th (the "And")
-    [1, 0, 1, 0, 1, 0], // 13: Triplet-esque (Quarter + 8th feel)
+    [1, 0, 1, 0, 1, 0], // 13: Triplet-esque (Feel)
     [0, 1, 0, 0]  // 14: Single Syncopated 16th (the "e")
 ];
 
-/**
- * Lick Library: Pre-baked "hooky" melodic/rhythmic fragments.
- * 'i' = interval from root, 'd' = duration in steps, 'o' = step offset from start of lick
- */
 const LICK_LIBRARY = {
     blues: [
         { name: 'The Box', notes: [{o:0, i:3, d:2}, {o:2, i:5, d:2}, {o:4, i:0, d:4}] },
@@ -60,152 +57,70 @@ const LICK_LIBRARY = {
     ],
     bird: [
         { name: 'Root Enclosure', notes: [{o:0, i:2, d:1}, {o:1, i:-1, d:1}, {o:2, i:0, d:2}] },
-        { name: '5th Enclosure', notes: [{o:0, i:8, d:1}, {o:1, i:6, d:1}, {o:2, i:7, d:2}] },
-        { name: 'Bebop Run', notes: [{o:0, i:11, d:1}, {o:1, i:10, d:1}, {o:2, i:9, d:1}, {o:3, i:7, d:1}] },
-        { name: 'Double Chromatic', notes: [{o:0, i:2, d:1}, {o:1, i:1, d:1}, {o:2, i:-1, d:1}, {o:3, i:0, d:1}] }
-    ],
-    bossa: [
-        { name: 'Lyrical 3rd', notes: [{o:0, i:4, d:4}, {o:6, i:3, d:2}, {o:8, i:2, d:4}] },
-        { name: 'Syncopated Triad', notes: [{o:0, i:0, d:2}, {o:3, i:4, d:2}, {o:6, i:7, d:4}] },
-        { name: 'Descending 9th', notes: [{o:0, i:14, d:2}, {o:2, i:11, d:2}, {o:4, i:7, d:4}] }
+        { name: '5th Enclosure', notes: [{o:0, i:8, d:1}, {o:1, i:6, d:1}, {o:2, i:7, d:2}] }
     ],
     funk: [
-        { name: 'JB Stabs', notes: [{o:0, i:0, d:1}, {o:1, i:0, d:1}, {o:2, i:0, d:2}, {o:4, i:10, d:1}, {o:5, i:0, d:3}] },
-        { name: 'The Box', notes: [{o:0, i:10, d:1}, {o:1, i:0, d:1}, {o:2, i:3, d:1}, {o:3, i:0, d:1}] },
         { name: 'Horn Line', notes: [{o:0, i:7, d:2}, {o:2, i:9, d:2}, {o:4, i:10, d:2}, {o:6, i:0, d:2}] }
     ],
     neo: [
-        { name: 'Dilla Drag', notes: [{o:0, i:2, d:2}, {o:2, i:0, d:4}, {o:6, i:10, d:2}] },
         { name: 'Quartal Rise', notes: [{o:0, i:0, d:2}, {o:2, i:5, d:2}, {o:4, i:10, d:4}] }
     ]
 };
 
 const STYLE_CONFIG = {
-    scalar: { // Standard Rock/Pop
-        restBase: 0.2, // More driving, less resting than Blues
-        restGrowth: 0.05,
-        cells: [0, 2, 11, 1], // Added 16ths (1) for energy
-        registerSoar: 10, // Wider range (Arena Rock)
-        tensionScale: 0.6, 
-        timingJitter: 8, // Tighter than Blues
-        maxNotesPerPhrase: 16,
-        doubleStopProb: 0.1,
-        anticipationProb: 0.1,
-        targetExtensions: [2, 9],
-        deviceProb: 0.15,
-        allowedDevices: ['run', 'slide', 'guitarDouble']
+    scalar: {
+        restBase: 0.2, restGrowth: 0.05, cells: [0, 2, 11, 1], registerSoar: 10,
+        tensionScale: 0.6, timingJitter: 8, maxNotesPerPhrase: 16,
+        doubleStopProb: 0.1, anticipationProb: 0.1, targetExtensions: [2, 9],
+        deviceProb: 0.15, allowedDevices: ['run', 'slide', 'guitarDouble']
     },
     shred: {
-        restBase: 0.1,
-        restGrowth: 0.02,
-        cells: [1, 3, 4, 7, 0], 
-        registerSoar: 16,
-        tensionScale: 0.3,
-        timingJitter: 4,
-        maxNotesPerPhrase: 32,
-        doubleStopProb: 0.05,
-        anticipationProb: 0.05,
-        targetExtensions: [2],
-        deviceProb: 0.4,
-        allowedDevices: ['run', 'guitarDouble']
+        restBase: 0.1, restGrowth: 0.02, cells: [1, 3, 4, 7, 0], registerSoar: 16,
+        tensionScale: 0.3, timingJitter: 4, maxNotesPerPhrase: 32,
+        doubleStopProb: 0.05, anticipationProb: 0.05, targetExtensions: [2],
+        deviceProb: 0.4, allowedDevices: ['run', 'guitarDouble']
     },
     blues: {
-        restBase: 0.6, 
-        restGrowth: 0.15,
-        cells: [2, 11, 0, 12, 6], 
-        registerSoar: 4, 
-        tensionScale: 0.8,
-        timingJitter: 25, 
-        maxNotesPerPhrase: 5, 
-        doubleStopProb: 0.35, // Increased from 0.2
-        anticipationProb: 0.3,
-        targetExtensions: [9, 10],
-        deviceProb: 0.3,
-        allowedDevices: ['slide', 'enclosure', 'guitarDouble']
+        restBase: 0.6, restGrowth: 0.15, cells: [2, 11, 0, 12, 6], registerSoar: 4,
+        tensionScale: 0.8, timingJitter: 25, maxNotesPerPhrase: 5,
+        doubleStopProb: 0.35, anticipationProb: 0.3, targetExtensions: [9, 10],
+        deviceProb: 0.3, allowedDevices: ['slide', 'enclosure', 'guitarDouble']
     },
     neo: {
-        restBase: 0.45,
-        restGrowth: 0.12,
-        cells: [11, 2, 6, 10, 12, 14], // Added 14 (Syncopated 16th)
-        registerSoar: 6,
-        tensionScale: 0.7,
-        timingJitter: 45, // Extremely laid back ("Drunken")
-        maxNotesPerPhrase: 8,
-        doubleStopProb: 0.15,
-        anticipationProb: 0.45,
-        targetExtensions: [2, 6, 9, 11],
-        deviceProb: 0.25,
-        allowedDevices: ['quartal', 'slide', 'guitarDouble']
+        restBase: 0.45, restGrowth: 0.12, cells: [11, 2, 6, 10, 12, 14], registerSoar: 6,
+        tensionScale: 0.7, timingJitter: 45, maxNotesPerPhrase: 8,
+        doubleStopProb: 0.15, anticipationProb: 0.45, targetExtensions: [2, 6, 9, 11],
+        deviceProb: 0.25, allowedDevices: ['quartal', 'slide', 'guitarDouble']
     },
     funk: {
-        restBase: 0.35, // Balanced spacing
-        restGrowth: 0.08,
-        cells: [1, 10, 14, 0, 6], // 16ths, Offbeat 16ths, Syncopated 'e', 8ths
-        registerSoar: 5, // Stay in the pocket
-        tensionScale: 0.4,
-        timingJitter: 5, // Tight!
-        maxNotesPerPhrase: 16, // Busy bursts
-        doubleStopProb: 0.15,
-        anticipationProb: 0.2,
-        targetExtensions: [9, 13], // 2 (9) and 6 (13)
-        deviceProb: 0.2,
-        allowedDevices: ['slide', 'run']
+        restBase: 0.35, restGrowth: 0.08, cells: [1, 10, 14, 0, 6], registerSoar: 5,
+        tensionScale: 0.4, timingJitter: 5, maxNotesPerPhrase: 16,
+        doubleStopProb: 0.15, anticipationProb: 0.2, targetExtensions: [9, 13],
+        deviceProb: 0.2, allowedDevices: ['slide', 'run']
     },
     minimal: {
-        restBase: 0.65,
-        restGrowth: 0.2,
-        cells: [11, 2, 12], // Added 12
-        registerSoar: 10,
-        tensionScale: 0.9,
-        timingJitter: 35,
-        maxNotesPerPhrase: 4,
-        doubleStopProb: 0.0,
-        anticipationProb: 0.1,
-        targetExtensions: [2, 7],
-        deviceProb: 0.1,
-        allowedDevices: ['slide']
+        restBase: 0.65, restGrowth: 0.2, cells: [11, 2, 12], registerSoar: 10,
+        tensionScale: 0.9, timingJitter: 35, maxNotesPerPhrase: 4,
+        doubleStopProb: 0.0, anticipationProb: 0.1, targetExtensions: [2, 7],
+        deviceProb: 0.1, allowedDevices: ['slide']
     },
     bird: {
-        restBase: 0.15, // Reduced from 0.3 to keep lines moving
-        restGrowth: 0.03, // Reduced from 0.05
-        cells: [0, 1, 7, 3], // 8ths, 16ths, Bebop 1, Gallop (avoiding slow quarters)
-        registerSoar: 8, // Increased from 5 for more range
-        tensionScale: 0.7,
-        timingJitter: 12, // Slightly tighter
-        maxNotesPerPhrase: 48, // Significantly increased from 16 for long Parker-style lines
-        doubleStopProb: 0.05,
-        anticipationProb: 0.6, // Parker often anticipated the change
-        targetExtensions: [2, 5, 6, 9], // 9, 11, #11, 13
-        deviceProb: 0.6, // High device probability for flurries
-        allowedDevices: ['enclosure', 'run', 'birdFlurry']
+        restBase: 0.15, restGrowth: 0.03, cells: [0, 1, 7, 3], registerSoar: 8,
+        tensionScale: 0.7, timingJitter: 12, maxNotesPerPhrase: 48,
+        doubleStopProb: 0.05, anticipationProb: 0.6, targetExtensions: [2, 5, 6, 9],
+        deviceProb: 0.6, allowedDevices: ['enclosure', 'run', 'birdFlurry']
     },
     disco: {
-        restBase: 0.25,
-        restGrowth: 0.06,
-        cells: [0, 2, 5, 10],
-        registerSoar: 12,
-        tensionScale: 0.5,
-        timingJitter: 8,
-        maxNotesPerPhrase: 12,
-        doubleStopProb: 0.05,
-        anticipationProb: 0.2,
-        targetExtensions: [2, 9],
-        deviceProb: 0.1,
-        allowedDevices: ['run']
+        restBase: 0.25, restGrowth: 0.06, cells: [0, 2, 5, 10], registerSoar: 12,
+        tensionScale: 0.5, timingJitter: 8, maxNotesPerPhrase: 12,
+        doubleStopProb: 0.05, anticipationProb: 0.2, targetExtensions: [2, 9],
+        deviceProb: 0.1, allowedDevices: ['run']
     },
     bossa: {
-        restBase: 0.4,
-        restGrowth: 0.08,
-        cells: [11, 2, 0, 6, 8], 
-        registerSoar: 8,
-        tensionScale: 0.7,
-        timingJitter: 15,
-        maxNotesPerPhrase: 8,
-        doubleStopProb: 0.08,
-        anticipationProb: 0.35,
-        targetExtensions: [2, 6, 9], // 9, #11, 13
-        deviceProb: 0.2,
-        allowedDevices: ['enclosure', 'slide', 'guitarDouble']
+        restBase: 0.4, restGrowth: 0.08, cells: [11, 2, 0, 6, 8], registerSoar: 8,
+        tensionScale: 0.7, timingJitter: 15, maxNotesPerPhrase: 8,
+        doubleStopProb: 0.08, anticipationProb: 0.35, targetExtensions: [2, 6, 9],
+        deviceProb: 0.2, allowedDevices: ['enclosure', 'slide', 'guitarDouble']
     }
 };
 
@@ -226,7 +141,7 @@ export function getScaleForChord(chord, nextChord, style) {
                        ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(chord.quality) ||
                        (chord.intervals.includes(10) && chord.intervals.includes(4));
     
-    // 1. Tension High? Altered/Diminished
+    // 1. Tension High? Altered
     if (sb.tension > 0.7 && isDominant) {
         return [0, 1, 3, 4, 6, 8, 10]; // Altered
     }
@@ -234,91 +149,53 @@ export function getScaleForChord(chord, nextChord, style) {
     // 2. Style Specifics
     if (style === 'blues' || style === 'disco' || style === 'funk') {
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
-             return [0, 2, 4, 5, 7, 9, 11]; // Ionian fallback for Major in Funk/Blues
+             return [0, 2, 4, 5, 7, 9, 11]; 
         }
-
         const isMinorQ = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality);
-        let base;
-        
-        if (chord.quality === 'halfdim') {
-            base = [0, 1, 3, 5, 6, 8, 10]; // Locrian (proper half-dim scale)
-        } else {
-            base = isMinorQ
-                ? [0, 2, 3, 5, 6, 7, 10] 
-                : [0, 2, 3, 4, 5, 6, 7, 9, 10];
-        }
-        
-        // BB Box Logic: Add Major 3rd (4) and 6th (9) availability over Major chords
-        // allowing the soloist to choose between b3 (3) and 3 (4) for expression.
-        if ((style === 'blues' || style === 'funk') && !isMinorQ) {
-            if (!base.includes(4)) base.push(4); // Major 3rd
-            if (!base.includes(9)) base.push(9); // Major 6th
-        }
-
-        // If tension is high, allow Major 7th (11) for that sophisticated blues "crunch"
+        let base = (chord.quality === 'halfdim') ? [0, 1, 3, 5, 6, 8, 10] : (isMinorQ ? [0, 2, 3, 5, 6, 7, 10] : [0, 2, 3, 4, 5, 6, 7, 9, 10]);
+        if ((style === 'blues' || style === 'funk') && !isMinorQ) { if (!base.includes(4)) base.push(4); if (!base.includes(9)) base.push(9); }
         if (sb.tension > 0.7) base.push(11);
         return base.sort((a,b)=>a-b);
     }
     
     if (style === 'neo' || style === 'bird') {
-        const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
-        const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
-
+        const keyRootIdx = KEY_ORDER.indexOf(chord.key || arranger.key);
+        const relativeRoot = (chord.rootMidi - keyRootIdx + 120) % 12;
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
-            // Tonic Maj7 or Major triads should strictly use Ionian to avoid #11 clash
             if (relativeRoot === 0 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; 
-            // Subdominant (IV) can use Lydian if it's a maj7, but for simple triads, stick to Ionian
             if (relativeRoot === 5 && !arranger.isMinor && chord.quality.includes('maj')) return [0, 2, 4, 6, 7, 9, 11];
             return [0, 2, 4, 5, 7, 9, 11]; 
         }
-        
         if (chord.quality === 'minor' || ['m9', 'm11', 'm13', 'm6'].includes(chord.quality)) {
-            // Natural Minor (Aeolian) for the vi chord to stay diatonic
             if (relativeRoot === 9 && !arranger.isMinor) return [0, 2, 3, 5, 7, 8, 10];
-            return [0, 2, 3, 5, 7, 9, 10]; // Dorian for others
+            return [0, 2, 3, 5, 7, 9, 10]; 
         }
     }
 
     if (style === 'bossa' && (chord.quality.startsWith('maj') || chord.quality === 'major')) {
-        return [0, 2, 4, 6, 7, 9, 11]; // Lydian (classic Bossa color)
+        return [0, 2, 4, 6, 7, 9, 11]; 
     }
 
-    // 3. Chord Scale Logic (Prioritize Specific Qualities)
+    // 3. Chord Quality Switch
     switch (chord.quality) {
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
         case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
         case 'aug': return [0, 2, 4, 6, 8, 10];
-        case 'm9':
-        case 'm11':
-        case 'm13':
-        case 'm6':
-            return [0, 2, 3, 5, 7, 9, 10]; // Dorian default for extended minors
-        case 'sus4': return [0, 2, 5, 7, 9, 10]; // Mixolydian sus4
+        case 'm9': case 'm11': case 'm13': case 'm6': return [0, 2, 3, 5, 7, 9, 10]; 
+        case 'sus4': return [0, 2, 5, 7, 9, 10]; 
         case '7alt': return [0, 1, 3, 4, 6, 8, 10];
-        case '7#9': 
-            if (style === 'funk') return [0, 1, 3, 4, 5, 7, 8, 10]; // Mixolydian b9#9 (Funk)
-            if (gb.genreFeel === 'Funk' && style === 'smart') return [0, 1, 3, 4, 5, 7, 8, 10];
-            return [0, 1, 3, 4, 6, 8, 10]; // Altered (Jazz)
-        case '7b9': return [0, 1, 4, 5, 7, 8, 10];
-        case '7b13': return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
-        case '7#11': return [0, 2, 4, 6, 7, 9, 10]; // Lydian Dominant
-        case '9': return [0, 2, 4, 5, 7, 9, 10];
-        case '13': return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
+        case '7#9': return (style === 'funk' || gb.genreFeel === 'Funk') ? [0, 1, 3, 4, 5, 7, 8, 10] : [0, 1, 3, 4, 6, 8, 10];
+        case '7b9': case '7b13': return [0, 1, 4, 5, 7, 8, 10];
+        case '7#11': return [0, 2, 4, 6, 7, 9, 10]; 
+        case '9': case '13': return [0, 2, 4, 5, 7, 9, 10];
     }
 
-    // 4. Resolution Logic (Secondary Dominants)
-    // Only apply generic resolution logic to plain dominant 7ths.
-    // Specific qualities handled above (like 7alt) should keep their intended flavor.
+    // 4. Resolution Logic
     const isMinorQuality = (q) => (q.startsWith('m') && !q.startsWith('maj')) || q.includes('minor') || q.includes('dim') || q.includes('halfdim');
-    
     if (chord.quality === '7' && nextChord) {
         const resolvingDownFifth = ((nextChord.rootMidi - chord.rootMidi + 120) % 12 === 5);
-        
         if (resolvingDownFifth) {
-            // V7 -> im7 (or iiø7) resolution
-            if (isMinorQuality(nextChord.quality)) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
-            
-            // V7 -> Imaj7 resolution (ensure Mixolydian for secondary doms)
+            if (isMinorQuality(nextChord.quality)) return [0, 1, 4, 5, 7, 8, 10]; 
             return [0, 2, 4, 5, 7, 9, 10]; 
         }
     }
@@ -327,43 +204,32 @@ export function getScaleForChord(chord, nextChord, style) {
         const isActuallyMinor = chord.quality.startsWith('m') && !chord.quality.startsWith('maj');
         if (isActuallyMinor) {
             if (style === 'bird' || gb.genreFeel === 'Jazz' || style === 'neo' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk' || style === 'bossa' || gb.genreFeel === 'Bossa Nova') {
-                return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+                return [0, 2, 3, 5, 7, 9, 10]; 
             }
         }
-        // Fall through to Diatonic check
     }
 
     if (isDominant || chord.quality === 'major') {
-        const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
-        const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
-
-        // V in Minor Key -> Phrygian Dominant
-        if (arranger.isMinor && relativeRoot === 7) return [0, 1, 4, 5, 7, 8, 10];
-
+        const kRootIdx = KEY_ORDER.indexOf(chord.key || arranger.key);
+        const relRoot = (chord.rootMidi - kRootIdx + 120) % 12;
+        if (arranger.isMinor && relRoot === 7) return [0, 1, 4, 5, 7, 8, 10];
         if (isDominant) {
-            // II7 (Major II) -> Lydian Dominant (#11)
-            if (relativeRoot === 2 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10]; 
-
-            // bVII7 (Backdoor Dominant) -> Lydian Dominant
-            if (relativeRoot === 10 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10];
-
-            return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian fallback
+            if (relRoot === 2 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10]; 
+            if (relRoot === 10 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10];
+            return [0, 2, 4, 5, 7, 9, 10]; 
         }
     }
-    // 4. Diatonic Fallback (Only for simple triads that fit the key)
-    const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
+
+    // 5. Diatonic Fallback
+    const keyRootIdx = KEY_ORDER.indexOf(chord.key || arranger.key);
     const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
-    const keyNotes = keyIntervals.map(i => (keyRoot + i) % 12);
+    const keyNotes = keyIntervals.map(i => (keyRootIdx + i) % 12);
     const chordRoot = chord.rootMidi % 12;
     const chordTones = chord.intervals.map(i => (chordRoot + i) % 12);
-    const isDiatonic = chordTones.every(note => keyNotes.includes(note));
-    
-    if (isDiatonic) {
+    if (chordTones.every(note => keyNotes.includes(note))) {
         return keyNotes.map(note => (note - chordRoot + 12) % 12).sort((a, b) => a - b);
     }
-
-    // 5. Final Fallback
-    if (chord.quality === 'minor' || (chord.quality.startsWith('m') && !chord.quality.startsWith('maj'))) return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
+    if (chord.quality === 'minor' || (chord.quality.startsWith('m') && !chord.quality.startsWith('maj'))) return [0, 2, 3, 5, 7, 8, 10]; 
     return chord.intervals.includes(11) ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 4, 5, 7, 9, 10];
 }
 
@@ -371,48 +237,21 @@ export function getScaleForChord(chord, nextChord, style) {
 
 export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 72, style = 'scalar', stepInChord = 0, bassFreq = null, isPriming = false) {
     if (!currentChord) return null;
-
     if (style === 'smart') {
-        if (arranger.lastChordPreset === 'Minor Blues') {
-            style = 'blues';
-        } else {
-            const mapping = { 
-                'Rock': 'scalar', 
-                'Jazz': 'bird', 
-                'Funk': 'funk', 
-                'Blues': 'blues', 
-                'Neo-Soul': 'neo', 
-                'Disco': 'disco', 
-                'Bossa': 'bossa', 
-                'Bossa Nova': 'bossa',
-                'Afrobeat': 'funk',
-                'Acoustic': 'minimal'
-            };
-            style = mapping[gb.genreFeel] || 'scalar';
-        }
+        const mapping = { 'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal' };
+        style = mapping[gb.genreFeel] || 'scalar';
     }
-    
     const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;
     const tsConfig = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const stepsPerBeat = tsConfig.stepsPerBeat;
     const stepsPerMeasure = tsConfig.beats * stepsPerBeat;
-    
     const measureStep = step % stepsPerMeasure;
     const stepInBeat = measureStep % stepsPerBeat;
-    const beatInMeasure = Math.floor(measureStep / stepsPerBeat);
     const intensity = ctx.bandIntensity || 0.5;
     
-    // --- 0. Warm-up Logic ---
-    // Prevent "guns-blazing" starts by scaling activity for the first few measures.
-    if (!isPriming) {
-        sb.sessionSteps = (sb.sessionSteps || 0) + 1;
-    }
-    const WARMUP_DURATION = stepsPerMeasure * 2; 
-    const warmupFactor = isPriming ? 1.0 : Math.min(1.0, sb.sessionSteps / WARMUP_DURATION);
+    if (!isPriming) sb.sessionSteps = (sb.sessionSteps || 0) + 1;
+    const warmupFactor = isPriming ? 1.0 : Math.min(1.0, sb.sessionSteps / (stepsPerMeasure * 2));
     
-    // --- 1. Melodic Device Buffer Gate ---
-    // If we have a queued sequence (like a Bebop enclosure), play the next note in the sequence.
-    // We check this BEFORE the busySteps gate to allow sequence consumption to bypass physical gaps.
     if (sb.deviceBuffer && sb.deviceBuffer.length > 0) {
         const devNote = sb.deviceBuffer.shift();
         const primaryNote = Array.isArray(devNote) ? devNote[0] : devNote;
@@ -421,645 +260,153 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (!primaryNote.isDoubleStop) sb.lastFreq = getFrequency(primaryNote.midi);
         return devNote;
     }
-
-    // --- 1.5 Physical Duration Gate ---
-    // If we are still "busy" from the previous note's duration, decrement and skip.
-    // This is the primary mechanism for preventing overlapping monophonic notes.
-    if (sb.busySteps > 0) {
-        sb.busySteps--;
-        return null;
-    }
+    if (sb.busySteps > 0) { sb.busySteps--; return null; }
     
-    // --- 2. Cycle & Tension Tracking ---
-    
-    const progressionBars = (arranger.progression && arranger.progression.length > 0) ? arranger.progression.length / stepsPerMeasure : 4;
-    const CYCLE_BARS = (progressionBars > 0 && progressionBars <= 8) ? progressionBars : 4;
-    const stepsPerCycle = stepsPerMeasure * CYCLE_BARS;
-    const cycleStep = step % stepsPerCycle;
-    
+    const cycleStep = step % (stepsPerMeasure * 4);
     const measureIndex = Math.floor(cycleStep / stepsPerMeasure);
-    let baseTension = (measureIndex / CYCLE_BARS) * (0.5 + intensity * 0.5); 
-    
-    // --- Section Build-up Tracking ---
-    const totalStepsArr = arranger.totalSteps || 0;
-    const modStepArr = step % (totalStepsArr || 1);
-    const entry = (arranger.stepMap || []).find(e => modStepArr >= e.start && modStepArr < e.end);
-    const sectionProgress = entry ? (modStepArr - entry.start) / (entry.end - entry.start) : 0;
-    
-    // Solos should build tension towards the end of a section
-    baseTension += sectionProgress * 0.25 * intensity;
+    sb.tension = Math.max(0, Math.min(1, (measureIndex / 4) * (0.5 + intensity * 0.5)));
 
-    const grouping = arranger.grouping || tsConfig.grouping || [tsConfig.beats];
-    const isGroupStart = (() => {
-        let accumulated = 0;
-        for (let g of grouping) {
-            if (measureStep === accumulated) return true;
-            accumulated += g * stepsPerBeat;
-        }
-        return false;
-    })();
-
-    const isStrongBeat = isGroupStart || (beatInMeasure === 0 && stepInBeat === 0);
-    const isOffbeat = stepInBeat !== 0;
-
-    if (isStrongBeat) baseTension -= (0.15 * intensity);
-    if (isOffbeat) baseTension += (0.1 * intensity);
-    
-    sb.tension = Math.max(0, Math.min(1, baseTension));
-
-
-    // --- 2. Breath & Phrasing Logic ---
-    
     if (typeof sb.currentPhraseSteps === 'undefined' || (step === 0 && !sb.isResting)) {
-        sb.currentPhraseSteps = 0;
-        sb.notesInPhrase = 0;
-        sb.qaState = 'Question';
-        sb.isResting = true; 
-        return null; 
+        sb.currentPhraseSteps = 0; sb.notesInPhrase = 0; sb.qaState = 'Question'; sb.isResting = true; return null; 
     }
     
-    if (typeof sb.contourSteps === 'undefined') {
-        sb.contourSteps = 0;
-        sb.melodicTrend = 'Static';
-    }
-
-    if (sb.contourSteps <= 0) {
-        const trends = ['Up', 'Down', 'Static'];
-        sb.melodicTrend = trends[Math.floor(Math.random() * trends.length)];
-        if (sb.qaState === 'Answer' && Math.random() < 0.7) {
-            sb.melodicTrend = Math.random() < 0.5 ? 'Down' : 'Static';
-        }
-        sb.contourSteps = 4 + Math.floor(Math.random() * 5); 
-    }
-    sb.contourSteps--;
+    const phraseBars = sb.currentPhraseSteps / stepsPerMeasure;
+    let restProb = (config.restBase * (2.0 - intensity * 1.5)) + (phraseBars * config.restGrowth);
+    restProb += (1.0 - warmupFactor) * 0.4;
+    if (sb.notesInPhrase >= config.maxNotesPerPhrase) restProb += 0.4;
     
-    const phraseLengthBars = sb.currentPhraseSteps / stepsPerMeasure;
-    const tempoBreathFactor = Math.max(0, (ctx.bpm - 120) * 0.003); 
-    let restProb = (config.restBase * (2.0 - intensity * 1.5)) + (phraseLengthBars * config.restGrowth) + tempoBreathFactor;
-    
-    // Scale rest probability based on warmup (Higher rest prob at start)
-    restProb = restProb + (1.0 - warmupFactor) * 0.4;
-
-    // Decrease rest probability as section ends to build "Storytelling" energy
-    restProb -= sectionProgress * 0.25 * intensity;
-
-    const tempoBudgetFactor = Math.max(0.5, 1.0 - (ctx.bpm - 100) * 0.004);
-    if (sb.notesInPhrase >= config.maxNotesPerPhrase * tempoBudgetFactor) restProb += 0.4;
-
-    if (isGroupStart) restProb *= 0.3;
-    restProb = Math.max(0.05, restProb);
-    
-    if (cycleStep > stepsPerCycle - (stepsPerBeat * 2)) restProb += (0.5 * (1.1 - intensity));
-
     if (sb.isResting) {
-        const startBias = step < 8 ? 0.3 : 1.0;
-        const tempoStartBias = Math.max(0.4, 1.0 - (ctx.bpm - 120) * 0.005);
-        
-        if (Math.random() < (0.4 + (intensity * 0.3)) * startBias * tempoStartBias) { 
-            sb.isResting = false;
-            sb.currentPhraseSteps = 0;
-            sb.notesInPhrase = 0;
+        if (Math.random() < (0.4 + (intensity * 0.3))) { 
+            sb.isResting = false; sb.currentPhraseSteps = 0; sb.notesInPhrase = 0;
             sb.qaState = sb.qaState === 'Question' ? 'Answer' : 'Question';
-
-            const hasHook = sb.hookBuffer && sb.hookBuffer.length > 0;
-            const hasMotif = sb.motifBuffer && sb.motifBuffer.length > 0;
-            const rand = Math.random();
-
-            if (rand < 0.2 && LICK_LIBRARY[style]) {
-                const licks = LICK_LIBRARY[style];
-                const selectedLick = licks[Math.floor(Math.random() * licks.length)];
-                sb.activeBuffer = selectedLick.notes.map(n => ({
-                    interval: n.i,
-                    dur: n.d,
-                    step: cycleStep + n.o
-                }));
-                sb.isReplayingMotif = true;
-                sb.motifReplayIndex = 0;
-            } else if ((hasHook || hasMotif) && rand < 0.6) {
-                sb.isReplayingMotif = true;
-                const useHook = hasHook && (progressionBars <= 8 || Math.random() < 0.3);
-                sb.activeBuffer = useHook ? sb.hookBuffer : sb.motifBuffer;
-                sb.motifReplayIndex = 0;
-            } else {
-                sb.isReplayingMotif = false;
-                if (hasMotif && sb.motifBuffer.length > 4 && Math.random() < sb.hookRetentionProb) {
-                    sb.hookBuffer = [...sb.motifBuffer];
-                }
-                sb.motifBuffer = []; 
-            }
-        } else {
-            return null; 
-        }
+            sb.isReplayingMotif = false; sb.motifBuffer = []; 
+        } else return null;
     }
-
     if (!sb.isResting && sb.currentPhraseSteps > 4 && Math.random() < restProb) {
-        sb.isResting = true;
-        sb.currentPhraseSteps = 0;
-        return null;
+        sb.isResting = true; sb.currentPhraseSteps = 0; return null;
     }
-    
     sb.currentPhraseSteps++;
 
-    // --- 3. Harmonization Context (Target Chord) ---
-
-    const chordLengthSteps = Math.round(currentChord.beats * stepsPerBeat);
-    const isAnticipationStep = (stepInChord >= chordLengthSteps - 2);
-    let targetChord = currentChord;
-    if (isAnticipationStep && nextChord && Math.random() < (config.anticipationProb || 0)) {
-        targetChord = nextChord;
+    if (stepInBeat === 0) {
+        let pool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
+        sb.currentCell = pool[Math.floor(Math.random() * pool.length)];
     }
-
-    const rootMidi = targetChord.rootMidi;
-
-    // --- 4. Rhythm Generation & Motif Replay ---
-
-    let shouldPlay = false;
-    let durationMultiplier = 1;
-    let selectedMidi = null;
-
-    if (sb.isReplayingMotif && sb.activeBuffer) {
-        const storedNote = sb.activeBuffer.find(n => n.step === cycleStep);
-        if (storedNote) {
-            shouldPlay = true;
-            durationMultiplier = storedNote.dur || 1;
-            
-            let interval = storedNote.interval;
-            const currentScale = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
-            
-            if (interval === 4 && !currentScale.includes(4) && currentScale.includes(3)) interval = 3;
-            else if (interval === 3 && !currentScale.includes(3) && currentScale.includes(4)) interval = 4;
-            else if (!currentScale.includes(interval % 12)) {
-                const pc = interval % 12;
-                const isExpressive = ['bird', 'blues', 'neo'].includes(style) || ['Jazz', 'Blues', 'Neo-Soul'].includes(gb.genreFeel);
-                let shouldNudge = true;
-                if (isExpressive) {
-                    const neighbors = [(pc - 1 + 12) % 12, (pc + 1 + 12) % 12];
-                    if (neighbors.some(n => currentScale.includes(n))) shouldNudge = false;
-                }
-                if (shouldNudge) {
-                    let best = currentScale[0];
-                    let minDiff = 12;
-                    for (const s of currentScale) {
-                        const diff = Math.min(Math.abs(s - pc), 12 - Math.abs(s - pc));
-                        if (diff < minDiff) { minDiff = diff; best = s; }
-                    }
-                    interval = (interval - pc) + best;
-                }
-            }
-
-            // MOTIF RESOLUTION: If replaying a motif during an "Answer" phase on a tonic chord,
-            // ensure any spicy extensions from the original motif are nudged to diatonic tones.
-            const keyRoot = KEY_ORDER.indexOf(currentChord.key || arranger.key);
-            const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
-            const pc = (interval % 12 + 12) % 12;
-            const isDiatonic = keyIntervals.includes((pc + targetChord.rootMidi - keyRoot + 120) % 12);
-            const relativeRoot = (targetChord.rootMidi - keyRoot + 120) % 12;
-            const isTonicChord = relativeRoot === 0 || (arranger.isMinor && relativeRoot === 9) || (!arranger.isMinor && relativeRoot === 4);
-
-            if (sb.qaState === 'Answer' && isTonicChord && !isDiatonic) {
-                 // Nudge to nearest diatonic scale tone within the current chord scale
-                 let best = pc;
-                 let minDiff = 12;
-                 const chordScale = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
-                 for (const s of chordScale) {
-                     const isSInKey = keyIntervals.includes((s + targetChord.rootMidi - keyRoot + 120) % 12);
-                     if (!isSInKey) continue;
-                     const diff = Math.min(Math.abs(s - pc), 12 - Math.abs(s - pc));
-                     if (diff < minDiff) { minDiff = diff; best = s; }
-                 }
-                 interval = (interval - pc) + best;
-            }
-
-            selectedMidi = targetChord.rootMidi + interval;
-        }
-    }
-
-    if (!sb.isReplayingMotif && !selectedMidi && stepInBeat === 0) {
-        if (sb.currentCell && sb.currentCell.some(v => v === 1) && Math.random() < 0.6) {
-            // Inertia
-        } else {
-            let cellPool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
-            if (ctx.bpm > 140 && style !== 'shred' && style !== 'bird') {
-                const forbiddenIdx = [1, 3, 4, 5, 6, 7, 8, 9, 10, 14];
-                cellPool = cellPool.filter((_, idx) => !forbiddenIdx.includes(idx));
-                if (ctx.bpm > 180) cellPool = cellPool.filter((_, idx) => [2, 11].includes(idx));
-                if (cellPool.length === 0) cellPool = [RHYTHMIC_CELLS[2]]; 
-            } else if (ctx.bpm > 120 && style !== 'shred' && style !== 'bird') {
-                cellPool = cellPool.filter((_, idx) => ![1, 3, 4, 7, 9].includes(idx));
-            }
-            if (sb.tension > 0.7 && style === 'shred') cellPool = [RHYTHMIC_CELLS[1]]; 
-            if (sb.tension < 0.3 && style === 'minimal') cellPool = [RHYTHMIC_CELLS[2]]; 
-            sb.currentCell = cellPool[Math.floor(Math.random() * cellPool.length)];
-        }
-        if (Math.random() < 0.1) sb.currentCell = [0, 0, 0, 0];
-    }
-    
-    if (!sb.isReplayingMotif && !selectedMidi && sb.currentCell && sb.currentCell[stepInBeat] === 1) shouldPlay = true;
-    if (!shouldPlay && !selectedMidi) return null;                
-    
+    if (sb.currentCell && sb.currentCell[stepInBeat] === 1) {} else return null;                
     sb.notesInPhrase++;
 
-    // --- 5. Pitch Selection (Standard Weighted Generation) ---
-
-    if (!selectedMidi) {
-        const chordTones = targetChord.intervals.map(i => rootMidi + i);
-        const scaleIntervals = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
-        const scaleTones = scaleIntervals.map(i => rootMidi + i);
-        const soarAmount = config.registerSoar * (0.5 + intensity); 
-        const dynamicCenter = centerMidi + Math.floor(sb.tension * soarAmount);
-        const minMidi = Math.max(0, dynamicCenter - 15); 
-        const maxMidi = Math.min(127, dynamicCenter + 15);
-        const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
-
-        // Optimization: Use static Float32Array instead of allocating objects
-        let totalWeight = 0;
-        
-        // 1. Calculate Weights
-        for (let m = minMidi; m <= maxMidi; m++) {
-            CANDIDATE_WEIGHTS[m] = 0; // Reset
-            
-            const pc = (m % 12 + 12) % 12;
-            const rootPC = (rootMidi % 12 + 12) % 12;
-            const interval = (pc - rootPC + 12) % 12;
-            let weight = 1.0;
-            const isChordTone = chordTones.some(ct => (ct % 12 + 12) % 12 === pc);
-            const isScaleTone = scaleTones.some(st => (st % 12 + 12) % 12 === pc);
-            
-            if (!isScaleTone) continue; 
-
-            // Target Extensions (Color Notes) - used more sparingly now
-            if (config.targetExtensions && config.targetExtensions.includes(interval)) {
-                weight += 8; // Reduced from 12
-            }
-
-            if (isStrongBeat) {
-                if (isChordTone) {
-                    weight += 15; // Increased from 10
-                    // Target the 3rd or 7th on ANY strong beat (Harmonic Anchors)
-                    if (interval === 3 || interval === 4 || interval === 10 || interval === 11) {
-                        weight += 20; // Increased from 15 and expanded beyond just beat 0
-                    }
-                } else {
-                    let isClash = false;
-                    const isDominant = targetChord.quality.startsWith('7') || 
-                                     ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(targetChord.quality) ||
-                                     (targetChord.intervals.includes(10) && targetChord.intervals.includes(4));
-                    const isMajorLike = ['major', 'maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(targetChord.quality) || isDominant;
-                    if (isMajorLike && interval === 5) isClash = true;
-                    if (targetChord.quality === 'minor' && interval === 8) isClash = true;
-                    const isAlteredOrPhrygian = scaleIntervals.includes(1) && (scaleIntervals.includes(3) || scaleIntervals.includes(8));
-                    if (interval === 1 && !isAlteredOrPhrygian) isClash = true;
-                    if (isClash) weight -= 50; else weight -= 5; 
-                }
-            } else {
-                if (!isChordTone) weight += 2; 
-            }
-
-            // 2. Quartal Harmony Logic (Neo-Soul)
-            // Modern/Neo-Soul styles often favor stacks of 4ths over traditional 3rds.
-            if (style === 'neo' && Math.abs(m - lastMidi) === 5) {
-                weight += 100; // Increased to ensure it out-competes aggregate stepwise movement
-            }
-
-            // 3. Rhythmic Call and Response (Conversational Logic)
-            // 'Question' phase builds tension with extensions, 'Answer' phase resolves to anchors.
-            // ONLY apply weights if the note is already in the scale.
-            if (sb.qaState === 'Question') {
-                if (interval === 6 || interval === 10) weight += 30; // #11 or b7
-            } else if (sb.qaState === 'Answer') {
-                if (interval === 0) weight += 60; // Root (Strong Resolution)
-                if (interval === 7) weight += 30; // 5th (Stable Anchor)
-            }
-
-            if (sb.tension > 0.8) {
-                if (!isChordTone && isScaleTone) weight += 5;
-            } else if (sb.tension < 0.2) {
-                if (interval === 0 || interval === 7) weight += 8;
-            }
-            
-            const dist = Math.abs(m - lastMidi);
-            if (dist === 0) weight -= 15; 
-            
-            if (dist > 0 && dist <= 2) {
-                const tempoStepBias = (ctx.bpm / 100) * 20;
-                weight += (45 + tempoStepBias); // Increased from 25
-                if (style === 'scalar') weight += 30; // Increased from 20
-            } else if (dist >= 3 && dist <= 4) {
-                weight += 5; // Reduced from 10
-            } else if (dist >= 5 && dist <= 7) {
-                weight -= 15; // Increased penalty from -5
-            } else if (dist > 7 && dist <= 12) {
-                weight -= 60; // Increased penalty from -40
-            } else if (dist > 12) {
-                weight -= 150; // Increased penalty from -100
-            }
-
-            if (sb.melodicTrend === 'Up' && m > lastMidi) weight += 15;
-            if (sb.melodicTrend === 'Down' && m < lastMidi) weight += 15;
-            if (sb.melodicTrend === 'Static' && dist <= 2) weight += 10;
-            
-            const distFromCenter = Math.abs(m - dynamicCenter);
-            if (distFromCenter > 7) weight -= (distFromCenter - 7) * 3; 
-            
-            
-            // 4. Harmonic Role Awareness (Key-based Filtering)
-            // Penalize non-diatonic notes on Tonic/Resolution chords during "Answer" phrases.
-            const keyRoot = KEY_ORDER.indexOf(targetChord.key || arranger.key);
-            const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
-            const isDiatonic = keyIntervals.includes((pc - keyRoot + 12) % 12);
-            const relativeRoot = (targetChord.rootMidi - keyRoot + 120) % 12;
-            const isTonicChord = relativeRoot === 0 || (arranger.isMinor && relativeRoot === 9) || (!arranger.isMinor && relativeRoot === 4);
-
-            if (sb.qaState === 'Answer' && isTonicChord && !isDiatonic) {
-                weight -= 40; // Heavy penalty for non-diatonic tones on resolution
-            }
-
-            weight = Math.max(0.1, weight);
-            CANDIDATE_WEIGHTS[m] = weight;
-            totalWeight += weight;
-        }
-
-        // 2. Select Weighted Random
-        let randomVal = Math.random() * totalWeight;
-        selectedMidi = lastMidi;
-        
-        for (let m = minMidi; m <= maxMidi; m++) {
-            const w = CANDIDATE_WEIGHTS[m];
-            if (w > 0) {
-                randomVal -= w;
-                if (randomVal <= 0) { selectedMidi = m; break; }
-            }
-        }
-        
-        if (cycleStep === 0 && isStrongBeat) {
-            selectedMidi = chordTones[0];
-            let safety = 0;
-            while (selectedMidi < minMidi && safety < 10) { selectedMidi += 12; safety++; }
-            safety = 0;
-            while (selectedMidi > maxMidi && safety < 10) { selectedMidi -= 12; safety++; }
-        }
-    }
-
-    // --- 6. Articulation & Humanization ---
+    // Pitch Selection
+    const scaleIntervals = getScaleForChord(currentChord, nextChord, style);
+    const rootMidi = currentChord.rootMidi;
+    const scaleTones = scaleIntervals.map(i => rootMidi + i);
+    const chordTones = currentChord.intervals.map(i => rootMidi + i);
     
-    let bendStartInterval = 0;
-    const intervalFromRoot = (selectedMidi - rootMidi + 120) % 12;
-    if (intervalFromRoot === 4 && ['blues', 'neo', 'bird', 'minimal', 'funk'].includes(style)) {
-        if (Math.random() < 0.4) bendStartInterval = 1; 
-    }
-    // Blues Curl: Bend b3 slightly sharp (Quarter tone or Half tone)
-    if (intervalFromRoot === 3 && (style === 'blues' || style === 'funk')) {
-         if (Math.random() < 0.5) bendStartInterval = 0.5; // Quarter tone curl
-    }
-    if (intervalFromRoot === 7 && (style === 'blues' || style === 'funk')) {
-         if (Math.random() < 0.3) bendStartInterval = 1; 
-    }
-    if (intervalFromRoot === 0 && ['neo', 'bird', 'blues', 'funk'].includes(style) && isStrongBeat) {
-         if (Math.random() < 0.35) bendStartInterval = 0.5; 
-    }
-    // Rock Unison Bend Simulation (Bend 4th to 5th or b7 to Root)
-    if ((intervalFromRoot === 5 || intervalFromRoot === 10) && (style === 'scalar' || style === 'shred')) {
-        if (Math.random() < 0.3) bendStartInterval = 2; // Whole tone bend
-    }
+    sb.smoothedTension = (sb.smoothedTension || 0) * 0.8 + (sb.tension || 0) * 0.2;
+    const dynamicCenter = centerMidi + Math.floor(sb.smoothedTension * config.registerSoar * (0.5 + intensity));
+    const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
+    const minMidi = Math.max(0, Math.min(dynamicCenter - 12, lastMidi - 14)); 
+    const maxMidi = Math.min(127, Math.max(dynamicCenter + 12, lastMidi + 14));
 
-    const phraseProg = Math.min(1, sb.currentPhraseSteps / 32);
-    const arch = Math.sin(phraseProg * Math.PI); 
-    let baseVel = 0.7;
-    let dynRange = 0.3;
-    if (style === 'minimal') { baseVel = 0.5; dynRange = 0.5; }
-    let velocity = baseVel + (arch * dynRange);
-    velocity += (Math.random() - 0.5) * 0.1;
-    if (isStrongBeat) velocity *= 1.1;
+    let totalWeight = 0;
+    const lastInterval = sb.lastInterval || 0; 
+    const isResolvingSkip = Math.abs(lastInterval) > 4;
 
-    // Jazz Ghost Notes
-    if (style === 'bird' && !isStrongBeat && Math.random() < 0.25) {
-        velocity *= 0.4; // Ghost note
-    }
-    // Funk Ghost Notes (more frequent)
-    if (style === 'funk' && !isStrongBeat && Math.random() < 0.35) {
-        velocity *= 0.3; 
-    }
+    for (let m = minMidi; m <= maxMidi; m++) {
+        CANDIDATE_WEIGHTS[m] = 0; 
+        const pc = (m % 12 + 12) % 12;
+        const interval = (pc - (rootMidi % 12) + 12) % 12;
+        let weight = 1.0;
+        if (!scaleTones.some(st => (st % 12 + 12) % 12 === pc)) continue; 
 
-    let timingOffset = (Math.random() - 0.5) * config.timingJitter;
+        const dist = Math.abs(m - lastMidi);
+        const currentInterval = m - lastMidi;
 
-    if (!sb.isReplayingMotif) {
-        const cellType = sb.currentCell.join('');
-        const cellDurs = {
-            '1010': 2, '1111': 1, '1000': 4, '1110': 1, '1011': 1, '0111': 1, '1001': 1,
-            '1101': 1, '0110': 1, '0101': 1, '10000000': 8, '0010': 2, '0100': 1
-        };
-        durationMultiplier = cellDurs[cellType] || 1;
-        
-        // FUNK/DISCO STACCATO ENFORCEMENT
-        if (style === 'funk' || style === 'disco') {
-            // Force short durations for that "pecking" sound
-            if (Math.random() < 0.8 && durationMultiplier > 1) {
-                durationMultiplier = 1;
-            }
+        if (isResolvingSkip) {
+            const isOppositeDir = (lastInterval > 0 && currentInterval < 0) || (lastInterval < 0 && currentInterval > 0);
+            if (isOppositeDir && dist > 0 && dist <= 2) weight += 5000; 
+            else if (!isOppositeDir && dist > 2) weight -= 1000; 
         }
-        
-        if (durationMultiplier >= 2 && ['blues', 'neo', 'bossa', 'minimal', 'bird'].includes(style)) {
-            if (Math.random() < 0.4) durationMultiplier *= 1.5;
-        }
-    }    
-    durationMultiplier = Math.max(1, Math.round(durationMultiplier || 1));
-    sb.busySteps = durationMultiplier - 1;
 
-    // --- 7. Advanced Melodic Devices ---
-    
-    if (!sb.isReplayingMotif && isStrongBeat && Math.random() < (config.deviceProb * 0.7 * warmupFactor)) {
+        if (config.targetExtensions && config.targetExtensions.includes(interval)) weight += 8;
+        if (stepInBeat === 0) {
+            if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) {
+                weight += 15; 
+                if ([3, 4, 10, 11].includes(interval)) weight += 20; 
+            } else weight -= 5;
+        }
+        if (style === 'neo' && dist === 5) weight += 100; 
+        if (sb.qaState === 'Answer') { if (interval === 0) weight += 60; if (interval === 7) weight += 30; }
+
+        if (dist === 0) weight -= 50; 
+        if (dist > 0 && dist <= 2) weight += (50 + (ctx.bpm / 100) * 20); 
+        else if (dist >= 3 && dist <= 4) weight += 10; 
+        else if (dist >= 5 && dist <= 7) weight -= 30; 
+        else if (dist === 12) weight += 10; 
+        else if (dist > 7) weight -= 500; 
+
+        if (distFromCenter(m, dynamicCenter) > 7) weight -= (distFromCenter(m, dynamicCenter) - 7) * 5; 
+        
+        weight = Math.max(0.1, weight);
+        CANDIDATE_WEIGHTS[m] = weight;
+        totalWeight += weight;
+    }
+
+    let randomVal = Math.random() * totalWeight;
+    let selectedMidi = lastMidi;
+    for (let m = minMidi; m <= maxMidi; m++) {
+        const w = CANDIDATE_WEIGHTS[m];
+        if (w > 0) { randomVal -= w; if (randomVal <= 0) { selectedMidi = m; break; } }
+    }
+    sb.lastInterval = selectedMidi - lastMidi;
+
+    // Devices
+    if (stepInBeat === 0 && Math.random() < (config.deviceProb * 0.7 * warmupFactor)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
-        
-        // FUNK REPETITIVE STAB (The "James Brown" Hit)
-        // If we are playing Funk, sometimes we just want to hit the same note 3-4 times.
-        if (style === 'funk' && Math.random() < 0.25) {
-             const stabCount = 3 + Math.floor(Math.random() * 3); // 3-5 hits
-             sb.deviceBuffer = [];
-             for(let i=0; i<stabCount; i++) {
-                 sb.deviceBuffer.push({ 
-                     midi: selectedMidi, 
-                     velocity: velocity * (i===0 ? 1.1 : 0.9), 
-                     durationSteps: 1, 
-                     style, 
-                     timingOffset: 0 
-                 });
-             }
-             sb.busySteps = 0;
-             sb.lastFreq = getFrequency(selectedMidi);
-             return sb.deviceBuffer.shift();
-        }
-        
         if (deviceType === 'birdFlurry') {
-            // Charlie Parker style "turn" or flurry: 
-            // Rapid 4-note sequence (usually 16ths or triplets)
-            const scaleIntervals = getScaleForChord(targetChord, nextChord, style);
-            let flurry = [];
-            let currentMidi = selectedMidi + 3; // Start a bit higher
-            
+            let flurry = []; let curr = selectedMidi + 3; 
             for (let i = 0; i < 4; i++) {
-                // Find nearest scale tone below current
-                let nextMidi = currentMidi - 1;
-                while (!scaleIntervals.includes((nextMidi - rootMidi + 120) % 12) && nextMidi > currentMidi - 5) {
-                    nextMidi--;
-                }
-                flurry.push({ midi: nextMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: 0 });
-                currentMidi = nextMidi;
+                let n = curr - 1; while (!scaleIntervals.includes((n - rootMidi + 120) % 12) && n > curr - 5) n--;
+                flurry.push({ midi: n, velocity: 0.8, durationSteps: 1, style });
+                curr = n;
             }
-            
             sb.deviceBuffer = flurry;
-            sb.busySteps = 0;
-            // First note of the flurry is played immediately
-            const first = sb.deviceBuffer.shift();
-            sb.lastFreq = getFrequency(first.midi);
-            return { ...first, timingOffset: timingOffset / 1000 };
+            const first = sb.deviceBuffer.shift(); return { ...first, timingOffset: 0 };
         }
-
+        if (deviceType === 'run') {
+            const sz = Math.random() < 0.5 ? 1 : 2;
+            sb.deviceBuffer = [ { midi: selectedMidi - sz, velocity: 0.8, durationSteps: 1, style }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style } ];
+            return { midi: selectedMidi - (sz * 2), velocity: 0.7, durationSteps: 1, style };
+        }
         if (deviceType === 'enclosure') {
-            const scaleIntervals = getScaleForChord(targetChord, nextChord, style);
-            // Try to find a scale tone above, otherwise default to +1 chromatic
-            let aboveMidi = selectedMidi + 1;
-            for(let d=1; d<=2; d++) {
-                if (scaleIntervals.includes((selectedMidi + d - rootMidi + 120) % 12)) {
-                    aboveMidi = selectedMidi + d;
-                    break;
-                }
-            }
-            // Below is almost always a half-step leading tone in bebop, but let's check scale
-            let belowMidi = selectedMidi - 1;
-            if (scaleIntervals.includes((selectedMidi - 2 - rootMidi + 120) % 12) && !scaleIntervals.includes(1)) {
-                // if -2 is in scale and -1 isn't, maybe use -2? No, Bebop enclosure -1 is usually best.
-                // We'll keep -1 but reduce probability of the device itself.
-            }
-
-            sb.deviceBuffer = [
-                { midi: belowMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: 0 },
-                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, bendStartInterval, style, timingOffset: 0 }
-            ];
-            sb.busySteps = 0;
-            sb.lastFreq = getFrequency(aboveMidi);
-            return { midi: aboveMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
-        } 
-        
-        if (deviceType === 'slide') {
-            // Chromatic slide/grace note (Blues/Rock)
-            // Ensure grace note is actually a half-step below and only used occasionally
-            const graceMidi = selectedMidi - 1;
-            sb.deviceBuffer = [
-                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0 }
-            ];
-            sb.busySteps = 0;
-            sb.lastFreq = getFrequency(graceMidi);
-            return { midi: graceMidi, velocity: velocity * 0.7, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
+            sb.deviceBuffer = [ { midi: selectedMidi - 1, velocity: 0.8, durationSteps: 1, style }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style } ];
+            let above = selectedMidi + 1; for(let d=1; d<=2; d++) { if (scaleIntervals.includes((selectedMidi + d - rootMidi + 120) % 12)) { above = selectedMidi + d; break; } }
+            return { midi: above, velocity: 0.8, durationSteps: 1, style };
         }
-
-        if (deviceType === 'guitarDouble' && sb.doubleStops) {
-            const rand = Math.random();
-            const currentScale = getScaleForChord(targetChord, nextChord, style);
-            let dsInterval = (style === 'blues' || style === 'scalar') ? (Math.random() < 0.7 ? 5 : 7) : (Math.random() < 0.5 ? 3 : 4);
-            
-            // SCALE CHECK: Ensure the second note is in the scale
-            if (!currentScale.includes((dsInterval) % 12)) {
-                 // Nudge to nearest scale tone
-                 let best = dsInterval;
-                 let minDiff = 12;
-                 for (const s of currentScale) {
-                     const diff = Math.min(Math.abs(s - (dsInterval % 12)), 12 - Math.abs(s - (dsInterval % 12)));
-                     if (diff < minDiff) { minDiff = diff; best = s; }
-                 }
-                 dsInterval = best;
-            }
-
-            const secondMidi = selectedMidi + dsInterval;
-
-            if (rand < 0.4) {
-                // Variation 1: Hendrix Hammer (Hold one note, hammer the other)
-                sb.deviceBuffer = [
-                    [{ midi: secondMidi, velocity: velocity * 0.9, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: true },
-                     { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: false }]
-                ];
-                sb.busySteps = 0;
-                sb.lastFreq = getFrequency(selectedMidi);
-                return [{ midi: secondMidi - 2, velocity: velocity * 0.7, durationSteps: 1, style, timingOffset: 0, isDoubleStop: true },
-                        { midi: selectedMidi, velocity: velocity * 0.8, durationSteps: 1, style, timingOffset: 0, isDoubleStop: false }];
-            } else if (rand < 0.7) {
-                // Variation 2: Slide In (Chromatic slide on both notes)
-                sb.deviceBuffer = [
-                    [{ midi: secondMidi, velocity: velocity * 0.9, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: true },
-                     { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: false }]
-                ];
-                sb.busySteps = 0;
-                sb.lastFreq = getFrequency(selectedMidi - 1);
-                return [{ midi: secondMidi - 1, velocity: velocity * 0.6, durationSteps: 1, style, timingOffset: 0, isDoubleStop: true },
-                        { midi: selectedMidi - 1, velocity: velocity * 0.7, durationSteps: 1, style, timingOffset: 0, isDoubleStop: false }];
-            } else {
-                // Variation 3: Rhythmic Punctuations (Double stop hits)
-                return [{ midi: secondMidi, velocity: velocity, durationSteps: 1, style, timingOffset: 0, isDoubleStop: true },
-                        { midi: selectedMidi, velocity: velocity * 1.1, durationSteps: 1, style, timingOffset: 0, isDoubleStop: false }];
-            }
+        if (deviceType === 'slide') {
+            sb.deviceBuffer = [ { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style } ];
+            return { midi: selectedMidi - 1, velocity: 0.7, durationSteps: 1, style };
+        }
+        if ((deviceType === 'quartal' || deviceType === 'guitarDouble') && sb.doubleStops) {
+            let dsInt = (style === 'blues' || style === 'scalar') ? 5 : 4;
+            return [{ midi: selectedMidi + dsInt, velocity: 0.8, durationSteps: 1, style, isDoubleStop: true }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style, isDoubleStop: false }];
         }
     }
 
     let notes = [];
-    if (sb.doubleStops && !sb.isReplayingMotif) {
-        const isUpbeat = stepInBeat === 2;
-        const isPhraseEnd = sb.notesInPhrase > (config.maxNotesPerPhrase * 0.7);
-        const dsMod = (isUpbeat || isPhraseEnd) ? 1.2 : 0.6; // Increased from 0.3 to be less restrictive
-
-        if (Math.random() < (config.doubleStopProb * dsMod * warmupFactor)) {
-            let dsIntervals = [5, 7, 9, 12];
-            if (style === 'blues') dsIntervals = [3, 4, 5, 9, 10, 12]; 
-            if (style === 'scalar' || style === 'shred') dsIntervals = [7, 12, 5]; 
-            if (style === 'neo') dsIntervals = [4, 5, 10, 11]; 
-            if (style === 'bossa') dsIntervals = [4, 9, 5]; 
-
-            // Chord Awareness: If chord has a strong b7 or 3rd, try to include it
-            const currentPC = (selectedMidi % 12 + 12) % 12;
-            const rootPC = (targetChord.rootMidi % 12 + 12) % 12;
-            const currentInterval = (currentPC - rootPC + 12) % 12;
-
-            if (targetChord.quality.includes('7') && currentInterval === 0) {
-                // If we are on the root, adding the b7 (10) or 4th (5) is very guitaristic
-                dsIntervals = [10, 5, 12];
-            }
-
-            const dsInt = dsIntervals[Math.floor(Math.random() * dsIntervals.length)];
-            const secondMidi = selectedMidi + (Math.random() > 0.5 ? dsInt : -dsInt);
-            if (secondMidi > 40 && secondMidi < 100) {
-                notes.push({ midi: secondMidi, velocity: velocity * 0.8, isDoubleStop: true });
-            }
-        }
+    if (sb.doubleStops && Math.random() < (config.doubleStopProb * (stepInBeat === 2 ? 1.2 : 0.6) * warmupFactor)) {
+        let dsInt = [5, 7, 9, 12][Math.floor(Math.random() * 4)];
+        notes.push({ midi: selectedMidi + dsInt, velocity: 0.8, isDoubleStop: true });
     }
 
-    if (!sb.isReplayingMotif) {
-        if (sb.motifBuffer) {
-            sb.motifBuffer.push({
-                interval: selectedMidi - rootMidi,
-                dur: durationMultiplier,
-                step: cycleStep 
-            });
-            if (sb.motifBuffer.length > 32) sb.motifBuffer.shift();
-        }
-    }
-    
     sb.lastFreq = getFrequency(selectedMidi);
-    if (style === 'neo') timingOffset += (0.01 + Math.random() * 0.035) * 1000; 
+    const result = { midi: selectedMidi, velocity: 0.8, durationSteps: 1, bendStartInterval: 0, ccEvents: [], timingOffset: 0, style, isDoubleStop: false };
+    if (notes.length > 0 && sb.doubleStops) return [...notes.map(n => ({...result, ...n})), result];
+    return result;
+}
 
-    const resultNote = {
-        midi: selectedMidi,
-        velocity,
-        durationSteps: durationMultiplier,
-        bendStartInterval, 
-        ccEvents: [],
-        timingOffset: timingOffset / 1000,
-        style,
-        isDoubleStop: false
-    };
+function distFromCenter(m, center) { return Math.abs(m - center); }
 
-    if (notes.length > 0 && sb.doubleStops) {
-        // LEAD PRIORITIZATION: Return harmony notes first, then the lead note.
-        // This ensures the lead note 'wins' in monophonic voice-stealing scenarios.
-        return [...notes.map(n => ({...resultNote, ...n})), resultNote];
-    }
-
-    return resultNote;
+export function isSoloistActive(style, step, stepInChord) {
+    if (sb.busySteps > 0) return true;
+    if (sb.isResting) return false;
+    return true; 
 }
