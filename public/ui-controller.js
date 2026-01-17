@@ -14,7 +14,7 @@ import { pushHistory, undo } from './history.js';
 import { shareProgression } from './sharing.js';
 import { triggerInstall } from './pwa.js';
 import { exportToMidi } from './midi-export.js';
-import { applyConductor } from './conductor.js';
+import { updateAutoConductor, checkSectionTransition, updateLarsTempo, updateBpmUI } from './conductor.js';
 import { initMIDI, panic, syncMIDIOutputs } from './midi-controller.js';
 import { midi as midiState } from './state.js';
 
@@ -651,6 +651,7 @@ export function setupUIHandlers(refs) {
         ui.larsModeCheck.addEventListener('change', (e) => {
             dispatch('SET_LARS_MODE', e.target.checked);
             updateLarsUI(e.target.checked);
+            updateBpmUI();
             saveCurrentState();
         });
     }

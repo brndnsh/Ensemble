@@ -25,9 +25,10 @@
     <div class="main-controls">
         <button id="playBtn" class="primary-btn">START</button>
         
-        <div class="control-group">
+        <div class="control-group" id="bpmControlGroup">
             <span class="control-label" id="bpm-label">BPM</span>
             <input type="number" id="bpmInput" value="100" min="40" max="240" aria-labelledby="bpm-label" aria-label="Tempo in BPM">
+            <span id="larsIndicator" style="display: none; font-size: 0.7rem; margin-left: 0.2rem; font-weight: 900;">LARS</span>
             <button id="tapBtn" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; height: auto;" aria-label="Tap Tempo">TAP</button>
         </div>
 

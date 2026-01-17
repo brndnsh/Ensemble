@@ -15,6 +15,8 @@ export function initUI() {
         soloistVol: 'soloistVolume',
         drumVol: 'drumVolume',
         bpmLabel: 'bpm-label',
+        bpmControlGroup: 'bpmControlGroup',
+        larsIndicator: 'larsIndicator',
         clearDrums: 'clearDrumsBtn',
         masterVol: 'masterVolume',
         countIn: 'countInCheck',
