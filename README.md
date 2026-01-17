@@ -36,6 +36,29 @@ Automated unit tests are located in the `tests/` directory and use Vitest.
 npm test
 ```
 
+## Deployment
+
+Ensemble includes scripts for automated deployment to remote servers using `esbuild` for minification and `scp` for file transfer.
+
+### Prerequisites
+
+- `esbuild` (installed via `npm install`)
+- SSH access with the `root` user to the target servers (`ensembletest` and `ensemble`).
+
+### Commands
+
+To deploy to the test environment:
+```bash
+npm run deploy:test
+```
+
+To deploy to the production environment:
+```bash
+npm run deploy:prod
+```
+
+The scripts will create a `dist/` folder, minify all JavaScript files, sync assets, and upload the contents to `/var/www/html/` on the target server.
+
 ## Tech Stack
 
 *   **Engine**: Vanilla JavaScript (ES Modules) & Web Audio API. Modularized core for high-precision scheduling and synthesis.
