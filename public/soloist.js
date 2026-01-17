@@ -166,18 +166,18 @@ const STYLE_CONFIG = {
         allowedDevices: ['slide']
     },
     bird: {
-        restBase: 0.3, 
-        restGrowth: 0.05,
-        cells: [0, 12, 2, 7, 1], // 8ths, offbeat 8th, quarters, bebop syncopation, and 16ths
-        registerSoar: 5,
+        restBase: 0.15, // Reduced from 0.3 to keep lines moving
+        restGrowth: 0.03, // Reduced from 0.05
+        cells: [0, 1, 7, 3], // 8ths, 16ths, Bebop 1, Gallop (avoiding slow quarters)
+        registerSoar: 8, // Increased from 5 for more range
         tensionScale: 0.7,
-        timingJitter: 15,
-        maxNotesPerPhrase: 16, 
-        doubleStopProb: 0.1,
-        anticipationProb: 0.5,
-        targetExtensions: [2, 5, 9], // 9, 11, 13
-        deviceProb: 0.5,
-        allowedDevices: ['enclosure', 'run', 'guitarDouble']
+        timingJitter: 12, // Slightly tighter
+        maxNotesPerPhrase: 48, // Significantly increased from 16 for long Parker-style lines
+        doubleStopProb: 0.05,
+        anticipationProb: 0.6, // Parker often anticipated the change
+        targetExtensions: [2, 5, 6, 9], // 9, 11, #11, 13
+        deviceProb: 0.6, // High device probability for flurries
+        allowedDevices: ['enclosure', 'run', 'birdFlurry']
     },
     disco: {
         restBase: 0.25,
@@ -889,6 +889,31 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
              return sb.deviceBuffer.shift();
         }
         
+        if (deviceType === 'birdFlurry') {
+            // Charlie Parker style "turn" or flurry: 
+            // Rapid 4-note sequence (usually 16ths or triplets)
+            const scaleIntervals = getScaleForChord(targetChord, nextChord, style);
+            let flurry = [];
+            let currentMidi = selectedMidi + 3; // Start a bit higher
+            
+            for (let i = 0; i < 4; i++) {
+                // Find nearest scale tone below current
+                let nextMidi = currentMidi - 1;
+                while (!scaleIntervals.includes((nextMidi - rootMidi + 120) % 12) && nextMidi > currentMidi - 5) {
+                    nextMidi--;
+                }
+                flurry.push({ midi: nextMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: 0 });
+                currentMidi = nextMidi;
+            }
+            
+            sb.deviceBuffer = flurry;
+            sb.busySteps = 0;
+            // First note of the flurry is played immediately
+            const first = sb.deviceBuffer.shift();
+            sb.lastFreq = getFrequency(first.midi);
+            return { ...first, timingOffset: timingOffset / 1000 };
+        }
+
         if (deviceType === 'enclosure') {
             const scaleIntervals = getScaleForChord(targetChord, nextChord, style);
             // Try to find a scale tone above, otherwise default to +1 chromatic
