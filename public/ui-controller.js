@@ -15,6 +15,8 @@ import { shareProgression } from './sharing.js';
 import { triggerInstall } from './pwa.js';
 import { exportToMidi } from './midi-export.js';
 import { applyConductor } from './conductor.js';
+import { initMIDI, panic, syncMIDIOutputs } from './midi-controller.js';
+import { midi as midiState } from './state.js';
 
 export function updateStyle(type, styleId) {
     const UPDATE_STYLE_CONFIG = {
@@ -704,6 +706,134 @@ export function setupUIHandlers(refs) {
 
     // Final UI Sync
     updateGroupingUI();
+    setupMIDIHandlers();
+}
+
+export function setupMIDIHandlers() {
+    if (!ui.midiEnableCheck) return;
+
+    ui.midiEnableCheck.addEventListener('change', async (e) => {
+        const enabled = e.target.checked;
+        if (enabled) {
+            const success = await initMIDI();
+            if (!success) {
+                ui.midiEnableCheck.checked = false;
+                showToast("MIDI Access Denied or Not Supported");
+                return;
+            }
+        } else {
+            panic();
+        }
+        dispatch('SET_MIDI_CONFIG', { enabled });
+        updateMIDIControlsUI(enabled);
+        restoreGains();
+        saveCurrentState();
+    });
+
+    if (ui.midiMuteLocalCheck) {
+        ui.midiMuteLocalCheck.addEventListener('change', (e) => {
+            dispatch('SET_MIDI_CONFIG', { muteLocal: e.target.checked });
+            restoreGains();
+            saveCurrentState();
+        });
+    }
+
+    ui.midiOutputSelect.addEventListener('change', (e) => {
+        dispatch('SET_MIDI_CONFIG', { selectedOutputId: e.target.value });
+        saveCurrentState();
+    });
+
+    const channels = ['Chords', 'Bass', 'Soloist', 'Drums'];
+    channels.forEach(ch => {
+        const el = ui[`midi${ch}Channel`];
+        if (el) {
+            el.addEventListener('change', (e) => {
+                const val = parseInt(e.target.value);
+                dispatch('SET_MIDI_CONFIG', { [`${ch.toLowerCase()}Channel`]: val });
+                saveCurrentState();
+            });
+        }
+        
+        const octEl = ui[`midi${ch}Octave`];
+        if (octEl) {
+            octEl.addEventListener('change', (e) => {
+                const val = parseInt(e.target.value);
+                dispatch('SET_MIDI_CONFIG', { [`${ch.toLowerCase()}Octave`]: val });
+                saveCurrentState();
+            });
+        }
+    });
+
+    if (ui.midiLatencySlider) {
+        ui.midiLatencySlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            dispatch('SET_MIDI_CONFIG', { latency: val });
+            if (ui.midiLatencyValue) ui.midiLatencyValue.textContent = `${val > 0 ? '+' : ''}${val}ms`;
+        });
+        ui.midiLatencySlider.addEventListener('change', () => saveCurrentState());
+    }
+
+    if (ui.midiVelocitySlider) {
+        ui.midiVelocitySlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            dispatch('SET_MIDI_CONFIG', { velocitySensitivity: val });
+            if (ui.midiVelocityValue) ui.midiVelocityValue.textContent = val.toFixed(1);
+        });
+        ui.midiVelocitySlider.addEventListener('change', () => saveCurrentState());
+    }
+
+    // Initial Sync from State
+    ui.midiEnableCheck.checked = midiState.enabled;
+    if (ui.midiChordsChannel) ui.midiChordsChannel.value = midiState.chordsChannel;
+    if (ui.midiBassChannel) ui.midiBassChannel.value = midiState.bassChannel;
+    if (ui.midiSoloistChannel) ui.midiSoloistChannel.value = midiState.soloistChannel;
+    if (ui.midiDrumsChannel) ui.midiDrumsChannel.value = midiState.drumsChannel;
+    if (ui.midiChordsOctave) ui.midiChordsOctave.value = midiState.chordsOctave;
+    if (ui.midiBassOctave) ui.midiBassOctave.value = midiState.bassOctave;
+    if (ui.midiSoloistOctave) ui.midiSoloistOctave.value = midiState.soloistOctave;
+    if (ui.midiDrumsOctave) ui.midiDrumsOctave.value = midiState.drumsOctave;
+    if (ui.midiVelocitySlider) ui.midiVelocitySlider.value = midiState.velocitySensitivity || 1.0;
+    if (ui.midiVelocityValue) ui.midiVelocityValue.textContent = (midiState.velocitySensitivity || 1.0).toFixed(1);
+    if (ui.midiLatencySlider) ui.midiLatencySlider.value = midiState.latency;
+    if (ui.midiLatencyValue) ui.midiLatencyValue.textContent = `${midiState.latency > 0 ? '+' : ''}${midiState.latency}ms`;
+    
+    updateMIDIControlsUI(midiState.enabled);
+    renderMIDIOutputs();
+
+    // Subscribe to MIDI state changes (to update output list)
+    import('./state.js').then(({ subscribe }) => {
+        subscribe((action, payload) => {
+            if (action === 'SET_MIDI_CONFIG' && payload.outputs) {
+                renderMIDIOutputs();
+            }
+        });
+    });
+}
+
+function updateMIDIControlsUI(enabled) {
+    if (!ui.midiControls) return;
+    ui.midiControls.style.opacity = enabled ? '1' : '0.5';
+    ui.midiControls.style.pointerEvents = enabled ? 'auto' : 'none';
+}
+
+function renderMIDIOutputs() {
+    if (!ui.midiOutputSelect) return;
+    const select = ui.midiOutputSelect;
+    const currentId = midiState.selectedOutputId;
+    
+    select.innerHTML = midiState.outputs.length > 0 ? '' : '<option value="">No outputs found</option>';
+    
+    midiState.outputs.forEach(out => {
+        const opt = document.createElement('option');
+        opt.value = out.id;
+        opt.textContent = out.name;
+        if (out.id === currentId) opt.selected = true;
+        select.appendChild(opt);
+    });
+
+    if (!currentId && midiState.outputs.length > 0) {
+        dispatch('SET_MIDI_CONFIG', { selectedOutputId: midiState.outputs[0].id });
+    }
 }
 
 const GROUPING_OPTIONS = {

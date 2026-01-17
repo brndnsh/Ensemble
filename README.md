@@ -9,7 +9,7 @@ Ensemble is a Progressive Web App (PWA) designed for musicians to practice and e
 *   🥁 **Smart Drum Machine**: A multi-level velocity step sequencer with built-in genre presets and adjustable swing/humanization. Integrated with a procedural fill engine.
 *   📊 **Unified Visualizer**: A multi-track harmonic monitor that superimposes instrumental performance over chord data, with real-time interval analysis and retractable UI.
 *   🎹 **Pro Accompaniment**: Highly optimized voicing engine with adjustable density, styles (Pad, Funk, Reggae), and intelligent relative key transposition.
-*   📁 **Workflow Tools**: MIDI export, auto-save persistence, URL-based sharing, and a comprehensive user library for custom presets.
+*   📁 **Workflow Tools**: Real-time Web MIDI output for DAW integration, MIDI file export, auto-save persistence, URL-based sharing, and a comprehensive user library for custom presets.
 *   📱 **PWA Ready**: Fully responsive, installable, and works offline with native Solarized theme support.
 
 ## Usage

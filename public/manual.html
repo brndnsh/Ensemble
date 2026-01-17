@@ -180,7 +180,7 @@
                 <li><a href="#bassist">Algorithmic Bassist</a></li>
                 <li><a href="#soloist">Algorithmic Soloist</a></li>
                 <li><a href="#visualizer">Unified Visualizer</a></li>
-                <li><a href="#midi">MIDI Export</a></li>
+                <li><a href="#midi">MIDI & DAW Connection</a></li>
                 <li><a href="#shortcuts">Shortcuts</a></li>
                 <li><a href="#advanced">Diagnostics & Advanced</a></li>
             </ul>
@@ -406,8 +406,32 @@
         </section>
 
         <section id="midi">
-            <h2>MIDI Export</h2>
-            <p>Export your progression as a Standard MIDI File (SMF) for use in any DAW. The export includes:</p>
+            <h2>MIDI & DAW Connection</h2>
+            <p>Ensemble supports both high-quality file exports and real-time connectivity to professional DAWs like Logic Pro, Ableton Live, and Cubase.</p>
+            
+            <h3>Real-Time DAW Connection</h3>
+            <p>Route Ensemble's generative performances directly into your DAW to use your own virtual instruments and high-end plugins.</p>
+            <ul class="list-detailed">
+                <li><strong>Enable Output:</strong> Go to Settings (⚙️) and check <strong>Enable Web MIDI Output</strong>.</li>
+                <li><strong>Port Selection:</strong> Select a virtual MIDI bus (like <strong>IAC Driver</strong> on macOS) or a hardware output.</li>
+                <li><strong>Channel Mapping:</strong> Assign each instrument to a specific MIDI channel (Defaults: Chords 1, Bass 2, Soloist 3, Drums 10).</li>
+                <li><strong>Velocity Compression:</strong> Use the <strong>Velocity Sensitivity</strong> slider to calibrate how hard the band plays your DAW's instruments. A setting of 1.0 maps a standard note to MIDI 85, leaving headroom for accents.</li>
+                <li><strong>Local Muting:</strong> By default, browser audio is muted when MIDI is enabled so you only hear your DAW.</li>
+            </ul>
+
+            <div class="feature-card">
+                <h4>Logic Pro Quick Start</h4>
+                <ol class="list-detailed" style="margin-bottom:0; font-size: 0.9rem;">
+                    <li>Enable <strong>IAC Driver</strong> in Audio MIDI Setup.</li>
+                    <li>In Logic, create tracks for each instrument.</li>
+                    <li>In the Track Inspector, set <strong>MIDI Input</strong> to the specific channel (e.g., Bass = Ch. 2) instead of "All".</li>
+                    <li>Enable <strong>Allow multitrack recording</strong> in Project Settings.</li>
+                    <li>Record-arm all tracks and press Start in Ensemble.</li>
+                </ol>
+            </div>
+
+            <h3>MIDI File Export</h3>
+            <p>Export your progression as a Standard MIDI File (SMF) for offline editing. The export includes:</p>
             <ul class="list-detailed">
                 <li><strong>Track 1:</strong> Chords (with naming markers)</li>
                 <li><strong>Track 2:</strong> Bass performance</li>

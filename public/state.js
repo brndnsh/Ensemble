@@ -312,6 +312,34 @@ export const vizState = {
     enabled: false
 };
 
+/**
+ * @typedef {Object} MidiState
+ * @property {boolean} enabled - Whether Web MIDI output is active.
+ * @property {Array<{id: string, name: string}>} outputs - List of available MIDI output ports.
+ * @property {string|null} selectedOutputId - The ID of the currently selected MIDI output.
+ * @property {number} chordsChannel - MIDI channel for Chords (1-16).
+ * @property {number} bassChannel - MIDI channel for Bass (1-16).
+ * @property {number} soloistChannel - MIDI channel for Soloist (1-16).
+ * @property {number} drumsChannel - MIDI channel for Drums (1-16).
+ * @property {number} latency - Global MIDI latency offset in ms.
+ */
+export const midi = {
+    enabled: false,
+    outputs: [],
+    selectedOutputId: null,
+    chordsChannel: 1,
+    bassChannel: 2,
+    soloistChannel: 3,
+    drumsChannel: 10,
+    latency: 0,
+    muteLocal: true,
+    chordsOctave: 0,
+    bassOctave: 0,
+    soloistOctave: 0,
+    drumsOctave: 0,
+    velocitySensitivity: 1.0
+};
+
 // Persistence Helpers
 export const storage = {
     get: (key) => {
@@ -327,7 +355,7 @@ export const storage = {
 // --- Event Bus / State Manager ---
 
 const listeners = new Set();
-const stateMap = { ctx, cb, bb, sb, gb, arranger, vizState };
+const stateMap = { ctx, cb, bb, sb, gb, arranger, vizState, midi };
 
 /**
  * Dispatch a state change action.
@@ -336,6 +364,10 @@ const stateMap = { ctx, cb, bb, sb, gb, arranger, vizState };
  */
 export function dispatch(action, payload) {
     switch (action) {
+        // --- MIDI ---
+        case 'SET_MIDI_CONFIG':
+            Object.assign(midi, payload);
+            break;
         // --- Global / Conductor ---
         case 'SET_BAND_INTENSITY':
             ctx.bandIntensity = Math.max(0, Math.min(1, payload));

@@ -1998,6 +1998,32 @@ select, input[type="range"] {
     accent-color: var(--accent-color);
 }
 
+/* --- MIDI Connection UI --- */
+#midiControls input[type="number"] {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.3rem;
+    width: 100%;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+#midiLatencyValue {
+    font-family: monospace;
+    font-weight: bold;
+}
+
+#midiOutputSelect {
+    width: 100%;
+    padding: 0.5rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 4px;
+}
+
 select {
     background-color: var(--select-bg);
     color: var(--select-text);

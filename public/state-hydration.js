@@ -109,10 +109,48 @@ export function hydrateState(viz) {
         if (ui.swingBase) ui.swingBase.value = gb.swingSub;
         if (ui.humanizeSlider) ui.humanizeSlider.value = gb.humanize;
         if (ui.drumBarsSelect) ui.drumBarsSelect.value = gb.measures;
-        if (ui.metronome) ui.metronome.checked = ctx.metronome;
-        if (ui.sessionTimerSelect) ui.sessionTimerSelect.value = ctx.sessionTimer;
         if (ui.applyPresetSettings) ui.applyPresetSettings.checked = ctx.applyPresetSettings;
         
+        if (savedState.midi) {
+            dispatch('SET_MIDI_CONFIG', {
+                enabled: savedState.midi.enabled || false,
+                selectedOutputId: savedState.midi.selectedOutputId || null,
+                chordsChannel: savedState.midi.chordsChannel || 1,
+                bassChannel: savedState.midi.bassChannel || 2,
+                soloistChannel: savedState.midi.soloistChannel || 3,
+                drumsChannel: savedState.midi.drumsChannel || 10,
+                latency: savedState.midi.latency || 0,
+                muteLocal: savedState.midi.muteLocal !== undefined ? savedState.midi.muteLocal : true,
+                chordsOctave: savedState.midi.chordsOctave || 0,
+                bassOctave: savedState.midi.bassOctave || 0,
+                soloistOctave: savedState.midi.soloistOctave || 0,
+                drumsOctave: savedState.midi.drumsOctave || 0,
+                velocitySensitivity: savedState.midi.velocitySensitivity !== undefined ? savedState.midi.velocitySensitivity : 1.0
+            });
+
+            if (ui.midiEnableCheck) ui.midiEnableCheck.checked = savedState.midi.enabled || false;
+            if (ui.midiMuteLocalCheck) ui.midiMuteLocalCheck.checked = savedState.midi.muteLocal !== undefined ? savedState.midi.muteLocal : true;
+            if (ui.midiChordsChannel) ui.midiChordsChannel.value = savedState.midi.chordsChannel || 1;
+            if (ui.midiBassChannel) ui.midiBassChannel.value = savedState.midi.bassChannel || 2;
+            if (ui.midiSoloistChannel) ui.midiSoloistChannel.value = savedState.midi.soloistChannel || 3;
+            if (ui.midiDrumsChannel) ui.midiDrumsChannel.value = savedState.midi.drumsChannel || 10;
+            
+            if (ui.midiVelocitySlider) {
+                ui.midiVelocitySlider.value = savedState.midi.velocitySensitivity !== undefined ? savedState.midi.velocitySensitivity : 1.0;
+                if (ui.midiVelocityValue) ui.midiVelocityValue.textContent = parseFloat(ui.midiVelocitySlider.value).toFixed(1);
+            }
+            if (ui.midiChordsOctave) ui.midiChordsOctave.value = savedState.midi.chordsOctave || 0;
+            if (ui.midiBassOctave) ui.midiBassOctave.value = savedState.midi.bassOctave || 0;
+            if (ui.midiSoloistOctave) ui.midiSoloistOctave.value = savedState.midi.soloistOctave || 0;
+            if (ui.midiDrumsOctave) ui.midiDrumsOctave.value = savedState.midi.drumsOctave || 0;
+
+            if (savedState.midi.enabled) {
+                import('./midi-controller.js').then(({ initMIDI }) => {
+                    initMIDI();
+                });
+            }
+        }
+
         applyTheme(ctx.theme); 
     } else { 
         applyTheme('auto'); 

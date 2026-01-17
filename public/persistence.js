@@ -1,4 +1,4 @@
-import { arranger, ctx, cb, bb, sb, gb, vizState, storage } from './state.js';
+import { arranger, ctx, cb, bb, sb, gb, vizState, storage, midi } from './state.js';
 import { ui, createPresetChip, renderSections, renderMeasurePagination, renderGrid } from './ui.js';
 import { decompressSections, generateId } from './utils.js';
 
@@ -35,6 +35,21 @@ export function saveCurrentState() {
             activeTab: gb.activeTab,
             mobileTab: gb.mobileTab,
             pattern: gb.instruments.map(inst => ({ name: inst.name, steps: [...inst.steps] }))
+        },
+        midi: {
+            enabled: midi.enabled,
+            selectedOutputId: midi.selectedOutputId,
+            chordsChannel: midi.chordsChannel,
+            bassChannel: midi.bassChannel,
+            soloistChannel: midi.soloistChannel,
+            drumsChannel: midi.drumsChannel,
+            chordsOctave: midi.chordsOctave,
+            bassOctave: midi.bassOctave,
+            soloistOctave: midi.soloistOctave,
+            drumsOctave: midi.drumsOctave,
+            latency: midi.latency,
+            muteLocal: midi.muteLocal,
+            velocitySensitivity: midi.velocitySensitivity
         }
     };
     storage.save('currentState', data);

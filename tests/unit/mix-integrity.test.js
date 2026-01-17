@@ -20,7 +20,8 @@ vi.mock('../../public/state.js', () => ({
     cb: { volume: 0.5, enabled: true, reverb: 0.2 },
     bb: { volume: 0.45, enabled: true, reverb: 0.05 },
     sb: { volume: 0.5, enabled: true, reverb: 0.6 },
-    gb: { volume: 0.5, enabled: true, reverb: 0.2, audioBuffers: { noise: {} } }
+    gb: { volume: 0.5, enabled: true, reverb: 0.2, audioBuffers: { noise: {} } },
+    midi: { enabled: false, muteLocal: false }
 }));
 
 // Mock UI

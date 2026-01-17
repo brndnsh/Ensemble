@@ -8,6 +8,8 @@ import { updateAutoConductor, checkSectionTransition } from './conductor.js';
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
 import { loadDrumPreset, flushBuffers, switchMeasure } from './instrument-controller.js';
 import { draw } from './animation-loop.js';
+import { sendMIDINote, sendMIDIDrum, sendMIDICC, normalizeMidiVelocity } from './midi-controller.js';
+import { midi as midiState } from './state.js';
 
 let isScheduling = false;
 let sessionStartTime = 0;
@@ -328,9 +330,15 @@ export function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, abs
             step, inst, stepVal: inst.steps[step], ctx, gb, isDownbeat, isQuarter, isBackbeat, isGroupStart
         });
 
-        if (shouldPlay && !inst.muted) {
-            playDrumSound(soundName, finalTime + instTimeOffset, velocity * conductorVel);
-        }
+                if (shouldPlay && !inst.muted) {
+
+                    playDrumSound(soundName, finalTime + instTimeOffset, velocity * conductorVel);
+
+                    sendMIDIDrum(soundName, finalTime + instTimeOffset, Math.min(1.0, velocity * conductorVel), midiState.drumsOctave);
+
+                }
+
+        
     });
 }
 
@@ -349,6 +357,9 @@ export function scheduleBass(chordData, step, time) {
         const finalVel = (velocity || 1.0) * (ctx.conductorVelocity || 1.0);
         if (vizState.enabled) ctx.drawQueue.push({ type: 'bass_vis', name, octave, midi, time: adjustedTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration });
         playBassNote(freq, adjustedTime, duration, finalVel, muted);
+        if (!muted) {
+            sendMIDINote(midiState.bassChannel, midi + (midiState.bassOctave * 12), normalizeMidiVelocity(finalVel), adjustedTime, duration);
+        }
     }
 }
 
@@ -375,6 +386,7 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
                 const playTime = unswungTime + offsetS;
                 
                 playSoloNote(freq, playTime, duration, vel, bendStartInterval || 0, style);
+                sendMIDINote(midiState.soloistChannel, midi + (midiState.soloistOctave * 12), normalizeMidiVelocity(vel), playTime, duration);
                 
                 if (vizState.enabled) {
                     ctx.drawQueue.push({ type: 'soloist_vis', name, octave, midi, time: playTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration, noteType });
@@ -410,6 +422,7 @@ export function scheduleChords(chordData, step, time, stepInfo) {
                        const isSustain = cc.value >= 64;
                        const ccTime = playTime + (cc.timingOffset || 0); 
                        updateSustain(isSustain, ccTime);
+                       sendMIDICC(midiState.chordsChannel, 64, cc.value, ccTime);
                    }
                });
             }
@@ -422,6 +435,7 @@ export function scheduleChords(chordData, step, time, stepInfo) {
                    instrument: instrument || 'Piano',
                    dry: dry
                });
+               sendMIDINote(midiState.chordsChannel, getMidi(freq) + (midiState.chordsOctave * 12), normalizeMidiVelocity(velocity), playTime, duration);
             }
         });
     }

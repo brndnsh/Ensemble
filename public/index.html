@@ -574,6 +574,94 @@
                     </select>
                 </div>
             </div>
+
+            <div class="settings-section">
+                <h3>MIDI Connection</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="midiEnableCheck">
+                        Enable Web MIDI Output
+                    </label>
+                    <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; margin-left: 1.8rem;">
+                        Route notes to your DAW or external hardware.
+                    </p>
+                </div>
+
+                <div id="midiControls" style="opacity: 0.5; pointer-events: none; transition: opacity 0.2s;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="midiMuteLocalCheck" checked>
+                            Mute Browser Audio
+                        </label>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Output Port</label>
+                        <select id="midiOutputSelect" aria-label="MIDI Output Port">
+                            <option value="">No outputs found</option>
+                        </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Chords Ch.</label>
+                                <input type="number" id="midiChordsChannel" min="1" max="16" value="1" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
+                                <input type="number" id="midiChordsOctave" min="-2" max="2" value="0" style="width: 100%;">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Bass Ch.</label>
+                                <input type="number" id="midiBassChannel" min="1" max="16" value="2" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
+                                <input type="number" id="midiBassOctave" min="-2" max="2" value="0" style="width: 100%;">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Soloist Ch.</label>
+                                <input type="number" id="midiSoloistChannel" min="1" max="16" value="3" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
+                                <input type="number" id="midiSoloistOctave" min="-2" max="2" value="0" style="width: 100%;">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Drums Ch.</label>
+                                <input type="number" id="midiDrumsChannel" min="1" max="16" value="10" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
+                                <input type="number" id="midiDrumsOctave" min="-2" max="2" value="0" style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">
+                            <span>Latency Offset</span>
+                            <span id="midiLatencyValue" style="color: var(--accent-color);">0ms</span>
+                        </label>
+                        <input type="range" id="midiLatencySlider" min="-100" max="100" step="1" value="0" style="width: 100%;">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">
+                            <span>Velocity Sensitivity</span>
+                            <span id="midiVelocityValue" style="color: var(--accent-color);">1.0</span>
+                        </label>
+                        <input type="range" id="midiVelocitySlider" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%;">
+                    </div>
+                </div>
+            </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem;">
                 <button id="settingsExportMidiBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--panel-color); border: 1px solid #475569; padding: 0.8rem 0.5rem;">

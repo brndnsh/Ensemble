@@ -1,4 +1,4 @@
-import { ctx, gb, cb, bb, sb } from './state.js';
+import { ctx, gb, cb, bb, sb, midi } from './state.js';
 import { ui, triggerFlash } from './ui.js';
 import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { safeDisconnect, createReverbImpulse, createSoftClipCurve } from './utils.js';
@@ -67,7 +67,8 @@ export function initAudio() {
 
         modules.forEach(m => {
             const gainNode = ctx.audio.createGain();
-            const targetGain = Math.max(0.0001, m.state.volume * m.mult);
+            const isLocalMuted = midi.enabled && midi.muteLocal;
+            const targetGain = (m.state.enabled && !isLocalMuted) ? Math.max(0.0001, m.state.volume * m.mult) : 0.0001;
             gainNode.gain.setValueAtTime(0.0001, ctx.audio.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(targetGain, ctx.audio.currentTime + 0.04);
             
@@ -197,7 +198,7 @@ export function killDrumBus() {
     }
 }
 
-export function killAllNotes() {
+export async function killAllNotes() {
     killAllPianoNotes();
     killSoloistNote();
     killBassNote();
@@ -207,6 +208,11 @@ export function killAllNotes() {
     killBassBus();
     killSoloistBus();
     killDrumBus();
+
+    try {
+        const { panic } = await import('./midi-controller.js');
+        panic();
+    } catch (e) {}
 }
 
 /**
@@ -223,7 +229,8 @@ export function restoreGains() {
     ];
     modules.forEach(m => {
         if (m.node) {
-            const target = m.state.enabled ? (m.state.volume * m.mult) : 0.0001;
+            const isLocalMuted = midi.enabled && midi.muteLocal;
+            const target = (m.state.enabled && !isLocalMuted) ? (m.state.volume * m.mult) : 0.0001;
             m.node.gain.cancelScheduledValues(t);
             m.node.gain.setTargetAtTime(target, t, 0.04);
         }

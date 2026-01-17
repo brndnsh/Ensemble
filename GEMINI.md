@@ -4,15 +4,17 @@ Ensemble is a high-performance Progressive Web App (PWA) designed for generative
 
 ## Project Overview
 
-*   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `fills`). Core logic is modularized into high-precision scheduling (`scheduler-core.js`), visual rendering (`visualizer.js`), and decentralized synthesis (`synth-*.js`). UI-specific transient state and DOM caches are decoupled from the reactive state and stored in `ui-store.js`.
+*   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`, `midi`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `fills`). Core logic is modularized into high-precision scheduling (`scheduler-core.js`), visual rendering (`visualizer.js`), and decentralized synthesis (`synth-*.js`). UI-specific transient state and DOM caches are decoupled from the reactive state and stored in `ui-store.js`.
 *   **Core Logic**: Orchestrated by `main.js` (entry/init), `scheduler-core.js` (timing/scheduling), and `conductor.js` (global dynamics/intensity management). Includes the **Smart Grooves** system, a multi-module architecture where `gb.genreFeel` and `ctx.bandIntensity` drive procedural behaviors across drums (`scheduler-core.js`, `fills.js`), piano (`accompaniment.js`), bass (`bass.js`), and soloist (`soloist.js`), coordinated by `conductor.js`.
+*   **MIDI Bridge**: Real-time Web MIDI connectivity managed by `midi-controller.js`. Synchronizes Web Audio's `currentTime` with MIDI's `performance.now()` timeline. Includes velocity normalization (compression curve) to map Ensemble's expressive 0.0–1.5 internal range to MIDI's 0–127 standard. Supports per-track channel mapping, octave offsets, and automatic browser audio muting.
 *   **Audio Engine**: Built on the **Web Audio API**. Synthesis logic is decentralized into instrument-specific synthesis modules (`synth-bass.js`, `synth-soloist.js`, etc.) and orchestrated by `engine.js`. Includes performance resilience features like **Emergency Lookahead** for high-load scenarios.
 
 ## Key Files & Responsibilities
 
 *   `main.js`: Main entry point and application initialization.
-*   `scheduler-core.js`: High-precision lookahead scheduler for all audio events.
-*   `state.js`: Single source of truth for global, arranger, and instrument states.
+*   `scheduler-core.js`: High-precision lookahead scheduler for all audio events and MIDI messages.
+*   `state.js`: Single source of truth for global, arranger, instrument, and MIDI states.
+*   `midi-controller.js`: Manages MIDI port access, message transmission, and velocity normalization.
 *   `ui-store.js`: Non-reactive storage for transient UI state (DOM caches, card offsets).
 *   `conductor.js`: The "brain" that adjusts band intensity, complexity, and mixing parameters based on song form.
 *   `engine.js`: Low-level Web Audio operations and synthesis orchestration.
