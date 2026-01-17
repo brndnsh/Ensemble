@@ -155,6 +155,24 @@ export function sendMIDINote(channel, note, velocity, time, duration) {
 }
 
 /**
+ * Maps drum instrument names to standard MIDI drum notes (General MIDI).
+ */
+const DRUM_MAP = {
+    'Kick': 36,
+    'Snare': 38,
+    'HiHat': 42,
+    'Open': 46,
+    'Crash': 49,
+    'Ride': 51,
+    'Rim': 37,
+    'TomLo': 41,
+    'TomHi': 45,
+    'Clap': 39,
+    'Cowbell': 56,
+    'Shaker': 70
+};
+
+/**
  * Specifically handles drum scheduling for MIDI.
  */
 export function sendMIDIDrum(instrumentName, time, velocity, octaveOffset = 0) {

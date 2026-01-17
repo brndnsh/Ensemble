@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { sendMIDINote, initMIDI } from '../../../public/midi-controller.js';
+import { sendMIDINote, sendMIDIDrum, initMIDI } from '../../../public/midi-controller.js';
 import { ctx, midi } from '../../../public/state.js';
 
 describe('MIDI Note Overlap Logic', () => {
@@ -111,5 +111,19 @@ describe('MIDI Note Overlap Logic', () => {
 
         expect(mockOutput.send).toHaveBeenCalledTimes(2);
         expect(mockOutput.send.mock.calls[1][0][0]).toBe(0x80);
+    });
+
+    it('should correctly map drum names to notes using sendMIDIDrum', () => {
+        // DRUM_MAP: Kick -> 36
+        // default drumsChannel -> 10 (0x99 for Note On)
+        midi.drumsChannel = 10;
+        
+        sendMIDIDrum('Kick', 1000, 0.8);
+
+        expect(mockOutput.send).toHaveBeenCalledTimes(1);
+        const [status, note, velocity] = mockOutput.send.mock.calls[0][0];
+        
+        expect(status).toBe(0x99); // Channel 10 Note On
+        expect(note).toBe(36);     // Kick
     });
 });
