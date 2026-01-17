@@ -148,15 +148,17 @@ export function sendMIDINote(channel, note, velocity, time, duration) {
             
             // We manually send the Off here instead of using setTimeout
             // This ensures the driver receives Off -> On sequence
-            const output = midiAccess.outputs.get(midi.selectedOutputId);
-            if (output) {
-                // Calculate MIDI timestamp for cutoff
-                // time param is AudioContext time.
-                // midiTime = (cutoffTime - ctx.audio.currentTime) * 1000 + performance.now()
-                const midiTime = (cutoffTime - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency;
-                const status = 0x80 | (channel - 1);
-                output.send([status, note, 0], midiTime);
-                activeNotes.delete(key);
+            if (midiAccess && midi.selectedOutputId) {
+                const output = midiAccess.outputs.get(midi.selectedOutputId);
+                if (output) {
+                    // Calculate MIDI timestamp for cutoff
+                    // time param is AudioContext time.
+                    // midiTime = (cutoffTime - ctx.audio.currentTime) * 1000 + performance.now()
+                    const midiTime = (cutoffTime - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency;
+                    const status = 0x80 | (channel - 1);
+                    output.send([status, note, 0], midiTime);
+                    activeNotes.delete(key);
+                }
             }
         }
         activeNoteOffs.delete(key);
