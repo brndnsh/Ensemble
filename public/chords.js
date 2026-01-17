@@ -667,7 +667,7 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                     formatted.roman.bass = bassNameRom;
                 }
 
-                const isMinor = quality === 'minor' || quality === 'dim' || quality === 'halfdim';
+                const isMinor = quality === 'minor' || quality === 'dim' || quality === 'halfdim' || quality === 'm9' || quality === 'm11' || quality === 'm13' || quality === 'm6';
 
                 parsed.push({ 
                     romanName: finalRomName, absName: finalAbsName, nnsName: finalNNSName,
