@@ -154,19 +154,19 @@ export function updateBpmUI() {
         ui.bpmControlGroup.classList.add('lars-active');
         
         // Calculate intensity of the color (0 to 1)
-        // Saturate the color shift at 6 BPM offset (more sensitive than 10)
+        // Saturate the color shift at 6 BPM offset
         const intensity = Math.min(1, Math.abs(offset) / 6);
         
         if (Math.abs(offset) > 0.1) {
             const isPushing = offset > 0;
             const targetColor = isPushing ? 'var(--blue)' : 'var(--red)';
-            
-            // Boost the mix percentage to make it stand out more
             const mixPercent = 20 + Math.round(intensity * 80); 
             const blendedColor = `color-mix(in srgb, var(--text-color), ${targetColor} ${mixPercent}%)`;
             
             ui.bpmInput.style.color = blendedColor;
+            
             if (ui.bpmLabel) {
+                // On desktop (label visible), show secondary counter
                 const direction = isPushing ? '↗' : '↘';
                 ui.bpmLabel.textContent = `${effectiveBpm} ${direction}`;
                 ui.bpmLabel.style.color = blendedColor;

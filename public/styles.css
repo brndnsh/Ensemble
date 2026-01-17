@@ -1995,15 +1995,13 @@ select, input[type="range"] {
 
 /* --- Lars Mode Indicators --- */
 .lars-active .control-label {
-    display: inline-block !important; /* Force visible on mobile */
-    font-size: 0.65rem;
     animation: lars-pulse 2s infinite ease-in-out;
 }
 
-@keyframes lars-pulse {
-    0% { opacity: 0.7; }
-    50% { opacity: 1; }
-    100% { opacity: 0.7; }
+@media (max-width: 600px) {
+    .lars-active .control-label {
+        display: none !important; /* Keep hidden on mobile to save space */
+    }
 }
 
 /* --- MIDI Connection UI --- */
