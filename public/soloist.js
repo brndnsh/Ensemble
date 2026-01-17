@@ -237,13 +237,14 @@ export function getScaleForChord(chord, nextChord, style) {
              return [0, 2, 4, 5, 7, 9, 11]; // Ionian fallback for Major in Funk/Blues
         }
 
-        const base = ['minor', 'halfdim', 'dim'].includes(chord.quality) 
+        const isMinorQ = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality);
+        const base = isMinorQ
             ? [0, 2, 3, 5, 6, 7, 10] 
             : [0, 2, 3, 4, 5, 6, 7, 9, 10];
         
         // BB Box Logic: Add Major 3rd (4) and 6th (9) availability over Major chords
         // allowing the soloist to choose between b3 (3) and 3 (4) for expression.
-        if ((style === 'blues' || style === 'funk') && !['minor', 'halfdim', 'dim'].includes(chord.quality)) {
+        if ((style === 'blues' || style === 'funk') && !isMinorQ) {
             if (!base.includes(4)) base.push(4); // Major 3rd
             if (!base.includes(9)) base.push(9); // Major 6th
         }
@@ -263,7 +264,7 @@ export function getScaleForChord(chord, nextChord, style) {
             return [0, 2, 4, 6, 7, 9, 11]; // Lydian for others (like IV)
         }
         
-        if (chord.quality === 'minor') {
+        if (chord.quality === 'minor' || ['m9', 'm11', 'm13', 'm6'].includes(chord.quality)) {
             // Natural Minor (Aeolian) for the vi chord, Dorian for ii/iii/v
             if (relativeRoot === 9 && !arranger.isMinor) return [0, 2, 3, 5, 7, 8, 10];
             return [0, 2, 3, 5, 7, 9, 10]; // Dorian
@@ -279,6 +280,11 @@ export function getScaleForChord(chord, nextChord, style) {
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
         case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
         case 'aug': return [0, 2, 4, 6, 8, 10];
+        case 'm9':
+        case 'm11':
+        case 'm13':
+        case 'm6':
+            return [0, 2, 3, 5, 7, 9, 10]; // Dorian default for extended minors
         case 'sus4': return [0, 2, 5, 7, 9, 10]; // Mixolydian sus4
         case '7alt': return [0, 1, 3, 4, 6, 8, 10];
         case '7#9': 

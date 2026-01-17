@@ -5,7 +5,7 @@ import { KEY_ORDER, TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
 /**
  * Determines the best scale for the bass based on chord and context.
  */
-function getScaleForBass(chord, nextChord) {
+export function getScaleForBass(chord, nextChord) {
     const isMinor = chord.isMinor !== undefined ? chord.isMinor : arranger.isMinor;
     const isDominant = chord.quality.startsWith('7') || 
                        ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(chord.quality) ||
@@ -16,7 +16,9 @@ function getScaleForBass(chord, nextChord) {
         return [0, 1, 3, 4, 6, 8, 10]; // Altered
     }
 
-    const isV7toMinor = isDominant && nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim');
+    const isNextMinor = nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim' || nextChord.quality === 'm9' || nextChord.quality === 'm11' || nextChord.quality === 'm13' || nextChord.quality === 'm6');
+    const isV7toMinor = isDominant && isNextMinor;
+    
     if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
 
     // Mode-aware diatonic scaling
@@ -29,12 +31,18 @@ function getScaleForBass(chord, nextChord) {
             // but we'll use Mixolydian as a general case for other major chords in minor.
             return [0, 2, 4, 5, 7, 9, 10]; 
         }
-        if (chord.quality === 'minor') return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
+        if (chord.quality === 'minor' || chord.quality === 'm9' || chord.quality === 'm11' || chord.quality === 'm13' || chord.quality === 'm6') {
+             return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
+        }
     }
 
     // Chord-scale logic mirroring soloist.js for consistency
     switch (chord.quality) {
         case 'minor': 
+        case 'm9':
+        case 'm11':
+        case 'm13':
+        case 'm6':
             if (gb.genreFeel === 'Jazz' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk') return [0, 2, 3, 5, 7, 9, 10]; // Dorian
             return [0, 2, 3, 5, 7, 8, 10]; 
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
