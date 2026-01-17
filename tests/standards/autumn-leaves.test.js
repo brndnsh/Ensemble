@@ -204,6 +204,7 @@ describe('Jazz Standard Test: Autumn Leaves', () => {
         expect(fsharp.quality).toBe('halfdim');
         expect(fsharp.intervals).toEqual([3, 5, 6, 10]); // b3, 11, b5, b7
         expect(fsharp.intervals).not.toContain(0); // Rootless
+        expect(fsharp.intervals).not.toContain(4); // No Major 3rd
     });
 
     it('should maintain smooth voice leading (minimum average drift) across the A section', () => {

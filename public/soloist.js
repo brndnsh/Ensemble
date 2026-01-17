@@ -238,9 +238,15 @@ export function getScaleForChord(chord, nextChord, style) {
         }
 
         const isMinorQ = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality);
-        const base = isMinorQ
-            ? [0, 2, 3, 5, 6, 7, 10] 
-            : [0, 2, 3, 4, 5, 6, 7, 9, 10];
+        let base;
+        
+        if (chord.quality === 'halfdim') {
+            base = [0, 1, 3, 5, 6, 8, 10]; // Locrian (proper half-dim scale)
+        } else {
+            base = isMinorQ
+                ? [0, 2, 3, 5, 6, 7, 10] 
+                : [0, 2, 3, 4, 5, 6, 7, 9, 10];
+        }
         
         // BB Box Logic: Add Major 3rd (4) and 6th (9) availability over Major chords
         // allowing the soloist to choose between b3 (3) and 3 (4) for expression.
