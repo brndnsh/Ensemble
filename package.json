@@ -4,9 +4,12 @@
   "description": "Generative musical accompaniment and chord visualization PWA",
   "type": "module",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy:test": "./scripts/deploy-test.sh",
+    "deploy:prod": "./scripts/deploy-prod.sh"
   },
   "devDependencies": {
+    "esbuild": "^0.27.2",
     "happy-dom": "^20.1.0",
     "vitest": "^4.0.17"
   }
