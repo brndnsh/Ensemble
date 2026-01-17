@@ -198,6 +198,12 @@ describe('Jazz Standard Test: Autumn Leaves', () => {
         // b9 (13) or #9 (15)
         const hasAltExtension = b7alt.intervals.includes(13) || b7alt.intervals.includes(15);
         expect(hasAltExtension).toBe(true);
+
+        // 4. F#m7b5 (iiø7)
+        const fsharp = progression[4];
+        expect(fsharp.quality).toBe('halfdim');
+        expect(fsharp.intervals).toEqual([3, 5, 6, 10]); // b3, 11, b5, b7
+        expect(fsharp.intervals).not.toContain(0); // Rootless
     });
 
     it('should maintain smooth voice leading (minimum average drift) across the A section', () => {
