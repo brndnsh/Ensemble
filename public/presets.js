@@ -43,8 +43,8 @@ export const SONG_TEMPLATES = [
     {
         name: 'Neo-Soul (Deep)',
         sections: [
-            { label: 'Verse', value: 'IVmaj9 | III7#9 | vi11 | V9sus4' },
-            { label: 'Chorus', value: 'ii9 | bIImaj7 | Imaj9 | vi9' }
+            { label: 'Verse', value: 'IVmaj9 | III7#9 | vi11 | V9sus4', repeat: 2 },
+            { label: 'Chorus', value: 'ii9 | bIImaj7 | Imaj9 | vi9', repeat: 2 }
         ],
         isMinor: false
     }
@@ -739,8 +739,8 @@ export const CHORD_PRESETS = [
     { 
         name: "Neo-Soul (Deep)", 
         sections: [
-            { label: 'Verse', value: "IVmaj9 | III7#9 | vi11 | V9sus4" },
-            { label: 'Chorus', value: "ii9 | bIImaj7 | Imaj9 | vi9" }
+            { label: 'Verse', value: "IVmaj9 | III7#9 | vi11 | V9sus4", repeat: 2 },
+            { label: 'Chorus', value: "ii9 | bIImaj7 | Imaj9 | vi9", repeat: 2 }
         ], 
         category: "Soul/R&B",
         settings: { bpm: 85, style: 'neo' }
