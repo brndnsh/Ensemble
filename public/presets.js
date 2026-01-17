@@ -39,6 +39,14 @@ export const SONG_TEMPLATES = [
             { label: 'Loop', value: 'I | I | III | III | IV | IV | iv | iv' }
         ],
         isMinor: false
+    },
+    {
+        name: 'Neo-Soul (Deep)',
+        sections: [
+            { label: 'Verse', value: 'IVmaj9 | III7#9 | vi11 | V9sus4' },
+            { label: 'Chorus', value: 'ii9 | bIImaj7 | Imaj9 | vi9' }
+        ],
+        isMinor: false
     }
 ];
 
@@ -729,16 +737,13 @@ export const CHORD_PRESETS = [
         settings: { bpm: 135, style: 'jazz' }
     },
     { 
-        name: "Neo-Soul", 
-        sections: [{ label: 'Main', value: "IVmaj7 | iii7 | ii7 | Imaj7" }], 
+        name: "Neo-Soul (Deep)", 
+        sections: [
+            { label: 'Verse', value: "IVmaj9 | III7#9 | vi11 | V9sus4" },
+            { label: 'Chorus', value: "ii9 | bIImaj7 | Imaj9 | vi9" }
+        ], 
         category: "Soul/R&B",
         settings: { bpm: 85, style: 'neo' }
-    },
-    { 
-        name: "Neo-Soul (Slash)", 
-        sections: [{ label: 'Main', value: "IVmaj7/5 | iii7 | ii7/5 | Imaj7" }], 
-        category: "Soul/R&B",
-        settings: { bpm: 80, style: 'neo' }
     },
     { 
         name: "Acid Jazz Vamp", 

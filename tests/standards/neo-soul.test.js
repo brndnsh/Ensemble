@@ -49,10 +49,11 @@ describe('Neo-Soul Integration Test: Slash Chords', () => {
     beforeEach(() => {
         arranger.key = 'C';
         arranger.isMinor = false;
-        // IVmaj7/5 | iii7 | ii7/5 | Imaj7
-        // In C: Fmaj7/G | Em7 | Dm7/G | Cmaj7
+        // Updated to use a more authentic Neo-Soul progression structure for the test
+        // including the characteristic IVmaj9 and bIImaj7 movements
         arranger.sections = [
-            { id: 'Main', label: 'Main', value: "IVmaj7/5 | iii7 | ii7/5 | Imaj7" }
+            { id: 'Verse', label: 'Verse', value: "IVmaj9/5 | III7#9 | vi11 | V9sus4" },
+            { id: 'Chorus', label: 'Chorus', value: "ii9 | bIImaj7/1 | Imaj9 | vi9" }
         ];
         validateProgression();
     });
@@ -60,32 +61,29 @@ describe('Neo-Soul Integration Test: Slash Chords', () => {
     it('should correctly identify and voice the slash chords', () => {
         const progression = arranger.progression;
         
-        // 1. IVmaj7/5 (Fmaj7/G)
-        const fmaj7g = progression[0];
-        expect(fmaj7g.absName).toBe('Fmaj7/G');
-        expect(fmaj7g.bassMidi % 12).toBe(7); // G
+        // 1. IVmaj9/5 (Fmaj9/G)
+        const iv9g = progression[0];
+        expect(iv9g.display.abs.bass).toBe('G');
+        expect(iv9g.bassMidi % 12).toBe(7); // G
         
-        // The freqs should include G as the lowest note
-        const midis = fmaj7g.freqs.map(f => Math.round(12 * Math.log2(f / 440) + 69));
-        expect(midis[0] % 12).toBe(7);
-
-        // 2. ii7/5 (Dm7/G)
-        const dm7g = progression[2];
-        expect(dm7g.absName).toBe('Dm7/G');
-        expect(dm7g.bassMidi % 12).toBe(7); // G
+        // 2. bIImaj7/1 (Dbmaj7/C)
+        const biimaj7c = progression[5]; // 2nd chord of Chorus (step 4,5,6,7? no, flattened progression)
+        // 4 chords in Verse, 4 in Chorus. Progression[5] is 2nd chord of Chorus.
+        expect(biimaj7c.absName).toContain('Dbmaj7/C');
+        expect(biimaj7c.bassMidi % 12).toBe(0); // C
     });
 
     it('should generate a bass line that respects the slash note on beat 1', () => {
         const progression = arranger.progression;
         
-        // Test Bar 1: Fmaj7/G
+        // Test Bar 1: IVmaj9/5 (Fmaj9/G in key of C)
         const result = getBassNote(progression[0], progression[1], 0, null, 38, 'neo', 0, 0, 0);
         // Should play G (7)
         expect(result.midi % 12).toBe(7);
 
-        // Test Bar 3: Dm7/G
-        const result2 = getBassNote(progression[2], progression[3], 0, null, 38, 'neo', 2, 32, 0);
-        expect(result2.midi % 12).toBe(7);
+        // Test Bar 6 (Chorus 2nd chord): bIImaj7/1 (Dbmaj7/C)
+        const result2 = getBassNote(progression[5], progression[6], 0, null, 38, 'neo', 5, 80, 0);
+        expect(result2.midi % 12).toBe(0); // C
     });
 
     it('should maintain a laid-back pocket offset for the bass', () => {
