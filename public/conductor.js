@@ -102,7 +102,7 @@ export function updateLarsTempo(currentStep) {
         return;
     }
 
-    // 1. Determine target drift based on current section energy
+    // 1. Determine target drift based on section energy and global band intensity
     const total = arranger.totalSteps;
     if (total === 0) return;
     const modStep = currentStep % total;
@@ -112,20 +112,25 @@ export function updateLarsTempo(currentStep) {
     }
 
     // Use section label energy as a base (-0.5 to +0.5 normalized drift)
-    const sectionEnergy = getSectionEnergy(entry.chord.sectionLabel); // 0.1 to 0.9
+    const labelEnergy = getSectionEnergy(entry.chord.sectionLabel); // 0.1 to 0.9
+    
+    // Blend with global band intensity (which includes macro-arc and randomness)
+    // If the label is generic (e.g., "Section 1"), rely more on bandIntensity.
+    const isGeneric = entry.chord.sectionLabel.toLowerCase().includes('section');
+    const energy = isGeneric ? ctx.bandIntensity : (labelEnergy * 0.6 + ctx.bandIntensity * 0.4);
     
     // Lars Mode Intensity scales the maximum drift. 
     // Max drift at 100% intensity is +/- 15 BPM (based on live recording research).
     const maxDrift = 15 * gb.larsIntensity;
-    let targetOffset = (sectionEnergy - 0.5) * 2 * maxDrift;
+    let targetOffset = (energy - 0.5) * 2 * maxDrift;
 
     // "Fill Rush" - Drummers often push even harder during transitions/fills
     if (gb.fillActive) {
-        targetOffset += (5 * gb.larsIntensity); // Extra 5 BPM push during fills
+        targetOffset += (8 * gb.larsIntensity); // Increased to +8 BPM surge during fills
     }
 
     // 2. Smoothly ramp towards target offset
-    const lerpFactor = gb.fillActive ? 0.05 : 0.02; // React even faster during fills
+    const lerpFactor = gb.fillActive ? 0.08 : 0.03; // Snappier transitions
     conductorState.larsBpmOffset += (targetOffset - conductorState.larsBpmOffset) * lerpFactor;
 
     if (Math.abs(conductorState.larsBpmOffset) < 0.01) {
@@ -149,15 +154,15 @@ export function updateBpmUI() {
         ui.bpmControlGroup.classList.add('lars-active');
         
         // Calculate intensity of the color (0 to 1)
-        // Saturate the color shift at 10 BPM offset
-        const intensity = Math.min(1, Math.abs(offset) / 10);
+        // Saturate the color shift at 6 BPM offset (more sensitive than 10)
+        const intensity = Math.min(1, Math.abs(offset) / 6);
         
         if (Math.abs(offset) > 0.1) {
             const isPushing = offset > 0;
             const targetColor = isPushing ? 'var(--blue)' : 'var(--red)';
             
-            // Using color-mix for smooth blending between base text and target color
-            const mixPercent = Math.round(intensity * 100);
+            // Boost the mix percentage to make it stand out more
+            const mixPercent = 20 + Math.round(intensity * 80); 
             const blendedColor = `color-mix(in srgb, var(--text-color), ${targetColor} ${mixPercent}%)`;
             
             ui.bpmInput.style.color = blendedColor;
