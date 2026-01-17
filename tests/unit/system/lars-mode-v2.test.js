@@ -68,4 +68,16 @@ describe('Lars Mode Logic V2', () => {
         expect(ui.bpmInput.classList.add).toHaveBeenCalledWith('tempo-pull'); // Red for slow
         expect(ui.bpmLabel.textContent).toContain('↘');
     });
+
+    it('should push tempo harder during drum fills (Fill Rush)', () => {
+        gb.fillActive = true;
+        gb.larsIntensity = 1.0;
+        // Chorus (0.9 energy) + Fill (active)
+        // Energy offset = 0.4. Max drift 15. Target = 0.4 * 2 * 15 = 12.
+        // Fill rush = +5. Total target = 17 BPM.
+        
+        for(let i=0; i<1000; i++) updateLarsTempo(0);
+        
+        expect(conductorState.larsBpmOffset).toBeGreaterThan(15);
+    });
 });

@@ -115,12 +115,17 @@ export function updateLarsTempo(currentStep) {
     const sectionEnergy = getSectionEnergy(entry.chord.sectionLabel); // 0.1 to 0.9
     
     // Lars Mode Intensity scales the maximum drift. 
-    // Max drift at 100% intensity is +/- 10 BPM.
-    const maxDrift = 10 * gb.larsIntensity;
-    const targetOffset = (sectionEnergy - 0.5) * 2 * maxDrift;
+    // Max drift at 100% intensity is +/- 15 BPM (based on live recording research).
+    const maxDrift = 15 * gb.larsIntensity;
+    let targetOffset = (sectionEnergy - 0.5) * 2 * maxDrift;
+
+    // "Fill Rush" - Drummers often push even harder during transitions/fills
+    if (gb.fillActive) {
+        targetOffset += (5 * gb.larsIntensity); // Extra 5 BPM push during fills
+    }
 
     // 2. Smoothly ramp towards target offset
-    const lerpFactor = 0.02; // Faster transition to be more noticeable
+    const lerpFactor = gb.fillActive ? 0.05 : 0.02; // React even faster during fills
     conductorState.larsBpmOffset += (targetOffset - conductorState.larsBpmOffset) * lerpFactor;
 
     if (Math.abs(conductorState.larsBpmOffset) < 0.01) {
