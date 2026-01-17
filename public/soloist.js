@@ -233,6 +233,10 @@ export function getScaleForChord(chord, nextChord, style) {
 
     // 2. Style Specifics
     if (style === 'blues' || style === 'disco' || style === 'funk') {
+        if (chord.quality.startsWith('maj') || chord.quality === 'major') {
+             return [0, 2, 4, 5, 7, 9, 11]; // Ionian fallback for Major in Funk/Blues
+        }
+
         const base = ['minor', 'halfdim', 'dim'].includes(chord.quality) 
             ? [0, 2, 3, 5, 6, 7, 10] 
             : [0, 2, 3, 4, 5, 6, 7, 9, 10];
@@ -277,7 +281,10 @@ export function getScaleForChord(chord, nextChord, style) {
         case 'aug': return [0, 2, 4, 6, 8, 10];
         case 'sus4': return [0, 2, 5, 7, 9, 10]; // Mixolydian sus4
         case '7alt': return [0, 1, 3, 4, 6, 8, 10];
-        case '7#9': return [0, 1, 3, 4, 6, 8, 10]; // Altered
+        case '7#9': 
+            if (style === 'funk') return [0, 1, 3, 4, 5, 7, 8, 10]; // Mixolydian b9#9 (Funk)
+            if (gb.genreFeel === 'Funk' && style === 'smart') return [0, 1, 3, 4, 5, 7, 8, 10];
+            return [0, 1, 3, 4, 6, 8, 10]; // Altered (Jazz)
         case '7b9': return [0, 1, 4, 5, 7, 8, 10];
         case '7b13': return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
         case '7#11': return [0, 2, 4, 6, 7, 9, 10]; // Lydian Dominant

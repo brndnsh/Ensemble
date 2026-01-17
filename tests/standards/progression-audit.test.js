@@ -81,6 +81,7 @@ describe('Progression Audit: Verifying All Library Presets', () => {
             // Set genre based on category or name for Smart logic
             if (template.category === 'Jazz' || template.name.includes('Jazz')) gb.genreFeel = 'Jazz';
             else if (template.category === 'Blues' || template.name.includes('Blues')) gb.genreFeel = 'Blues';
+            else if (template.name.includes('Funk')) gb.genreFeel = 'Funk';
             else if (template.category === 'Soul/R&B' || template.name.includes('Neo')) gb.genreFeel = 'Neo-Soul';
             else gb.genreFeel = 'Rock';
 

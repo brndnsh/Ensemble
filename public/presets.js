@@ -47,6 +47,14 @@ export const SONG_TEMPLATES = [
             { label: 'Chorus', value: 'ii9 | bIImaj7 | Imaj9 | vi9', repeat: 2 }
         ],
         isMinor: false
+    },
+    {
+        name: 'Funk (Grand Groove)',
+        sections: [
+            { label: 'Verse', value: 'im11 | im11 | IV9 | IV13', repeat: 2 },
+            { label: 'Chorus', value: 'bVII13 | bVImaj7 | v11 | I7#9', repeat: 2 }
+        ],
+        isMinor: true
     }
 ];
 
@@ -758,6 +766,16 @@ export const CHORD_PRESETS = [
         category: "Soul/R&B", 
         isMinor: true,
         settings: { bpm: 110, style: 'funk' }
+    },
+    { 
+        name: "Funk (Grand Groove)", 
+        sections: [
+            { label: 'Verse', value: "im11 | im11 | IV9 | IV13", repeat: 2 },
+            { label: 'Chorus', value: "bVII13 | bVImaj7 | v11 | I7#9", repeat: 2 }
+        ], 
+        category: "Soul/R&B",
+        isMinor: true,
+        settings: { bpm: 108, style: 'funk' }
     },
     { 
         name: "Circle of 4ths", 
