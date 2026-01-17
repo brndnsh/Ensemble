@@ -106,12 +106,19 @@ export function sendMIDICC(channel, controller, value, time) {
  * @returns {number} 0-127
  */
 export function normalizeMidiVelocity(internalVel) {
+    if (internalVel <= 0.01) return 1; // Minimum audibility for non-zero internal
+
     // We treat 1.5 as the "theoretical maximum" for internal accents.
-    // Linear scale would be (vel / 1.5) * 127.
-    // Sensitivity allows users to push the "meat" of the performance higher or lower.
+    // We apply a slight curve (0.8) to boost the "meat" of the signal (0.5-1.0 range)
+    // so it sits comfortably in the MIDI 60-100 range.
     const sensitivity = midi.velocitySensitivity || 1.0;
-    const normalized = Math.pow(Math.min(1.5, internalVel) / 1.5, 1 / sensitivity);
-    return Math.max(1, Math.min(127, Math.floor(normalized * 127)));
+    const curve = 0.8 / sensitivity; 
+    
+    const normalized = Math.pow(Math.min(1.5, internalVel) / 1.5, curve);
+    
+    // DAWs often treat < 20 as "ghost notes" or barely audible.
+    // We lift the floor to 20 for better translation.
+    return Math.max(20, Math.min(127, Math.floor(normalized * 127)));
 }
 
 /**
