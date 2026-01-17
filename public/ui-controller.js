@@ -637,6 +637,15 @@ export function setupUIHandlers(refs) {
         dispatch('SET_PRESET_SETTINGS_MODE', ui.applyPresetSettings.checked);
     });
 
+    if (ui.soloistDoubleStops) {
+        ui.soloistDoubleStops.addEventListener('change', (e) => {
+            dispatch('SET_DOUBLE_STOPS', e.target.checked);
+            flushBuffers();
+            syncWorker();
+            saveCurrentState();
+        });
+    }
+
     if (ui.larsModeCheck) {
         const updateLarsUI = (enabled) => {
             if (ui.larsIntensityContainer) {

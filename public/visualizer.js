@@ -103,6 +103,20 @@ export class UnifiedVisualizer {
         }
     }
 
+    /**
+     * Truncates any active notes on a track to end at the specified time.
+     * Used for enforcing monophony in the visualizer.
+     */
+    truncateNotes(name, time) {
+        if (!this.tracks[name]) return;
+        for (const ev of this.tracks[name].history) {
+            const noteEnd = ev.time + (ev.duration || 0.25);
+            if (ev.time < time && noteEnd > time) {
+                ev.duration = time - ev.time;
+            }
+        }
+    }
+
     render(currentTime, bpm, beatsPerMeasure = 4) {
         const ctx = this.ctx;
         const w = this.width;

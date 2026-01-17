@@ -72,55 +72,64 @@ const STYLE_CONFIG = {
         restBase: 0.2, restGrowth: 0.05, cells: [0, 2, 11, 1], registerSoar: 10,
         tensionScale: 0.6, timingJitter: 8, maxNotesPerPhrase: 16,
         doubleStopProb: 0.1, anticipationProb: 0.1, targetExtensions: [2, 9],
-        deviceProb: 0.15, allowedDevices: ['run', 'slide', 'guitarDouble']
+        deviceProb: 0.15, allowedDevices: ['run', 'slide', 'guitarDouble'],
+        motifProb: 0.3, hookProb: 0.1
     },
     shred: {
         restBase: 0.1, restGrowth: 0.02, cells: [1, 3, 4, 7, 0], registerSoar: 16,
         tensionScale: 0.3, timingJitter: 4, maxNotesPerPhrase: 32,
         doubleStopProb: 0.05, anticipationProb: 0.05, targetExtensions: [2],
-        deviceProb: 0.4, allowedDevices: ['run', 'guitarDouble']
+        deviceProb: 0.4, allowedDevices: ['run', 'guitarDouble'],
+        motifProb: 0.1, hookProb: 0.05
     },
     blues: {
         restBase: 0.6, restGrowth: 0.15, cells: [2, 11, 0, 12, 6], registerSoar: 4,
         tensionScale: 0.8, timingJitter: 25, maxNotesPerPhrase: 5,
         doubleStopProb: 0.35, anticipationProb: 0.3, targetExtensions: [9, 10],
-        deviceProb: 0.3, allowedDevices: ['slide', 'enclosure', 'guitarDouble']
+        deviceProb: 0.3, allowedDevices: ['slide', 'enclosure', 'guitarDouble'],
+        motifProb: 0.5, hookProb: 0.3
     },
     neo: {
         restBase: 0.45, restGrowth: 0.12, cells: [11, 2, 6, 10, 12, 14], registerSoar: 6,
         tensionScale: 0.7, timingJitter: 25, maxNotesPerPhrase: 8,
         doubleStopProb: 0.15, anticipationProb: 0.45, targetExtensions: [2, 6, 9, 11],
-        deviceProb: 0.25, allowedDevices: ['quartal', 'slide', 'guitarDouble']
+        deviceProb: 0.25, allowedDevices: ['quartal', 'slide', 'guitarDouble'],
+        motifProb: 0.4, hookProb: 0.2
     },
     funk: {
         restBase: 0.35, restGrowth: 0.08, cells: [1, 10, 14, 0, 6], registerSoar: 5,
         tensionScale: 0.4, timingJitter: 5, maxNotesPerPhrase: 16,
         doubleStopProb: 0.15, anticipationProb: 0.2, targetExtensions: [9, 13],
-        deviceProb: 0.2, allowedDevices: ['slide', 'run']
+        deviceProb: 0.2, allowedDevices: ['slide', 'run'],
+        motifProb: 0.3, hookProb: 0.15
     },
     minimal: {
         restBase: 0.65, restGrowth: 0.2, cells: [11, 2, 12], registerSoar: 10,
         tensionScale: 0.9, timingJitter: 20, maxNotesPerPhrase: 4,
         doubleStopProb: 0.0, anticipationProb: 0.1, targetExtensions: [2, 7],
-        deviceProb: 0.1, allowedDevices: ['slide']
+        deviceProb: 0.1, allowedDevices: ['slide'],
+        motifProb: 0.6, hookProb: 0.4
     },
     bird: {
         restBase: 0.15, restGrowth: 0.03, cells: [0, 1, 7, 3], registerSoar: 8,
         tensionScale: 0.7, timingJitter: 12, maxNotesPerPhrase: 48,
         doubleStopProb: 0.05, anticipationProb: 0.6, targetExtensions: [2, 5, 6, 9],
-        deviceProb: 0.6, allowedDevices: ['enclosure', 'run', 'birdFlurry']
+        deviceProb: 0.6, allowedDevices: ['enclosure', 'run', 'birdFlurry'],
+        motifProb: 0.2, hookProb: 0.1
     },
     disco: {
         restBase: 0.25, restGrowth: 0.06, cells: [0, 2, 5, 10], registerSoar: 12,
         tensionScale: 0.5, timingJitter: 8, maxNotesPerPhrase: 12,
         doubleStopProb: 0.05, anticipationProb: 0.2, targetExtensions: [2, 9],
-        deviceProb: 0.1, allowedDevices: ['run']
+        deviceProb: 0.1, allowedDevices: ['run'],
+        motifProb: 0.4, hookProb: 0.2
     },
     bossa: {
         restBase: 0.4, restGrowth: 0.08, cells: [11, 2, 0, 6, 8], registerSoar: 8,
         tensionScale: 0.7, timingJitter: 15, maxNotesPerPhrase: 8,
         doubleStopProb: 0.08, anticipationProb: 0.35, targetExtensions: [2, 6, 9],
-        deviceProb: 0.2, allowedDevices: ['enclosure', 'slide', 'guitarDouble']
+        deviceProb: 0.2, allowedDevices: ['enclosure', 'slide', 'guitarDouble'],
+        motifProb: 0.5, hookProb: 0.25
     }
 };
 
@@ -252,6 +261,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (!isPriming) sb.sessionSteps = (sb.sessionSteps || 0) + 1;
     const warmupFactor = isPriming ? 1.0 : Math.min(1.0, sb.sessionSteps / (stepsPerMeasure * 2));
     
+    // --- 1. Busy/Device Handling ---
     if (sb.deviceBuffer && sb.deviceBuffer.length > 0) {
         const devNote = sb.deviceBuffer.shift();
         const primaryNote = Array.isArray(devNote) ? devNote[0] : devNote;
@@ -266,6 +276,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     const measureIndex = Math.floor(cycleStep / stepsPerMeasure);
     sb.tension = Math.max(0, Math.min(1, (measureIndex / 4) * (0.5 + intensity * 0.5)));
 
+    // --- 2. Phrasing & Rest Logic ---
     if (typeof sb.currentPhraseSteps === 'undefined' || (step === 0 && !sb.isResting)) {
         sb.currentPhraseSteps = 0; sb.notesInPhrase = 0; sb.qaState = 'Question'; sb.isResting = true; return null; 
     }
@@ -279,7 +290,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (Math.random() < (0.4 + (intensity * 0.3))) { 
             sb.isResting = false; sb.currentPhraseSteps = 0; sb.notesInPhrase = 0;
             sb.qaState = sb.qaState === 'Question' ? 'Answer' : 'Question';
-            sb.isReplayingMotif = false; sb.motifBuffer = []; 
+            
+            // Motif Replay Decision
+            if (sb.motifBuffer && sb.motifBuffer.length > 0 && Math.random() < config.motifProb) {
+                sb.isReplayingMotif = true;
+                sb.motifReplayIndex = 0;
+            } else {
+                sb.isReplayingMotif = false;
+                sb.motifBuffer = []; 
+            }
         } else return null;
     }
     if (!sb.isResting && sb.currentPhraseSteps > 4 && Math.random() < restProb) {
@@ -287,6 +306,21 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     }
     sb.currentPhraseSteps++;
 
+    // --- 3. Motif/Hook Replay ---
+    if (sb.isReplayingMotif) {
+        const motifNote = sb.motifBuffer[sb.motifReplayIndex++];
+        if (sb.motifReplayIndex >= sb.motifBuffer.length) sb.isReplayingMotif = false;
+        
+        if (motifNote) {
+            // Adaptive Transposition: Map motif pitch to current scale if needed
+            // For now, we'll just replay it (Motown/Blues style often repeats exactly)
+            sb.busySteps = (motifNote.durationSteps || 1) - 1;
+            sb.notesInPhrase++;
+            return motifNote;
+        }
+    }
+
+    // --- 4. Rhythmic Density ---
     if (stepInBeat === 0) {
         let pool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
         sb.currentCell = pool[Math.floor(Math.random() * pool.length)];
@@ -294,7 +328,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (sb.currentCell && sb.currentCell[stepInBeat] === 1) {} else return null;                
     sb.notesInPhrase++;
 
-    // Pitch Selection
+    // --- 5. Pitch Selection ---
     const scaleIntervals = getScaleForChord(currentChord, nextChord, style);
     const rootMidi = currentChord.rootMidi;
     const scaleTones = scaleIntervals.map(i => rootMidi + i);
@@ -358,7 +392,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     }
     sb.lastInterval = selectedMidi - lastMidi;
 
-    // Devices
+    // --- 6. Melodic Devices ---
     if (stepInBeat === 0 && Math.random() < (config.deviceProb * 0.7 * warmupFactor)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         if (deviceType === 'birdFlurry') {
@@ -369,25 +403,40 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
                 curr = n;
             }
             sb.deviceBuffer = flurry;
-            const first = sb.deviceBuffer.shift(); return { ...first, timingOffset: 0 };
+            const first = sb.deviceBuffer.shift(); 
+            sb.busySteps = (first.durationSteps || 1) - 1;
+            sb.motifBuffer.push(first);
+            return { ...first, timingOffset: 0 };
         }
         if (deviceType === 'run') {
             const sz = Math.random() < 0.5 ? 1 : 2;
             sb.deviceBuffer = [ { midi: selectedMidi - sz, velocity: 0.8, durationSteps: 1, style }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style } ];
-            return { midi: selectedMidi - (sz * 2), velocity: 0.7, durationSteps: 1, style };
+            const res = { midi: selectedMidi - (sz * 2), velocity: 0.7, durationSteps: 1, style };
+            sb.busySteps = (res.durationSteps || 1) - 1;
+            sb.motifBuffer.push(res);
+            return res;
         }
         if (deviceType === 'enclosure') {
             sb.deviceBuffer = [ { midi: selectedMidi - 1, velocity: 0.8, durationSteps: 1, style }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style } ];
             let above = selectedMidi + 1; for(let d=1; d<=2; d++) { if (scaleIntervals.includes((selectedMidi + d - rootMidi + 120) % 12)) { above = selectedMidi + d; break; } }
-            return { midi: above, velocity: 0.8, durationSteps: 1, style };
+            const res = { midi: above, velocity: 0.8, durationSteps: 1, style };
+            sb.busySteps = (res.durationSteps || 1) - 1;
+            sb.motifBuffer.push(res);
+            return res;
         }
         if (deviceType === 'slide') {
             sb.deviceBuffer = [ { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style } ];
-            return { midi: selectedMidi - 1, velocity: 0.7, durationSteps: 1, style };
+            const res = { midi: selectedMidi - 1, velocity: 0.7, durationSteps: 1, style };
+            sb.busySteps = (res.durationSteps || 1) - 1;
+            sb.motifBuffer.push(res);
+            return res;
         }
         if ((deviceType === 'quartal' || deviceType === 'guitarDouble') && sb.doubleStops) {
             let dsInt = (style === 'blues' || style === 'scalar') ? 5 : 4;
-            return [{ midi: selectedMidi + dsInt, velocity: 0.8, durationSteps: 1, style, isDoubleStop: true }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style, isDoubleStop: false }];
+            const res = [{ midi: selectedMidi + dsInt, velocity: 0.8, durationSteps: 1, style, isDoubleStop: true }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style, isDoubleStop: false }];
+            sb.busySteps = 0; // Device notes are 1 step
+            sb.motifBuffer.push(res);
+            return res;
         }
     }
 
@@ -399,37 +448,38 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
     sb.lastFreq = getFrequency(selectedMidi);
 
-    // --- Dynamic Duration & Bending ---
+    // --- 7. Dynamic Duration & Bending ---
     let durationSteps = 1;
     let bendStartInterval = 0;
 
     // Sustained Notes: Longer durations on downbeats or when intensity is high
     const isImportantStep = stepInBeat === 0 || (stepInBeat === 2 && Math.random() < 0.3);
     if (isImportantStep && (style === 'neo' || style === 'blues' || style === 'minimal' || style === 'bossa')) {
-        // Sustain for a half note (8 steps) or a quarter (4 steps)
         durationSteps = Math.random() < 0.4 ? 8 : 4;
     } else if (style === 'scalar' && stepInBeat === 0 && Math.random() < 0.15) {
-        durationSteps = 4; // Occasional sustained rock note
+        durationSteps = 4; 
     } else if (style === 'neo' && Math.random() < 0.2) {
-        durationSteps = 2; // Subtle syncopated sustain
+        durationSteps = 2; 
     }
 
     // Soulful Scoops: Bend into the note
     if (durationSteps >= 4 && Math.random() < 0.3) {
-        // Bend from 1 or 2 semitones below
         bendStartInterval = Math.random() < 0.7 ? 1 : 2;
     }
 
     const result = { midi: selectedMidi, velocity: 0.8, durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style, isDoubleStop: false };
     
-    // Update busySteps to prevent generating new notes while this one is sustaining
-    // We allow a 1-step overlap for legato if duration is > 1, otherwise strict
     if (durationSteps > 1) {
         sb.busySteps = durationSteps - 1;
     }
 
-    if (notes.length > 0 && sb.doubleStops) return [...notes.map(n => ({...result, ...n})), result];
-    return result;
+    const finalResult = (notes.length > 0 && sb.doubleStops) ? [...notes.map(n => ({...result, ...n})), result] : result;
+    
+    // Record for motif memory
+    sb.motifBuffer.push(finalResult);
+    if (sb.motifBuffer.length > 16) sb.motifBuffer.shift();
+
+    return finalResult;
 }
 
 function distFromCenter(m, center) { return Math.abs(m - center); }
