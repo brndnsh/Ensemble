@@ -115,12 +115,12 @@ export function updateLarsTempo(currentStep) {
     const sectionEnergy = getSectionEnergy(entry.chord.sectionLabel); // 0.1 to 0.9
     
     // Lars Mode Intensity scales the maximum drift. 
-    // Max drift at 100% intensity is +/- 4 BPM.
-    const maxDrift = 4 * gb.larsIntensity;
+    // Max drift at 100% intensity is +/- 10 BPM.
+    const maxDrift = 10 * gb.larsIntensity;
     const targetOffset = (sectionEnergy - 0.5) * 2 * maxDrift;
 
     // 2. Smoothly ramp towards target offset
-    const lerpFactor = 0.005; // Very slow transition for musicality
+    const lerpFactor = 0.02; // Faster transition to be more noticeable
     conductorState.larsBpmOffset += (targetOffset - conductorState.larsBpmOffset) * lerpFactor;
 
     if (Math.abs(conductorState.larsBpmOffset) < 0.01) {
@@ -138,18 +138,16 @@ function updateBpmUI() {
     
     const baseBpm = ctx.bpm;
     const offset = conductorState.larsBpmOffset;
-    const effectiveBpm = Math.round((baseBpm + offset) * 10) / 10;
+    const effectiveBpm = Math.round((baseBpm + offset) * 1); // Round to whole number for clarity
 
-    if (gb.larsMode && Math.abs(offset) > 0.1) {
+    if (gb.larsMode && Math.abs(offset) > 0.2) {
         const direction = offset > 0 ? '↗' : '↘';
-        const color = offset > 0 ? 'var(--orange)' : 'var(--blue)';
+        // User requested: Red for slower, Blue for faster
+        const color = offset > 0 ? 'var(--blue)' : 'var(--red)';
         ui.bpmInput.style.color = color;
-        // We don't change the input value itself to avoid fighting user input,
-        // but we can indicate it in the label or a separate element.
-        // For now, let's use a subtle color shift and an indicator if we had one.
-        // Actually, let's update the control-label if it exists.
+        
         if (ui.bpmLabel) {
-            ui.bpmLabel.textContent = `BPM ${direction}`;
+            ui.bpmLabel.textContent = `${effectiveBpm} ${direction}`;
             ui.bpmLabel.style.color = color;
         }
     } else {
