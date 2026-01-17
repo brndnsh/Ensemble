@@ -516,7 +516,10 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
     else if (quality === 'aug') { absSuffix = 'aug'; nnsSuffix = '+'; romSuffix = '+'; }
     else if (quality === 'maj7') { absSuffix = 'maj7'; nnsSuffix = 'maj7'; romSuffix = 'maj7'; }
     else if (quality === 'maj9') { absSuffix = 'maj9'; nnsSuffix = 'maj9'; romSuffix = 'maj9'; }
+    else if (quality === 'maj13') { absSuffix = 'maj13'; nnsSuffix = 'maj13'; romSuffix = 'maj13'; }
     else if (quality === 'm9') { absSuffix = 'm9'; nnsSuffix = '-9'; romSuffix = '9'; }
+    else if (quality === 'm11') { absSuffix = 'm11'; nnsSuffix = '-11'; romSuffix = '11'; }
+    else if (quality === 'm13') { absSuffix = 'm13'; nnsSuffix = '-13'; romSuffix = '13'; }
     else if (quality === 'maj11') { absSuffix = 'maj11'; nnsSuffix = 'maj11'; romSuffix = 'maj11'; }
     else if (quality === 'maj7#11') { absSuffix = 'maj7#11'; nnsSuffix = 'maj7#11'; romSuffix = 'maj7#11'; }
     else if (quality === 'sus4') { absSuffix = 'sus4'; nnsSuffix = 'sus4'; romSuffix = 'sus4'; }
@@ -525,17 +528,21 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
     else if (quality === '6') { absSuffix = '6'; nnsSuffix = '6'; romSuffix = '6'; }
     else if (quality === 'm6') { absSuffix = 'm6'; nnsSuffix = '-6'; romSuffix = '6'; }
     else if (quality === '9') { absSuffix = '9'; nnsSuffix = '9'; romSuffix = '9'; }
+    else if (quality === '11') { absSuffix = '11'; nnsSuffix = '11'; romSuffix = '11'; }
+    else if (quality === '13') { absSuffix = '13'; nnsSuffix = '13'; romSuffix = '13'; }
     else if (quality === '7alt') { absSuffix = '7alt'; nnsSuffix = '7alt'; romSuffix = '7alt'; }
     else if (quality === '7b9') { absSuffix = '7b9'; nnsSuffix = '7b9'; romSuffix = '7b9'; }
     else if (quality === '7#9') { absSuffix = '7#9'; nnsSuffix = '7#9'; romSuffix = '7#9'; }
+    else if (quality === '7#11') { absSuffix = '7#11'; nnsSuffix = '7#11'; romSuffix = '7#11'; }
+    else if (quality === '7b13') { absSuffix = '7b13'; nnsSuffix = '7b13'; romSuffix = '7b13'; }
     else if (quality === '5') { absSuffix = '5'; nnsSuffix = '5'; romSuffix = '5'; }
     
-    if (is7th && !['maj7', 'maj9', 'maj11', 'maj7#11', 'halfdim', '7b9', '7#9', '7alt', '9'].includes(quality)) { 
+    if (is7th && !['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11', 'halfdim', '7b9', '7#9', '7alt', '7#11', '7b13', '9', '11', '13', 'm9', 'm11', 'm13'].includes(quality)) { 
         absSuffix += '7'; nnsSuffix += '7'; romSuffix += '7';
     }
 
     let romanName;
-    if (quality === 'minor' || quality === 'dim' || quality === 'halfdim') {
+    if (quality === 'minor' || quality === 'dim' || quality === 'halfdim' || quality === 'm9' || quality === 'm11' || quality === 'm13' || quality === 'm6') {
         romanName = rootRomanBase.toLowerCase();
     } else {
         romanName = rootRomanBase;
