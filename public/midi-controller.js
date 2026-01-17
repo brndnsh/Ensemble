@@ -117,6 +117,7 @@ export function normalizeMidiVelocity(internalVel) {
 /**
  * Convenience helper to send a note with a duration.
  * Includes a small safety gap to ensure Note Offs occur before the next Note On.
+ * intelligently handles overlaps by truncating previous notes if they overlap with new ones.
  * @param {number} channel 
  * @param {number} note 
  * @param {number} velocity 
@@ -124,12 +125,40 @@ export function normalizeMidiVelocity(internalVel) {
  * @param {number} duration 
  */
 export function sendMIDINote(channel, note, velocity, time, duration) {
-    // 1. Send the Note On immediately (scheduled)
+    const key = `${channel}_${note}`;
+    const now = ctx.audio.currentTime;
+
+    // 1. Check for overlapping previous note on the same channel/pitch
+    if (activeNoteOffs.has(key)) {
+        const prev = activeNoteOffs.get(key);
+        if (prev.endTime > time) {
+            // Cancel the original late Off
+            clearTimeout(prev.id);
+            
+            // Send Off IMMEDIATELY (synchronously) to ensure it arrives before the new On
+            // We use the new note's start time minus epsilon as the timestamp
+            const cutoffTime = Math.max(now, time - 0.005);
+            
+            // We manually send the Off here instead of using setTimeout
+            // This ensures the driver receives Off -> On sequence
+            const output = midiAccess.outputs.get(midi.selectedOutputId);
+            if (output) {
+                // Calculate MIDI timestamp for cutoff
+                // time param is AudioContext time.
+                // midiTime = (cutoffTime - ctx.audio.currentTime) * 1000 + performance.now()
+                const midiTime = (cutoffTime - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency;
+                const status = 0x80 | (channel - 1);
+                output.send([status, note, 0], midiTime);
+                activeNotes.delete(key);
+            }
+        }
+        activeNoteOffs.delete(key);
+    }
+
+    // 2. Send the Note On immediately (scheduled)
     sendMIDINoteOn(channel, note, velocity, time);
 
-    const key = `${channel}_${note}`;
-
-    // 2. Schedule the Note Off
+    // 3. Schedule the Note Off
     // We apply a tiny "safety gap" (Gate < 100%) to ensure that if the next note
     // starts exactly when this one ends, the Off message is sent slightly *before* the new On.
     // This guarantees retriggering on monophonic synths and prevents "tied" notes.
@@ -137,7 +166,6 @@ export function sendMIDINote(channel, note, velocity, time, duration) {
     const safeDuration = Math.max(0.02, duration - 0.015);
     
     // Calculate delay relative to now
-    const now = ctx.audio.currentTime;
     const startTime = time;
     const endTime = startTime + safeDuration;
     
@@ -146,12 +174,15 @@ export function sendMIDINote(channel, note, velocity, time, duration) {
 
     const timeoutId = setTimeout(() => {
         sendMIDINoteOff(channel, note, ctx.audio.currentTime); 
-        activeNoteOffs.delete(key);
+        // Only delete if it's THIS timeout (in case we overwrote it, but we cleared before, so it's fine)
+        const current = activeNoteOffs.get(key);
+        if (current && current.id === timeoutId) {
+            activeNoteOffs.delete(key);
+        }
     }, delayMs);
 
-    // We track it only for panic(), we don't cancel previous notes anymore
-    // because that caused "tied note" behavior on repeated bass notes.
-    activeNoteOffs.set(key, timeoutId);
+    // We track it for collision detection and panic
+    activeNoteOffs.set(key, { id: timeoutId, endTime });
 }
 
 /**
@@ -187,8 +218,8 @@ export function sendMIDIDrum(instrumentName, time, velocity, octaveOffset = 0) {
  */
 export function panic() {
     // 1. Clear future Note Offs (they are no longer needed as we'll kill now)
-    for (const [key, timeoutId] of activeNoteOffs) {
-        clearTimeout(timeoutId);
+    for (const [key, value] of activeNoteOffs) {
+        clearTimeout(value.id);
     }
     activeNoteOffs.clear();
 

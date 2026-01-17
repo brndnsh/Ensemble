@@ -10,6 +10,9 @@ describe('MIDI Note Overlap Logic', () => {
         vi.useFakeTimers();
         sentMessages = [];
         
+        // Clear module state from previous tests
+        panic();
+        
         // Mock Audio Context
         ctx.audio = { currentTime: 1000 }; // Start at T=1000s
 
@@ -45,50 +48,39 @@ describe('MIDI Note Overlap Logic', () => {
         midi.enabled = false;
     });
 
-    it('should NOT cancel pending Note Off for repeated notes, ensuring distinct re-attacks', async () => {
+    it('should truncate previous note if new note overlaps, ensuring Off occurs before new On', async () => {
         const channel = 1;
-        const note = 60; // C4
-        const velocity = 100; // 0.8 internal
-        const time = 1000; // Immediate
-        const duration = 0.5; // 0.5 second
+        const note = 60; 
+        const duration = 1.0; 
 
-        // 1. Send first note
-        sendMIDINote(channel, note, 0.8, time, duration);
+        // 1. Send Note 1 at T=1000. Ends at T=1001 (approx).
+        sendMIDINote(channel, note, 0.8, 1000, duration);
 
         expect(mockOutput.send).toHaveBeenCalledTimes(1);
-        expect(mockOutput.send.mock.calls[0][0][0]).toBe(0x90); // Note On
+        expect(mockOutput.send.mock.calls[0][0][0]).toBe(0x90);
 
-        // 2. Advance time to 1000.4 (0.4s elapsed)
-        // Note 1 should still be playing (Ends at 1000 + 0.5 - 0.015 = 1000.485)
-        ctx.audio.currentTime = 1000.4;
-        vi.advanceTimersByTime(400);
-
-        expect(mockOutput.send).toHaveBeenCalledTimes(1);
-
-        // 3. Send second note (Abutting/Overlapping)
-        // This simulates a fast bass line or retrigger
+        // 2. Send Note 2 at T=1000.5 (Overlap!)
+        // This should force Note 1 to end IMMEDIATELY (synchronously)
         sendMIDINote(channel, note, 0.8, 1000.5, duration);
 
-        expect(mockOutput.send).toHaveBeenCalledTimes(2); // New Note On
-        expect(mockOutput.send.mock.calls[1][0][0]).toBe(0x90);
+        // Expect 3 calls: On 1, Off 1 (truncated), On 2
+        expect(mockOutput.send).toHaveBeenCalledTimes(3); 
 
-        // 4. Advance time to 1000.6
-        // Note 1 Off should have fired at ~1000.485
-        ctx.audio.currentTime = 1000.6;
-        vi.advanceTimersByTime(200); 
+        const calls = mockOutput.send.mock.calls;
+        const msg1 = calls[0]; // On 1
+        const msg2 = calls[1]; // Off 1 (Truncated)
+        const msg3 = calls[2]; // On 2
 
-        // We expect Note Off for Note 1 to have fired!
-        // Because we removed the cancellation logic.
-        expect(mockOutput.send).toHaveBeenCalledTimes(3);
-        expect(mockOutput.send.mock.calls[2][0][0]).toBe(0x80); // Note Off for Note 1
+        expect(msg1[0][0] & 0xF0).toBe(0x90);
+        expect(msg2[0][0] & 0xF0).toBe(0x80); // Note Off
+        expect(msg3[0][0] & 0xF0).toBe(0x90); // Note On
 
-        // 5. Advance time to 1001.1 (Past second note's end)
-        ctx.audio.currentTime = 1001.1;
-        vi.advanceTimersByTime(500);
-
-        // Note Off for Note 2
-        expect(mockOutput.send).toHaveBeenCalledTimes(4);
-        expect(mockOutput.send.mock.calls[3][0][0]).toBe(0x80);
+        // Verify Off 1 timestamp is before or equal to On 2 timestamp
+        // msg2 timestamp: cutoffTime (1000.495)
+        // msg3 timestamp: time (1000.5)
+        // Note: mockOutput receives MIDI timestamp (ms), not AudioContext time.
+        // But relative order should hold.
+        expect(msg2[1]).toBeLessThan(msg3[1]);
     });
 
     it('should send Note Off correctly if no overlap occurs', () => {
