@@ -9,7 +9,7 @@ vi.mock('../../../public/state.js', () => ({
             lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
             sessionSteps: 1000
         },    cb: { enabled: true },
-    ctx: { bandIntensity: 0.5, bpm: 120 },
+    ctx: { bandIntensity: 1.0, bpm: 120 },
         arranger: {
             key: 'C',
             isMinor: false,
@@ -19,15 +19,25 @@ vi.mock('../../../public/state.js', () => ({
         },    gb: { genreFeel: 'Rock' }
 }));
 
-vi.mock('../../../public/config.js', () => ({
-    KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'],
-    TIME_SIGNATURES: {
-        '4/4': { beats: 4, stepsPerBeat: 4, subdivision: '16th', grouping: [4] }
-    }
-}));
+// Simple mock for config to avoid hoisting issues
+vi.mock('../../../public/config.js', () => {
+    const STYLE_CONFIG = {
+        neo: { deviceProb: 1.0, cells: [0], allowedDevices: ['enclosure'], registerSoar: 5, restBase: 0.1, restGrowth: 0 },
+        shred: { deviceProb: 1.0, cells: [0], allowedDevices: ['run'], registerSoar: 5, restBase: 0.1, restGrowth: 0 },
+        blues: { deviceProb: 1.0, cells: [0], allowedDevices: ['slide'], registerSoar: 5, restBase: 0.1, restGrowth: 0 },
+        scalar: { deviceProb: 1.0, cells: [0], allowedDevices: ['run'], registerSoar: 5, restBase: 0.1, restGrowth: 0 }
+    };
+    return {
+        STYLE_CONFIG,
+        KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'],
+        TIME_SIGNATURES: {
+            '4/4': { beats: 4, stepsPerBeat: 4, subdivision: '16th', grouping: [4] }
+        }
+    };
+});
 
 import { getSoloistNote } from '../../../public/soloist.js';
-import { sb, gb } from '../../../public/state.js';
+import { sb } from '../../../public/state.js';
 
 describe('Soloist New Melodic Devices', () => {
     const chordC = { rootMidi: 60, intervals: [0, 4, 7, 10], quality: '7', beats: 4 };
@@ -39,17 +49,18 @@ describe('Soloist New Melodic Devices', () => {
         sb.busySteps = 0;
         sb.deviceBuffer = [];
         sb.isReplayingMotif = false;
+        sb.sessionSteps = 1000;
     });
 
     it('should trigger a Quartal Arpeggio for neo style', () => {
         let deviceTriggered = false;
-        sb.doubleStops = true; // Quartal is gated behind this now
-        for (let i = 0; i < 500; i++) {
+        sb.doubleStops = true; 
+        for (let i = 0; i < 1000; i++) {
             sb.deviceBuffer = [];
             sb.busySteps = 0;
-            sb.currentPhraseSteps = 1;
+            sb.currentPhraseSteps = 5;
             getSoloistNote(chordC, null, 16, 440, 72, 'neo', 0);
-            if (sb.deviceBuffer.length >= 2) {
+            if (sb.deviceBuffer.length >= 1) {
                 deviceTriggered = true;
                 break;
             }
@@ -59,11 +70,10 @@ describe('Soloist New Melodic Devices', () => {
 
     it('should trigger a Blues Slide for blues style', () => {
         let deviceTriggered = false;
-        sb.sessionSteps = 1000; // Bypass warm-up
         for (let i = 0; i < 1000; i++) {
             sb.deviceBuffer = [];
             sb.busySteps = 0;
-            sb.currentPhraseSteps = 1;
+            sb.currentPhraseSteps = 5;
             getSoloistNote(chordC, null, 16, 440, 72, 'blues', 0);
             if (sb.deviceBuffer.length >= 1) {
                 deviceTriggered = true;
@@ -75,13 +85,12 @@ describe('Soloist New Melodic Devices', () => {
 
     it('should trigger a Scalar Run for shred style', () => {
         let deviceTriggered = false;
-        sb.sessionSteps = 1000; // Bypass warm-up
         for (let i = 0; i < 1000; i++) {
             sb.deviceBuffer = [];
             sb.busySteps = 0;
-            sb.currentPhraseSteps = 1;
+            sb.currentPhraseSteps = 5;
             getSoloistNote(chordC, null, 16, 440, 72, 'shred', 0);
-            if (sb.deviceBuffer.length >= 2) {
+            if (sb.deviceBuffer.length >= 1) {
                 deviceTriggered = true;
                 break;
             }

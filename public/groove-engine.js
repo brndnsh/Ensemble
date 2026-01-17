@@ -17,23 +17,71 @@ export function applyGrooveOverrides({ step, inst, stepVal, ctx, gb, isDownbeat,
         if (inst.name === 'Snare') instTimeOffset += 0.008;
     }
 
-    // --- Hip Hop Procedural Overrides ---
-    if (gb.genreFeel === 'Hip Hop' && !inst.muted) {
-        // 1. "Boom Bap" Swing (MPC-60 style)
-        if (loopStep % 2 === 1) instTimeOffset += 0.035; 
+    // --- Neo-Soul / Hip Hop Procedural Overrides ---
+    if ((gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Hip Hop') && !inst.muted) {
+        // 1. "Drunken" Pocket (Varying displacement based on intensity) - TIGHTENED
+        const drunkenFactor = ctx.bandIntensity * 0.012; 
+        if (loopStep % 4 !== 0) instTimeOffset += (Math.random() - 0.5) * drunkenFactor;
 
-        // 2. Kick Ghosting (The "Skippy" Kick)
-        if (inst.name === 'Kick') {
-            if ((loopStep === 3 || loopStep === 11) && Math.random() < 0.3) {
+        // 2. Ghost Note "Peeling" (Density increases with intensity)
+        if (inst.name === 'Snare' && stepVal === 0) {
+            const ghostProb = 0.1 + (ctx.bandIntensity * 0.4);
+            if (Math.random() < ghostProb && [2, 3, 6, 7, 10, 11, 14, 15].includes(loopStep)) {
                 shouldPlay = true;
-                velocity = 0.6; 
+                velocity = 0.15 + (Math.random() * 0.1);
+                instTimeOffset += 0.008; // Reduced drag
             }
         }
 
-        // 3. Lazy Snare (Slightly late backbeat)
-        if (inst.name === 'Snare' && (loopStep === 4 || loopStep === 12)) {
-            instTimeOffset += 0.015; 
-            velocity = 1.15; 
+        // 3. Lazy Snare displacement at high intensity - TIGHTENED
+        if (inst.name === 'Snare' && (loopStep === 4 || loopStep === 12) && ctx.bandIntensity > 0.75) {
+            instTimeOffset += 0.012; // Reduced late "crack"
+            velocity *= 1.1;
+        }
+
+        // 4. "Skippy" Kick Variations
+        if (inst.name === 'Kick') {
+            const skipProb = 0.1 + (ctx.bandIntensity * 0.35);
+            if ((loopStep === 3 || loopStep === 11 || loopStep === 15) && Math.random() < skipProb) {
+                shouldPlay = true;
+                velocity = 0.55 + (Math.random() * 0.15);
+            }
+        }
+    }
+
+    // --- Acoustic / Percussive Overrides ---
+    if (gb.genreFeel === 'Acoustic' && !inst.muted) {
+        // Simulate a Cajon or hand-percussion feel
+        if (inst.name === 'Snare') {
+            // High intensity = "Slap" sound (Snare), Low intensity = "Rim/Tap" (Sidestick)
+            soundName = (ctx.bandIntensity > 0.5) ? 'Snare' : 'Sidestick';
+            
+            // Add subtle mid-phrase taps as intensity builds
+            if (stepVal === 0) {
+                const tapProb = (ctx.bandIntensity * 0.35);
+                if (Math.random() < tapProb && loopStep % 2 === 1) {
+                    shouldPlay = true;
+                    velocity = 0.2 + (Math.random() * 0.15);
+                    soundName = 'Sidestick';
+                }
+            }
+        }
+
+        if (inst.name === 'Kick') {
+            // Keep it foundational but add "double-thump" at high intensity
+            if (loopStep === 10 && ctx.bandIntensity > 0.65 && Math.random() < 0.4) {
+                shouldPlay = true;
+                velocity = 0.7;
+            }
+        }
+
+        if (inst.name === 'HiHat') {
+            // Shaker-like behavior (varying velocity on 16ths)
+            if (loopStep % 2 === 1) velocity *= 0.7;
+            if (ctx.bandIntensity < 0.3) {
+                // Very sparse hats at low intensity
+                if (loopStep % 4 !== 0) shouldPlay = false;
+            }
         }
     }
 

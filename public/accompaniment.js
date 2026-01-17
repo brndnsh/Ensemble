@@ -33,6 +33,21 @@ export function generateCompingPattern(genre, vibe, length = 16) {
     
     // --- GENRE ARCHETYPES ---
     
+    if (genre === 'Neo-Soul') {
+        // Lay back heavily on the "and" of 2 and 4
+        if (length >= 7) hit(6);
+        if (length >= 15) hit(14);
+        
+        // Add random syncopated "filler" at high intensity
+        if (intensity > 0.6) {
+            const fillers = [3, 9, 11];
+            fillers.forEach(f => {
+                if (Math.random() < (intensity * 0.4)) hit(f);
+            });
+        }
+        return pattern;
+    }
+
     if (genre === 'Reggae') {
         // Skank on 2 and 4 (Steps 4 and 12 in 16th grid)
         if (length >= 5) hit(4);
@@ -294,6 +309,46 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
 
     // --- GENRE LANES ---
 
+    if (genre === 'Neo-Soul') {
+        // "Quartal" and "Rootless" Voicings for Neo-Soul
+        // This style favors stacks of 4ths and 2nds (clusters) for that "cloudy" feel.
+        const isHit = compingState.currentCell[measureStep % spm] === 1;
+        const ghostProb = 0.1 + (intensity * 0.3);
+        const isGhost = !isHit && (Math.random() < ghostProb);
+
+        if (isHit || isGhost) {
+            let voicing = [];
+            // Strategy: Pick the 3rd, 7th, and 9th/11th for a rich, rootless cluster
+            const three = chord.intervals.find(i => i === 3 || i === 4);
+            const seven = chord.intervals.find(i => i === 10 || i === 11);
+            const ext = chord.intervals.find(i => i === 2 || i === 5 || i === 9 || i === 14); // 9, 11, 13
+            
+            if (three !== undefined && seven !== undefined) {
+                voicing = [chord.rootMidi + three, chord.rootMidi + seven];
+                if (ext !== undefined) voicing.push(chord.rootMidi + ext);
+            } else {
+                voicing = chord.freqs.slice(0, 3).map(f => getMidi(f));
+            }
+
+            // Neo-Soul "Drunken" Timing (Randomized displacement) - TIGHTENED
+            const drunk = (Math.random() - 0.5) * (intensity * 0.02);
+            
+            voicing.forEach((m, i) => {
+                notes.push({
+                    midi: m,
+                    velocity: (isGhost ? 0.2 : 0.55) * (0.7 + intensity * 0.4),
+                    durationSteps: isGhost ? 0.5 : 2.5,
+                    ccEvents: (i === 0) ? ccEvents : [],
+                    timingOffset: (i * 0.012) + ctx.intent.layBack + drunk,
+                    instrument: 'Piano',
+                    muted: isGhost,
+                    dry: true
+                });
+            });
+            return notes;
+        }
+    }
+
     if (genre === 'Reggae') {
         // Lane A: The Skank (Staccato chords on 2 & 4)
         const isSkank = (measureStep === 4 || measureStep === 12);
@@ -432,13 +487,18 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
 
         let voicing = [...chord.freqs];
         
-        // --- Low Intensity Arpeggiation (0.0 - 0.3) ---
-        if (intensity < 0.4 && cb.style === 'smart' && genre !== 'Reggae') {
-            // Pick a single note from the voicing based on the step in the beat
-            const stepInBeat = measureStep % ts.stepsPerBeat;
-            const noteIdx = stepInBeat % voicing.length;
+        // --- Low Intensity Arpeggiation / Fingerpicking (Acoustic) ---
+        if (genre === 'Acoustic' && intensity < 0.45 && cb.style === 'smart') {
+            // Pick a single note or dyad based on the step for a "fingerpicked" feel
+            const pattern = [0, 2, 1, 3]; // Bass, High, Mid, High sequence
+            const pickIdx = pattern[Math.floor(measureStep / 2) % pattern.length];
+            const noteIdx = pickIdx % voicing.length;
             voicing = [voicing[noteIdx]];
-            durationSteps = ts.stepsPerBeat; // Sustain for the beat
+            
+            // If it's the "One", add the root for foundation
+            if (measureStep === 0) voicing.push(chord.freqs[0]);
+            
+            durationSteps = 4; // Let the strings ring
         }
 
         // --- Frequency Slotting & Soloist Pocket ---

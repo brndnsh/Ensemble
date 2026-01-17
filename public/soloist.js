@@ -260,20 +260,22 @@ export function getScaleForChord(chord, nextChord, style) {
         return base.sort((a,b)=>a-b);
     }
     
-    if (style === 'neo') {
+    if (style === 'neo' || style === 'bird') {
         const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
         const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
 
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
-            // Tonic Maj7 in Neo-Soul often sounds better with Ionian than Lydian to avoid #11 clash with melody
+            // Tonic Maj7 or Major triads should strictly use Ionian to avoid #11 clash
             if (relativeRoot === 0 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; 
-            return [0, 2, 4, 6, 7, 9, 11]; // Lydian for others (like IV)
+            // Subdominant (IV) can use Lydian if it's a maj7, but for simple triads, stick to Ionian
+            if (relativeRoot === 5 && !arranger.isMinor && chord.quality.includes('maj')) return [0, 2, 4, 6, 7, 9, 11];
+            return [0, 2, 4, 5, 7, 9, 11]; 
         }
         
         if (chord.quality === 'minor' || ['m9', 'm11', 'm13', 'm6'].includes(chord.quality)) {
-            // Natural Minor (Aeolian) for the vi chord, Dorian for ii/iii/v
+            // Natural Minor (Aeolian) for the vi chord to stay diatonic
             if (relativeRoot === 9 && !arranger.isMinor) return [0, 2, 3, 5, 7, 8, 10];
-            return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+            return [0, 2, 3, 5, 7, 9, 10]; // Dorian for others
         }
     }
 
@@ -721,6 +723,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
             // 3. Rhythmic Call and Response (Conversational Logic)
             // 'Question' phase builds tension with extensions, 'Answer' phase resolves to anchors.
+            // ONLY apply weights if the note is already in the scale.
             if (sb.qaState === 'Question') {
                 if (interval === 6 || interval === 10) weight += 30; // #11 or b7
             } else if (sb.qaState === 'Answer') {
@@ -864,12 +867,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 
     // --- 7. Advanced Melodic Devices ---
     
-    if (!sb.isReplayingMotif && isStrongBeat && Math.random() < (config.deviceProb * warmupFactor)) {
+    if (!sb.isReplayingMotif && isStrongBeat && Math.random() < (config.deviceProb * 0.7 * warmupFactor)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         
         // FUNK REPETITIVE STAB (The "James Brown" Hit)
         // If we are playing Funk, sometimes we just want to hit the same note 3-4 times.
-        if (style === 'funk' && Math.random() < 0.35) {
+        if (style === 'funk' && Math.random() < 0.25) {
              const stabCount = 3 + Math.floor(Math.random() * 3); // 3-5 hits
              sb.deviceBuffer = [];
              for(let i=0; i<stabCount; i++) {
@@ -887,59 +890,34 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         }
         
         if (deviceType === 'enclosure') {
-            const aboveMidi = selectedMidi + (Math.random() < 0.5 ? 1 : 2);
-            const belowMidi = selectedMidi - 1;
-            
-            // SCALE CHECK: Ensure enclosure notes are either in-scale or chromatic leading tones
             const scaleIntervals = getScaleForChord(targetChord, nextChord, style);
-            const isNoteSafe = (m) => {
-                const pc = (m % 12 + 12) % 12;
-                const rootPC = (targetChord.rootMidi % 12 + 12) % 12;
-                const interval = (pc - rootPC + 12) % 12;
-                return scaleIntervals.includes(interval);
-            };
+            // Try to find a scale tone above, otherwise default to +1 chromatic
+            let aboveMidi = selectedMidi + 1;
+            for(let d=1; d<=2; d++) {
+                if (scaleIntervals.includes((selectedMidi + d - rootMidi + 120) % 12)) {
+                    aboveMidi = selectedMidi + d;
+                    break;
+                }
+            }
+            // Below is almost always a half-step leading tone in bebop, but let's check scale
+            let belowMidi = selectedMidi - 1;
+            if (scaleIntervals.includes((selectedMidi - 2 - rootMidi + 120) % 12) && !scaleIntervals.includes(1)) {
+                // if -2 is in scale and -1 isn't, maybe use -2? No, Bebop enclosure -1 is usually best.
+                // We'll keep -1 but reduce probability of the device itself.
+            }
 
             sb.deviceBuffer = [
-                { midi: isNoteSafe(belowMidi) ? belowMidi : selectedMidi - 1, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: 0 },
+                { midi: belowMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: 0 },
                 { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, bendStartInterval, style, timingOffset: 0 }
             ];
             sb.busySteps = 0;
-            sb.lastFreq = getFrequency(isNoteSafe(aboveMidi) ? aboveMidi : selectedMidi + 1);
-            return { midi: isNoteSafe(aboveMidi) ? aboveMidi : selectedMidi + 1, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
+            sb.lastFreq = getFrequency(aboveMidi);
+            return { midi: aboveMidi, velocity: velocity * 0.85, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
         } 
         
-        if (deviceType === 'quartal' && sb.doubleStops) {
-            // Stack of 4ths (Neo-Soul style)
-            const midMidi = selectedMidi + 5;
-            const topMidi = selectedMidi + 10;
-            sb.deviceBuffer = [
-                { midi: midMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: 0, isDoubleStop: true },
-                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0, isDoubleStop: false }
-            ];
-            sb.busySteps = 0;
-            sb.lastFreq = getFrequency(topMidi);
-            return { midi: topMidi, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: timingOffset / 1000, isDoubleStop: true };
-        }
-
-        if (deviceType === 'run') {
-            // Scalar run leading to target
-            const stepSize = Math.random() < 0.5 ? 1 : 2;
-            const n1 = selectedMidi - (stepSize * 3);
-            const n2 = selectedMidi - (stepSize * 2);
-            const n3 = selectedMidi - (stepSize * 1);
-            sb.deviceBuffer = [
-                { midi: n2, velocity: velocity * 0.8, durationSteps: 1, style, timingOffset: 0 },
-                { midi: n3, velocity: velocity * 0.9, durationSteps: 1, style, timingOffset: 0 },
-                { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0 }
-            ];
-            sb.busySteps = 0;
-            sb.lastFreq = getFrequency(n1);
-            return { midi: n1, velocity: velocity * 0.7, durationSteps: 1, style, timingOffset: timingOffset / 1000 };
-        }
-
         if (deviceType === 'slide') {
             // Chromatic slide/grace note (Blues/Rock)
-            // SCALE CHECK: For non-blues styles, ensure grace note is in scale or a half-step below target
+            // Ensure grace note is actually a half-step below and only used occasionally
             const graceMidi = selectedMidi - 1;
             sb.deviceBuffer = [
                 { midi: selectedMidi, velocity: velocity, durationSteps: durationMultiplier, style, timingOffset: 0 }

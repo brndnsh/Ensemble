@@ -460,8 +460,20 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     if (intensity >= 0.6 && quality !== '5' && !['Rock', 'Jazz', 'Funk'].includes(genre)) {
         if (!is7th && quality !== '6' && quality !== 'm6') {
             const isMajor7th = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
+            
+            // Diatonic aware: If this is the tonic chord in a major key, prefer Maj7 (11)
+            const keyRoot = stateModule.arranger.key ? KEY_ORDER.indexOf(stateModule.arranger.key) : 0;
+            // Note: rootMidi isn't available here, but we can assume if it's a Major triad in a major key,
+            // we should be careful. 
+            // Better strategy: Only add b7 if quality is explicitly dominant or if genre is bluesy.
             const seven = isMajor7th ? 11 : 10;
-            if (!intervals.includes(seven)) intervals.push(seven);
+            
+            // If it's a plain Major triad, don't just slam a b7 on it in Pop/Acoustic.
+            if (quality === 'major' && !['Blues', 'Funk'].includes(genre)) {
+                // Add nothing or add Maj7 (11) - let's stay safe and add 9th (14) only for now
+            } else {
+                if (!intervals.includes(seven)) intervals.push(seven);
+            }
         }
         if (!intervals.includes(14)) intervals.push(14); // 9th
     }

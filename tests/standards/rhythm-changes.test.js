@@ -85,9 +85,9 @@ describe('Jazz Standard Test: Rhythm Changes', () => {
         const scaleI = getScaleForChord(progression[0], progression[1], 'bird');
         expect(scaleI).toEqual([0, 2, 4, 5, 7, 9, 11]);
 
-        // vi7 (Gm7) -> Dorian (Standard minor)
+        // vi7 (Gm7) -> Aeolian (Diatonic to Bb Major)
         const scaleVI7 = getScaleForChord(progression[1], progression[2], 'bird');
-        expect(scaleVI7).toEqual([0, 2, 3, 5, 7, 9, 10]);
+        expect(scaleVI7).toEqual([0, 2, 3, 5, 7, 8, 10]);
 
         // ii7 (Cm7) -> Dorian
         const scaleII7 = getScaleForChord(progression[2], progression[3], 'bird');

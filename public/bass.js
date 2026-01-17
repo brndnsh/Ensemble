@@ -6,44 +6,41 @@ import { KEY_ORDER, TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
  * Determines the best scale for the bass based on chord and context.
  */
 export function getScaleForBass(chord, nextChord) {
-    const isMinor = chord.isMinor !== undefined ? chord.isMinor : arranger.isMinor;
     const isDominant = chord.quality.startsWith('7') || 
                        ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(chord.quality) ||
                        (chord.intervals.includes(10) && chord.intervals.includes(4));
     
-    // Tension awareness from soloist logic
+    // 1. Tension awareness from soloist logic
     if (sb.tension > 0.7 && isDominant) {
         return [0, 1, 3, 4, 6, 8, 10]; // Altered
     }
 
+    // 2. Resolution Logic (Secondary Dominants)
     const isNextMinor = nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim' || nextChord.quality === 'm9' || nextChord.quality === 'm11' || nextChord.quality === 'm13' || nextChord.quality === 'm6');
-    const isV7toMinor = isDominant && isNextMinor;
-    
-    if (isV7toMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
+    if (isDominant && isNextMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
 
-    // Mode-aware diatonic scaling
-    if (isMinor) {
-        const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
-        const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
+    // 3. Style Specifics
+    const genre = gb.genreFeel;
+    const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
+    const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
 
-        if (chord.quality === 'major' || chord.quality === '7') {
-            // V7 in minor should be Phrygian Dominant if resolving to tonic, 
-            // but we'll use Mixolydian as a general case for other major chords in minor.
-            return [0, 2, 4, 5, 7, 9, 10]; 
-        }
-        if (chord.quality === 'minor' || chord.quality === 'm9' || chord.quality === 'm11' || chord.quality === 'm13' || chord.quality === 'm6') {
-             return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
+    if (genre === 'Neo-Soul') {
+        if (chord.quality.startsWith('maj') || chord.quality === 'major') {
+            // Tonic Maj7 in Neo-Soul often sounds better with Ionian than Lydian to avoid #11 clash
+            if (relativeRoot === 0 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; 
+            return [0, 2, 4, 6, 7, 9, 11]; // Lydian for others
         }
     }
 
-    // Chord-scale logic mirroring soloist.js for consistency
+    // 4. Chord Quality Switch
     switch (chord.quality) {
         case 'minor': 
-        case 'm9':
-        case 'm11':
-        case 'm13':
-        case 'm6':
-            if (gb.genreFeel === 'Jazz' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk') return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+        case 'm9': case 'm11': case 'm13': case 'm6':
+            if (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk') {
+                // Use Aeolian for the vi chord in major key to stay diatonic
+                if (relativeRoot === 9 && !arranger.isMinor) return [0, 2, 3, 5, 7, 8, 10];
+                return [0, 2, 3, 5, 7, 9, 10]; // Dorian for ii/iii/v
+            }
             return [0, 2, 3, 5, 7, 8, 10]; 
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
         case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
@@ -59,10 +56,21 @@ export function getScaleForBass(chord, nextChord) {
         case '13': return [0, 2, 4, 5, 7, 9, 10];
     }
 
-    if (isDominant) return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian fallback
+    // 5. Diatonic Fallback (Best for Pop/Rock)
+    const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
+    const keyNotes = keyIntervals.map(i => (keyRoot + i) % 12);
+    const chordRoot = chord.rootMidi % 12;
+    const chordTones = (chord.intervals || [0, 4, 7]).map(i => (chordRoot + i) % 12);
+    const isDiatonic = chordTones.every(note => keyNotes.includes(note));
+    
+    if (isDiatonic) {
+        return keyNotes.map(note => (note - chordRoot + 12) % 12).sort((a, b) => a - b);
+    }
 
+    if (isDominant) return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian fallback
     return chord.intervals.includes(11) ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 4, 5, 7, 9, 10];
 }
+
 
 /**
  * Generates a frequency for a bass line.
@@ -105,6 +113,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     // --- Genre-Specific Register Offsets ---
     if (style === 'dub' || gb.genreFeel === 'Reggae') safeCenterMidi = 32;
     else if (style === 'disco' || gb.genreFeel === 'Disco') safeCenterMidi = 45;
+    else if (style === 'neo' || gb.genreFeel === 'Neo-Soul') safeCenterMidi = 36; // Keep it deep
 
     // Shift center up as intensity builds (max +7 semitones)
     safeCenterMidi += Math.floor(intensity * 7);
@@ -113,6 +122,11 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     let absMin = Math.max(26, safeCenterMidi - 12); 
     let absMax = safeCenterMidi + 12;
+
+    if (style === 'neo' || gb.genreFeel === 'Neo-Soul') {
+        absMin = 24; // Allow deep low-E
+        absMax = 48; // Stay below the piano clusters
+    }
 
     const clampAndNormalize = (midi) => {
         if (!Number.isFinite(midi)) return safeCenterMidi;
@@ -194,9 +208,17 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         let timingOffset = bb.pocketOffset || 0;
         
         // Intensity-based timing: Push slightly ahead during climaxes
-        if (intensity > 0.8) timingOffset -= 0.005;
+        if (intensity > 0.8 && style !== 'neo') timingOffset -= 0.005;
+
+        // Neo-Soul "Drunken" Lag: Tightened up (reduced base and scaling)
+        if (style === 'neo' || gb.genreFeel === 'Neo-Soul') {
+            timingOffset += 0.010 + (intensity * 0.015);
+            // Reduced jitter
+            timingOffset += (Math.random() - 0.5) * 0.005;
+        }
         
         const midi = getMidi(freq);
+
         let durationSteps = durationMultiplier; 
         
         if (durationSteps === null) {
@@ -385,8 +407,9 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
             // If soloist is busy, skip the grease to stay grounded
             if (isSoloistBusy) return null;
 
-            const useFlat7 = currentChord.intervals.includes(10) || Math.random() < 0.6;
-            const interval = useFlat7 ? 10 : 7;
+            const scale = getScaleForBass(currentChord, nextChord);
+            const hasFlat7 = scale.includes(10);
+            const interval = hasFlat7 ? 10 : 7;
             const note = baseRoot + interval; 
             return result(getFrequency(clampAndNormalize(note)), 0.5, 0.7);
         }
@@ -456,18 +479,29 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         if (isSoloistBusy) return null;
 
         // Reduced probability of skips for a more solid foundation
-        const baseSkipProb = 0.15;
-        const skipProb = baseSkipProb + (globalIntensity * 0.15);
+        const baseSkipProb = 0.12; // Reduced from 0.15
+        const skipProb = baseSkipProb + (globalIntensity * 0.12);
         
         if (Math.random() < skipProb) {
             const skipVel = 0.6 + Math.random() * 0.3;
-            const isMuted = Math.random() < 0.3; // More ghost notes for taste
+            const isMuted = Math.random() < 0.3; 
+            const scale = getScaleForBass(currentChord, nextChord);
+
             if (Math.random() < 0.7 && prevMidi) {
-                const ghostNote = Math.random() < 0.3 ? withOctaveJump(prevMidi) : prevMidi;
+                const ghostNote = Math.random() < 0.2 ? withOctaveJump(prevMidi) : prevMidi;
                 return result(getFrequency(ghostNote), 2, skipVel, isMuted);
             } else {
-                const offset = Math.random() < 0.5 ? 1 : -1;
-                return result(getFrequency(clampAndNormalize(prevMidi + offset)), 2, skipVel, isMuted);
+                // Favour a scale tone for the skip instead of a random chromatic step
+                const pc = (prevMidi - baseRoot + 120) % 12;
+                const idx = scale.indexOf(pc);
+                let nextPC = pc;
+                if (idx !== -1) {
+                    const dir = Math.random() < 0.5 ? 1 : -1;
+                    nextPC = scale[(idx + dir + scale.length) % scale.length];
+                } else {
+                    nextPC = scale[0];
+                }
+                return result(getFrequency(clampAndNormalize(baseRoot + nextPC)), 2, skipVel, isMuted);
             }
         }
         return null;
@@ -486,19 +520,19 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         const targetRoot = normalizeToRange(nextTarget);
         
         // Tasteful Harmonic Pull: 
-        // Only use chromatic/dominant anchors ~30-50% of the time. 
+        // Reduced frequency of chromatic pulls. 
         // Resolution to the root/scale tones is often more "foundational".
-        const pullTension = (sb.tension || 0) + (globalIntensity * 0.4);
-        const baseProb = isSoloistBusy ? 0.2 : 0.4;
-        const chromaticProb = baseProb + (pullTension * 0.4);
+        const pullTension = (sb.tension || 0) + (globalIntensity * 0.3);
+        const baseProb = isSoloistBusy ? 0.1 : 0.25; // Reduced base prob
+        const chromaticProb = baseProb + (pullTension * 0.3);
 
-        if (Math.random() < chromaticProb) {
+        if (Math.random() < chromaticProb && (gb.genreFeel === 'Jazz' || gb.genreFeel === 'Blues' || pullTension > 0.7)) {
             // Priority 1: Leading Tone (Half step above/below)
             // Priority 2: Dominant Anchor (Perfect 5th above = -5 semitones from target)
             const choices = [
-                { midi: targetRoot - 1, weight: 1.0 }, 
-                { midi: targetRoot + 1, weight: 0.6 }, 
-                { midi: targetRoot - 5, weight: 0.4 }  
+                { midi: targetRoot - 5, weight: 1.0 }, // Favor 5th over chromatic
+                { midi: targetRoot - 1, weight: 0.6 }, 
+                { midi: targetRoot + 1, weight: 0.4 }  
             ];
 
             let totalWeight = choices.reduce((acc, c) => acc + c.weight, 0);
@@ -620,7 +654,19 @@ export function isBassActive(style, step, stepInChord) {
     if (style === 'neo') {
         if (stepInChord === 0) return true;
         if (stepInChord % 8 === 0) return true;
-        if (step % 4 === 3) return true; 
+        
+        // Add more syncopation as intensity builds
+        const syncoProb = 0.15 + (ctx.bandIntensity * 0.45);
+        if (step % 4 === 2 && Math.random() < syncoProb) return true;
+        if (step % 4 === 3 && Math.random() < (syncoProb * 0.5)) return true; 
+        return false;
+    }
+
+    if (style === 'half') {
+        // Acoustic / Folk style: Increase density at high intensity
+        if (stepInChord === 0) return true;
+        if (ctx.bandIntensity > 0.6 && stepInChord % 8 === 0) return true; // Add half-note pulse
+        if (ctx.bandIntensity > 0.8 && stepInChord % 4 === 0) return true; // Add quarter-note pulse
         return false;
     }
 
