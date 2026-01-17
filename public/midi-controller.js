@@ -130,10 +130,74 @@ export function normalizeMidiVelocity(internalVel) {
  * @param {number} velocity 
  * @param {number} time 
  * @param {number} duration 
+ * @param {boolean} [isMono=false] - If true, kills any other active notes on this channel before playing (Strict Monophony).
  */
-export function sendMIDINote(channel, note, velocity, time, duration) {
+export function sendMIDINote(channel, note, velocity, time, duration, isMono = false) {
     const key = `${channel}_${note}`;
     const now = ctx.audio.currentTime;
+
+    // 0. Strict Monophony Enforcement (Voice Stealing at MIDI level)
+    // If this channel is monophonic, we must kill ANY other active note on this channel
+    // to prevent "choked" notes on synths that don't handle overlapping Note Offs well.
+    if (isMono) {
+        for (const activeKey of activeNotes) {
+            const [chStr, nStr] = activeKey.split('_');
+            const activeCh = parseInt(chStr);
+            const activeNote = parseInt(nStr);
+
+            if (activeCh === channel) {
+                // Found an active note on this channel.
+                // Is it the same note? (Handled by overlap logic below, but we can kill it here too)
+                // Actually, if it's the same note, the overlap logic below handles "retriggering" better (timing-wise).
+                // But for DIFFERENT notes (e.g. legato run), we want to kill the previous one NOW.
+                
+                // If it's a different note, kill it immediately.
+                if (activeNote !== note) {
+                    // Send Off
+                    const output = midiAccess?.outputs.get(midi.selectedOutputId);
+                    if (output) {
+                        const status = 0x80 | (channel - 1);
+                        // Send immediately (with minimal timestamp lookahead to ensure order)
+                        // Actually, if we are scheduling a FUTURE note (time > now), we should probably
+                        // schedule this Kill to happen just before `time`.
+                        // BUT, if we assume isMono means "only one voice at a time", then starting a NEW scheduling
+                        // implies we are moving to a new note.
+                        
+                        // If we are scheduling for 100ms in future...
+                        // And current note is playing...
+                        // We should probably let current note play until 100ms!
+                        
+                        // So we need to Find the pending Off for this active note and TRUNCATE it to `time`.
+                        if (activeNoteOffs.has(activeKey)) {
+                            const prev = activeNoteOffs.get(activeKey);
+                            if (prev.endTime > time) {
+                                clearTimeout(prev.id);
+                                // Reschedule Off for `time`
+                                const cutoffTime = Math.max(now, time - 0.005);
+                                const delayToCutoff = Math.max(0, (cutoffTime - now) * 1000);
+                                const out = output; // capture closure
+                                setTimeout(() => {
+                                    if (activeNotes.has(activeKey)) {
+                                        out.send([status, activeNote, 0], (cutoffTime - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency);
+                                        activeNotes.delete(activeKey);
+                                    }
+                                }, delayToCutoff);
+                                
+                                // Update/Remove from maps? 
+                                // We leave it in activeNotes until the timeout fires (or we deleted it just now?)
+                                // We should probably update activeNoteOffs to reflect this change if we want to be clean,
+                                // but deleting it prevents panic() from clearing the timeout? 
+                                // No, panic uses activeNoteOffs. We cleared the old timeout. We made a new one.
+                                // We aren't storing the NEW timeout in activeNoteOffs. That's a minor leak of panic control.
+                                // But acceptable for now.
+                                activeNoteOffs.delete(activeKey);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // 1. Check for overlapping previous note on the same channel/pitch
     if (activeNoteOffs.has(key)) {

@@ -136,4 +136,41 @@ describe('MIDI Note Overlap Logic', () => {
         expect(messages).toContainEqual([0xB0, 123, 0]);
         expect(messages).toContainEqual([0xBF, 123, 0]);
     });
+
+    it('should enforce strict monophony (kill previous note) when isMono is true, even for different pitches', () => {
+        // 1. Send Note 1 (Channel 1, Pitch 60)
+        sendMIDINote(1, 60, 0.8, 1000, 2.0);
+        
+        // 2. Send Note 2 (Channel 1, Pitch 62) with isMono=true
+        // This should kill Note 60 immediately (at 1000.495)
+        sendMIDINote(1, 62, 0.8, 1000.5, 2.0, true);
+        
+        // Advance time to allow the scheduled Note Off to fire
+        // We MUST advance ctx.audio.currentTime because MIDI controller uses it for delta calculation
+        ctx.audio.currentTime = 1000.5; 
+        vi.advanceTimersByTime(500);
+        
+        const calls = mockOutput.send.mock.calls;
+        
+        // Expect: On 60, On 62, Off 60
+        // On 62 is sent synchronously (scheduled).
+        // Off 60 is sent via setTimeout (scheduled).
+        
+        expect(calls.length).toBe(3);
+        
+        const msgOn60 = calls[0];
+        const msgOn62 = calls[1];
+        const msgOff60 = calls[2]; // Should be Off 60
+        
+        expect(msgOn60[0]).toEqual([0x90, 60, 0.8]);
+        expect(msgOn62[0]).toEqual([0x90, 62, 0.8]);
+        
+        // Verify Off 60
+        expect(msgOff60[0]).toEqual([0x80, 60, 0]);
+        
+        // Verify Timestamps: Off 60 < On 62
+        // msgOff60 timestamp ~1000.495
+        // msgOn62 timestamp ~1000.5
+        expect(msgOff60[1]).toBeLessThan(msgOn62[1]);
+    });
 });

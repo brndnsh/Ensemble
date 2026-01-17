@@ -363,7 +363,8 @@ export function scheduleBass(chordData, step, time) {
         if (vizState.enabled) ctx.drawQueue.push({ type: 'bass_vis', name, octave, midi, time: adjustedTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration });
         playBassNote(freq, adjustedTime, duration, finalVel, muted);
         if (!muted) {
-            sendMIDINote(midiState.bassChannel, midi + (midiState.bassOctave * 12), normalizeMidiVelocity(finalVel), adjustedTime, duration);
+            // Bass is strictly monophonic, so we force Mono mode to kill previous notes
+            sendMIDINote(midiState.bassChannel, midi + (midiState.bassOctave * 12), normalizeMidiVelocity(finalVel), adjustedTime, duration, true);
         }
     }
 }
@@ -391,7 +392,10 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
                 const playTime = unswungTime + offsetS;
                 
                 playSoloNote(freq, playTime, duration, vel, bendStartInterval || 0, style);
-                sendMIDINote(midiState.soloistChannel, midi + (midiState.soloistOctave * 12), normalizeMidiVelocity(vel), playTime, duration);
+                
+                // Soloist is monophonic UNLESS double stops are enabled
+                const isMono = !sb.doubleStops;
+                sendMIDINote(midiState.soloistChannel, midi + (midiState.soloistOctave * 12), normalizeMidiVelocity(vel), playTime, duration, isMono);
                 
                 if (vizState.enabled) {
                     ctx.drawQueue.push({ type: 'soloist_vis', name, octave, midi, time: playTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration, noteType });
