@@ -143,43 +143,43 @@ export function updateBpmUI() {
     
     const baseBpm = ctx.bpm;
     const offset = conductorState.larsBpmOffset;
-    const effectiveBpm = Math.round((baseBpm + offset) * 1);
+    const effectiveBpm = Math.round(baseBpm + offset);
 
     if (gb.larsMode && ctx.isPlaying) {
         ui.bpmControlGroup.classList.add('lars-active');
         
-        if (Math.abs(offset) > 0.2) {
+        // Calculate intensity of the color (0 to 1)
+        // Saturate the color shift at 10 BPM offset
+        const intensity = Math.min(1, Math.abs(offset) / 10);
+        
+        if (Math.abs(offset) > 0.1) {
             const isPushing = offset > 0;
-            const direction = isPushing ? '↗' : '↘';
-            const colorClass = isPushing ? 'tempo-push' : 'tempo-pull';
+            const targetColor = isPushing ? 'var(--blue)' : 'var(--red)';
             
-            ui.bpmInput.classList.remove('tempo-push', 'tempo-pull');
-            ui.bpmInput.classList.add(colorClass);
+            // Using color-mix for smooth blending between base text and target color
+            const mixPercent = Math.round(intensity * 100);
+            const blendedColor = `color-mix(in srgb, var(--text-color), ${targetColor} ${mixPercent}%)`;
             
+            ui.bpmInput.style.color = blendedColor;
             if (ui.bpmLabel) {
+                const direction = isPushing ? '↗' : '↘';
                 ui.bpmLabel.textContent = `${effectiveBpm} ${direction}`;
-                ui.bpmLabel.classList.remove('tempo-push', 'tempo-pull');
-                ui.bpmLabel.classList.add(colorClass);
-            }
-            if (ui.larsIndicator) {
-                ui.larsIndicator.style.color = isPushing ? 'var(--blue)' : 'var(--red)';
+                ui.bpmLabel.style.color = blendedColor;
             }
         } else {
-            ui.bpmInput.classList.remove('tempo-push', 'tempo-pull');
+            ui.bpmInput.style.color = '';
             if (ui.bpmLabel) {
                 ui.bpmLabel.textContent = 'BPM';
-                ui.bpmLabel.classList.remove('tempo-push', 'tempo-pull');
+                ui.bpmLabel.style.color = '';
             }
-            if (ui.larsIndicator) ui.larsIndicator.style.color = '';
         }
     } else {
         ui.bpmControlGroup.classList.remove('lars-active');
-        ui.bpmInput.classList.remove('tempo-push', 'tempo-pull');
+        ui.bpmInput.style.color = '';
         if (ui.bpmLabel) {
             ui.bpmLabel.textContent = 'BPM';
-            ui.bpmLabel.classList.remove('tempo-push', 'tempo-pull');
+            ui.bpmLabel.style.color = '';
         }
-        if (ui.larsIndicator) ui.larsIndicator.style.color = '';
     }
 }
 

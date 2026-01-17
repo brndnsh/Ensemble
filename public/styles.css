@@ -1994,30 +1994,16 @@ select, input[type="range"] {
 }
 
 /* --- Lars Mode Indicators --- */
-.lars-active #larsIndicator {
-    display: inline-block !important;
-    animation: lars-pulse 2s infinite ease-in-out;
-}
-
 .lars-active .control-label {
     display: inline-block !important; /* Force visible on mobile */
     font-size: 0.65rem;
+    animation: lars-pulse 2s infinite ease-in-out;
 }
 
 @keyframes lars-pulse {
-    0% { opacity: 0.6; }
+    0% { opacity: 0.7; }
     50% { opacity: 1; }
-    100% { opacity: 0.6; }
-}
-
-.tempo-push {
-    color: var(--blue) !important;
-    text-shadow: 0 0 5px rgba(38, 139, 210, 0.5);
-}
-
-.tempo-pull {
-    color: var(--red) !important;
-    text-shadow: 0 0 5px rgba(220, 50, 47, 0.5);
+    100% { opacity: 0.7; }
 }
 
 /* --- MIDI Connection UI --- */
