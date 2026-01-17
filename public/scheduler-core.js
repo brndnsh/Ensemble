@@ -8,7 +8,7 @@ import { updateAutoConductor, checkSectionTransition, updateLarsTempo, conductor
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
 import { loadDrumPreset, flushBuffers, switchMeasure } from './instrument-controller.js';
 import { draw } from './animation-loop.js';
-import { sendMIDINote, sendMIDIDrum, sendMIDICC, normalizeMidiVelocity } from './midi-controller.js';
+import { sendMIDINote, sendMIDIDrum, sendMIDICC, normalizeMidiVelocity, panic } from './midi-controller.js';
 import { midi as midiState } from './state.js';
 
 let isScheduling = false;
@@ -46,6 +46,7 @@ export function togglePlay(viz) {
         cb.lastActiveChordIndex = null;
         clearActiveVisuals(activeViz);
         killAllNotes();
+        panic(); // Immediate MIDI panic
         flushBuffers();
         ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
         if (ctx.audio) {

@@ -3,6 +3,14 @@ import { getMidi } from './utils.js';
 
 let midiAccess = null;
 
+// Track pending Note Offs to handle overlaps/legato properly.
+// Key: `${channel}_${note}`, Value: timeoutId
+const activeNoteOffs = new Map();
+
+// Track currently active ("On") notes to send explicit Offs during panic.
+// Key: `${channel}_${note}`
+const activeNotes = new Set();
+
 /**
  * Initializes Web MIDI access and populates available outputs.
  */
@@ -52,6 +60,8 @@ export function sendMIDINoteOn(channel, note, velocity, time) {
     const midiTime = (time - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency;
     const status = 0x90 | (channel - 1);
     output.send([status, note, velocity], midiTime);
+    
+    activeNotes.add(`${channel}_${note}`);
 }
 
 /**
@@ -68,6 +78,8 @@ export function sendMIDINoteOff(channel, note, time) {
     const midiTime = (time - ctx.audio.currentTime) * 1000 + performance.now() + midi.latency;
     const status = 0x80 | (channel - 1);
     output.send([status, note, 0], midiTime);
+
+    activeNotes.delete(`${channel}_${note}`);
 }
 
 /**
@@ -102,13 +114,9 @@ export function normalizeMidiVelocity(internalVel) {
     return Math.max(1, Math.min(127, Math.floor(normalized * 127)));
 }
 
-// Track pending Note Offs to handle overlaps/legato properly.
-// Key: `${channel}_${note}`, Value: timeoutId
-const activeNoteOffs = new Map();
-
 /**
  * Convenience helper to send a note with a duration.
- * Handles overlapping notes by cancelling pending Note Offs for the same pitch.
+ * Includes a small safety gap to ensure Note Offs occur before the next Note On.
  * @param {number} channel 
  * @param {number} note 
  * @param {number} velocity 
@@ -119,38 +127,30 @@ export function sendMIDINote(channel, note, velocity, time, duration) {
     // 1. Send the Note On immediately (scheduled)
     sendMIDINoteOn(channel, note, velocity, time);
 
-    // 2. Manage the Note Off
     const key = `${channel}_${note}`;
 
-    // If there's a pending off for this note, cancel it.
-    // This prevents the previous note's end from cutting off this new note.
-    if (activeNoteOffs.has(key)) {
-        clearTimeout(activeNoteOffs.get(key));
-        activeNoteOffs.delete(key);
-    }
-
-    // 3. Schedule the new Note Off using JS timer (so it can be cancelled)
+    // 2. Schedule the Note Off
+    // We apply a tiny "safety gap" (Gate < 100%) to ensure that if the next note
+    // starts exactly when this one ends, the Off message is sent slightly *before* the new On.
+    // This guarantees retriggering on monophonic synths and prevents "tied" notes.
+    // Min duration 20ms, Safety gap 15ms.
+    const safeDuration = Math.max(0.02, duration - 0.015);
+    
     // Calculate delay relative to now
     const now = ctx.audio.currentTime;
     const startTime = time;
-    const endTime = startTime + duration;
+    const endTime = startTime + safeDuration;
     
-    // If the note ends in the past, don't schedule (or send immediately?)
-    // But usually this is lookahead.
-    
-    // We need to calculate the delay in ms from *now* to *endTime*
     const delaySeconds = endTime - now;
     const delayMs = Math.max(0, delaySeconds * 1000);
 
     const timeoutId = setTimeout(() => {
-        // Send the Note Off
-        // We use 0 (immediate) because setTimeout has already waited the duration
-        // Ideally we'd map this to a precise MIDI timestamp, but `performance.now()`
-        // inside setTimeout is close enough for Note Offs.
         sendMIDINoteOff(channel, note, ctx.audio.currentTime); 
         activeNoteOffs.delete(key);
     }, delayMs);
 
+    // We track it only for panic(), we don't cancel previous notes anymore
+    // because that caused "tied note" behavior on repeated bass notes.
     activeNoteOffs.set(key, timeoutId);
 }
 
@@ -186,7 +186,7 @@ export function sendMIDIDrum(instrumentName, time, velocity, octaveOffset = 0) {
  * All Notes Off for all channels.
  */
 export function panic() {
-    // Clear all pending JS scheduled Note Offs
+    // 1. Clear future Note Offs (they are no longer needed as we'll kill now)
     for (const [key, timeoutId] of activeNoteOffs) {
         clearTimeout(timeoutId);
     }
@@ -196,6 +196,20 @@ export function panic() {
     const output = midiAccess.outputs.get(midi.selectedOutputId);
     if (!output) return;
 
+    // 2. Explicitly kill currently active notes
+    for (const key of activeNotes) {
+        const [chStr, noteStr] = key.split('_');
+        const ch = parseInt(chStr);
+        const note = parseInt(noteStr);
+        
+        // Send Note Off (0x80) immediate
+        // Status: 0x80 | (ch - 1)
+        const status = 0x80 | (ch - 1);
+        output.send([status, note, 0]); // Immediate
+    }
+    activeNotes.clear();
+
+    // 3. Send All Notes Off / Reset Controllers as backup
     for (let ch = 0; ch < 16; ch++) {
         output.send([0xB0 | ch, 123, 0]); // All Notes Off
         output.send([0xB0 | ch, 121, 0]); // Reset All Controllers
