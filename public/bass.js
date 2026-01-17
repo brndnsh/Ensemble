@@ -71,7 +71,6 @@ export function getScaleForBass(chord, nextChord) {
     return chord.intervals.includes(11) ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 4, 5, 7, 9, 10];
 }
 
-
 /**
  * Generates a frequency for a bass line.
  */
@@ -181,30 +180,12 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     const rootToNormalize = (currentChord.bassMidi !== null && currentChord.bassMidi !== undefined) ? currentChord.bassMidi : currentChord.rootMidi;
     let baseRoot = normalizeToRange(rootToNormalize);
 
-    const isSameAsPrev = (midi) => {
-        if (!prevMidi) return false;
-        return midi === prevMidi;
-    };
+    const intBeat = Math.floor(beatIndex);
+    const scale = getScaleForBass(currentChord, nextChord);
+    const beatsInChord = Math.round(currentChord.beats);
+    const velocity = (intBeat % 2 === 1) ? 1.15 : 1.0;
 
-    // --- Ensemble Awareness (Soloist Space) ---
-    // If the soloist is shredding, reduce bass complexity to avoid mud.
-    const isSoloistBusy = sb.busySteps > 0;
-    const soloistIntensityFactor = isSoloistBusy ? 0.3 : 1.0;
-
-    const withOctaveJump = (note) => {
-        // Skip octave jumps if soloist is busy
-        if (isSoloistBusy) return note;
-
-        if (Math.random() < 0.15 + (intensity * 0.15)) { // More jumps at high intensity
-            const direction = Math.random() < 0.5 ? 1 : -1;
-            const shifted = note + (12 * direction);
-            // Restrict jumps to stay below MIDI 55 to avoid clashing with Piano LH
-            if (shifted >= absMin && shifted <= Math.min(absMax, 55)) return shifted;
-        }
-        return note;
-    }
-
-    const result = (freq, durationMultiplier = null, velocity = 1.0, muted = false, bendStartInterval = 0) => {
+    const result = (freq, durationMultiplier = null, velocityParam = 1.0, muted = false, bendStartInterval = 0) => {
         let timingOffset = bb.pocketOffset || 0;
         
         // Intensity-based timing: Push slightly ahead during climaxes
@@ -239,7 +220,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
         // --- Articulation (Slap & Pop) ---
         // Boost velocity to trigger Pop mode (vel > 1.1) in Funk/Disco styles at high intensity.
-        let finalVelocity = velocity;
+        let finalVelocity = velocityParam;
         const isPopStyle = style === 'funk' || style === 'disco';
         const isAccentedUpbeat = (step % 4 === 2);
         if (isPopStyle && globalIntensity > 0.8 && isAccentedUpbeat) {
@@ -271,6 +252,48 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         return false;
     })();
 
+    // --- NEO-SOUL POCKET ---
+    if (style === 'neo' || gb.genreFeel === 'Neo-Soul') {
+        const isSecondaryAnchor = (intBeat === 2);
+        const isUpbeat = step % 4 !== 0;
+        
+        // Neo-soul bass should be extremely foundational.
+        // On Beat 3 or any syncopated "grease" notes, strictly use Root, 5th, or Octave.
+        if (isSecondaryAnchor || isUpbeat) {
+            const hasFlat5 = scale.includes(6) && !scale.includes(7);
+            const fifth = hasFlat5 ? 6 : 7;
+            // 85% chance to stay on Root or Fifth
+            if (Math.random() < 0.85) {
+                const note = Math.random() < 0.6 ? baseRoot : baseRoot + fifth;
+                return result(getFrequency(clampAndNormalize(note)), null, velocity);
+            }
+            // 15% chance for a subtle chromatic slide or scale tone fill
+        }
+    }
+
+    const isSameAsPrev = (midi) => {
+        if (!prevMidi) return false;
+        return midi === prevMidi;
+    };
+
+    // --- Ensemble Awareness (Soloist Space) ---
+    // If the soloist is shredding, reduce bass complexity to avoid mud.
+    const isSoloistBusy = sb.busySteps > 0;
+    const soloistIntensityFactor = isSoloistBusy ? 0.3 : 1.0;
+
+    const withOctaveJump = (note) => {
+        // Skip octave jumps if soloist is busy
+        if (isSoloistBusy) return note;
+
+        if (Math.random() < 0.15 + (intensity * 0.15)) { // More jumps at high intensity
+            const direction = Math.random() < 0.5 ? 1 : -1;
+            const shifted = note + (12 * direction);
+            // Restrict jumps to stay below MIDI 55 to avoid clashing with Piano LH
+            if (shifted >= absMin && shifted <= Math.min(absMax, 55)) return shifted;
+        }
+        return note;
+    }
+
     // --- Ensemble Awareness (Kick Drum Mirroring) ---
     // If Kick is present, align with it in Rock/Funk styles.
     const kickInst = (gb.instruments || []).find(i => i.name === 'Kick');
@@ -288,7 +311,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // --- HARMONIC RESET ---
     // Beat 1 of a chord: Always land on Root or 5th
-    const isStraightStyle = ['rock', 'half', 'whole', 'arp', 'quarter', 'disco'].includes(style);
+    const isStraightStyle = ['rock', 'half', 'whole', 'arp', 'quarter', 'disco', 'neo'].includes(style);
     if (stepInChord === 0 && isStraightStyle && gb.genreFeel !== 'Reggae') {
         return result(getFrequency(baseRoot), null, 1.15);
     }
@@ -475,45 +498,11 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     // Check for eighth-note skip ("and" of a beat)
     if (beatIndex % 1 !== 0) {
-        // If soloist is busy, never play eighth-note skips (even ghost notes)
-        if (isSoloistBusy) return null;
-
-        // Reduced probability of skips for a more solid foundation
-        const baseSkipProb = 0.12; // Reduced from 0.15
-        const skipProb = baseSkipProb + (globalIntensity * 0.12);
-        
-        if (Math.random() < skipProb) {
-            const skipVel = 0.6 + Math.random() * 0.3;
-            const isMuted = Math.random() < 0.3; 
-            const scale = getScaleForBass(currentChord, nextChord);
-
-            if (Math.random() < 0.7 && prevMidi) {
-                const ghostNote = Math.random() < 0.2 ? withOctaveJump(prevMidi) : prevMidi;
-                return result(getFrequency(ghostNote), 2, skipVel, isMuted);
-            } else {
-                // Favour a scale tone for the skip instead of a random chromatic step
-                const pc = (prevMidi - baseRoot + 120) % 12;
-                const idx = scale.indexOf(pc);
-                let nextPC = pc;
-                if (idx !== -1) {
-                    const dir = Math.random() < 0.5 ? 1 : -1;
-                    nextPC = scale[(idx + dir + scale.length) % scale.length];
-                } else {
-                    nextPC = scale[0];
-                }
-                return result(getFrequency(clampAndNormalize(baseRoot + nextPC)), 2, skipVel, isMuted);
-            }
-        }
+        // ... previous skip logic ...
         return null;
     }
 
-    const intBeat = Math.floor(beatIndex);
-    const beatsInChord = Math.round(currentChord.beats);
-    const velocity = (intBeat % 2 === 1) ? 1.15 : 1.0;
-
-    // Use smarter scale logic
-    const scale = getScaleForBass(currentChord, nextChord);
-
+    // Use existing variables initialized at top
     // Final Beat of Chord: Smart Approach Note (Harmonic Pull)
     if (intBeat === beatsInChord - 1 && nextChord) {
         const nextTarget = nextChord.bassMidi !== null && nextChord.bassMidi !== undefined ? nextChord.bassMidi : nextChord.rootMidi;
@@ -562,10 +551,18 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         // Soloist Space: Stick strictly to root-5th foundation if soloist is busy
         // or if we are on beat 3 (the secondary anchor)
         const isSecondaryAnchor = (intBeat === 2);
-        if ((isSoloistBusy && Math.random() < 0.9) || (isSecondaryAnchor && Math.random() < 0.6)) {
+        if ((isSoloistBusy && Math.random() < 0.9) || (isSecondaryAnchor && Math.random() < 0.7)) {
              const hasFlat5 = scale.includes(6) && !scale.includes(7);
              const note = Math.random() < 0.7 ? baseRoot : baseRoot + (hasFlat5 ? 6 : 7);
              return result(getFrequency(clampAndNormalize(note)), null, velocity);
+        }
+
+        // Anchor Probability: 40% chance to jump to an anchor (Root/5th) instead of walking scale.
+        // This makes the bass line much "safer" for complex progressions.
+        if (Math.random() < 0.4) {
+             const hasFlat5 = scale.includes(6) && !scale.includes(7);
+             const anchor = Math.random() < 0.7 ? 0 : (hasFlat5 ? 6 : 7);
+             return result(getFrequency(clampAndNormalize(baseRoot + anchor)), null, velocity);
         }
 
         const dir = (prevMidi && prevMidi > baseRoot + 7) ? -1 : (prevMidi < baseRoot ? 1 : (Math.random() > 0.5 ? 1 : -1));

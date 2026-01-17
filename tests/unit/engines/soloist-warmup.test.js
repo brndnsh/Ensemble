@@ -56,14 +56,14 @@ describe('Soloist Warm-up Logic (Guns-Blazing Prevention)', () => {
     it('should be more likely to rest at the very start of a session', () => {
         let startNotes = 0;
         let endNotes = 0;
-        const iterations = 5000;
+        const iterations = 10000;
 
         // 1. Check at start (sessionSteps reset every iteration)
         for (let i = 0; i < iterations; i++) {
             sb.sessionSteps = 0;
             sb.isResting = false;
             sb.notesInPhrase = 0; // Reset to avoid budget penalty
-            sb.currentPhraseSteps = 5; // Long enough to trigger rest check (>4)
+            sb.currentPhraseSteps = 8; // Longer phrase = higher rest prob trigger
             // Use Step 16 to bypass initial 8-step forced rest bias
             const result = getSoloistNote(chordC, null, 16, 440, 72, 'scalar', 4);
             if (result) startNotes++;
@@ -74,7 +74,7 @@ describe('Soloist Warm-up Logic (Guns-Blazing Prevention)', () => {
             sb.sessionSteps = 1000;
             sb.isResting = false;
             sb.notesInPhrase = 0; // Reset to avoid budget penalty
-            sb.currentPhraseSteps = 5;
+            sb.currentPhraseSteps = 8;
             const result = getSoloistNote(chordC, null, 16, 440, 72, 'scalar', 4);
             if (result) endNotes++;
         }
