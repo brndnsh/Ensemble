@@ -415,13 +415,16 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
         if (rootless) return rootless;
     }
 
-    let intervals = [0, 4, 7]; // Default Major
+    let intervals = null;
 
     // 2. POP & ROCK: SPREAD 10ths
     if (genre === 'Rock' || (genre === 'Bossa' && !shouldBeRootless)) {
         if (quality === 'major') intervals = [0, 7, 16, 19]; // 1, 5, 10, 12
         else if (quality === 'minor') intervals = [0, 7, 15, 19]; // 1, 5, b10, 12
-    } else {
+    } 
+    
+    if (!intervals) {
+        intervals = [0, 4, 7]; // Default Major
         // Standard Triad Fallback for others
         const isMinorQuality = (quality.startsWith('m') && !quality.startsWith('maj')) || quality === 'minor' || quality === 'halfdim';
         if (isMinorQuality) intervals = [0, 3, 7];

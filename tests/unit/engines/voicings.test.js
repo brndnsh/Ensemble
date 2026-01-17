@@ -1,19 +1,29 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const { ctxMock, gbMock } = vi.hoisted(() => ({
+    ctxMock: { bandIntensity: 0.5 },
+    gbMock: { genreFeel: 'Jazz' }
+}));
 
 // Mock dependencies
 vi.mock('../../../public/ui.js', () => ({ ui: {} }));
 vi.mock('../../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('../../../public/state.js', () => ({
-    ctx: { bandIntensity: 0.5 },
+    ctx: ctxMock,
     cb: { density: 'standard', practiceMode: true },
     arranger: { timeSignature: '4/4' },
-    gb: { genreFeel: 'Jazz' },
+    gb: gbMock,
     bb: { enabled: true }
 }));
 
 import { getIntervals, getChordDetails } from '../../../public/chords.js';
 
 describe('Functional Extension Scaling (Rootless Voicings)', () => {
+    
+    beforeEach(() => {
+        ctxMock.bandIntensity = 0.5;
+        gbMock.genreFeel = 'Jazz';
+    });
     
     // Helper to simulate getIntervals call with specific density/genre
     const getVoicing = (symbol, density = 'standard') => {
@@ -96,4 +106,25 @@ describe('Functional Extension Scaling (Rootless Voicings)', () => {
             expect(intervals.some(i => [13, 15, 20].includes(i))).toBe(true);
         });
     });
+    
+    describe('Bug Regression: m7b5 (Half-Diminished) Voicings', () => {
+        it('should NOT produce a perfect 5th (7) for m7b5 in Rock/Pop mode', () => {
+            // Regression: Rock mode logic used to default m7b5 to Major Triad [0, 4, 7]
+            const intervals = getIntervals('halfdim', true, 'standard', 'Rock', true);
+            expect(intervals).toContain(6); // b5
+            expect(intervals).not.toContain(7); // Perfect 5th
+            expect(intervals).not.toContain(4); // Major 3rd
+        });
+
+        it('should NOT produce a perfect 5th (7) for m7b5 at HIGH intensity', () => {
+            ctxMock.bandIntensity = 1.0;
+            // Test in Rock mode where intensity logic is active (Jazz rootless skips it)
+            const intervals = getIntervals('halfdim', true, 'standard', 'Rock', true);
+            
+            expect(intervals).toContain(6); // b5
+            expect(intervals).not.toContain(7); // Perfect 5th
+            // High intensity might add b7 (10) or Root (12), but never natural 5th on halfdim
+        });
+    });
 });
+
