@@ -97,9 +97,10 @@ describe('Soloist Engine Logic', () => {
         it('should anticipate the next chord on step 14 or 15', () => {
             const chordCmaj = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major', beats: 4 };
             let anticipated = false;
-            for (let i = 0; i < 1000; i++) {
+            for (let i = 0; i < 2000; i++) {
                 sb.busySteps = 0;
                 sb.isResting = false;
+                sb.tension = 0;
                 const result = getSoloistNote(chordCmaj, chordF, 14, 440, 72, 'bird', 14);
                 if (result) {
                     const note = Array.isArray(result) ? result[0] : result;
@@ -167,13 +168,15 @@ describe('Soloist Engine Logic', () => {
     describe('Melodic Contour & Skip Resolution', () => {
         it('should resolve a large upward skip with a downward step', () => {
             let downwardStepCount = 0;
-            for (let i = 0; i < 50; i++) {
+            for (let i = 0; i < 200; i++) {
                 sb.busySteps = 0;
+                sb.isResting = false;
+                sb.tension = 0;
                 sb.lastInterval = 7; 
                 const result = getSoloistNote(chordC, null, 16, 440, 69, 'scalar', 0);
                 if (result && result.midi < 69 && Math.abs(result.midi - 69) <= 2) downwardStepCount++;
             }
-            expect(downwardStepCount).toBeGreaterThan(20);
+            expect(downwardStepCount).toBeGreaterThan(80);
         });
     });
 
