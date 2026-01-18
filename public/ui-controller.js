@@ -746,58 +746,74 @@ export function setupAnalyzerHandlers() {
     if (!ui.analyzeAudioBtn) return;
 
     let detectedChords = [];
+    let currentAudioBuffer = null;
+    let currentFileName = "";
 
     const resetAnalyzer = () => {
         ui.analyzerDropZone.style.display = 'block';
+        ui.analyzerTrimView.style.display = 'none';
         ui.analyzerProcessing.style.display = 'none';
         ui.analyzerResults.style.display = 'none';
         ui.analyzerProgressBar.style.width = '0%';
         ui.analyzerFileInput.value = '';
+        currentAudioBuffer = null;
         detectedChords = [];
     };
 
-    ui.analyzeAudioBtn.addEventListener('click', () => {
-        ui.arrangerActionMenu.classList.remove('open');
-        ui.arrangerActionTrigger.classList.remove('active');
-        resetAnalyzer();
-        ui.analyzerOverlay.classList.add('active');
-    });
+    const drawWaveform = (buffer) => {
+        const canvas = ui.analyzerWaveformCanvas;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Match internal size to display size
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        
+        const width = canvas.width;
+        const height = canvas.height;
+        const data = buffer.getChannelData(0);
+        const step = Math.ceil(data.length / width);
+        const amp = height / 2;
 
-    ui.closeAnalyzerBtn.addEventListener('click', () => {
-        ui.analyzerOverlay.classList.remove('active');
-    });
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
+        ctx.clearRect(0, 0, width, height);
+        
+        // Draw baseline
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.beginPath();
+        ctx.moveTo(0, amp);
+        ctx.lineTo(width, amp);
+        ctx.stroke();
 
-    ui.analyzerDropZone.addEventListener('click', () => ui.analyzerFileInput.click());
-
-    ui.analyzerDropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        ui.analyzerDropZone.classList.add('drag-over');
-    });
-
-    ui.analyzerDropZone.addEventListener('dragleave', () => {
-        ui.analyzerDropZone.classList.remove('drag-over');
-    });
-
-    ui.analyzerDropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        ui.analyzerDropZone.classList.remove('drag-over');
-        if (e.dataTransfer.files.length > 0) {
-            handleFile(e.dataTransfer.files[0]);
+        for (let i = 0; i < width; i++) {
+            let min = 1.0;
+            let max = -1.0;
+            for (let j = 0; j < step; j++) {
+                const datum = data[(i * step) + j];
+                if (datum < min) min = datum;
+                if (datum > max) max = datum;
+            }
+            ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
         }
-    });
+    };
 
-    ui.analyzerFileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
-        }
-    });
-
-    let currentAudioBuffer = null;
-    let currentFileName = "";
+    const updateSelectionUI = () => {
+        if (!currentAudioBuffer) return;
+        const duration = currentAudioBuffer.duration;
+        const start = parseFloat(ui.analyzerStartInput.value) || 0;
+        const end = parseFloat(ui.analyzerEndInput.value) || duration;
+        
+        const leftPct = (start / duration) * 100;
+        const widthPct = ((end - start) / duration) * 100;
+        
+        ui.analyzerSelectionOverlay.style.left = `${leftPct}%`;
+        ui.analyzerSelectionOverlay.style.width = `${widthPct}%`;
+    };
 
     const handleFile = async (file) => {
         ui.analyzerDropZone.style.display = 'none';
-        ui.analyzerProcessing.style.display = 'block';
+        ui.analyzerProcessing.style.display = 'block'; // Show loading spinner
         currentFileName = file.name;
         
         try {
@@ -805,15 +821,19 @@ export function setupAnalyzerHandlers() {
             const audioCtx = ctx.audio || new (window.AudioContext || window.webkitAudioContext)();
             currentAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
             
+            ui.analyzerProcessing.style.display = 'none';
+            ui.analyzerTrimView.style.display = 'block';
+            
             // Initialize trim inputs
             ui.analyzerStartInput.value = 0;
             ui.analyzerEndInput.value = Math.floor(currentAudioBuffer.duration);
             ui.analyzerDurationLabel.textContent = `Total Duration: ${currentAudioBuffer.duration.toFixed(1)}s`;
             
-            await performAnalysis();
+            drawWaveform(currentAudioBuffer);
+            updateSelectionUI();
             
         } catch (err) {
-            console.error("[Analyzer] Error:", err);
+            console.error("[Analyzer] Loading Error:", err);
             showToast("Loading failed: " + err.message);
             resetAnalyzer();
         }
@@ -822,6 +842,7 @@ export function setupAnalyzerHandlers() {
     const performAnalysis = async () => {
         if (!currentAudioBuffer) return;
         
+        ui.analyzerTrimView.style.display = 'none';
         ui.analyzerProcessing.style.display = 'block';
         ui.analyzerResults.style.display = 'none';
         ui.analyzerProgressBar.style.width = '0%';
@@ -881,10 +902,14 @@ export function setupAnalyzerHandlers() {
         } catch (err) {
             console.error("[Analyzer] Analysis Error:", err);
             showToast("Analysis failed: " + err.message);
+            ui.analyzerTrimView.style.display = 'block';
+            ui.analyzerProcessing.style.display = 'none';
         }
     };
 
-    ui.reanalyzeBtn.addEventListener('click', performAnalysis);
+    ui.analyzerStartInput.addEventListener('input', updateSelectionUI);
+    ui.analyzerEndInput.addEventListener('input', updateSelectionUI);
+    ui.startAnalysisBtn.addEventListener('click', performAnalysis);
 
     ui.applyAnalysisBtn.addEventListener('click', () => {
         if (detectedChords.length === 0) return;

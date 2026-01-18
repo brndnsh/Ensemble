@@ -172,6 +172,38 @@
     margin-top: 1rem;
 }
 
+/* --- Waveform Visualizer --- */
+.analyzer-trim-view {
+    padding: 1rem 0;
+}
+
+.waveform-container {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+#analyzerWaveformCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.waveform-selection {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: rgba(59, 130, 246, 0.2);
+    border-left: 2px solid var(--accent-color);
+    border-right: 2px solid var(--accent-color);
+    pointer-events: none;
+    transition: left 0.1s ease, width 0.1s ease;
+}
+
 .suggested-sections-list {
     max-height: 300px;
     overflow-y: auto;

@@ -853,25 +853,28 @@
             </div>
         </div>
 
+        <div id="analyzerTrimView" class="analyzer-trim-view" style="display: none;">
+            <div class="waveform-container">
+                <canvas id="analyzerWaveformCanvas"></canvas>
+                <div id="analyzerSelectionOverlay" class="waveform-selection"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                <div class="setting-item">
+                    <label class="setting-label">Start (sec)</label>
+                    <input type="number" id="analyzerStartInput" value="0" min="0" step="1" style="width: 100%;">
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label">End (sec)</label>
+                    <input type="number" id="analyzerEndInput" value="0" min="1" step="1" style="width: 100%;">
+                </div>
+            </div>
+            <p id="analyzerDurationLabel" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+            <button id="startAnalysisBtn" class="primary-btn" style="width: 100%;">Analyze Selection</button>
+        </div>
+
         <div id="analyzerProcessing" class="analyzer-processing" style="display: none;">
             <div class="spinner"></div>
             <p>Ensemble is listening...</p>
-            
-            <div id="analyzerTrimControls" class="analyzer-trim-controls" style="margin-bottom: 1.5rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div class="setting-item">
-                        <label class="setting-label">Start (sec)</label>
-                        <input type="number" id="analyzerStartInput" value="0" min="0" step="1" style="width: 100%;">
-                    </div>
-                    <div class="setting-item">
-                        <label class="setting-label">End (sec)</label>
-                        <input type="number" id="analyzerEndInput" value="0" min="1" step="1" style="width: 100%;">
-                    </div>
-                </div>
-                <p id="analyzerDurationLabel" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;"></p>
-                <button id="reanalyzeBtn" class="primary-btn" style="width: 100%; margin-top: 0.5rem; background: var(--panel-color); border: 1px solid var(--border-color);">Update Selection</button>
-            </div>
-
             <div class="progress-bar-container">
                 <div id="analyzerProgressBar" class="progress-bar"></div>
             </div>
