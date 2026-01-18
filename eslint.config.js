@@ -10,6 +10,7 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.node,
+        WORKER_PATH: "readonly",
       },
     },
     rules: {
