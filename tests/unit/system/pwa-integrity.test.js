@@ -16,7 +16,7 @@ describe('PWA Offline Asset Integrity', () => {
         const assets = assetsRaw
             .split(',')
             .map(s => s.trim().replace(/['"\[\]]/g, ''))
-            .filter(s => s && s !== './');
+            .filter(s => s && s !== './' && !s.includes('ASSETS_PLACEHOLDER'));
 
         const publicDir = path.resolve(__dirname, '../../../public');
         

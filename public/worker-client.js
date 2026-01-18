@@ -16,7 +16,9 @@ export function initWorker(onSchedulerRequest, onNotesReceived) {
     schedulerRequestHandler = onSchedulerRequest;
     notesReceivedHandler = onNotesReceived;
     
-    timerWorker = new Worker('logic-worker.js', { type: 'module' });
+    // In production, WORKER_PATH is injected by esbuild --define
+    const workerPath = typeof WORKER_PATH !== 'undefined' ? WORKER_PATH : 'logic-worker.js';
+    timerWorker = new Worker(workerPath, { type: 'module' });
 
     timerWorker.onmessage = (e) => {
         const { type, notes, data, timestamp } = e.data;
