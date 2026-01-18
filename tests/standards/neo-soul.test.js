@@ -64,7 +64,7 @@ describe('Neo-Soul Integration Test: Slash Chords', () => {
         
         // 1. IVmaj9/5 (Fmaj9/G)
         const iv9g = progression[0];
-        expect(iv9g.display.abs.bass).toBe('G');
+        expect(iv9g.display.name.bass).toBe('G');
         expect(iv9g.bassMidi % 12).toBe(7); // G
         
         // 2. bIImaj7/1 (Dbmaj7/C)
