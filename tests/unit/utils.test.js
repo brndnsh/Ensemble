@@ -14,6 +14,7 @@ describe('Utility Functions', () => {
             expect(formatUnicodeSymbols('Bb')).toBe('B♭');
             expect(formatUnicodeSymbols('Ebmaj7')).toBe('E♭maj7');
             expect(formatUnicodeSymbols('bII')).toBe('♭II');
+            expect(formatUnicodeSymbols('bvii9')).toBe('♭vii9');
             expect(formatUnicodeSymbols('m7b5')).toBe('m7♭5');
             expect(formatUnicodeSymbols('7b9')).toBe('7♭9');
         });
