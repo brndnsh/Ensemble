@@ -324,6 +324,12 @@ export function setupUIHandlers(refs) {
                 ui.arrangerActionTrigger.classList.remove('active');
             }
         }],
+        [ui.analyzeAudioBtn, 'click', () => {
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
+            ui.analyzerOverlay.classList.add('active');
+        }],
+        [ui.closeAnalyzerBtn, 'click', () => ui.analyzerOverlay.classList.remove('active')],
         [ui.randomizeBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
@@ -852,7 +858,8 @@ export function setupAnalyzerHandlers() {
         }
 
         timeline.forEach((chord, i) => {
-            result += chord + " ";
+            if (chord === 'Rest') result += "- ";
+            else result += chord + " ";
             if ((i + 1) % chordsPerMeasure === 0) result += "| ";
         });
 
