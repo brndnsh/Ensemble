@@ -314,7 +314,7 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
         ['Default', ...KEY_ORDER].forEach(k => {
             const opt = document.createElement('option');
             opt.value = k === 'Default' ? '' : k;
-            opt.textContent = k === 'Default' ? 'Key: Auto' : `Key: ${k}${arranger.isMinor ? 'm' : ''}`;
+            opt.textContent = k === 'Default' ? 'Key: Auto' : `Key: ${formatUnicodeSymbols(k)}${arranger.isMinor ? 'm' : ''}`;
             if (opt.value === (s.key || '')) opt.selected = true;
             keySelect.appendChild(opt);
         });
@@ -852,7 +852,7 @@ export function updateKeySelectLabels() {
     const currentValue = ui.keySelect.value;
     Array.from(ui.keySelect.options).forEach(opt => {
         const root = opt.value;
-        opt.textContent = `Key: ${root}${arranger.isMinor ? 'm' : ''}`;
+        opt.textContent = `Key: ${formatUnicodeSymbols(root)}${arranger.isMinor ? 'm' : ''}`;
     });
     // Force browser to update the displayed label of the select
     ui.keySelect.value = currentValue;
