@@ -211,6 +211,21 @@ export function getStepInfo(step, tsConfig, measureMap, allTSConfigs) {
         return impulse;
     }
 
+    /**
+     * Replaces ASCII # and b with Unicode ♯ and ♭ for display.
+     * @param {string} str - The string to format.
+     * @returns {string}
+     */
+    export function formatUnicodeSymbols(str) {
+        if (!str) return str;
+        return str
+            .replace(/#/g, '♯')
+            // Replace 'b' with '♭' if it's at the end of the string (note names like Bb)
+            // or if it's followed by a number (suffixes like b9)
+            // or if it's followed by a Roman numeral (bII, bVII)
+            .replace(/b(?=[0-9IVi|$])/g, '♭');
+    }
+
 let cachedSoftClipCurve = null;
 
     /**
