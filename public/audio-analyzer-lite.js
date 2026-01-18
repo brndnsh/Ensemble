@@ -50,36 +50,53 @@ export class ChordAnalyzerLite {
             // Extract Chromagram for this window
             const chroma = this.calculateChromagram(signal.subarray(start, end), sampleRate);
             const chord = this.identifyChord(chroma);
+            results.push({ beat: b, chord });
 
-            if (chord !== lastChord) {
-                results.push({ beat: b, time: b * secondsPerBeat, chord });
-                lastChord = chord;
-            }
-            
-            // Progress callback if provided
             if (options.onProgress) {
                 options.onProgress((b / beats) * 100);
             }
         }
 
-        return results;
+        // --- SECOND PASS: Musician Smoothing ---
+        // Look for the consensus chord in a sliding 3-beat window to remove "jitter"
+        const smoothed = [];
+        let lastConsensus = null;
+
+        for (let i = 0; i < results.length; i++) {
+            const window = results.slice(Math.max(0, i - 1), Math.min(results.length, i + 2));
+            const counts = {};
+            window.forEach(r => counts[r.chord] = (counts[r.chord] || 0) + 1);
+            const consensus = Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+
+            if (consensus !== lastConsensus) {
+                smoothed.push({ beat: i, time: i * secondsPerBeat, chord: consensus });
+                lastConsensus = consensus;
+            }
+        }
+
+        return smoothed;
     }
 
     /**
-     * Calculates energy in 12 semitone bins using a bank of simple 
-     * single-frequency DFT (Goertzel-like) filters.
+     * Calculates energy in 12 semitone bins using a bank of targeted 
+     * single-frequency filters with frequency weighting.
      */
     calculateChromagram(signal, sampleRate) {
         const chroma = new Float32Array(12).fill(0);
-        
-        // Downsample signal for performance (we only care about frequencies < 2000Hz)
-        const step = 4; 
         const len = signal.length;
+        const step = 4; // Downsample for performance
 
         this.pitchFrequencies.forEach(p => {
             let real = 0;
             let imag = 0;
             const angleStep = (2 * Math.PI * p.freq) / sampleRate;
+
+            // Apply Frequency Weighting:
+            // High weight for Bass (C1-C3), Medium for Mids (C4-C5), Low for Highs (C6+)
+            let weight = 1.0;
+            if (p.midi < 48) weight = 3.0;      // Bass depth
+            else if (p.midi < 60) weight = 2.0; // Low mids
+            else if (p.midi > 80) weight = 0.2; // Ignore high melody noise
 
             for (let i = 0; i < len; i += step) {
                 const angle = i * angleStep;
@@ -87,18 +104,29 @@ export class ChordAnalyzerLite {
                 imag += signal[i] * Math.sin(angle);
             }
 
-            // Magnitude squared
-            const mag = (real * real + imag * imag);
+            const mag = (real * real + imag * imag) * weight;
             chroma[p.bin] += mag;
         });
 
-        // Normalize chroma
-        const max = Math.max(...chroma);
-        if (max > 0) {
-            for (let i = 0; i < 12; i++) chroma[i] /= max;
+        // Apply "Harmonic Sharpening"
+        // If two adjacent bins (e.g. C and Db) are both high, pick the winner and 
+        // suppress the neighbor to prevent "blurry" detections.
+        const sharpened = new Float32Array(12);
+        for (let i = 0; i < 12; i++) {
+            const prev = chroma[(i - 1 + 12) % 12];
+            const next = chroma[(i + 1) % 12];
+            if (chroma[i] > prev && chroma[i] > next) {
+                sharpened[i] = chroma[i];
+            }
         }
 
-        return chroma;
+        // Normalize
+        const max = Math.max(...sharpened);
+        if (max > 0) {
+            for (let i = 0; i < 12; i++) sharpened[i] /= max;
+        }
+
+        return sharpened;
     }
 
     identifyChord(chroma) {
