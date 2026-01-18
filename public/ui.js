@@ -1,5 +1,5 @@
 import { arranger, cb, ctx, gb, bb, sb } from './state.js';
-import { getStepsPerMeasure, midiToNote, getStepInfo } from './utils.js';
+import { getStepsPerMeasure, midiToNote, getStepInfo, formatUnicodeSymbols } from './utils.js';
 import { saveCurrentState } from './persistence.js';
 import { clearDrumPresetHighlight } from './instrument-controller.js';
 import { TIME_SIGNATURES, KEY_ORDER } from './config.js';
@@ -148,18 +148,7 @@ export function renderChordVisualizer() {
                     // Update Content
                     const notation = arranger.notation || 'roman';
                     const disp = chord.display ? chord.display[notation] : null;
-                    let html = '';
-                    
-                    if (disp) {
-                        html = `<span class="root">${disp.root}</span><span class="suffix">${disp.suffix}</span>`;
-                        if (disp.bass) {
-                            html += `<span class="bass-note">/${disp.bass}</span>`;
-                        }
-                    } else {
-                        html = chord.absName || '...';
-                    }
-                    
-                    // Only write innerHTML if changed to avoid reflows
+                    const html = `<span class="root">${formatUnicodeSymbols(disp.root)}</span><span class="suffix">${formatUnicodeSymbols(disp.suffix)}</span>${disp.bass ? `<span class="bass-note">/${formatUnicodeSymbols(disp.bass)}</span>` : ''}`;
                     if (card.innerHTML !== html) card.innerHTML = html;
                     
                     // Re-bind click (or rely on stable index closure? No, closures are stale. Rebind.)
@@ -204,7 +193,7 @@ export function renderChordVisualizer() {
 
             const header = document.createElement('div');
             header.className = 'section-block-header';
-            header.textContent = section.label;
+            header.textContent = formatUnicodeSymbols(section.label);
             block.appendChild(header);
 
             content = document.createElement('div');
@@ -224,7 +213,7 @@ export function renderChordVisualizer() {
             if (pendingKeyLabel && mIdx === 0) {
                 const label = document.createElement('div');
                 label.className = 'key-label';
-                label.textContent = pendingKeyLabel;
+                label.textContent = formatUnicodeSymbols(pendingKeyLabel);
                 mBox.appendChild(label);
                 mBox.classList.add('has-key-label');
                 pendingKeyLabel = null;
@@ -240,12 +229,12 @@ export function renderChordVisualizer() {
                 const disp = chord.display ? chord.display[notation] : null;
                 
                 if (disp) {
-                    card.innerHTML = `<span class="root">${disp.root}</span><span class="suffix">${disp.suffix}</span>`;
+                    card.innerHTML = `<span class="root">${formatUnicodeSymbols(disp.root)}</span><span class="suffix">${formatUnicodeSymbols(disp.suffix)}</span>`;
                     if (disp.bass) {
-                        card.innerHTML += `<span class="bass-note">/${disp.bass}</span>`;
+                        card.innerHTML += `<span class="bass-note">/${formatUnicodeSymbols(disp.bass)}</span>`;
                     }
                 } else {
-                    card.textContent = chord.absName || '...';
+                    card.textContent = formatUnicodeSymbols(chord.absName) || '...';
                 }
 
                 card.onclick = (e) => {
