@@ -311,7 +311,10 @@ export function setupUIHandlers(refs) {
         [ui.closeTemplatesBtn, 'click', () => {
             ui.templatesOverlay.classList.remove('active');
         }],
-        [ui.undoBtn, 'click', () => undo(refreshArrangerUI)],
+        [ui.undoBtn, 'click', () => {
+            undo(refreshArrangerUI);
+            clearChordPresetHighlight();
+        }],
         [ui.arrangerActionTrigger, 'click', (e) => {
             e.stopPropagation();
             ui.arrangerActionMenu.classList.toggle('open');

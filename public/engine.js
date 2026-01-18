@@ -4,15 +4,15 @@ import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { safeDisconnect, createReverbImpulse, createSoftClipCurve } from './utils.js';
 
 // Facade: Re-export synthesis logic from specialized modules
-export { playNote, playChordScratch, updateSustain, killAllPianoNotes, INSTRUMENT_PRESETS } from './synth-chords.js';
-export { playBassNote, killBassNote } from './synth-bass.js';
-export { playSoloNote, killSoloistNote } from './synth-soloist.js';
-export { playDrumSound, killDrumNote } from './synth-drums.js';
+import { playNote, playChordScratch, updateSustain, killAllPianoNotes, INSTRUMENT_PRESETS } from './synth-chords.js';
+import { playBassNote, killBassNote } from './synth-bass.js';
+import { playSoloNote, killSoloistNote } from './synth-soloist.js';
+import { playDrumSound, killDrumNote } from './synth-drums.js';
 
-import { killAllPianoNotes } from './synth-chords.js';
-import { killBassNote } from './synth-bass.js';
-import { killSoloistNote } from './synth-soloist.js';
-import { killDrumNote } from './synth-drums.js';
+export { playNote, playChordScratch, updateSustain, killAllPianoNotes, INSTRUMENT_PRESETS };
+export { playBassNote, killBassNote };
+export { playSoloNote, killSoloistNote };
+export { playDrumSound, killDrumNote };
 
 /**
  * Initializes the Web Audio context and global audio nodes.
@@ -238,47 +238,25 @@ export function restoreGains() {
 }
 
 let lastAudioTime = 0;
-
 let lastPerfTime = 0;
 
-
-
 export function getVisualTime() {
-
     if (!ctx.audio) return 0;
-
     
-
     const audioTime = ctx.audio.currentTime;
-
     const perfTime = performance.now();
-
     
-
     if (audioTime !== lastAudioTime) {
-
         lastAudioTime = audioTime;
-
         lastPerfTime = perfTime;
-
     }
-
     
-
     const dt = (perfTime - lastPerfTime) / 1000;
-
     const smoothAudioTime = audioTime + Math.min(dt, 0.1);
 
-
-
     const outputLatency = ctx.audio.outputLatency || 0;
-
     const isChromium = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-
     const offset = outputLatency > 0 ? outputLatency : (isChromium ? 0.015 : 0.045);
-
     
-
     return smoothAudioTime - offset;
-
 }

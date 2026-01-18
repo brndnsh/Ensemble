@@ -15,19 +15,10 @@ export function pushHistory() {
     if (arranger.history.length > 20) arranger.history.shift();
 }
 
-/**
- * Clears the active chord preset state and highlights.
- */
-function clearChordPresetHighlight() {
-    arranger.lastChordPreset = null;
-    document.querySelectorAll('.chord-preset-chip').forEach(c => c.classList.remove('active'));
-}
-
 export function undo(refreshArrangerUI) {
     if (arranger.history.length === 0) return;
     const last = arranger.history.pop();
     arranger.sections = JSON.parse(last);
-    clearChordPresetHighlight();
     if (refreshArrangerUI) {
         refreshArrangerUI();
     }

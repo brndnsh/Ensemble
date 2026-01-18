@@ -3,7 +3,7 @@
  * @property {AudioContext|null} audio - The Web Audio API context.
  * @property {GainNode|null} masterGain - The master volume gain node.
  * @property {WaveShaperNode|null} saturator - The master soft-clipper/saturator.
- * @property {DynamicsCompressorNode|null} limiter - The master safety limiter.
+ * @property {DynamicsCompressorNode|null} masterLimiter - The master safety limiter.
  * @property {ConvolverNode|null} reverbNode - The global reverb node.
  * @property {GainNode|null} chordsGain - The gain node for chords.
  * @property {GainNode|null} chordsReverb - Reverb send for chords.
@@ -38,7 +38,6 @@ export const ctx = {
     audio: null,
     masterGain: null,
     saturator: null,
-    limiter: null,
     reverbNode: null,
     chordsGain: null,
     chordsReverb: null,
@@ -282,7 +281,6 @@ export const sb = {
     lastPlayedFreq: null,
     buffer: new Map(),
     lastNoteEnd: 0,
-    lastNoteStartTime: 0,
     octave: 72, // C5
     style: 'smart',
     direction: 1,
@@ -304,8 +302,7 @@ export const sb = {
     activeVoices: [], // Track active gain nodes for voice stealing (duophonic limit)
     sessionSteps: 0, // Steps elapsed since playback start for warm-up logic
     deviceBuffer: [], // Buffer for multi-step melodic devices like enclosures
-    activeTab: 'smart',
-    activeBuffer: null // Temporary buffer for lick replay
+    activeTab: 'smart'
 };
 
 /**

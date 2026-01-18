@@ -6,7 +6,6 @@ import { generateProceduralFill } from './fills.js';
 
 export const conductorState = { 
     target: 0.5, 
-    nextDecisionStep: 0, 
     stepSize: 0.0005,
     loopCount: 0,
     formIteration: 0, // Tracks how many times the ENTIRE song has looped
