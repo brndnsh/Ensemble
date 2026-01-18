@@ -239,7 +239,10 @@
             <ul class="list-detailed">
                 <li><strong>Enable:</strong> Settings > Enable Web MIDI Output.</li>
                 <li><strong>Channels:</strong> Chords (1), Bass (2), Soloist (3), Drums (10).</li>
-                <li><strong>Local Mute:</strong> Browser audio is muted by default when MIDI is active.</li>
+                <li><strong>Transport Sync:</strong> Ensemble sends MIDI Start/Stop messages to sync your DAW's playhead.</li>
+                <li><strong>Expressive Automation:</strong> Soloist sends <strong>Pitch Bend</strong> (scoops) and <strong>Modulation (CC 1)</strong> based on tension. All tracks send <strong>Expression (CC 11)</strong> mapped to Band Intensity.</li>
+                <li><strong>Panic (Reset):</strong> Double-clicking Stop or toggling MIDI sends a full reset (CC 121) and kills all active voices.</li>
+                <li><strong>Monophony:</strong> Bass and Soloist tracks enforce strict monophony (clean re-attacks) to ensure reliability with hardware and vintage synth patches.</li>
                 <li><strong>Export:</strong> Download a multi-track .mid file for offline editing.</li>
             </ul>
         </section>
