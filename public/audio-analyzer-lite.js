@@ -130,6 +130,10 @@ export class ChordAnalyzerLite {
             }
         }
 
+        // If very low energy, call it a rest (silent or too noisy)
+        const energy = chroma.reduce((a, b) => a + b, 0);
+        if (energy < 0.1) return 'Rest';
+
         return bestChord;
     }
 }

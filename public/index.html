@@ -863,9 +863,18 @@
 
         <div id="analyzerResults" class="analyzer-results" style="display: none;">
             <h3>Analysis Complete</h3>
-            <p id="analyzerSummary">Detected 8 chords in C Major.</p>
-            <div class="analyzer-actions">
-                <button id="applyAnalysisBtn" class="primary-btn" style="width: 100%;">Apply to Arrangement</button>
+            <p id="analyzerSummary" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;"></p>
+            
+            <div id="suggestedSectionsContainer" class="suggested-sections-list">
+                <!-- Sections will be injected here -->
+            </div>
+
+            <div class="analyzer-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem; cursor: pointer;">
+                    <input type="checkbox" id="analyzerReplaceCheck" checked>
+                    <span>Replace existing arrangement</span>
+                </label>
+                <button id="applyAnalysisBtn" class="primary-btn" style="width: 100%;">Import Arrangement</button>
             </div>
         </div>
     </div>

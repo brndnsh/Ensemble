@@ -798,25 +798,54 @@ export function setupAnalyzerHandlers() {
         
         try {
             const { ChordAnalyzerLite } = await import('./audio-analyzer-lite.js');
+            const { extractForm } = await import('./form-extractor.js');
             const analyzer = new ChordAnalyzerLite();
             
             const arrayBuffer = await file.arrayBuffer();
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
             
-            detectedChords = await analyzer.analyze(audioBuffer, { 
+            const detectedRaw = await analyzer.analyze(audioBuffer, { 
                 bpm: ctx.bpm,
                 onProgress: (pct) => {
                     ui.analyzerProgressBar.style.width = `${pct}%`;
                 }
             });
+
+            // Flatten beat results into a full timeline
+            const maxBeat = detectedRaw.length > 0 ? detectedRaw[detectedRaw.length - 1].beat : 0;
+            const timeline = new Array(maxBeat + 1).fill("");
+            detectedRaw.forEach(c => { timeline[c.beat] = c.chord; });
+            let current = timeline[0] || "C";
+            for (let i = 0; i < timeline.length; i++) {
+                if (timeline[i]) current = timeline[i];
+                else timeline[i] = current;
+            }
+
+            // Extract structural sections
+            detectedChords = extractForm(timeline);
             
             ui.analyzerProgressBar.style.width = '100%';
             ui.analyzerProcessing.style.display = 'none';
             ui.analyzerResults.style.display = 'block';
             
-            const chordCount = detectedChords.length;
-            ui.analyzerSummary.textContent = `Detected ${chordCount} chord changes in "${file.name}".`;
+            const container = document.getElementById('suggestedSectionsContainer');
+            container.innerHTML = '<h4>Suggested Structure</h4>';
+            
+            detectedChords.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'suggested-section-item';
+                item.innerHTML = `
+                    <div class="ss-header">
+                        <strong>${s.label}</strong>
+                        <span class="ss-repeat">x${s.repeat}</span>
+                    </div>
+                    <div class="ss-value">${formatUnicodeSymbols(s.value)}</div>
+                `;
+                container.appendChild(item);
+            });
+
+            ui.analyzerSummary.textContent = `Identified ${detectedChords.length} song sections in "${file.name}".`;
             
         } catch (err) {
             console.error("[Analyzer] Error:", err);
@@ -830,50 +859,28 @@ export function setupAnalyzerHandlers() {
         
         pushHistory();
         
-        // Convert detected chords to a sequence string
-        // We group them by measure for better readability
-        const chordsPerMeasure = 4; // Assume 4/4 for now
-        let result = "";
-        
-        // We need to fill in the gaps between detected changes
-        // Chord detections are at specific beats
-        const maxBeat = detectedChords[detectedChords.length - 1].beat;
-        const timeline = new Array(maxBeat + 1).fill("");
-        
-        detectedChords.forEach(c => {
-            timeline[c.beat] = c.chord;
-        });
+        const newSections = detectedChords.map(s => ({
+            id: generateId(),
+            label: s.label,
+            value: s.value,
+            repeat: s.repeat,
+            key: '',
+            timeSignature: '',
+            seamless: false
+        }));
 
-        // Forward fill
-        let current = timeline[0] || "C";
-        for (let i = 0; i < timeline.length; i++) {
-            if (timeline[i]) current = timeline[i];
-            else timeline[i] = current;
-        }
+        const replaceAll = document.getElementById('analyzerReplaceCheck').checked;
 
-        timeline.forEach((chord, i) => {
-            if (chord === 'Rest') result += "- ";
-            else result += chord + " ";
-            if ((i + 1) % chordsPerMeasure === 0) result += "| ";
-        });
-
-        // Add to a new section or replace current
-        const targetId = arranger.lastInteractedSectionId;
-        const section = arranger.sections.find(s => s.id === targetId);
-        if (section) {
-            section.value = result.trim();
-            showToast(`Applied analysis to ${section.label}`);
+        if (replaceAll) {
+            arranger.sections = newSections;
         } else {
-            arranger.sections.push({ 
-                id: generateId(), 
-                label: 'Extracted', 
-                value: result.trim() 
-            });
-            showToast("Added 'Extracted' section");
+            arranger.sections.push(...newSections);
         }
 
+        arranger.isDirty = true;
         refreshArrangerUI();
         ui.analyzerOverlay.classList.remove('active');
+        showToast(`Imported ${newSections.length} sections.`);
     });
 }
 

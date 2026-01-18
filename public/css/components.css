@@ -172,6 +172,49 @@
     margin-top: 1rem;
 }
 
+.suggested-sections-list {
+    max-height: 300px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.suggested-sections-list h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.8rem;
+    color: var(--accent-color);
+    text-transform: uppercase;
+}
+
+.suggested-section-item {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.ss-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+}
+
+.ss-repeat {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.ss-value {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Disabled state for grouped UI elements */
 .disabled-group {
     opacity: 0.4;
