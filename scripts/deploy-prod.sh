@@ -5,6 +5,12 @@
 
 set -e
 
+DRY_RUN=false
+if [[ "$1" == "-whatif" || "$1" == "--dry-run" ]]; then
+    DRY_RUN=true
+    echo "🚧 DRY RUN MODE: Files will be built but NOT deployed."
+fi
+
 echo "🌟 Starting deployment to PROD (Bundled)..."
 
 # 1. Get version/hash
@@ -49,11 +55,15 @@ ASSETS_LIST="'./', './index.html', './manual.html', './main.$REV.js', './logic-w
 sed -i "s#/\* ASSETS_PLACEHOLDER \*/#$ASSETS_LIST#" dist/sw.js
 
 # 8. Deploy to PROD server
-echo "🚚 Uploading to ensemble..."
-scp -r dist/* root@ensemble:/var/www/html/
-
-# 9. Cleanup
-echo "🧹 Cleaning up..."
-rm -rf dist
-
-echo "✅ Deployment to PROD complete!"
+if [ "$DRY_RUN" = true ]; then
+    echo "🔍 (Simulated) scp -r dist/* root@ensemble:/var/www/html/"
+    echo "✅ Dry run complete. Artifacts available in 'dist/' for inspection."
+else
+    echo "🚚 Uploading to ensemble..."
+    scp -r dist/* root@ensemble:/var/www/html/
+    
+    # 9. Cleanup
+    echo "🧹 Cleaning up..."
+    rm -rf dist
+    echo "✅ Deployment to PROD complete!"
+fi

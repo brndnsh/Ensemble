@@ -5,6 +5,12 @@
 
 set -e
 
+DRY_RUN=false
+if [[ "$1" == "-whatif" || "$1" == "--dry-run" ]]; then
+    DRY_RUN=true
+    echo "🚧 DRY RUN MODE: Files will be built but NOT deployed."
+fi
+
 echo "🚀 Starting deployment to TEST (Bundled)..."
 
 # 1. Get version/hash
@@ -48,11 +54,15 @@ ASSETS_LIST="'./', './index.html', './manual.html', './main.$REV.js', './logic-w
 sed -i "s#/\* ASSETS_PLACEHOLDER \*/#$ASSETS_LIST#" dist/sw.js
 
 # 8. Deploy to TEST server
-echo "🚚 Uploading to ensembletest..."
-scp -r dist/* root@ensembletest:/var/www/html/
-
-# 9. Cleanup
-echo "🧹 Cleaning up..."
-rm -rf dist
-
-echo "✅ Deployment to TEST complete!"
+if [ "$DRY_RUN" = true ]; then
+    echo "🔍 (Simulated) scp -r dist/* root@ensembletest:/var/www/html/"
+    echo "✅ Dry run complete. Artifacts available in 'dist/' for inspection."
+else
+    echo "🚚 Uploading to ensembletest..."
+    scp -r dist/* root@ensembletest:/var/www/html/
+    
+    # 9. Cleanup
+    echo "🧹 Cleaning up..."
+    rm -rf dist
+    echo "✅ Deployment to TEST complete!"
+fi
