@@ -55,6 +55,12 @@ Ensemble is a zero-dependency project and requires no build step.
 *   Always maintain JSDoc comments in `state.js` when updating the state schema.
 *   **Intensity Mapping**: Link features to `ctx.bandIntensity` for dynamic response (e.g., filter cutoffs, pattern density).
 *   **Buffer Integrity**: During a `flush` operation (e.g., genre switch), explicitly clear the client-side instrument buffers (`cb.buffer`, `bb.buffer`, `sb.buffer`) to prevent stale patterns from playing.
+*   **Atomic Commits**: STRICTLY avoid "kitchen sink" commits. Break tasks into granular steps:
+    1.  **Refactor**: Clean up or restructure code *without* changing behavior. Commit.
+    2.  **Implementation**: Add the new feature or fix the bug. Commit.
+    3.  **Verification**: Add tests or update documentation. Commit.
+    *   *Example*: Do not combine "Setup ESLint" (tooling) with "Fix Bass Logic" (bugfix). These must be separate commits.
+*   **Branch Management**: Do NOT delete feature branches until the user has confirmed the implementation works as expected in the UI or through integration tests. Always verify behavior before merging and deleting.
 
 ## Roadmap & Future Goals
 
