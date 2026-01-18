@@ -1,11 +1,10 @@
-import { ctx, gb, cb, bb, sb, vizState, storage, arranger, dispatch } from './state.js';
-import { ui, updateKeySelectLabels, updateRelKeyButton, updateGenreUI } from './ui.js';
-import { decompressSections, generateId, normalizeKey } from './utils.js';
+import { ctx, cb, bb, sb, gb, arranger, vizState, storage, dispatch } from './state.js';
 import { applyTheme, setBpm } from './app-controller.js';
-import { loadDrumPreset } from './instrument-controller.js';
+import { ui, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
+import { decompressSections, generateId, normalizeKey } from './utils.js';
 import { updateStyle } from './ui-controller.js';
 
-export function hydrateState(viz) {
+export function hydrateState() {
     const savedState = storage.get('currentState');
     if (savedState && savedState.sections) {
         arranger.sections = savedState.sections; 

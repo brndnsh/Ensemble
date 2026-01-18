@@ -1,8 +1,7 @@
-import { ctx, gb, cb, bb, sb, arranger, subscribe, vizState, storage } from './state.js';
-import { ui, initUI, renderChordVisualizer, renderGrid, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, updateActiveChordUI } from './ui.js';
-import { initAudio, playNote, getVisualTime, killAllNotes } from './engine.js';
-import { APP_VERSION, TIME_SIGNATURES } from './config.js';
-import { generateId, getStepsPerMeasure } from './utils.js';
+import { ctx, cb, bb, sb, arranger, subscribe, storage } from './state.js';
+import { initUI, renderChordVisualizer, renderGrid, renderSections, initTabs, renderMeasurePagination, setupPanelMenus } from './ui.js';
+import { initAudio, playNote } from './engine.js';
+import { APP_VERSION } from './config.js';
 import { validateProgression } from './chords.js';
 import { UnifiedVisualizer } from './visualizer.js';
 import { initWorker, syncWorker } from './worker-client.js';
@@ -33,7 +32,7 @@ function init() {
         viz.addTrack('bass', 'var(--success-color)'); 
         viz.addTrack('soloist', 'var(--soloist-color)');
 
-        hydrateState(viz);
+        hydrateState();
         loadFromUrl(viz);
 
         setInstrumentControllerRefs(() => scheduler(), viz);

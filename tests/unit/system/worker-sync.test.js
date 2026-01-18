@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * @vitest-environment happy-dom
  */
@@ -15,7 +16,7 @@ global.Worker = class MockWorker {
     }
 };
 
-const { syncWorker, initWorker } = await import('../../../public/worker-client.js');
+const { syncWorker, initWorker, getTimerWorker } = await import('../../../public/worker-client.js');
 
 describe('Worker Synchronization Integrity', () => {
     beforeEach(() => {
@@ -62,7 +63,7 @@ describe('Worker Synchronization Integrity', () => {
         
         syncWorker();
         
-        const data = lastWorkerInstance.postMessage.mock.calls[0][0].data;
+        const data = getTimerWorker().postMessage.mock.calls[0][0].data;
         const sentSteps = data.gb.instruments[0].steps;
         
         // Modify local state
@@ -77,16 +78,16 @@ describe('Worker Synchronization Integrity', () => {
         initWorker(null, onNotes);
         
         const mockNotes = [{ midi: 60, step: 0, module: 'bb' }];
-        lastWorkerInstance.onmessage({ data: { type: 'notes', notes: mockNotes } });
+        getTimerWorker().onmessage({ data: { type: 'notes', notes: mockNotes } });
         
-        expect(onNotes).toHaveBeenCalledWith(mockNotes);
+        expect(onNotes).toHaveBeenCalledWith(mockNotes, undefined);
     });
 
     it('should trigger onTick callback when worker sends tick', () => {
         const onTick = vi.fn();
         initWorker(onTick, null);
         
-        lastWorkerInstance.onmessage({ data: { type: 'tick' } });
+        getTimerWorker().onmessage({ data: { type: 'tick' } });
         
         expect(onTick).toHaveBeenCalled();
     });

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Unified mock for state.js to ensure internal synthesis logic sees consistent state

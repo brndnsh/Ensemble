@@ -1,9 +1,8 @@
-import { ctx, arranger, gb } from './state.js';
-import { ui, updateOctaveLabel, renderMeasurePagination, renderGrid } from './ui.js';
+import { ctx, arranger } from './state.js';
+import { ui } from './ui.js';
 import { syncWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
 import { getStepsPerMeasure } from './utils.js';
-import { switchMeasure } from './instrument-controller.js';
 
 export function applyTheme(theme) {
     ctx.theme = theme;

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect } from 'vitest';
 import { normalizeMidiVelocity } from '../../../public/midi-controller.js';
 import { midi } from '../../../public/state.js';

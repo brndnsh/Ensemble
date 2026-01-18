@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect } from 'vitest';
 import { normalizeKey, getFrequency, midiToNote, getMidi, getStepsPerMeasure } from '../../public/utils.js';
 

@@ -1,7 +1,7 @@
 import { ctx, gb, cb, bb, sb, midi } from './state.js';
-import { ui, triggerFlash } from './ui.js';
+import { ui } from './ui.js';
 import { MIXER_GAIN_MULTIPLIERS } from './config.js';
-import { safeDisconnect, createReverbImpulse, createSoftClipCurve } from './utils.js';
+import { createReverbImpulse, createSoftClipCurve } from './utils.js';
 
 // Facade: Re-export synthesis logic from specialized modules
 import { playNote, playChordScratch, updateSustain, killAllPianoNotes, INSTRUMENT_PRESETS } from './synth-chords.js';
@@ -212,7 +212,7 @@ export async function killAllNotes() {
     try {
         const { panic } = await import('./midi-controller.js');
         panic();
-    } catch (e) {}
+    } catch { /* ignore panic error */ }
 }
 
 /**

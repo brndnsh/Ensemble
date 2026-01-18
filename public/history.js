@@ -1,10 +1,5 @@
 import { arranger } from './state.js';
-import { ui, showToast } from './ui.js';
-import { renderSections, updateActiveChordUI } from './ui.js';
-import { validateProgression } from './chords.js';
-import { renderChordVisualizer } from './ui.js';
-import { flushBuffers } from './instrument-controller.js';
-import { saveCurrentState } from './persistence.js';
+import { showToast } from './ui.js';
 
 // We need some function references that are usually in main.js
 // For now, we'll assume they are globally available or we'll pass them.

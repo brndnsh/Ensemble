@@ -7,7 +7,7 @@ export function killBassNote() {
             const g = bb.lastBassGain.gain;
             g.cancelScheduledValues(ctx.audio.currentTime);
             g.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
-        } catch(e) {}
+        } catch { /* ignore safety disconnect */ }
         bb.lastBassGain = null;
     }
 }
@@ -138,7 +138,7 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
                 const prevGain = bb.lastBassGain.gain;
                 prevGain.cancelScheduledValues(startTime);
                 prevGain.setTargetAtTime(0, startTime, 0.005);
-            } catch (e) {}
+                } catch { /* ignore error during note end */ }
         }
         bb.lastBassGain = mainGain;
 

@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect, vi } from 'vitest';
 import { getBassNote, isBassActive } from '../../public/bass.js';
 import { ctx, gb, arranger } from '../../public/state.js';

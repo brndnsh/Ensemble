@@ -186,7 +186,7 @@ export function getStepInfo(step, tsConfig, measureMap, allTSConfigs) {
     export function safeDisconnect(nodes) {
         nodes.forEach(node => {
             if (node) {
-                try { node.disconnect(); } catch (e) {}
+                try { node.disconnect(); } catch { /* ignore disconnect error */ }
             }
         });
     }

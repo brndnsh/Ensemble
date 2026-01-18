@@ -86,7 +86,6 @@ export function analyzeForm() {
 
     // 3. Assign Functional Roles via Heuristics
     const roles = sections.map((s, i) => {
-        const sig = sectionSignatures[i];
         const isFirstOccurrence = s.iteration === 1;
         const isLastSection = i === sections.length - 1;
         const label = s.label.toLowerCase();

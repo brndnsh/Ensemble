@@ -7,8 +7,7 @@ export function killSoloistNote() {
             try {
                 const g = voice.gain.gain;
                 g.cancelScheduledValues(ctx.audio.currentTime);
-                g.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
-            } catch(e) {}
+        } catch { /* ignore error */ }
         });
         sb.activeVoices = [];
     }
@@ -50,7 +49,7 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
                 try {
                     oldest.gain.gain.cancelScheduledValues(playTime);
                     oldest.gain.gain.setTargetAtTime(0, playTime, 0.01);
-                } catch(e) {}
+                            } catch { /* ignore error */ }
             }
         }
     }

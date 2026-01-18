@@ -1,93 +1,100 @@
 import { getFrequency, getMidi } from './utils.js';
-import { arranger, cb, bb, sb, ctx, gb } from './state.js';
-import { KEY_ORDER, TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
+import { ctx, gb, bb, sb, arranger } from './state.js';
+import { TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
 
 /**
- * Determines the best scale for the bass based on chord and context.
+ * BASS ENGINE - Procedural Line Generation
+ * 
+ * Logic flow:
+ * 1. Determine register based on genre/intensity.
+ * 2. Identify target notes (Root/5th/Approach).
+ * 3. Generate rhythm cell.
+ * 4. Select pitches with voice-leading constraints.
  */
-export function getScaleForBass(chord, nextChord) {
-    const isDominant = chord.quality.startsWith('7') || 
-                       ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(chord.quality) ||
-                       (chord.intervals.includes(10) && chord.intervals.includes(4));
+
+export function getScaleForBass(chord) {
+    if (!chord) return [0, 2, 4, 5, 7, 9, 11]; // Default Major
+    const isMinor = chord.quality.startsWith('m') && !chord.quality.startsWith('maj');
+    const isDominant = chord.is7th && !isMinor;
     
-    // 1. Tension awareness from soloist logic
-    if (sb.tension > 0.7 && isDominant) {
-        return [0, 1, 3, 4, 6, 8, 10]; // Altered
+    if (isMinor) {
+        // Neo-soul context for minor chords (Dorian)
+        if (gb.genreFeel === 'Neo-Soul') return [0, 2, 3, 5, 7, 9, 10];
+        return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
     }
-
-    // 2. Resolution Logic (Secondary Dominants)
-    const isNextMinor = nextChord && (nextChord.quality === 'minor' || nextChord.quality === 'dim' || nextChord.quality === 'halfdim' || nextChord.quality === 'm9' || nextChord.quality === 'm11' || nextChord.quality === 'm13' || nextChord.quality === 'm6');
-    if (isDominant && isNextMinor) return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
-
-    // 3. Style Specifics
-    const genre = gb.genreFeel;
-    const keyRoot = KEY_ORDER.indexOf(chord.key || arranger.key);
-    const relativeRoot = (chord.rootMidi - keyRoot + 120) % 12;
-
-    if (genre === 'Neo-Soul') {
-        if (chord.quality.startsWith('maj') || chord.quality === 'major') {
-            // Tonic Maj7 in Neo-Soul often sounds better with Ionian than Lydian to avoid #11 clash
-            if (relativeRoot === 0 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; 
-            return [0, 2, 4, 6, 7, 9, 11]; // Lydian for others
-        }
-    }
-
-    // 4. Chord Quality Switch
-    switch (chord.quality) {
-        case 'minor': 
-        case 'm9': case 'm11': case 'm13': case 'm6':
-            if (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk') {
-                // Use Aeolian for the vi chord in major key to stay diatonic
-                if (relativeRoot === 9 && !arranger.isMinor) return [0, 2, 3, 5, 7, 8, 10];
-                return [0, 2, 3, 5, 7, 9, 10]; // Dorian for ii/iii/v
-            }
-            return [0, 2, 3, 5, 7, 8, 10]; 
-        case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
-        case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
-        case 'aug': return [0, 2, 4, 6, 8, 10];
-        case 'maj7': return [0, 2, 4, 5, 7, 9, 11];
-        case 'sus4': return [0, 2, 5, 7, 9, 10];
-        case '7alt': return [0, 1, 3, 4, 6, 8, 10];
-        case '7#9': return [0, 1, 3, 4, 6, 8, 10];
-        case '7b9': return [0, 1, 4, 5, 7, 8, 10];
-        case '7b13': return [0, 1, 4, 5, 7, 8, 10];
-        case '7#11': return [0, 2, 4, 6, 7, 9, 10];
-        case '9': return [0, 2, 4, 5, 7, 9, 10];
-        case '13': return [0, 2, 4, 5, 7, 9, 10];
-    }
-
-    // 5. Diatonic Fallback (Best for Pop/Rock)
-    const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
-    const keyNotes = keyIntervals.map(i => (keyRoot + i) % 12);
-    const chordRoot = chord.rootMidi % 12;
-    const chordTones = (chord.intervals || [0, 4, 7]).map(i => (chordRoot + i) % 12);
-    const isDiatonic = chordTones.every(note => keyNotes.includes(note));
-    
-    if (isDiatonic) {
-        return keyNotes.map(note => (note - chordRoot + 12) % 12).sort((a, b) => a - b);
-    }
-
-    if (isDominant) return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian fallback
-    return chord.intervals.includes(11) ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 4, 5, 7, 9, 10];
+    if (isDominant || gb.genreFeel === 'Reggae') return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
+    return [0, 2, 4, 5, 7, 9, 11]; // Major
 }
 
-/**
- * Generates a frequency for a bass line.
- */
-export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null, centerMidi = 38, style = 'quarter', chordIndex = 0, step = 0, stepInChord = 0, isMinor = false, isPriming = false) {
-    if (!currentChord) return null;
+export function isBassActive(style, step, stepInChord) {
+    if (style === 'smart') {
+        const mapping = { 'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Disco': 'disco', 'Reggae': 'dub', 'Neo-Soul': 'neo', 'Bossa Nova': 'bossa' };
+        style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
+    }
+
+    if (style === 'whole') return stepInChord === 0;
+    if (style === 'half') return stepInChord % 8 === 0;
+    if (style === 'arp') return stepInChord % 4 === 0;
+    if (style === 'rock') {
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        return step % (ts.stepsPerBeat / 2) === 0; // 8th notes
+    }
+    if (style === 'bossa') {
+        const stepInMeasure = step % 16;
+        return [0, 6, 8, 14].includes(stepInMeasure);
+    }
+    if (style === 'quarter') {
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const isQuarter = step % ts.stepsPerBeat === 0;
+        const isEighthSkip = step % ts.stepsPerBeat === Math.floor(ts.stepsPerBeat * 0.75); // The 'and' of 2/4
+        
+        if (isQuarter) return true;
+        
+        // Probabilistic eighth-note "skips" for walking bass feel
+        const skipProb = 0.1 + (ctx.bandIntensity * 0.25);
+        if (isEighthSkip && Math.random() < skipProb) return true;
+        
+        return false;
+    }
+    if (style === 'funk') {
+        // Funk uses a combination of foundational 1/8ths and syncopated 1/16ths
+        const stepInMeasure = step % 16;
+        const isFoundational = [0, 4, 8, 12, 14].includes(stepInMeasure);
+        const ghostProb = 0.05 + (ctx.bandIntensity * 0.3);
+        if (isFoundational) return true;
+        if (Math.random() < ghostProb) return true;
+        return false;
+    }
+    if (style === 'rocco') return true;
+    if (style === 'disco') return true;
+    if (style === 'dub') return true;
+    
+    if (style === 'neo') {
+        const stepInMeasure = step % 16;
+        // Foundation: 1, 2&, 3, 4& (classic Dilla-esque placements)
+        if ([0, 6, 8, 14].includes(stepInMeasure)) return true;
+        // Occasional ghost fills
+        if (ctx.bandIntensity > 0.6 && Math.random() < 0.15) return true;
+        return false;
+    }
+
+    return false;
+}
+
+export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMidi, style, chordIndex, step, stepInChord) {
+    if (!chord) return null;
+
+    if (style === 'smart') {
+        const mapping = { 'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Disco': 'disco', 'Reggae': 'dub', 'Neo-Soul': 'neo', 'Bossa Nova': 'bossa' };
+        style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
+    }
 
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
-
-    if (style === 'smart') {
-        const mapping = { 
-            'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo',
-            'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk',
-            'Disco': 'disco', 'Acoustic': 'half'
-        };
-        style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
-    }
+    const stepInMeasure = step % stepsPerMeasure;
+    const isDownbeat = (stepInMeasure % ts.stepsPerBeat === 0);
+    const grouping = ts.grouping || [ts.beats];
+    const isGroupStart = (stepInMeasure % (grouping[0] * ts.stepsPerBeat) === 0);
 
     // --- Intensity Mapping ---
     const globalIntensity = ctx.bandIntensity || 0.5;
@@ -107,8 +114,8 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     }
     
     const intensity = (globalIntensity * 0.7) + (sectionProgress * 0.3);
-    let safeCenterMidi = (typeof centerMidi === 'number' && !isNaN(centerMidi)) ? centerMidi : 38;
-
+    let safeCenterMidi = centerMidi || 48; // Standard bass register anchor
+    
     // --- Genre-Specific Register Offsets ---
     if (style === 'dub' || gb.genreFeel === 'Reggae') safeCenterMidi = 32;
     else if (style === 'disco' || gb.genreFeel === 'Disco') safeCenterMidi = 45;
@@ -119,13 +126,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
 
     const prevMidi = getMidi(prevFreq);
 
-    let absMin = Math.max(26, safeCenterMidi - 12); 
-    let absMax = safeCenterMidi + 12;
-
-    if (style === 'neo' || gb.genreFeel === 'Neo-Soul') {
-        absMin = 24; // Allow deep low-E
-        absMax = 48; // Stay below the piano clusters
-    }
+    const absMin = 36, absMax = 55; // Common bass range
 
     const clampAndNormalize = (midi) => {
         if (!Number.isFinite(midi)) return safeCenterMidi;
@@ -136,7 +137,7 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         
         const check = (off) => {
             const c = octave + off + pc;
-            if (c >= absMin && c <= absMax) {
+            if (c >= Math.max(absMin, safeCenterMidi - 12) && c <= Math.min(absMax, safeCenterMidi + 12)) {
                 const diff = Math.abs(c - safeCenterMidi);
                 if (diff < minDiff) { minDiff = diff; best = c; }
             }
@@ -177,12 +178,13 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     };
 
     // Use slash chord bass note if it exists, otherwise use chord root
-    const rootToNormalize = (currentChord.bassMidi !== null && currentChord.bassMidi !== undefined) ? currentChord.bassMidi : currentChord.rootMidi;
+    const rootToNormalize = (chord.bassMidi !== null && chord.bassMidi !== undefined) ? chord.bassMidi : chord.rootMidi;
     let baseRoot = normalizeToRange(rootToNormalize);
 
+    const beatIndex = beatInMeasure;
     const intBeat = Math.floor(beatIndex);
-    const scale = getScaleForBass(currentChord, nextChord);
-    const beatsInChord = Math.round(currentChord.beats);
+    const scale = getScaleForBass(chord);
+    const beatsInChord = Math.round(chord.beats);
     const velocity = (intBeat % 2 === 1) ? 1.15 : 1.0;
 
     const result = (freq, durationMultiplier = null, velocityParam = 1.0, muted = false, bendStartInterval = 0) => {
@@ -195,91 +197,42 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
         if (style === 'neo' || gb.genreFeel === 'Neo-Soul') {
             timingOffset += 0.010 + (intensity * 0.015);
             // Reduced jitter
-            timingOffset += (Math.random() - 0.5) * 0.005;
         }
-        
-        const midi = getMidi(freq);
 
-        let durationSteps = durationMultiplier; 
-        
-        if (durationSteps === null) {
-             if (style === 'whole') durationSteps = currentChord.beats * ts.stepsPerBeat;
-             else if (style === 'half') durationSteps = (stepsPerMeasure / 2);
-             else if (style === 'arp') durationSteps = (ts.stepsPerBeat); 
-             else if (style === 'rock') durationSteps = (ts.stepsPerBeat * 0.75); 
-             else if (style === 'funk') durationSteps = (ts.stepsPerBeat * 0.5); 
-             else durationSteps = ts.stepsPerBeat; 
-        } else {
-             if (style === 'rock') durationSteps = ts.stepsPerBeat * 0.7; 
-             else if (style === 'funk') durationSteps = ts.stepsPerBeat * 0.4;
-             else if (style === 'bossa') durationSteps = durationMultiplier ? durationMultiplier * (ts.stepsPerBeat / 4) : ts.stepsPerBeat; 
-             else durationSteps = durationMultiplier;
+        let durationSteps = 1;
+        if (durationMultiplier) durationSteps = durationMultiplier;
+        else {
+            if (style === 'whole') durationSteps = chord.beats * ts.stepsPerBeat;
+            else if (style === 'half') durationSteps = (stepsPerMeasure / 2);
+            else if (style === 'arp') durationSteps = (ts.stepsPerBeat);
+            else if (style === 'rock') durationSteps = (ts.stepsPerBeat * 0.45);
+            else if (style === 'funk') durationSteps = (ts.stepsPerBeat * 0.2);
+            else durationSteps = ts.stepsPerBeat;
         }
-        
-        bb.busySteps = Math.max(0, Math.round(durationSteps) - 1);
 
-        // --- Articulation (Slap & Pop) ---
-        // Boost velocity to trigger Pop mode (vel > 1.1) in Funk/Disco styles at high intensity.
-        let finalVelocity = velocityParam;
+        if (intensity < 0.4) {
+            if (style === 'rock') durationSteps = ts.stepsPerBeat * 0.4;
+            else if (style === 'funk') durationSteps = ts.stepsPerBeat * 0.4;
+            else if (style === 'bossa') durationSteps = durationMultiplier ? durationMultiplier * (ts.stepsPerBeat / 4) : ts.stepsPerBeat;
+        }
+
         const isPopStyle = style === 'funk' || style === 'disco';
-        const isAccentedUpbeat = (step % 4 === 2);
-        if (isPopStyle && globalIntensity > 0.8 && isAccentedUpbeat) {
-            finalVelocity = Math.max(finalVelocity, 1.2);
-        }
+        const finalVel = Math.min(1.35, velocityParam * velocity * (isPopStyle ? (0.86 + intensity * 0.3) : 1.0));
 
-        return { 
-            midi, 
-            velocity: finalVelocity, 
-            durationSteps: durationSteps || ts.stepsPerBeat, 
-            bendStartInterval, 
-            ccEvents: [], 
-            muted, 
-            timingOffset 
+        return {
+            freq,
+            midi: getMidi(freq),
+            velocity: finalVel,
+            durationSteps,
+            timingOffset,
+            muted,
+            bendStartInterval
         };
-    };
-
-    const grouping = arranger.grouping || ts.grouping || [ts.beats];
-    const stepInMeasure = step % stepsPerMeasure;
-    
-    // Use the structural metadata to identify important anchors
-    const isDownbeat = stepInChord % ts.stepsPerBeat === 0;
-    const isGroupStart = (() => {
-        let accumulated = 0;
-        for (let g of grouping) {
-            if (stepInMeasure === accumulated) return true;
-            accumulated += g * ts.stepsPerBeat;
-        }
-        return false;
-    })();
-
-    // --- NEO-SOUL POCKET ---
-    if (style === 'neo' || gb.genreFeel === 'Neo-Soul') {
-        const isSecondaryAnchor = (intBeat === 2);
-        const isUpbeat = step % 4 !== 0;
-        
-        // Neo-soul bass should be extremely foundational.
-        // On Beat 3 or any syncopated "grease" notes, strictly use Root, 5th, or Octave.
-        if (isSecondaryAnchor || isUpbeat) {
-            const hasFlat5 = scale.includes(6) && !scale.includes(7);
-            const fifth = hasFlat5 ? 6 : 7;
-            // 85% chance to stay on Root or Fifth
-            if (Math.random() < 0.85) {
-                const note = Math.random() < 0.6 ? baseRoot : baseRoot + fifth;
-                return result(getFrequency(clampAndNormalize(note)), null, velocity);
-            }
-            // 15% chance for a subtle chromatic slide or scale tone fill
-        }
-    }
-
-    const isSameAsPrev = (midi) => {
-        if (!prevMidi) return false;
-        return midi === prevMidi;
     };
 
     // --- Ensemble Awareness (Soloist Space) ---
     // If the soloist is shredding, reduce bass complexity to avoid mud.
     const isSoloistBusy = sb.busySteps > 0;
-    const soloistIntensityFactor = isSoloistBusy ? 0.3 : 1.0;
 
     const withOctaveJump = (note) => {
         // Skip octave jumps if soloist is busy
@@ -289,44 +242,63 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
             const direction = Math.random() < 0.5 ? 1 : -1;
             const shifted = note + (12 * direction);
             // Restrict jumps to stay below MIDI 55 to avoid clashing with Piano LH
-            if (shifted >= absMin && shifted <= Math.min(absMax, 55)) return shifted;
+            if (shifted >= 36 && shifted <= 55) return shifted;
         }
         return note;
     }
 
+    // --- NEO-SOUL POCKET ---
+    if (style === 'neo' || gb.genreFeel === 'Neo-Soul') {
+        const isSecondaryAnchor = (intBeat === 2);
+        const isUpbeat = step % 4 !== 0;
+        
+        // Neo-soul bass should be extremely foundational.
+        if (isSecondaryAnchor || isUpbeat) {
+            const hasFlat5 = scale.includes(6) && !scale.includes(7);
+            const fifth = hasFlat5 ? 6 : 7;
+            if (Math.random() < 0.85) {
+                const note = Math.random() < 0.6 ? baseRoot : baseRoot + fifth;
+                return result(getFrequency(clampAndNormalize(note)), null, velocity);
+            }
+        }
+    }
+
+    const isSameAsPrev = (midi) => {
+        if (!prevMidi) return false;
+        return midi === prevMidi;
+    };
+
     // --- Ensemble Awareness (Kick Drum Mirroring) ---
-    // If Kick is present, align with it in Rock/Funk styles.
     const kickInst = (gb.instruments || []).find(i => i.name === 'Kick');
     const hasKickTrigger = kickInst && kickInst.steps && kickInst.steps[step % (gb.measures * stepsPerMeasure)] > 0;
     
     if ((style === 'rock' || style === 'funk') && hasKickTrigger) {
-        // Play with increased velocity on kick hits
         const kickVel = (kickInst.steps[step % (gb.measures * stepsPerMeasure)] === 2) ? 1.25 : 1.15;
-        return result(getFrequency(baseRoot), null, kickVel);
-    } else if ((style === 'rock' || style === 'funk') && !hasKickTrigger && globalIntensity < 0.4) {
-        // If no kick and intensity is low, prefer silence or ghost notes.
+        return result(getFrequency(withOctaveJump(baseRoot)), null, kickVel);
+    } else if ((style === 'rock' || style === 'funk') && !hasKickTrigger && intensity < 0.4 && !isDownbeat) {
+        if (isSoloistBusy) return null;
         if (Math.random() < 0.6) return null;
         if (Math.random() < 0.3) return result(getFrequency(baseRoot), 1, 0.4, true);
     }
 
     // --- HARMONIC RESET ---
-    // Beat 1 of a chord: Always land on Root or 5th
     const isStraightStyle = ['rock', 'half', 'whole', 'arp', 'quarter', 'disco', 'neo'].includes(style);
-    if (stepInChord === 0 && isStraightStyle && gb.genreFeel !== 'Reggae') {
-        return result(getFrequency(baseRoot), null, 1.15);
+    if (stepInChord === 0 && (isStraightStyle || style === 'funk') && gb.genreFeel !== 'Reggae') {
+        const resetVel = style === 'funk' ? 1.25 : 1.15;
+        return result(getFrequency(withOctaveJump(baseRoot)), null, resetVel);
     }
 
     // --- WHOLE NOTE STYLE ---
-    if (style === 'whole') return result(getFrequency(baseRoot));
+    if (style === 'whole') return result(getFrequency(withOctaveJump(baseRoot)));
 
     // --- HALF NOTE STYLE ---
     if (style === 'half') {
         const halfStep = Math.floor(stepsPerMeasure / 2);
         if (stepInChord % halfStep === 0) {
-            if (stepInChord === 0) return result(getFrequency(baseRoot));
-            const hasFlat5 = currentChord.quality === 'dim' || currentChord.quality === 'halfdim';
+            if (stepInChord === 0) return result(getFrequency(withOctaveJump(baseRoot)));
+            const hasFlat5 = chord.quality === 'dim' || chord.quality === 'halfdim';
             let fifth = baseRoot + (hasFlat5 ? 6 : 7);
-            return result(getFrequency(clampAndNormalize(fifth)));
+            return result(getFrequency(clampAndNormalize(withOctaveJump(fifth))));
         }
         return null;
     }
@@ -334,73 +306,50 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     // --- ARP STYLE ---
     if (style === 'arp') {
         if (!isDownbeat) return null;
-        const beatInMeasure = Math.floor(stepInMeasure / ts.stepsPerBeat);
-        const beatInPattern = beatInMeasure % 4;
-        if (beatInPattern === 0 || isGroupStart) return result(getFrequency(baseRoot));
-        const intervals = currentChord.intervals; 
+        const beatInMeasureInside = Math.floor(stepInMeasure / ts.stepsPerBeat);
+        const beatInPattern = beatInMeasureInside % 4;
+        if (beatInPattern === 0 || isGroupStart) return result(getFrequency(withOctaveJump(baseRoot)));
+        const intervals = chord.intervals; 
         let targetInterval = (beatInPattern === 1 || beatInPattern === 3) ? (intervals[1] || 4) : (intervals[2] || 7);
-        return result(getFrequency(clampAndNormalize(baseRoot + targetInterval)));
+        return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + targetInterval))));
     }
 
     // --- ROCK STYLE (8th Note Pedal) ---
     if (style === 'rock') {
         const dur = 0.7; 
         const isPulse = ts.pulse.includes(stepInMeasure);
-        const velocity = (isGroupStart || (isPulse && isDownbeat)) ? 1.25 : 1.1;
-
+        const velocityRock = (isGroupStart || (isPulse && isDownbeat)) ? 1.25 : 1.1;
         const lastBeatIndex = ts.beats - 1;
         const beat = Math.floor(stepInMeasure / ts.stepsPerBeat);
-
-        if (beat === lastBeatIndex) {
-            if (Math.random() < 0.4) {
-                 if (stepInMeasure === (lastBeatIndex * ts.stepsPerBeat)) { 
-                     const fillNote = Math.random() < 0.5 ? baseRoot + 12 : baseRoot + 7;
-                     return result(getFrequency(clampAndNormalize(fillNote)), dur, 1.15);
-                 }
-            }
+        if (beat === lastBeatIndex && Math.random() < 0.4) {
+             if (stepInMeasure === (lastBeatIndex * ts.stepsPerBeat)) { 
+                 const fillNote = Math.random() < 0.5 ? baseRoot + 12 : baseRoot + 7;
+                 return result(getFrequency(clampAndNormalize(withOctaveJump(fillNote))), dur, 1.15);
+             }
         }
-        
-        return result(getFrequency(baseRoot), dur, velocity);
+        return result(getFrequency(withOctaveJump(baseRoot)), dur, velocityRock);
     }
 
     // --- BOSSA NOVA / SAMBA STYLE ---
     if (style === 'bossa') {
-        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
-        const stepInMeasure = step % stepsPerMeasure;
+        const stepsPerMeasureBossa = ts.beats * ts.stepsPerBeat;
+        const stepInMeasureBossa = step % stepsPerMeasureBossa;
         const root = baseRoot;
-        const fifth = clampAndNormalize(root + (currentChord.quality.includes('dim') ? 6 : 7));
-        const intensity = ctx.bandIntensity;
-        
-        // High Intensity: Samba variation (Driving 8th notes with syncopated accents)
+        const fifth = clampAndNormalize(root + (chord.quality.includes('dim') ? 6 : 7));
         if (intensity > 0.65) {
-            // Driving surdo-style pattern
-            if (stepInMeasure === 0) return result(getFrequency(root), 2, 1.1);
-            if (stepInMeasure === 4) return result(getFrequency(root), 2, 0.95);
-            if (stepInMeasure === 8) return result(getFrequency(root), 2, 1.1);
-            if (stepInMeasure === 12) return result(getFrequency(root), 2, 0.95);
-            
-            // Synco-accents (the "pull")
-            if (stepInMeasure === 6 || stepInMeasure === 14) {
+            if (stepInMeasureBossa === 0) return result(getFrequency(root), 2, 1.1);
+            if (stepInMeasureBossa === 4) return result(getFrequency(root), 2, 0.95);
+            if (stepInMeasureBossa === 8) return result(getFrequency(root), 2, 1.1);
+            if (stepInMeasureBossa === 12) return result(getFrequency(root), 2, 0.95);
+            if (stepInMeasureBossa === 6 || stepInMeasureBossa === 14) {
                 const note = Math.random() < 0.7 ? fifth : root + 12;
                 return result(getFrequency(clampAndNormalize(note)), 2, 1.25);
             }
-            
-            // Random 16th ghosting for "percolation"
-            if (intensity > 0.85 && (stepInMeasure % 2 === 1) && Math.random() < 0.2) {
-                return result(getFrequency(prevMidi || root), 1, 0.6, true);
-            }
         } else {
-            // Standard Bossa Nova: 1, (2)&, 3, (4)&
-            if (stepInMeasure === 0) return result(getFrequency(root), 4, 1.05);
-            if (stepInMeasure === 6) return result(getFrequency(fifth), 2, 1.1);
-            if (stepInMeasure === 8) return result(getFrequency(root), 4, 1.05);
-            if (stepInMeasure === 14) return result(getFrequency(fifth), 2, 1.1);
-            
-            // Subtle ghost notes at medium intensity
-            if (intensity > 0.4 && stepInMeasure === 15 && Math.random() < 0.3) {
-                return result(getFrequency(root), 1, 0.55, true);
-            }
+            if (stepInMeasureBossa === 0) return result(getFrequency(root), 4, 1.05);
+            if (stepInMeasureBossa === 6) return result(getFrequency(fifth), 2, 1.1);
+            if (stepInMeasureBossa === 8) return result(getFrequency(root), 4, 1.05);
+            if (stepInMeasureBossa === 14) return result(getFrequency(fifth), 2, 1.1);
         }
         return null;
     }
@@ -408,264 +357,109 @@ export function getBassNote(currentChord, nextChord, beatIndex, prevFreq = null,
     // --- FUNK STYLE ---
     if (style === 'funk') {
         const stepInBeat = stepInChord % 4;
-        const intBeat = Math.floor(stepInChord / 4);
-        
-        // The "One" is sacred - Heavy Root but controlled (Ref: Cantaloupe Island)
-        if (stepInChord === 0) return result(getFrequency(baseRoot), 1.5, 0.85);
-
-        // "Bootsy" Octave Pops on the 'and' (upbeats)
-        if (stepInBeat === 2) {
-             if (intBeat < 3 && Math.random() < 0.45) {
-                 return result(getFrequency(clampAndNormalize(baseRoot + 12)), 0.4, 1.0); 
-             }
+        const intBeatFunk = Math.floor(stepInChord / 4);
+        if (stepInChord === 0) return result(getFrequency(withOctaveJump(baseRoot)), 0.9, 1.2);
+        if (stepInBeat === 2 && intBeatFunk < 3 && Math.random() < 0.45) {
+             return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + 12))), 0.4, 1.0); 
         }
-
-        // Beat 3 (Backbeat) 
-        if (intBeat === 2 && stepInBeat === 0 && Math.random() < 0.4) {
-             return result(getFrequency(baseRoot), 0.8, 0.9);
+        if (intBeatFunk === 2 && stepInBeat === 0 && Math.random() < 0.4) {
+             return result(getFrequency(withOctaveJump(baseRoot)), 0.8, 0.9);
         }
-
-        // The "Grease" - b7 or 5th usage on weak 16ths
-        if ((stepInBeat === 1 || stepInBeat === 3) && Math.random() < 0.3) {
-            // If soloist is busy, skip the grease to stay grounded
-            if (isSoloistBusy) return null;
-
-            const scale = getScaleForBass(currentChord, nextChord);
+        if ((stepInBeat === 1 || stepInBeat === 3) && Math.random() < 0.3 && !isSoloistBusy) {
             const hasFlat7 = scale.includes(10);
             const interval = hasFlat7 ? 10 : 7;
-            const note = baseRoot + interval; 
-            return result(getFrequency(clampAndNormalize(note)), 0.5, 0.7);
+            return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + interval))), 0.5, 0.7);
         }
-
-        // Beat 4: Turnaround / Fill
-        if (intBeat === 3) {
-            if (stepInBeat >= 2 && Math.random() < 0.5) {
-                const approach = Math.random() < 0.5 ? baseRoot - 1 : baseRoot + 7;
-                return result(getFrequency(clampAndNormalize(approach)), 0.5, 0.9);
-            }
+        if (intBeatFunk === 3 && stepInBeat >= 2 && Math.random() < 0.5) {
+            const approach = Math.random() < 0.5 ? baseRoot - 1 : baseRoot + 7;
+            return result(getFrequency(clampAndNormalize(withOctaveJump(approach))), 0.5, 0.9);
         }
-
-        // Ghost notes (dead notes)
-        // Soloist Space: Skip ghost notes if soloist is busy
         if (!isSoloistBusy && Math.random() < 0.15) {
              return result(getFrequency(prevMidi || baseRoot), 0.25, 0.35, true);
         }
-
         return null;
     }
 
     // --- DUB STYLE (Reggae) ---
     if (style === 'dub') {
         const deepRoot = clampAndNormalize(baseRoot - 12); 
-        const measureStep = step % 16; // Standardize to 4/4 riddims
-        
+        const measureStepReggae = step % 16;
         let selectedRiddim = 'One Drop';
-        if (ctx.bandIntensity > 0.8) selectedRiddim = 'Steppers';
-        else if (ctx.bandIntensity > 0.6) selectedRiddim = 'Stalag';
-        else if (ctx.bandIntensity > 0.4) selectedRiddim = '54-46';
-        else if (ctx.bandIntensity > 0.2) selectedRiddim = 'Real Rock';
-
+        if (intensity > 0.8) selectedRiddim = 'Steppers';
+        else if (intensity > 0.6) selectedRiddim = 'Stalag';
+        else if (intensity > 0.4) selectedRiddim = '54-46';
+        else if (intensity > 0.2) selectedRiddim = 'Real Rock';
         const riddim = REGGAE_RIDDIMS[selectedRiddim];
-        const match = riddim.find(r => r[0] === measureStep);
-
+        const match = riddim.find(r => r[0] === measureStepReggae);
         if (match) {
-            const [s, interval, vel, dur] = match;
-            const note = clampAndNormalize(deepRoot + interval);
-            // Lower velocity to 0.8 target (Ref: Redemption Song)
+            const [, interval, vel, dur] = match;
             const tunedVel = vel * 0.7; 
-            return result(getFrequency(note), dur, tunedVel * (0.95 + Math.random() * 0.1));
+            return result(getFrequency(clampAndNormalize(deepRoot + interval)), dur, tunedVel * (0.95 + Math.random() * 0.1));
         }
-        
         return null;
     }
 
     // --- QUARTER NOTE (WALKING) STYLE ---
-    
-    // Jazz Two-Feel Lesson: At low intensity (Head/Intro), play Half Notes
     if (style === 'quarter' && gb.genreFeel === 'Jazz' && intensity < 0.3) {
-        // Play on Beat 1 (Root) and Beat 3 (Fifth/Color)
         const isHalfPulse = stepInMeasure % (ts.stepsPerBeat * 2) === 0;
         if (!isHalfPulse) return null;
-
-        const isBeatOne = stepInMeasure === 0 || (stepInMeasure % stepsPerMeasure === 0);
-        if (isBeatOne) return result(getFrequency(baseRoot), 2, 1.05);
-        
-        // On Beat 3, play the 5th (or b5 if dim)
-        const hasFlat5 = currentChord.quality === 'dim' || currentChord.quality === 'halfdim';
-        const fifth = baseRoot + (hasFlat5 ? 6 : 7);
-        return result(getFrequency(clampAndNormalize(fifth)), 2, 1.05);
+        if (stepInMeasure === 0 || (stepInMeasure % stepsPerMeasure === 0)) return result(getFrequency(withOctaveJump(baseRoot)), 2, 1.05);
+        const hasFlat5 = chord.quality === 'dim' || chord.quality === 'halfdim';
+        return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + (hasFlat5 ? 6 : 7)))), 2, 1.05);
     }
 
-    // Check for eighth-note skip ("and" of a beat)
-    if (beatIndex % 1 !== 0) {
-        // ... previous skip logic ...
-        return null;
+    if (beatIndex % 1 !== 0) return null;
+
+    if (intBeat === 2 && style === 'quarter' && Math.random() < 0.8) {
+        const hasFlat5 = chord.quality === 'dim' || chord.quality === 'halfdim';
+        return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + (hasFlat5 ? 6 : 7)))), null, velocity);
     }
 
-    // Use existing variables initialized at top
-    // Final Beat of Chord: Smart Approach Note (Harmonic Pull)
     if (intBeat === beatsInChord - 1 && nextChord) {
         const nextTarget = nextChord.bassMidi !== null && nextChord.bassMidi !== undefined ? nextChord.bassMidi : nextChord.rootMidi;
         const targetRoot = normalizeToRange(nextTarget);
-        
-        // Tasteful Harmonic Pull: 
-        // Reduced frequency of chromatic pulls. 
-        // Resolution to the root/scale tones is often more "foundational".
-        const pullTension = (sb.tension || 0) + (globalIntensity * 0.3);
-        const baseProb = isSoloistBusy ? 0.1 : 0.25; // Reduced base prob
-        const chromaticProb = baseProb + (pullTension * 0.3);
-
+        const pullTension = (sb.tension || 0) + (intensity * 0.3);
+        const chromaticProb = (isSoloistBusy ? 0.1 : 0.25) + (pullTension * 0.3);
         if (Math.random() < chromaticProb && (gb.genreFeel === 'Jazz' || gb.genreFeel === 'Blues' || pullTension > 0.7)) {
-            // Priority 1: Leading Tone (Half step above/below)
-            // Priority 2: Dominant Anchor (Perfect 5th above = -5 semitones from target)
-            const choices = [
-                { midi: targetRoot - 5, weight: 1.0 }, // Favor 5th over chromatic
-                { midi: targetRoot - 1, weight: 0.6 }, 
-                { midi: targetRoot + 1, weight: 0.4 }  
-            ];
-
+            const choices = [{ midi: targetRoot - 5, weight: 1.0 }, { midi: targetRoot - 1, weight: 0.6 }, { midi: targetRoot + 1, weight: 0.4 }];
             let totalWeight = choices.reduce((acc, c) => acc + c.weight, 0);
             let r = Math.random() * totalWeight;
             let approach = targetRoot - 1;
-            for (let c of choices) {
-                r -= c.weight;
-                if (r <= 0) { approach = c.midi; break; }
-            }
-            
-            approach = clampAndNormalize(approach);
-            let bend = 0;
-            if (Math.random() < 0.2 && !isSoloistBusy) bend = (approach < targetRoot) ? -1 : 1;
-            
+            for (let c of choices) { r -= c.weight; if (r <= 0) { approach = c.midi; break; } }
+            approach = clampAndNormalize(withOctaveJump(approach));
+            let bend = (Math.random() < 0.2 && !isSoloistBusy) ? (approach < targetRoot ? -1 : 1) : 0;
             return result(getFrequency(approach), null, velocity, false, bend);
         } else {
-            // Foundation resolution (Diatonic)
             let candidates = [targetRoot - 5, targetRoot + 7, targetRoot + 5, targetRoot - 7];
-            let valid = candidates.filter(n => n >= absMin && n <= absMax && !isSameAsPrev(n));
+            let valid = candidates.filter(n => n >= absMin && n <= absMax && !isSameAsPrev(n) && (n % 12 !== baseRoot % 12));
             let approach = valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : targetRoot - 5;
-            return result(getFrequency(approach), null, velocity);
+            return result(getFrequency(withOctaveJump(approach)), null, velocity);
         }
     }
 
-    // Intermediate beats: Scale-aware walking
     if (intBeat > 0) {
-        // Soloist Space: Stick strictly to root-5th foundation if soloist is busy
-        // or if we are on beat 3 (the secondary anchor)
-        const isSecondaryAnchor = (intBeat === 2);
-        if ((isSoloistBusy && Math.random() < 0.9) || (isSecondaryAnchor && Math.random() < 0.7)) {
-             const hasFlat5 = scale.includes(6) && !scale.includes(7);
-             const note = Math.random() < 0.7 ? baseRoot : baseRoot + (hasFlat5 ? 6 : 7);
-             return result(getFrequency(clampAndNormalize(note)), null, velocity);
+        let candidates = scale.map(pc => {
+            const note = baseRoot + pc;
+            const octaves = [0, 12, -12];
+            let best = note, minDiff = Math.abs(note - baseRoot);
+            for (const o of octaves) { if (Math.abs(note + o - baseRoot) < minDiff) { minDiff = Math.abs(note + o - baseRoot); best = note + o; } }
+            return best;
+        }).filter(n => n >= absMin && n <= absMax && !isSameAsPrev(n));
+
+        if (isSoloistBusy) {
+            candidates = candidates.filter(n => {
+                const pc = n % 12;
+                const rootPC = baseRoot % 12;
+                return pc === rootPC || pc === (rootPC + 7) % 12;
+            });
+            if (candidates.length === 0) candidates = [baseRoot, baseRoot + 7, baseRoot - 5].map(n => clampAndNormalize(n));
         }
 
-        // Anchor Probability: 40% chance to jump to an anchor (Root/5th) instead of walking scale.
-        // This makes the bass line much "safer" for complex progressions.
-        if (Math.random() < 0.4) {
-             const hasFlat5 = scale.includes(6) && !scale.includes(7);
-             const anchor = Math.random() < 0.7 ? 0 : (hasFlat5 ? 6 : 7);
-             return result(getFrequency(clampAndNormalize(baseRoot + anchor)), null, velocity);
+        if (candidates.length > 0) {
+            candidates.sort((a, b) => Math.abs(a - (prevMidi || baseRoot)) - Math.abs(b - (prevMidi || baseRoot)));
+            return result(getFrequency(withOctaveJump(candidates[Math.floor(Math.random() * Math.min(2, candidates.length))])), null, velocity);
         }
-
-        const dir = (prevMidi && prevMidi > baseRoot + 7) ? -1 : (prevMidi < baseRoot ? 1 : (Math.random() > 0.5 ? 1 : -1));
-        const currentPC = (prevMidi - baseRoot + 120) % 12;
-        const scaleIdx = scale.indexOf(currentPC);
-        
-        let nextPC;
-        if (scaleIdx !== -1) {
-            const nextIdx = (scaleIdx + dir + scale.length) % scale.length;
-            nextPC = scale[nextIdx];
-        } else {
-            nextPC = scale.reduce((prev, curr) => Math.abs(curr - currentPC) < Math.abs(prev - currentPC) ? curr : prev);
-        }
-        
-        return result(getFrequency(clampAndNormalize(baseRoot + nextPC)), null, velocity);
     }
 
-    // Default Fallback
-    const fallbackVel = (style === 'neo' || gb.genreFeel === 'Neo-Soul') ? 0.85 : 1.1;
-    return result(getFrequency(baseRoot), null, fallbackVel);
-}
-
-/**
- * Determines if the bass should play at a specific step.
- */
-export function isBassActive(style, step, stepInChord) {
-    if (bb.busySteps > 0) {
-        bb.busySteps--;
-        // The "One" is sacred: allow it to interrupt any sustaining note/fill
-        // to ensure the harmonic foundation is solid.
-        if (stepInChord !== 0) return false;
-        else bb.busySteps = 0; // Force reset if we are interrupting
-    }
-
-    if (style === 'smart') {
-        const mapping = { 
-            'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Blues': 'quarter', 'Neo-Soul': 'neo',
-            'Bossa Nova': 'bossa', 'Bossa': 'bossa', 'Latin/Clave': 'bossa', 'Reggae': 'dub', 'Afrobeat': 'funk',
-            'Disco': 'disco', 'Acoustic': 'half'
-        };
-        style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
-    }
-    if (style === 'whole') return stepInChord === 0;
-    if (style === 'half') return stepInChord % 8 === 0;
-    if (style === 'arp') return stepInChord % 4 === 0;
-    if (style === 'rock') {
-        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-        return stepInChord % (ts.stepsPerBeat / 2) === 0; 
-    }
-    if (style === 'bossa') {
-        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-        const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
-        const mStep = step % stepsPerMeasure;
-        const intensity = ctx.bandIntensity;
-        
-        if (intensity > 0.65) {
-            const sambaSteps = [0, 4, 6, 8, 12, 14];
-            if (sambaSteps.includes(mStep)) return true;
-            if (intensity > 0.85) return true; 
-        }
-        
-        return [0, 6, 8, 14].filter(s => s < stepsPerMeasure).includes(mStep);
-    }
-    
-    if (style === 'quarter') {
-        // Quarter notes (Beats 1, 2, 3, 4) are the foundation.
-        if (stepInChord % 4 === 0) return true;
-        
-        // Eighth-note skips: only if intensity is high enough or soloist is resting.
-        // We handle the specific note generation logic in getBassNote.
-        if (stepInChord % 2 === 0) {
-             const busyFactor = sb.busySteps > 0 ? 0.1 : 0.4;
-             return Math.random() < (busyFactor + ctx.bandIntensity * 0.2);
-        }
-        return false;
-    }
-    
-    if (style === 'funk') {
-        return true;
-    }
-
-    if (style === 'rocco') return true;
-    if (style === 'disco') return true;
-    if (style === 'dub') return true;
-
-    if (style === 'neo') {
-        if (stepInChord === 0) return true;
-        if (stepInChord % 8 === 0) return true;
-        
-        // Add more syncopation as intensity builds
-        const syncoProb = 0.15 + (ctx.bandIntensity * 0.45);
-        if (step % 4 === 2 && Math.random() < syncoProb) return true;
-        if (step % 4 === 3 && Math.random() < (syncoProb * 0.5)) return true; 
-        return false;
-    }
-
-    if (style === 'half') {
-        // Acoustic / Folk style: Increase density at high intensity
-        if (stepInChord === 0) return true;
-        if (ctx.bandIntensity > 0.6 && stepInChord % 8 === 0) return true; // Add half-note pulse
-        if (ctx.bandIntensity > 0.8 && stepInChord % 4 === 0) return true; // Add quarter-note pulse
-        return false;
-    }
-
-    return false;
+    return result(getFrequency(withOctaveJump(baseRoot)), null, velocity);
 }

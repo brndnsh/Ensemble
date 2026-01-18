@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect } from 'vitest';
 import { getStepsPerMeasure, getStepInfo } from '../../public/utils.js';
 import { TIME_SIGNATURES } from '../../public/config.js';

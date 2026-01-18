@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
+    "lint": "eslint .",
     "deploy:test": "./scripts/deploy-test.sh",
     "deploy:prod": "./scripts/deploy-prod.sh"
   },
   "devDependencies": {
     "esbuild": "^0.27.2",
+    "eslint": "^9.39.2",
+    "globals": "^17.0.0",
     "happy-dom": "^20.1.0",
     "vitest": "^4.0.17"
   }

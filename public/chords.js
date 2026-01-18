@@ -3,7 +3,6 @@ import { normalizeKey, getFrequency } from './utils.js';
 import * as stateModule from './state.js';
 const { cb, arranger, gb, bb } = stateModule;
 const ctx = stateModule.ctx || { bandIntensity: 0.5 };
-import { ui } from './ui.js';
 import { syncWorker } from './worker-client.js';
 
 const ROMAN_REGEX = /^([#b])?(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v)/;
@@ -117,7 +116,6 @@ export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = f
 
 /**
  * Generates a musically coherent random progression based on style.
- * @param {string} [style='pop'] - The musical style (pop, jazz, blues, neo)
  * @returns {string} The generated progression string.
  */
 export function generateRandomProgression(style = 'pop') {
@@ -206,7 +204,7 @@ export function generateRandomProgression(style = 'pop') {
 /**
  * Mutates an existing progression string by subtly changing one or more chords.
  */
-export function mutateProgression(progressionStr, style = 'Pop') {
+export function mutateProgression(progressionStr) {
     const parts = progressionStr.split('|').map(p => p.trim());
     if (parts.length === 0) return progressionStr;
 
@@ -254,7 +252,7 @@ export function mutateProgression(progressionStr, style = 'Pop') {
  * @param {boolean} targetIsMinor - Whether the new key is minor.
  * @returns {string} The transformed progression string.
  */
-export function transformRelativeProgression(input, semitoneShift, targetIsMinor) {
+export function transformRelativeProgression(input, semitoneShift) {
     const parts = input.split(/([\s,|,-]+|\/)/);
     const transformed = parts.map(part => {
         if (!part.trim() || part === '|' || part === '/' || part === ',' || part === '-') return part;
@@ -462,7 +460,6 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
             const isMajor7th = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
             
             // Diatonic aware: If this is the tonic chord in a major key, prefer Maj7 (11)
-            const keyRoot = stateModule.arranger.key ? KEY_ORDER.indexOf(stateModule.arranger.key) : 0;
             // Note: rootMidi isn't available here, but we can assume if it's a Major triad in a major key,
             // we should be careful. 
             // Better strategy: Only add b7 if quality is explicitly dominant or if genre is bluesy.
@@ -607,7 +604,7 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                 const part = token.trim();
                 const [chordPart, bassPart] = part.split('/');
                 
-                const { rootMidi, rootPart, romanMatch, nnsMatch } = resolveChordRoot(chordPart, keyRootMidi, baseOctave);
+                const { rootMidi, rootPart, romanMatch } = resolveChordRoot(chordPart, keyRootMidi, baseOctave);
 
                 const suffixPart = chordPart.slice(rootPart.length);
                 let { quality, is7th } = getChordDetails(suffixPart);
@@ -761,7 +758,6 @@ export function updateProgressionCache() {
     arranger.totalSteps = current;
 
     // Build Measure Map for absolute step tracking with variable time signatures
-    let mAcc = 0;
     arranger.measureMap = [];
     
     // Group chords by their "measure boundaries"

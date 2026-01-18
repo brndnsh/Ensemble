@@ -3,11 +3,10 @@ import { getSoloistNote } from './soloist.js';
 import { getAccompanimentNotes, compingState } from './accompaniment.js';
 import { generateResolutionNotes } from './resolution.js';
 import { arranger, cb, bb, sb, gb, ctx } from './state.js';
-import { APP_VERSION, TIME_SIGNATURES, KEY_ORDER } from './config.js';
+import { TIME_SIGNATURES } from './config.js';
 import { getMidi, getStepInfo } from './utils.js';
 import { generateProceduralFill } from './fills.js';
-import { analyzeForm, getSectionEnergy } from './form-analysis.js';
-import { DRUM_PRESETS } from './presets.js';
+import { analyzeForm } from './form-analysis.js';
 
 // --- WORKER STATE ---
 let timerID = null;
@@ -168,7 +167,7 @@ function fillBuffers(currentStep, timestamp = null) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
-                const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
+                const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord);
                 
                 if (soloResult) {
                     const results = Array.isArray(soloResult) ? soloResult : [soloResult];
@@ -327,7 +326,6 @@ export function handleExport(options) {
             checkWorkerTransition(globalStep);
 
             const stepTimeS = stepTimes[globalStep];
-            const pulse = toPulses(stepTimeS);
 
             const measureStep = globalStep % stepsPerMeasure;
             const stepInfo = getStepInfo(globalStep, ts);
@@ -700,17 +698,17 @@ function handlePrime(steps) {
             // 1. Prime Bass (if enabled) to update bb.lastFreq
             if (bb.enabled) {
                 if (isBassActive(bb.style, s, stepInChord)) {
+                    const centerMidi = bb.octave;
                     const bassResult = getBassNote(
                         chord, 
                         nextChordData?.chord, 
                         stepInChord / ts.stepsPerBeat, 
                         bb.lastFreq, 
-                        bb.octave, 
+                        centerMidi, 
                         bb.style, 
                         chordData.chordIndex, 
                         s, 
-                        stepInChord, 
-                        true // isPriming
+                        stepInChord
                     );
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
                          if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
@@ -727,9 +725,7 @@ function handlePrime(steps) {
                 sb.lastFreq, 
                 sb.octave, 
                 sb.style, 
-                stepInChord, 
-                bb.lastFreq,
-                true // isPriming
+                stepInChord
             );
             
             if (soloResult) {

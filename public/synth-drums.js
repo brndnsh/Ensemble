@@ -7,7 +7,7 @@ export function killDrumNote() {
             const g = gb.lastHatGain.gain;
             g.cancelScheduledValues(ctx.audio.currentTime);
             g.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
-        } catch(e) {}
+        } catch { /* ignore error */ }
         gb.lastHatGain = null;
     }
 }
@@ -227,7 +227,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
                 const g = gb.lastHatGain.gain;
                 g.cancelScheduledValues(playTime);
                 g.setTargetAtTime(0, playTime, 0.005);
-            } catch (e) {}
+            } catch { /* ignore error */ }
         }
 
         // 2. Pre-render / Cache the Metallic Buffer (Lazy Load)

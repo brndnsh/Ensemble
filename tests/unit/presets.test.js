@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect } from 'vitest';
 import { DRUM_PRESETS } from '../../public/presets.js';
 

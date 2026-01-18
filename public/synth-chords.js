@@ -1,4 +1,4 @@
-import { ctx, cb, gb } from './state.js';
+import { ctx, gb } from './state.js';
 import { safeDisconnect } from './utils.js';
 
 /**
@@ -78,7 +78,7 @@ export function killAllPianoNotes() {
  * @param {number} duration - Note duration in seconds.
  * @param {Object} options - Synthesis options.
  */
-export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrument = 'Piano', muted = false, dry = false } = {}) {
+export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrument = 'Piano', muted = false } = {}) {
     if (!Number.isFinite(freq)) return;
     
     // Ensure heldNotes exists on ctx
@@ -156,7 +156,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
             // Sharp damping for staccato, smoother for sustained, very fast for panic
             const dampingConstant = isPanic ? 0.005 : (duration < 0.2 ? 0.02 : 0.12);
             mainGain.gain.setTargetAtTime(0, t, dampingConstant); 
-            try { osc.stop(t + 0.5); } catch(e) {}
+            try { osc.stop(t + 0.5); } catch { /* ignore already stopped */ }
         };
 
         if (ctx.sustainActive && !muted) {
@@ -202,7 +202,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
 
         osc.onended = () => safeDisconnect([osc, filter, mainGain]);
 
-    } catch (e) { console.error("playNote error:", e); }
+    } catch (err) { console.error("playNote error:", err); }
 }
 
 /**

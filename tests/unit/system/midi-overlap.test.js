@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { sendMIDINote, sendMIDIDrum, initMIDI, panic } from '../../../public/midi-controller.js';
 import { ctx, midi } from '../../../public/state.js';

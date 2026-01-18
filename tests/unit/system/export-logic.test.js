@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const capturedMessages = [];

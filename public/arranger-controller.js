@@ -1,4 +1,4 @@
-import { arranger, cb, ctx, gb } from './state.js';
+import { arranger } from './state.js';
 import { ui, renderSections, renderChordVisualizer, showToast, updateKeySelectLabels } from './ui.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
@@ -166,7 +166,7 @@ export function switchToRelativeKey(updateRelKeyButton) {
     
     pushHistory();
     arranger.sections.forEach(section => {
-        section.value = transformRelativeProgression(section.value, shift, arranger.isMinor);
+        section.value = transformRelativeProgression(section.value, shift);
     });
     
     arranger.isDirty = true;

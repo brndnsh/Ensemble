@@ -1,12 +1,12 @@
-import { ctx, gb, cb, bb, sb, arranger, vizState, storage, dispatch } from './state.js';
-import { ui, updateGenreUI, triggerFlash, updateActiveChordUI, clearActiveVisuals } from './ui.js';
-import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, updateSustain, killAllNotes, restoreGains } from './engine.js';
+import { ctx, gb, cb, bb, sb, arranger, vizState, dispatch } from './state.js';
+import { ui, updateGenreUI, triggerFlash, clearActiveVisuals } from './ui.js';
+import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
 import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker, requestResolution } from './worker-client.js';
 import { updateAutoConductor, checkSectionTransition, updateLarsTempo, conductorState } from './conductor.js';
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
-import { loadDrumPreset, flushBuffers, switchMeasure } from './instrument-controller.js';
+import { loadDrumPreset, flushBuffers } from './instrument-controller.js';
 import { draw } from './animation-loop.js';
 import { sendMIDINote, sendMIDIDrum, sendMIDICC, normalizeMidiVelocity, panic, sendMIDITransport } from './midi-controller.js';
 import { midi as midiState } from './state.js';
@@ -21,7 +21,7 @@ if (silentAudio.loop !== undefined) silentAudio.loop = true;
 
 async function requestWakeLock() {
     if (!('wakeLock' in navigator)) return;
-    try { ctx.wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+    try { ctx.wakeLock = await navigator.wakeLock.request('screen'); } catch { /* ignore wake lock error */ }
 }
 
 function releaseWakeLock() { 
@@ -74,10 +74,10 @@ export function togglePlay(viz) {
         flushBuffers(primeSteps);
         
         if (!iosAudioUnlocked) {
-            silentAudio.play().catch(e => console.log("Audio unlock failed", e));
+            silentAudio.play().catch(() => { /* ignore play error */ });
             iosAudioUnlocked = true;
         } else {
-            silentAudio.play().catch(e => {});
+            silentAudio.play().catch(() => { /* ignore play error */ });
         }
         ctx.isPlaying = true;
         restoreGains();
@@ -131,15 +131,12 @@ function scheduleResolution(time) {
     // 2. Schedule notes that came from the worker (Bass, Chords, Soloist)
     // The worker-client puts these in bb.buffer, cb.buffer, sb.buffer
     // We manually trigger the scheduling for this specific step
-    const chordData = getChordAtStep(ctx.step); // This might return null or old chord
     // Create a dummy chord data for visuals
-    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-    const stepInfo = getStepInfo(ctx.step, ts);
     
     // We use a simplified version of scheduleGlobalEvent logic
     if (bb.enabled) scheduleBass({ chord: { freqs: [] } }, ctx.step, time);
     if (sb.enabled) scheduleSoloist({ chord: { freqs: [] } }, ctx.step, time, time);
-    if (cb.enabled) scheduleChords({ chord: { freqs: [] } }, ctx.step, time, stepInfo);
+    if (cb.enabled) scheduleChords({ chord: { freqs: [] } }, ctx.step, time);
     
     // 3. Add a final flash
     if (ui.visualFlash.checked) {
@@ -284,8 +281,8 @@ function advanceGlobalStep() {
     let duration = sixteenth;
     if (gb.swing > 0) {
         // Find current time signature for swing logic
-        const stepInfo = getStepInfo(ctx.step, TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'], arranger.measureMap, TIME_SIGNATURES);
-        const ts = TIME_SIGNATURES[stepInfo.tsName] || TIME_SIGNATURES['4/4'];
+        const sInfo = getStepInfo(ctx.step, TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'], arranger.measureMap, TIME_SIGNATURES);
+        const ts = TIME_SIGNATURES[sInfo.tsName] || TIME_SIGNATURES['4/4'];
         if (ts.stepsPerBeat === 4) {
             const shift = (sixteenth / 3) * (gb.swing / 100);
             duration += (gb.swingSub === '16th') ? ((ctx.step % 2 === 0) ? shift : -shift) : (((ctx.step % 4) < 2) ? shift : -shift);
@@ -440,7 +437,7 @@ export function scheduleChordVisuals(chordData, t) {
     }
 }
 
-export function scheduleChords(chordData, step, time, stepInfo) {
+export function scheduleChords(chordData, step, time) {
     const notes = cb.buffer.get(step);
     cb.buffer.delete(step);
     
@@ -543,7 +540,7 @@ export function scheduleGlobalEvent(step, swungTime) {
         scheduleChordVisuals(chordData, t);
         if (bb.enabled) scheduleBass(chordData, step, t);
         if (sb.enabled) scheduleSoloist(chordData, step, t, soloistTime);
-        if (cb.enabled) scheduleChords(chordData, step, t, stepInfo);
+        if (cb.enabled) scheduleChords(chordData, step, t);
     }
 }
 

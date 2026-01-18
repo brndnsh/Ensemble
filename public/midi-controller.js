@@ -1,5 +1,4 @@
-import { midi, dispatch, ctx } from './state.js';
-import { getMidi } from './utils.js';
+import { ctx, midi, dispatch } from './state.js';
 
 let midiAccess = null;
 
@@ -41,7 +40,7 @@ export async function initMIDI() {
 
     try {
         midiAccess = await navigator.requestMIDIAccess();
-        midiAccess.onstatechange = (e) => {
+        midiAccess.onstatechange = () => {
             syncMIDIOutputs();
         };
 
@@ -335,7 +334,7 @@ export function sendMIDITransport(type, time) {
  */
 export function panic(resetAll = false) {
     // 1. Clear future Note Offs (they are no longer needed as we'll kill now)
-    for (const [key, value] of activeNoteOffs) {
+    for (const [, value] of activeNoteOffs) {
         clearTimeout(value.id);
     }
     activeNoteOffs.clear();

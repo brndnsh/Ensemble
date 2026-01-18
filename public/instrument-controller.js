@@ -1,19 +1,17 @@
 import { gb, arranger, ctx, cb, bb, sb, vizState } from './state.js';
-import { ui, renderGrid, renderMeasurePagination, renderGridState, showToast, updateOctaveLabel, renderSections, renderChordVisualizer, initTabs } from './ui.js';
+import { ui, renderGrid, renderMeasurePagination, renderGridState, showToast, renderSections, renderChordVisualizer, initTabs } from './ui.js';
 import { DRUM_PRESETS } from './presets.js';
 import { saveCurrentState } from './persistence.js';
 import { syncWorker, flushWorker } from './worker-client.js';
 import { MIXER_GAIN_MULTIPLIERS } from './config.js';
-import { applyTheme, setBpm } from './app-controller.js';
+import { applyTheme } from './app-controller.js';
 import { onSectionUpdate, onSectionDelete, onSectionDuplicate, analyzeFormUI } from './arranger-controller.js';
 import { getStepsPerMeasure } from './utils.js';
-import { killAllNotes, restoreGains, killChordBus, killBassBus, killSoloistBus, killDrumBus, killAllPianoNotes, killSoloistNote, killBassNote, killDrumNote } from './engine.js';
+import { restoreGains, killChordBus, killBassBus, killSoloistBus, killDrumBus, killAllPianoNotes, killSoloistNote, killBassNote, killDrumNote } from './engine.js';
 
-let schedulerRef = null;
 let vizRef = null;
 
 export function setInstrumentControllerRefs(scheduler, viz) {
-    schedulerRef = scheduler;
     vizRef = viz;
 }
 

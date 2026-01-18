@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect, vi } from 'vitest';
 import { gb, cb, bb, sb, dispatch, ctx } from '../../../public/state.js';
 

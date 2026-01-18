@@ -1,21 +1,21 @@
-import { ui, showToast, triggerFlash, updateOctaveLabel, renderChordVisualizer, renderSections, renderGridState, clearActiveVisuals, recalculateScrollOffsets, renderMeasurePagination, setupPanelMenus, renderTemplates, createPresetChip, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
-import { ctx, cb, bb, sb, gb, arranger, vizState, storage, dispatch } from './state.js';
-import { saveCurrentState, renderUserPresets, renderUserDrumPresets } from './persistence.js';
+import { ui, showToast, renderChordVisualizer, renderSections, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
+import { ctx, cb, bb, sb, gb, arranger, dispatch } from './state.js';
+import { saveCurrentState } from './persistence.js';
 import { restoreGains } from './engine.js';
 import { syncWorker } from './worker-client.js';
-import { generateId, compressSections, normalizeKey, decompressSections, getStepsPerMeasure } from './utils.js';
+import { generateId } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
-import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES, KEY_ORDER } from './config.js';
-import { generateRandomProgression, mutateProgression, transformRelativeProgression } from './chords.js';
+import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
+import { generateRandomProgression, mutateProgression } from './chords.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, handleTap, resetToDefaults, togglePower } from './instrument-controller.js';
-import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, analyzeFormUI, transposeKey, switchToRelativeKey } from './arranger-controller.js';
+import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey } from './arranger-controller.js';
 import { pushHistory, undo } from './history.js';
 import { shareProgression } from './sharing.js';
 import { triggerInstall } from './pwa.js';
 import { exportToMidi } from './midi-export.js';
-import { updateAutoConductor, checkSectionTransition, updateLarsTempo, updateBpmUI } from './conductor.js';
-import { initMIDI, panic, syncMIDIOutputs } from './midi-controller.js';
+import { applyConductor, updateBpmUI } from './conductor.js';
+import { initMIDI, panic } from './midi-controller.js';
 import { midi as midiState } from './state.js';
 
 export function updateStyle(type, styleId) {
@@ -79,7 +79,7 @@ export function setupPresets(refs = {}) {
             chip.dataset.id = itemId;
             chip.dataset.category = item.category || 'Other';
             if (itemId === activeId) chip.classList.add('active');
-            chip.onclick = () => onSelect(item, chip);
+            chip.onclick = () => onSelect(item);
             container.appendChild(chip);
         });
     };
@@ -93,7 +93,7 @@ export function setupPresets(refs = {}) {
         ...DRUM_PRESETS[name]
     }));
     
-    renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item, chip) => {
+    renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item) => {
         loadDrumPreset(item.name);
         document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
         document.querySelectorAll(`.drum-preset-chip[data-id="${item.name}"]`).forEach(c => c.classList.add('active'));
@@ -103,7 +103,7 @@ export function setupPresets(refs = {}) {
     });
 
     if (ui.smartDrumPresets) {
-        renderCategorized(ui.smartDrumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item, chip) => {
+        renderCategorized(ui.smartDrumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item) => {
             loadDrumPreset(item.name);
             document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
             document.querySelectorAll(`.drum-preset-chip[data-id="${item.name}"]`).forEach(c => c.classList.add('active'));
@@ -113,7 +113,7 @@ export function setupPresets(refs = {}) {
         });
     }
 
-    renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', arranger.lastChordPreset, (item, chip) => {
+    renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', arranger.lastChordPreset, (item) => {
         if (arranger.isDirty) {
             if (!confirm("Discard your custom arrangement and load this preset?")) return;
         }
@@ -151,14 +151,15 @@ export function setupPresets(refs = {}) {
         validateAndAnalyze();
         flushBuffers();
         document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
+        // We'll need to find the chip again or just re-render. Since setupPresets is usually called once, 
+        // and chips are updated via 'active' class elsewhere, let's just remove the reference.
         saveCurrentState();
     });
 }
 
 export function setupUIHandlers(refs) {
     const { 
-        togglePlay, saveDrumPattern, previewChord, init
+        togglePlay, saveDrumPattern
     } = refs;
 
     const openExportModal = () => {

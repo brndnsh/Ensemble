@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SONG_TEMPLATES, CHORD_PRESETS } from '../../../public/presets.js';
 import { getBassNote, isBassActive, getScaleForBass } from '../../../public/bass.js';

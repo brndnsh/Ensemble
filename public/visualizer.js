@@ -1,5 +1,5 @@
 export class UnifiedVisualizer {
-    constructor(containerId, options = {}) {
+    constructor(containerId) {
         this.container = document.getElementById(containerId);
         this.canvas = document.createElement('canvas');
         this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimization: no transparency

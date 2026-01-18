@@ -1,4 +1,4 @@
-import { arranger, cb, ctx, gb, bb, sb, vizState } from './state.js';
+import { arranger, cb, ctx, gb, bb, sb } from './state.js';
 import { getStepsPerMeasure, midiToNote, getStepInfo } from './utils.js';
 import { saveCurrentState } from './persistence.js';
 import { clearDrumPresetHighlight } from './instrument-controller.js';
@@ -181,7 +181,7 @@ export function renderChordVisualizer() {
     let activeBlockContent = null;
     let pendingKeyLabel = null;
 
-    sections.forEach((section, index) => {
+    sections.forEach((section) => {
         const sectionData = arranger.sections.find(s => s.id === section.id);
         const isSeamless = sectionData && sectionData.seamless;
         
@@ -263,7 +263,7 @@ export function renderChordVisualizer() {
 export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
     if (!ui.sectionList) return;
     ui.sectionList.innerHTML = '';
-    sections.forEach((s, idx) => {
+    sections.forEach((s) => {
         const card = document.createElement('div');
         card.className = `section-card ${s.seamless ? 'linked' : ''}`;
         card.dataset.id = s.id;
@@ -537,7 +537,7 @@ export function renderGrid(skipScroll = false) {
             if (inst.steps[i] === 1) step.classList.add('active');
             if (inst.steps[i] === 2) step.classList.add('accented');
             
-            step.onclick = (e) => {
+            step.onclick = () => {
                 if (inst.steps[i] === 0) inst.steps[i] = 1;
                 else if (inst.steps[i] === 1) inst.steps[i] = 2;
                 else inst.steps[i] = 0;

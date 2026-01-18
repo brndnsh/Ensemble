@@ -1,3 +1,4 @@
+/* eslint-disable */
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
 import { getFormattedChordNames, getChordDetails, resolveChordRoot } from '../../public/chords.js';

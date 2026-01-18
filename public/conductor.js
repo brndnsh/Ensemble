@@ -1,4 +1,4 @@
-import { ctx, cb, sb, gb, arranger, dispatch } from './state.js';
+import { ctx, sb, gb, arranger, dispatch } from './state.js';
 import { ui, triggerFlash } from './ui.js';
 import { getSectionEnergy } from './form-analysis.js';
 import { debounceSaveState } from './persistence.js';

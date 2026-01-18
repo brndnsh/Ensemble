@@ -1,6 +1,6 @@
 import { arranger, cb, gb, ctx } from './state.js';
 import { ui, showToast } from './ui.js';
-import { compressSections, normalizeKey } from './utils.js';
+import { compressSections } from './utils.js';
 
 export function shareProgression() {
     try {

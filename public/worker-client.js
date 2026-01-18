@@ -1,26 +1,33 @@
 import { arranger, cb, bb, sb, gb, ctx } from './state.js';
 
 let timerWorker = null;
-let onTickCallback = null;
+let schedulerRequestHandler = null;
+let notesReceivedHandler = null;
 
-export function initWorker(onTick, onNotes) {
-    timerWorker = new Worker('./logic-worker.js', { type: 'module' });
+export const getTimerWorker = () => timerWorker;
+
+export function initWorker(onSchedulerRequest, onNotesReceived) {
+    if (timerWorker) {
+        schedulerRequestHandler = onSchedulerRequest;
+        notesReceivedHandler = onNotesReceived;
+        return;
+    }
     
+    schedulerRequestHandler = onSchedulerRequest;
+    notesReceivedHandler = onNotesReceived;
+    
+    timerWorker = new Worker('logic-worker.js', { type: 'module' });
+
     timerWorker.onmessage = (e) => {
-        const { type, notes, data, stack, blob, filename, timestamp } = e.data;
+        const { type, notes, data, timestamp } = e.data;
         if (type === 'tick') {
-            if (onTick) onTick();
+            if (typeof schedulerRequestHandler === 'function') schedulerRequestHandler();
         } else if (type === 'notes') {
-            if (timestamp) {
-                const latency = performance.now() - timestamp;
-                if (latency > 50) {
-                    console.warn(`[Worker] High Logic Latency: ${latency.toFixed(2)}ms`);
-                }
-            }
-            if (onNotes) onNotes(notes);
+            if (typeof notesReceivedHandler === 'function') notesReceivedHandler(notes, timestamp);
         } else if (type === 'error') {
-            console.error("[Worker Error]", data, stack);
+            console.error("[Worker Error]", data);
         } else if (type === 'exportComplete') {
+            const { blob, filename } = e.data;
             const url = URL.createObjectURL(new Blob([blob], { type: 'audio/midi' }));
             const a = document.createElement('a');
             a.href = url;
@@ -29,16 +36,11 @@ export function initWorker(onTick, onNotes) {
             URL.revokeObjectURL(url);
         }
     };
-
-    timerWorker.onerror = (e) => {
-        console.error("Worker error:", e);
-    };
 }
 
 export function startExport(options) {
     if (timerWorker) timerWorker.postMessage({ type: 'export', data: options });
 }
-
 
 export function startWorker() {
     if (timerWorker) timerWorker.postMessage({ type: 'start' });

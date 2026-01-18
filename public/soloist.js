@@ -1,6 +1,6 @@
 import { getFrequency, getMidi } from './utils.js';
-import { sb, cb, ctx, arranger, gb } from './state.js';
-import { KEY_ORDER, TIME_SIGNATURES } from './config.js';
+import { ctx, gb, sb, arranger } from './state.js';
+import { TIME_SIGNATURES, KEY_ORDER } from './config.js';
 
 const CANDIDATE_WEIGHTS = new Float32Array(128);
 
@@ -36,36 +36,6 @@ const RHYTHMIC_CELLS = [
     [1, 0, 1, 0, 1, 0], // 13: Triplet-esque (Feel)
     [0, 1, 0, 0]  // 14: Single Syncopated 16th (the "e")
 ];
-
-const LICK_LIBRARY = {
-    blues: [
-        { name: 'The Box', notes: [{o:0, i:3, d:2}, {o:2, i:5, d:2}, {o:4, i:0, d:4}] },
-        { name: 'Soul Slide', notes: [{o:0, i:7, d:1}, {o:1, i:6, d:1}, {o:2, i:5, d:2}, {o:4, i:3, d:4}] },
-        { name: 'Root Pivot', notes: [{o:0, i:0, d:2}, {o:2, i:10, d:2}, {o:4, i:0, d:4}] }
-    ],
-    jazz: [
-        { name: 'ii-V Enclosure', notes: [{o:0, i:2, d:1}, {o:1, i:1, d:1}, {o:2, i:0, d:2}] },
-        { name: 'Arp Up', notes: [{o:0, i:0, d:2}, {o:2, i:4, d:2}, {o:4, i:7, d:2}, {o:6, i:11, d:2}] }
-    ],
-    rock: [
-        { name: 'Pentatonic Run', notes: [{o:0, i:7, d:1}, {o:1, i:5, d:1}, {o:2, i:3, d:1}, {o:3, i:0, d:5}] },
-        { name: 'Octave Jump', notes: [{o:0, i:0, d:2}, {o:4, i:12, d:4}] }
-    ],
-    disco: [
-        { name: 'Octave Pump', notes: [{o:0, i:0, d:2}, {o:2, i:12, d:2}, {o:4, i:0, d:2}, {o:6, i:12, d:2}] },
-        { name: 'Syncopated Triad', notes: [{o:1, i:4, d:1}, {o:3, i:7, d:1}, {o:5, i:12, d:3}] }
-    ],
-    bird: [
-        { name: 'Root Enclosure', notes: [{o:0, i:2, d:1}, {o:1, i:-1, d:1}, {o:2, i:0, d:2}] },
-        { name: '5th Enclosure', notes: [{o:0, i:8, d:1}, {o:1, i:6, d:1}, {o:2, i:7, d:2}] }
-    ],
-    funk: [
-        { name: 'Horn Line', notes: [{o:0, i:7, d:2}, {o:2, i:9, d:2}, {o:4, i:10, d:2}, {o:6, i:0, d:2}] }
-    ],
-    neo: [
-        { name: 'Quartal Rise', notes: [{o:0, i:0, d:2}, {o:2, i:5, d:2}, {o:4, i:10, d:4}] }
-    ]
-};
 
 const STYLE_CONFIG = {
     scalar: {
@@ -145,10 +115,9 @@ export function getScaleForChord(chord, nextChord, style) {
         style = mapping[gb.genreFeel] || 'scalar';
     }
 
-    const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;
-    const isDominant = chord.quality.startsWith('7') || 
-                       ['13', '11', '9', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(chord.quality) ||
-                       (chord.intervals.includes(10) && chord.intervals.includes(4));
+    const quality = chord.quality;
+    const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
+    const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && !quality.startsWith('maj') && (chord.is7th || ['9', '11', '13', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(quality) || quality.startsWith('7'));
     
     // 1. Tension High? Altered
     if (sb.tension > 0.7 && isDominant) {
@@ -160,19 +129,19 @@ export function getScaleForChord(chord, nextChord, style) {
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
              return [0, 2, 4, 5, 7, 9, 11]; 
         }
-        const isMinorQ = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality);
-        let base = (chord.quality === 'halfdim') ? [0, 1, 3, 5, 6, 8, 10] : (isMinorQ ? [0, 2, 3, 5, 6, 7, 10] : [0, 2, 3, 4, 5, 6, 7, 9, 10]);
-        if ((style === 'blues' || style === 'funk') && !isMinorQ) { if (!base.includes(4)) base.push(4); if (!base.includes(9)) base.push(9); }
+        const isMinorQualityLocal = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality);
+        let base = (chord.quality === 'halfdim') ? [0, 1, 3, 5, 6, 8, 10] : (isMinorQualityLocal ? [0, 2, 3, 5, 6, 7, 10] : [0, 2, 3, 4, 5, 6, 7, 9, 10]);
+        if ((style === 'blues' || style === 'funk') && !isMinorQualityLocal) { if (!base.includes(4)) base.push(4); if (!base.includes(9)) base.push(9); }
         if (sb.tension > 0.7) base.push(11);
         return base.sort((a,b)=>a-b);
     }
     
     if (style === 'neo' || style === 'bird') {
-        const keyRootIdx = KEY_ORDER.indexOf(chord.key || arranger.key);
+        const keyRootIdx = KEY_ORDER.indexOf(arranger.key || 'C');
         const relativeRoot = (chord.rootMidi - keyRootIdx + 120) % 12;
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
             if (relativeRoot === 0 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; 
-            if (relativeRoot === 5 && !arranger.isMinor && chord.quality.includes('maj')) return [0, 2, 4, 6, 7, 9, 11];
+            if (relativeRoot === 5 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; // Ionian for Bb
             return [0, 2, 4, 5, 7, 9, 11]; 
         }
         if (chord.quality === 'minor' || ['m9', 'm11', 'm13', 'm6'].includes(chord.quality)) {
@@ -244,19 +213,22 @@ export function getScaleForChord(chord, nextChord, style) {
 
 // --- Main Generator ---
 
-export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, centerMidi = 72, style = 'scalar', stepInChord = 0, bassFreq = null, isPriming = false) {
+export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, style, stepInChord, isPriming) {
     if (!currentChord) return null;
-    if (style === 'smart') {
+    
+    let activeStyle = style;
+    if (activeStyle === 'smart') {
         const mapping = { 'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal' };
-        style = mapping[gb.genreFeel] || 'scalar';
+        activeStyle = mapping[gb.genreFeel] || 'scalar';
     }
-    const config = STYLE_CONFIG[style] || STYLE_CONFIG.scalar;
+    const config = STYLE_CONFIG[activeStyle] || STYLE_CONFIG.scalar;
     const tsConfig = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const stepsPerBeat = tsConfig.stepsPerBeat;
     const stepsPerMeasure = tsConfig.beats * stepsPerBeat;
     const measureStep = step % stepsPerMeasure;
     const stepInBeat = measureStep % stepsPerBeat;
     const intensity = ctx.bandIntensity || 0.5;
+    const centerMidi = 72; // Standard soloist register anchor
     
     if (!isPriming) sb.sessionSteps = (sb.sessionSteps || 0) + 1;
     const warmupFactor = isPriming ? 1.0 : Math.min(1.0, sb.sessionSteps / (stepsPerMeasure * 2));
@@ -330,7 +302,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         let pool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
         sb.currentCell = pool[Math.floor(Math.random() * pool.length)];
     }
-    if (sb.currentCell && sb.currentCell[stepInBeat] === 1) {} else return null;                
+    if (sb.currentCell && sb.currentCell[stepInBeat] === 1) {
+        /* hit */
+    } else return null;                
     sb.notesInPhrase++;
 
     // --- 5. Pitch Selection & Anticipation ---
@@ -494,9 +468,3 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
 }
 
 function distFromCenter(m, center) { return Math.abs(m - center); }
-
-export function isSoloistActive(style, step, stepInChord) {
-    if (sb.busySteps > 0) return true;
-    if (sb.isResting) return false;
-    return true; 
-}
