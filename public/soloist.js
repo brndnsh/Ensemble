@@ -312,11 +312,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
         if (sb.motifReplayIndex >= sb.motifBuffer.length) sb.isReplayingMotif = false;
         
         if (motifNote) {
-            // Adaptive Transposition: Map motif pitch to current scale if needed
-            // For now, we'll just replay it (Motown/Blues style often repeats exactly)
-            sb.busySteps = (motifNote.durationSteps || 1) - 1;
+            // Filter motifs for double stops if disabled
+            let res = motifNote;
+            if (Array.isArray(motifNote) && !sb.doubleStops) {
+                res = motifNote.find(n => !n.isDoubleStop) || motifNote[0];
+            }
+            
+            const primary = Array.isArray(res) ? res[0] : res;
+            sb.busySteps = (primary.durationSteps || 1) - 1;
             sb.notesInPhrase++;
-            return motifNote;
+            return res;
         }
     }
 
