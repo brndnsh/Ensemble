@@ -5,19 +5,19 @@ export const FILL_TEMPLATES = {
     'Rock': {
         low: [
             // Simple snare hits on 4, 4&
-            { steps: [12, 14], instruments: ['Snare'], velocities: [0.8, 0.7] },
+            { steps: [12, 14], instruments: ['Snare', 'Snare'], velocities: [0.8, 0.7] },
             // Kick/Snare interplay
             { steps: [12, 13, 14], instruments: ['Kick', 'Snare', 'Snare'], velocities: [1.0, 0.7, 0.9] }
         ],
         medium: [
             // 8th note build
             { steps: [8, 10, 12, 14], instruments: ['Snare', 'Snare', 'Snare', 'Snare'], velocities: [0.6, 0.7, 0.8, 0.9] },
-            // Tom-Snare movement (Simulated with Snare/Kick for now as we lack Toms)
-            { steps: [8, 10, 12, 14], instruments: ['Snare', 'Kick', 'Snare', 'Kick'], velocities: [0.8, 1.0, 0.9, 1.1] }
+            // Tom-Snare movement
+            { steps: [8, 10, 12, 14], instruments: ['High Tom', 'Mid Tom', 'Low Tom', 'Kick'], velocities: [0.8, 0.8, 0.9, 1.1] }
         ],
         high: [
             // 16th note roll
-            { steps: [8, 9, 10, 11, 12, 13, 14, 15], instruments: Array(8).fill('Snare'), velocities: [0.5, 0.4, 0.6, 0.5, 0.7, 0.6, 0.9, 0.8] },
+            { steps: [8, 9, 10, 11, 12, 13, 14, 15], instruments: ['Snare', 'Snare', 'High Tom', 'High Tom', 'Mid Tom', 'Mid Tom', 'Low Tom', 'Low Tom'], velocities: [0.5, 0.4, 0.6, 0.5, 0.7, 0.6, 0.9, 0.8] },
             // Flam-like accents (using Flam logic if engine supported, or just tight notes)
             { steps: [0, 2, 4, 6, 8, 10, 12, 14], instruments: ['Kick', 'Crash', 'Snare', 'Snare', 'Kick', 'Crash', 'Snare', 'Kick'], velocities: [1.2, 1.0, 0.9, 0.9, 1.2, 1.0, 1.0, 1.2] }
         ]
@@ -99,6 +99,17 @@ export const FILL_TEMPLATES = {
         ],
         high: [
              { steps: [8, 10, 12, 14], instruments: ['Snare', 'Snare', 'Snare', 'Crash'], velocities: [0.6, 0.7, 0.8, 0.9] }
+        ]
+    },
+    'Bossa Nova': {
+        low: [
+            { steps: [14, 15], instruments: ['Snare', 'Snare'], velocities: [0.6, 0.4] }
+        ],
+        medium: [
+            { steps: [12, 13, 14, 15], instruments: ['Snare', 'High Tom', 'Mid Tom', 'Conga'], velocities: [0.7, 0.6, 0.7, 0.9] }
+        ],
+        high: [
+            { steps: [8, 10, 12, 14, 15], instruments: ['High Tom', 'Conga', 'Mid Tom', 'Snare', 'Crash'], velocities: [0.6, 0.8, 0.7, 0.9, 1.1] }
         ]
     }
 };

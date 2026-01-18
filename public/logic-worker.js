@@ -448,10 +448,12 @@ export function handleExport(options) {
                 const drumPulse = Math.max(0, toPulses(drumTimeS));
                 
                 const nextStepTimeS = stepTimes[globalStep + 1] || (stepTimeS + sixteenthSec);
-                const stepDurationS = nextStepTimeS - stepTimeS;
-                const tightDurationS = stepDurationS * 0.75; 
-
-                const drumMap = { 'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46, 'Crash': 49 };
+                const tightDurationS = (nextStepTimeS - stepTimeS) * 0.75; 
+                const drumMap = { 
+                    'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46, 'Crash': 49,
+                    'Clave': 75, 'Conga': 63, 'Bongo': 60, 'Perc': 67, 'Shaker': 82, 'Guiro': 74,
+                    'High Tom': 50, 'Mid Tom': 47, 'Low Tom': 43
+                };
 
                 let fillPlayed = false;
 
@@ -548,7 +550,11 @@ export function handleExport(options) {
                  const durationS = (n.durationSteps || 1) * sixteenthSec;
                  track.noteOff(toPulses(resTimeS + offsetS + durationS), channel, n.midi);
             } else if (n.module === 'gb' && n.name) {
-                const drumMap = { 'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46, 'Crash': 49 };
+                const drumMap = { 
+                    'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46, 'Crash': 49,
+                    'Clave': 75, 'Conga': 63, 'Bongo': 60, 'Perc': 67, 'Shaker': 82, 'Guiro': 74,
+                    'High Tom': 50, 'Mid Tom': 47, 'Low Tom': 43
+                };
                 const midi = drumMap[n.name];
                 if (midi) {
                     track.noteOn(notePulse, channel, midi, n.midiVelocity || 110);

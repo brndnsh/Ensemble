@@ -58,13 +58,11 @@ This document tracks specific reference recordings used to calibrate the Ensembl
     - **Performance:** Verified stability with "Emergency Lookahead" and "Logic Latency" monitoring.
     - **Verification:** 346 tests passing, including new stress tests for congestion and continuity.
 
-### [Date: 2026-01-17]
-- **Status:** MIDI DAW Integration, Monophony Audit, and Production Linting.
+### [Date: 2026-01-18]
+- **Status:** Expanded Drum Synthesis (Toms & Latin Percussion).
 - **Action:**
-    - **MIDI Velocity:** Refined `normalizeMidiVelocity` with a 0.8 power curve.
-    - **Monophony:** Implemented `isMono` flag in MIDI bridge.
-    - **Velocity Ceiling:** Enforced strict 1.35 velocity limit in Bass and Soloist engines to satisfy Harmonic Audit stability rules.
-    - **Reggae:** Updated Bass scale to include b7 (Mixolydian) for improved melodic authenticity.
-    - **Standards:** Setup ESLint and resolved all logic-worker undefined variables and engine regressions.
-    - **Verification:** 374 tests passing (stabilized probabilistic suite).
+    - **Agogo Bells:** Reduced master volume from 0.5 to 0.35 to prevent mix congestion. Implemented multi-oscillator stack (Sine + Triangle + Body Sine) for authentic "ping".
+    - **Toms:** Implemented High (180Hz), Mid (135Hz), and Low (90Hz) variations using dual-layer synthesis (Body Sine + Stick Square).
+    - **Bossa Smart Genre:** Implemented procedural 16th-note Shaker layer (accents on quarters) and intensity-driven Guiro/Tom surdo accents.
+    - **Verification:** 433 tests passing (added Template Integrity suite for fills).
 

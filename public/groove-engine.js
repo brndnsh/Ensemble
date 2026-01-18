@@ -216,6 +216,86 @@ export function applyGrooveOverrides({ step, inst, stepVal, ctx, gb, isDownbeat,
         }
     }
 
+    // --- Latin / World Procedural Overrides ---
+    const isLatinStyle = gb.genreFeel === 'Bossa Nova' || 
+                         ['Bossa Nova', 'Latin/Salsa', 'Afro-Cuban 6/8', 'Samba'].includes(gb.lastDrumPreset) || 
+                         gb.lastSmartGenre === 'Bossa';
+
+    if (isLatinStyle) {
+        if (inst.name === 'Conga') {
+            // Randomly switch between CongaHigh (Open), CongaSlap, and CongaMute
+            const slapProb = 0.1 + (ctx.bandIntensity * 0.4);
+            const muteProb = 0.2;
+            const rand = Math.random();
+            if (rand < slapProb) soundName = 'CongaHighSlap';
+            else if (rand < slapProb + muteProb) soundName = 'CongaHighMute';
+            else soundName = 'CongaHigh';
+            
+            // Subtle ghosting
+            if (stepVal === 0 && Math.random() < (ctx.bandIntensity * 0.2)) {
+                shouldPlay = true;
+                velocity = 0.2;
+                soundName = 'CongaHighMute';
+            }
+        }
+        
+        if (inst.name === 'Bongo') {
+            soundName = (loopStep % 8 < 4) ? 'BongoHigh' : 'BongoLow';
+            if (Math.random() < 0.2) velocity *= 0.8;
+        }
+
+        if (inst.name === 'Clave') {
+            instTimeOffset += (Math.random() - 0.5) * 0.005; // Tight humanization
+        }
+
+        if (inst.name === 'Perc') {
+            // Agogo high/low variation based on accents
+            if (stepVal === 2) {
+                soundName = 'AgogoHigh';
+                velocity *= 1.1;
+            } else {
+                soundName = 'AgogoLow';
+                velocity *= 0.9;
+            }
+        }
+
+        if (inst.name === 'Shaker') {
+            // 1. Procedural Layer: If intensity is high enough, Shaker plays even if not in grid
+            if (ctx.bandIntensity > 0.3 && gb.lastSmartGenre === 'Bossa') {
+                shouldPlay = true;
+                // Steady 16th note pattern with "push/pull" velocity
+                velocity = (loopStep % 2 === 0) ? 0.7 : 0.4;
+                velocity *= (0.8 + Math.random() * 0.4); // High humanization
+            } else if (stepVal > 0) {
+                // 2. Grid Overrides: Accent the "push" (8th notes) and vary the "pull" (16ths)
+                if (loopStep % 2 === 1) velocity *= (0.65 + Math.random() * 0.15);
+                else velocity *= 1.1;
+            }
+        }
+
+        if (inst.name === 'Guiro') {
+            // 1. Procedural Layer: Add occasional scrapes at high intensity
+            if (ctx.bandIntensity > 0.6 && gb.lastSmartGenre === 'Bossa') {
+                if (loopStep === 4 || loopStep === 12) {
+                    shouldPlay = true;
+                    velocity = 0.5 * (0.8 + Math.random() * 0.4);
+                }
+            }
+            // 2. Grid Overrides: Slight lag for the scrape pull
+            if (shouldPlay && loopStep % 4 === 2) instTimeOffset += 0.005;
+        }
+
+        if (inst.name === 'High Tom' && stepVal === 0 && gb.lastSmartGenre === 'Bossa' && ctx.bandIntensity > 0.75) {
+            // Add occasional Tom "surdo" style accents on beat 3/4
+            if (loopStep === 10 || loopStep === 14) {
+                if (Math.random() < 0.2) {
+                    shouldPlay = true;
+                    velocity = 0.6;
+                }
+            }
+        }
+    }
+
     // --- Global Timing & Gain Adjustments ---
     if (shouldPlay && !inst.muted) {
         if (gb.genreFeel === 'Funk' && (inst.name === 'HiHat' || inst.name === 'Open')) {

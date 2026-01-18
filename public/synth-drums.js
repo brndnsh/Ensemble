@@ -13,6 +13,7 @@ export function killDrumNote() {
 }
 
 export function playDrumSound(name, time, velocity = 1.0) {
+    if (!name) return;
     const now = ctx.audio.currentTime;
     // Add a tiny 2ms buffer to ensure scheduling always happens slightly in the future,
     // which prevents the "immediate-start" clicks common in Firefox.
@@ -334,6 +335,244 @@ export function playDrumSound(name, time, velocity = 1.0) {
         gain.connect(ctx.drumsGain);
 
         oscs[0].onended = () => safeDisconnect([...oscs, noise, hpFilter, gain]);
+    } else if (name === 'Clave') {
+        const vol = masterVol * 0.7 * rr();
+        
+        // 1. The "Wood" (Core frequency)
+        const osc = ctx.audio.createOscillator();
+        const gain = ctx.audio.createGain();
+        osc.type = 'sine';
+        // Classic claves are high-pitched but have a slight "thunk"
+        osc.frequency.setValueAtTime(2450 * rr(0.01), playTime);
+        
+        gain.gain.setValueAtTime(0, playTime);
+        gain.gain.setTargetAtTime(vol, playTime, 0.0005);
+        // Faster decay for a tighter "tick"
+        gain.gain.setTargetAtTime(0, playTime + 0.005, 0.008);
+        
+        // 2. The "Strike" (Noise transient for wood texture)
+        const strike = ctx.audio.createBufferSource();
+        strike.buffer = gb.audioBuffers.noise;
+        const strikeFilter = ctx.audio.createBiquadFilter();
+        const strikeGain = ctx.audio.createGain();
+        
+        strikeFilter.type = 'highpass';
+        strikeFilter.frequency.setValueAtTime(5000, playTime);
+        strikeFilter.Q.value = 0.5;
+        
+        strikeGain.gain.setValueAtTime(0, playTime);
+        strikeGain.gain.setTargetAtTime(vol * 0.4, playTime, 0.0005);
+        strikeGain.gain.setTargetAtTime(0, playTime + 0.002, 0.003);
+        
+        osc.connect(gain);
+        gain.connect(ctx.drumsGain);
+        
+        strike.connect(strikeFilter);
+        strikeFilter.connect(strikeGain);
+        strikeGain.connect(ctx.drumsGain);
+        
+        osc.start(playTime);
+        strike.start(playTime);
+        osc.stop(playTime + 0.1);
+        strike.stop(playTime + 0.1);
+        
+        osc.onended = () => safeDisconnect([osc, gain, strike, strikeFilter, strikeGain]);
+
+    } else if (name.startsWith('Conga') || name.startsWith('Bongo')) {
+        const isBongo = name.startsWith('Bongo');
+        const isHigh = name.includes('High');
+        const isSlap = name.includes('Slap');
+        const isMute = name.includes('Mute');
+        
+        // Slightly lower frequencies for "warmth"
+        const baseFreq = isBongo ? (isHigh ? 420 : 280) : (isHigh ? 210 : 155);
+        const vol = masterVol * (isSlap ? 0.85 : 0.7) * rr();
+        
+        // 1. The "Skin" (Tone) - Use Sine for warmth, Triangle only for slap
+        const tone = ctx.audio.createOscillator();
+        const toneGain = ctx.audio.createGain();
+        tone.type = isSlap ? 'triangle' : 'sine';
+        tone.frequency.setValueAtTime(baseFreq * rr(0.01), playTime);
+        
+        // Pitch drop on impact (simulates skin tension change)
+        tone.frequency.exponentialRampToValueAtTime(baseFreq * 0.95, playTime + 0.05);
+        
+        toneGain.gain.setValueAtTime(0, playTime);
+        toneGain.gain.setTargetAtTime(vol, playTime, 0.002);
+        const decay = isMute ? 0.015 : (isSlap ? 0.03 : 0.07);
+        toneGain.gain.setTargetAtTime(0, playTime + 0.01, decay);
+        
+        tone.connect(toneGain);
+        toneGain.connect(ctx.drumsGain);
+        
+        // 2. The "Palm" (Impact transient)
+        const noise = ctx.audio.createBufferSource();
+        noise.buffer = gb.audioBuffers.noise;
+        const noiseFilter = ctx.audio.createBiquadFilter();
+        const noiseGain = ctx.audio.createGain();
+        
+        // Bandpass at mid-range for the "thump"
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.setValueAtTime(isSlap ? 2500 : 800, playTime);
+        noiseFilter.Q.value = 1.0;
+        
+        noiseGain.gain.setValueAtTime(0, playTime);
+        noiseGain.gain.setTargetAtTime(isSlap ? vol * 0.6 : vol * 0.25, playTime, 0.001);
+        noiseGain.gain.setTargetAtTime(0, playTime + 0.005, 0.015);
+        
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(ctx.drumsGain);
+        
+        tone.start(playTime);
+        noise.start(playTime);
+        tone.stop(playTime + 0.3);
+        noise.stop(playTime + 0.3);
+        
+        tone.onended = () => safeDisconnect([tone, toneGain, noise, noiseFilter, noiseGain]);
+
+    } else if (name.startsWith('Agogo') || name === 'Perc') {
+        const isHigh = name.includes('High') || name === 'Perc';
+        const vol = masterVol * 0.35 * rr();
+        const freq = isHigh ? 1150 : 780; // Slightly detuned from pure pitches
+        
+        // Refined metallic ring using resonant filters + FM-ish stack
+        const osc1 = ctx.audio.createOscillator();
+        const osc2 = ctx.audio.createOscillator();
+        const gain = ctx.audio.createGain();
+        const filter = ctx.audio.createBiquadFilter();
+        
+        osc1.type = 'sine'; // Sine + Triangle for less "harsh" square sound
+        osc2.type = 'triangle';
+        osc1.frequency.setValueAtTime(freq * rr(0.005), playTime);
+        osc2.frequency.setValueAtTime(freq * 1.492 * rr(0.005), playTime); // Non-harmonic ratio
+        
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(freq * 1.5, playTime);
+        filter.Q.value = 4.0; // High resonance for "ping" but with softer waveforms
+        
+        gain.gain.setValueAtTime(0, playTime);
+        gain.gain.setTargetAtTime(vol, playTime, 0.001);
+        gain.gain.setTargetAtTime(0, playTime + 0.02, 0.12);
+        
+        // Add a secondary sine for low-end body
+        const body = ctx.audio.createOscillator();
+        const bodyGain = ctx.audio.createGain();
+        body.type = 'sine';
+        body.frequency.setValueAtTime(freq, playTime);
+        bodyGain.gain.setValueAtTime(0, playTime);
+        bodyGain.gain.setTargetAtTime(vol * 0.5, playTime, 0.002);
+        bodyGain.gain.setTargetAtTime(0, playTime + 0.01, 0.04);
+        
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(gain);
+        body.connect(bodyGain);
+        
+        [gain, bodyGain].forEach(g => g.connect(ctx.drumsGain));
+        
+        [osc1, osc2, body].forEach(o => {
+            o.start(playTime);
+            o.stop(playTime + 0.5);
+        });
+        
+        osc1.onended = () => safeDisconnect([osc1, osc2, body, filter, gain, bodyGain]);
+
+    } else if (name === 'Guiro') {
+        const vol = masterVol * 0.5 * rr();
+        
+        const noise = ctx.audio.createBufferSource();
+        noise.buffer = gb.audioBuffers.noise;
+        noise.loop = true;
+        
+        const filter = ctx.audio.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(2500, playTime);
+        filter.Q.value = 1.0;
+        
+        const gain = ctx.audio.createGain();
+        gain.gain.setValueAtTime(0, playTime);
+        
+        // Scrape effect: 4 quick pulses
+        for (let i = 0; i < 4; i++) {
+            const t = playTime + (i * 0.035);
+            gain.gain.setTargetAtTime(vol * (0.6 + i * 0.1), t, 0.005);
+            gain.gain.setTargetAtTime(0, t + 0.015, 0.01);
+        }
+        
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.drumsGain);
+        
+        noise.start(playTime);
+        noise.stop(playTime + 0.2);
+        
+        noise.onended = () => safeDisconnect([noise, filter, gain]);
+
+    } else if (name === 'Shaker') {
+        const vol = masterVol * 0.45 * rr();
+        
+        const noise = ctx.audio.createBufferSource();
+        noise.buffer = gb.audioBuffers.noise;
+        
+        const filter = ctx.audio.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(6000, playTime);
+        
+        const gain = ctx.audio.createGain();
+        gain.gain.setValueAtTime(0, playTime);
+        // Soft attack for shaker feel
+        gain.gain.setTargetAtTime(vol, playTime, 0.01);
+        gain.gain.setTargetAtTime(0, playTime + 0.02, 0.05);
+        
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.drumsGain);
+        
+        noise.start(playTime);
+        noise.stop(playTime + 0.2);
+        
+        noise.onended = () => safeDisconnect([noise, filter, gain]);
+    } else if (name.includes('Tom')) {
+        const vol = masterVol * 0.8 * rr();
+        const isHigh = name.includes('High');
+        const isMid = name.includes('Mid');
+        const freq = isHigh ? 180 : (isMid ? 135 : 90);
+        
+        // 1. The Tone (Body resonance)
+        const tone = ctx.audio.createOscillator();
+        const toneGain = ctx.audio.createGain();
+        tone.type = 'sine';
+        tone.frequency.setValueAtTime(freq * 1.2 * rr(), playTime);
+        tone.frequency.exponentialRampToValueAtTime(freq, playTime + 0.05);
+        
+        toneGain.gain.setValueAtTime(0, playTime);
+        toneGain.gain.setTargetAtTime(vol, playTime, 0.002);
+        toneGain.gain.setTargetAtTime(0, playTime + 0.05, 0.2);
+        
+        tone.connect(toneGain);
+        toneGain.connect(ctx.drumsGain);
+        
+        // 2. The "Stick" (Attack transient)
+        const stick = ctx.audio.createOscillator();
+        const stickGain = ctx.audio.createGain();
+        stick.type = 'square';
+        stick.frequency.setValueAtTime(freq * 2.5, playTime);
+        stick.frequency.exponentialRampToValueAtTime(freq, playTime + 0.01);
+        
+        stickGain.gain.setValueAtTime(0, playTime);
+        stickGain.gain.setTargetAtTime(vol * 0.3, playTime, 0.001);
+        stickGain.gain.setTargetAtTime(0, playTime + 0.005, 0.01);
+        
+        stick.connect(stickGain);
+        stickGain.connect(ctx.drumsGain);
+        
+        tone.start(playTime);
+        stick.start(playTime);
+        tone.stop(playTime + 1.0);
+        stick.stop(playTime + 0.1);
+        
+        tone.onended = () => safeDisconnect([tone, toneGain, stick, stickGain]);
     }
 }
 

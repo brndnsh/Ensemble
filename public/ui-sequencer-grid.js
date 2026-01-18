@@ -39,14 +39,39 @@ export function renderGrid(ui, skipScroll = false) {
         }
 
         const label = row.querySelector('.track-header');
-        label.textContent = inst.symbol || inst.name.charAt(0);
-        label.title = inst.name;
-        label.onclick = () => {
-            inst.muted = !inst.muted;
-            label.classList.toggle('muted', inst.muted);
+        label.innerHTML = ''; // Clear to rebuild with mute button
+        
+        const symbol = document.createElement('span');
+        symbol.className = 'track-symbol';
+        symbol.textContent = inst.symbol || inst.name.charAt(0);
+        symbol.title = `Audition ${inst.name}`;
+        symbol.onclick = (e) => {
+            e.stopPropagation();
+            import('./engine.js').then(({ initAudio, playDrumSound }) => {
+                import('./state.js').then(({ ctx }) => {
+                    initAudio();
+                    playDrumSound(inst.name, ctx.audio.currentTime, 1.0);
+                });
+            });
+            symbol.classList.add('auditioning');
+            setTimeout(() => symbol.classList.remove('auditioning'), 100);
         };
+        
+        const muteBtn = document.createElement('button');
+        muteBtn.className = `mute-toggle ${inst.muted ? 'active' : ''}`;
+        muteBtn.textContent = 'M';
+        muteBtn.title = inst.muted ? 'Unmute' : 'Mute';
+        muteBtn.onclick = (e) => {
+            e.stopPropagation();
+            inst.muted = !inst.muted;
+            muteBtn.classList.toggle('active', inst.muted);
+            symbol.classList.toggle('muted', inst.muted);
+        };
+
+        label.appendChild(symbol);
+        label.appendChild(muteBtn);
+        
         label.className = 'track-header';
-        if (inst.muted) label.classList.add('muted');
 
         stepsContainer.style.gridTemplateColumns = `repeat(${totalSteps}, 1fr)`;
 

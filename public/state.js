@@ -207,7 +207,16 @@ export const gb = {
         { name: 'Kick',  symbol: '🥁', steps: new Array(128).fill(0), muted: false },
         { name: 'Snare', symbol: '👏', steps: new Array(128).fill(0), muted: false },
         { name: 'HiHat', symbol: '🎩', steps: new Array(128).fill(0), muted: false },
-        { name: 'Open',  symbol: '📀', steps: new Array(128).fill(0), muted: false }
+        { name: 'Open',  symbol: '📀', steps: new Array(128).fill(0), muted: false },
+        { name: 'Clave', symbol: '🥢', steps: new Array(128).fill(0), muted: false },
+        { name: 'Conga', symbol: '🪘', steps: new Array(128).fill(0), muted: false },
+        { name: 'Bongo', symbol: '🥁', steps: new Array(128).fill(0), muted: false },
+        { name: 'Perc',  symbol: '🪇', steps: new Array(128).fill(0), muted: false },
+        { name: 'Shaker', symbol: '🧂', steps: new Array(128).fill(0), muted: false },
+        { name: 'Guiro', symbol: '🥖', steps: new Array(128).fill(0), muted: false },
+        { name: 'High Tom', symbol: '🪘', steps: new Array(128).fill(0), muted: false },
+        { name: 'Mid Tom', symbol: '🪘', steps: new Array(128).fill(0), muted: false },
+        { name: 'Low Tom', symbol: '🪘', steps: new Array(128).fill(0), muted: false }
     ],
     volume: 0.5,
     reverb: 0.2,

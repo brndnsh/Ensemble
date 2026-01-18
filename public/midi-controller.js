@@ -297,11 +297,17 @@ const DRUM_MAP = {
     'Crash': 49,
     'Ride': 51,
     'Rim': 37,
-    'TomLo': 41,
-    'TomHi': 45,
     'Clap': 39,
     'Cowbell': 56,
-    'Shaker': 70
+    'Shaker': 70,
+    'Clave': 75,
+    'Conga': 63,
+    'Bongo': 60,
+    'Perc': 67,
+    'Guiro': 74,
+    'High Tom': 50,
+    'Mid Tom': 47,
+    'Low Tom': 43
 };
 
 /**

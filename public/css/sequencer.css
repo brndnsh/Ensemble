@@ -27,19 +27,66 @@
 }
 
 .track-header {
-    width: 32px;
-    min-width: 32px;
+    width: 52px;
+    min-width: 52px;
     font-size: 0.8rem;
     color: var(--text-color);
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    padding: 0 4px;
     position: sticky;
     left: 0;
     background: var(--panel-color); /* Match or contrast with grid bg */
     z-index: 10;
     box-shadow: 4px 0 8px -2px rgba(0,0,0,0.3); /* Subtle shadow to indicate depth when scrolling */
     margin-right: 0.25rem;
+}
+
+.track-symbol {
+    cursor: pointer;
+    transition: transform 0.1s;
+    user-select: none;
+    flex-grow: 1;
+    text-align: center;
+}
+
+.track-symbol:hover {
+    transform: scale(1.2);
+}
+
+.track-symbol.auditioning {
+    transform: scale(1.4);
+    filter: brightness(1.5);
+}
+
+.track-symbol.muted {
+    filter: grayscale(1) opacity(0.3);
+}
+
+.mute-toggle {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.6rem;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mute-toggle.active {
+    background: var(--danger-color);
+    color: white;
+    border-color: var(--danger-color);
+}
+
+.mute-toggle:hover {
+    border-color: var(--text-muted);
 }
 
 .label-header {
