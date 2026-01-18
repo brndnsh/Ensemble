@@ -61,7 +61,7 @@
 }
 
 /* --- Settings Overlay --- */
-#settingsOverlay, #editorOverlay, #exportOverlay, #templatesOverlay {
+#settingsOverlay, #editorOverlay, #exportOverlay, #templatesOverlay, #analyzerOverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -77,7 +77,7 @@
     transition: opacity 0.2s ease-out;
 }
 
-#settingsOverlay.active, #editorOverlay.active, #exportOverlay.active, #templatesOverlay.active {
+#settingsOverlay.active, #editorOverlay.active, #exportOverlay.active, #templatesOverlay.active, #analyzerOverlay.active {
     opacity: 1;
     pointer-events: auto;
 }
