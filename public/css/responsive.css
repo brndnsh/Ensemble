@@ -1,0 +1,53 @@
+
+/* --- Desktop / Tablet Grid Layout --- */
+@media (min-width: 900px) {
+    .app-main-layout {
+        display: grid;
+        grid-template-columns: 1fr 28rem; /* Main | Fixed Sidebar */
+        gap: 1rem;
+        align-items: start;
+        max-width: 1800px;
+        padding: 1.5rem;
+    }
+
+    .layout-column {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        min-width: 0; /* Prevent flex overflow */
+    }
+
+    .dashboard-panel {
+        padding: 1.25rem;
+    }
+
+    /* Instrument panels are "smaller" */
+    .instrument-panel {
+        padding: 1rem;
+        /* No specific grid column needed, it's inside the sidebar column */
+    }
+
+    /* Arranger takes full height of its content, sidebar stacks naturally */
+    #panel-arranger {
+        /* No specific grid placement needed */
+    }
+    
+    .mobile-tabs-nav {
+        display: none; /* Hide tabs on desktop */
+    }
+
+    .instrument-panel {
+        display: flex !important; /* Always show instruments */
+        animation: none;
+    }
+
+    .desktop-power-btn {
+        display: flex;
+    }
+}
+
+@media (min-width: 1600px) {
+    .app-main-layout {
+        grid-template-columns: 1fr 32rem; /* Wider sidebar on massive screens */
+    }
+}
