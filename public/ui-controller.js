@@ -324,12 +324,6 @@ export function setupUIHandlers(refs) {
                 ui.arrangerActionTrigger.classList.remove('active');
             }
         }],
-        [ui.analyzeAudioBtn, 'click', () => {
-            ui.arrangerActionMenu.classList.remove('open');
-            ui.arrangerActionTrigger.classList.remove('active');
-            ui.analyzerOverlay.classList.add('active');
-        }],
-        [ui.closeAnalyzerBtn, 'click', () => ui.analyzerOverlay.classList.remove('active')],
         [ui.randomizeBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
