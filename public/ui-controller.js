@@ -324,6 +324,17 @@ export function setupUIHandlers(refs) {
                 ui.arrangerActionTrigger.classList.remove('active');
             }
         }],
+        [ui.analyzeAudioBtn, 'click', (e) => {
+            console.log("[Analyzer] analyzeAudioBtn triggered");
+            e.stopPropagation();
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
+            
+            // Trigger the reset logic from the specialized handler
+            if (window.resetAnalyzer) window.resetAnalyzer();
+            
+            ui.analyzerOverlay.classList.add('active');
+        }],
         [ui.randomizeBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
@@ -743,7 +754,17 @@ export function setupUIHandlers(refs) {
 }
 
 export function setupAnalyzerHandlers() {
-    if (!ui.analyzeAudioBtn) return;
+    if (!ui.analyzeAudioBtn) {
+        console.warn("[Analyzer] analyzeAudioBtn not found in UI registry.");
+        return;
+    }
+
+    ui.closeAnalyzerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ui.analyzerOverlay.classList.remove('active');
+    });
+
+    ui.analyzerDropZone.addEventListener('click', () => ui.analyzerFileInput.click());
 
     let detectedChords = [];
     let currentAudioBuffer = null;
@@ -759,6 +780,7 @@ export function setupAnalyzerHandlers() {
         currentAudioBuffer = null;
         detectedChords = [];
     };
+    window.resetAnalyzer = resetAnalyzer;
 
     const drawWaveform = (buffer) => {
         const canvas = ui.analyzerWaveformCanvas;
