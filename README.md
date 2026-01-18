@@ -75,4 +75,4 @@ The scripts will create a `dist/` folder, bundle and minify JavaScript and CSS u
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+GNU Affero General Public License v3.0 (AGPLv3). See [LICENSE](LICENSE) for details.
