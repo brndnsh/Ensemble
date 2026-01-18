@@ -222,5 +222,13 @@ describe('Bass Engine Logic', () => {
         it('should not have overlapping notes in Funk style', () => {
             expect(checkOverlaps('funk')).toBeLessThanOrEqual(1);
         });
+
+        it('should not have overlapping notes in Disco style', () => {
+            expect(checkOverlaps('disco')).toBeLessThanOrEqual(1);
+        });
+
+        it('should not have overlapping notes in Neo-Soul style', () => {
+            expect(checkOverlaps('neo')).toBeLessThanOrEqual(1);
+        });
     });
 });

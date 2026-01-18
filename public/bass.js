@@ -215,13 +215,14 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
             else if (style === 'half') durationSteps = (stepsPerMeasure / 2);
             else if (style === 'arp') durationSteps = (ts.stepsPerBeat);
             else if (style === 'rock') durationSteps = (ts.stepsPerBeat * 0.45);
-            else if (style === 'funk') durationSteps = (ts.stepsPerBeat * 0.2);
+            else if (style === 'funk') durationSteps = 0.8;
+            else if (style === 'disco' || style === 'rocco' || style === 'metal' || style === 'neo') durationSteps = 0.8;
             else durationSteps = ts.stepsPerBeat;
         }
 
         if (intensity < 0.4) {
             if (style === 'rock') durationSteps = ts.stepsPerBeat * 0.4;
-            else if (style === 'funk') durationSteps = ts.stepsPerBeat * 0.4;
+            else if (style === 'funk') durationSteps = 0.7; // Ensure Funk doesn't overlap at low intensity
             else if (style === 'bossa') durationSteps = durationMultiplier ? durationMultiplier * (ts.stepsPerBeat / 4) : ts.stepsPerBeat;
         }
 
