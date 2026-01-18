@@ -49,8 +49,7 @@ sed -i "s#/\* ASSETS_PLACEHOLDER \*/#$ASSETS_LIST#" dist/sw.js
 
 # 8. Deploy to TEST server
 echo "🚚 Uploading to ensembletest..."
-# scp -r dist/* root@ensembletest:/var/www/html/
-echo "(Simulated) scp -r dist/* root@ensembletest:/var/www/html/"
+scp -r dist/* root@ensembletest:/var/www/html/
 
 # 9. Cleanup
 echo "🧹 Cleaning up..."

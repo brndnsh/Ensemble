@@ -50,9 +50,7 @@ sed -i "s#/\* ASSETS_PLACEHOLDER \*/#$ASSETS_LIST#" dist/sw.js
 
 # 8. Deploy to PROD server
 echo "🚚 Uploading to ensemble..."
-# scp -r dist/* root@ensemble:/var/www/html/
-# NOTE: scp is commented out for safety during development/simulation
-echo "(Simulated) scp -r dist/* root@ensemble:/var/www/html/"
+scp -r dist/* root@ensemble:/var/www/html/
 
 # 9. Cleanup
 echo "🧹 Cleaning up..."
