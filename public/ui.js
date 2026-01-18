@@ -132,7 +132,9 @@ export function renderChordVisualizer() {
             const block = existingBlocks[sIdx];
             // Update Header if changed
             const header = block.querySelector('.section-block-header');
-            if (header.textContent !== section.label) header.textContent = section.label;
+            if (header.textContent !== formatUnicodeSymbols(section.label)) {
+                header.textContent = formatUnicodeSymbols(section.label);
+            }
 
             section.measures.forEach(measure => {
                 measure.chords.forEach(chord => {
@@ -763,7 +765,7 @@ export function createPresetChip(name, onDelete, onSelect, extraClass = '') {
     chip.className = `preset-chip user-preset-chip ${extraClass}`;
     
     const label = document.createElement('span');
-    label.textContent = name;
+    label.textContent = formatUnicodeSymbols(name);
     label.onclick = (e) => { e.stopPropagation(); onSelect(); };
     
     const del = document.createElement('button');

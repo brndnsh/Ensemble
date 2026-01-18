@@ -3,7 +3,7 @@ import { ctx, cb, bb, sb, gb, arranger, dispatch } from './state.js';
 import { saveCurrentState } from './persistence.js';
 import { restoreGains } from './engine.js';
 import { syncWorker } from './worker-client.js';
-import { generateId } from './utils.js';
+import { generateId, formatUnicodeSymbols } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
 import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
 import { generateRandomProgression, mutateProgression } from './chords.js';
@@ -75,7 +75,7 @@ export function setupPresets(refs = {}) {
             const chip = document.createElement('div');
             const itemId = item.id || item.name;
             chip.className = `preset-chip ${type}-chip`;
-            chip.textContent = item.name;
+            chip.textContent = formatUnicodeSymbols(item.name);
             chip.dataset.id = itemId;
             chip.dataset.category = item.category || 'Other';
             if (itemId === activeId) chip.classList.add('active');
