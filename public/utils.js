@@ -221,7 +221,7 @@ export function getStepInfo(step, tsConfig, measureMap, allTSConfigs) {
         return str
             .replace(/#/g, '♯')
             .replace(/([A-G])b/g, '$1♭')
-            .replace(/b(?=[0-9IViv/])/g, '♭');
+            .replace(/b(?=[0-9IVivm\-/])/g, '♭');
     }
 
 let cachedSoftClipCurve = null;
