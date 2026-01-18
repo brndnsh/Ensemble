@@ -100,6 +100,22 @@ const STYLE_CONFIG = {
         doubleStopProb: 0.08, anticipationProb: 0.35, targetExtensions: [2, 6, 9],
         deviceProb: 0.2, allowedDevices: ['enclosure', 'slide', 'guitarDouble'],
         motifProb: 0.5, hookProb: 0.25
+    },
+    country: {
+        // Chicken pickin': Lots of 16ths, double stops, staccato
+        restBase: 0.2, restGrowth: 0.1, cells: [1, 3, 4, 12, 14], registerSoar: 8,
+        tensionScale: 0.5, timingJitter: 4, maxNotesPerPhrase: 12,
+        doubleStopProb: 0.4, anticipationProb: 0.2, targetExtensions: [2, 4, 9, 11], // 6th is big in country
+        deviceProb: 0.35, allowedDevices: ['guitarDouble', 'slide', 'run'],
+        motifProb: 0.4, hookProb: 0.2
+    },
+    metal: {
+        // Shred / Neo-classical: Continuous runs, tapping arpeggios
+        restBase: 0.1, restGrowth: 0.05, cells: [1, 3, 0], registerSoar: 14,
+        tensionScale: 0.4, timingJitter: 2, maxNotesPerPhrase: 32,
+        doubleStopProb: 0.05, anticipationProb: 0.05, targetExtensions: [2, 7],
+        deviceProb: 0.5, allowedDevices: ['run'],
+        motifProb: 0.1, hookProb: 0.05
     }
 };
 
@@ -110,7 +126,8 @@ export function getScaleForChord(chord, nextChord, style) {
         const mapping = { 
             'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 
             'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 
-            'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal'
+            'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal',
+            'Country': 'country', 'Metal': 'metal', 'Rock/Metal': 'metal'
         };
         style = mapping[gb.genreFeel] || 'scalar';
     }
@@ -125,6 +142,22 @@ export function getScaleForChord(chord, nextChord, style) {
     }
 
     // 2. Style Specifics
+    if (style === 'country') {
+        // Country: Major Pentatonic + b3 (Blue note) passing tone, and 4
+        // Base Major Pent: 0, 2, 4, 7, 9
+        // Add 3 (b3) for bluesy slides -> actually, scale logic usually takes Semitones from root
+        // 0, 2, 3, 4, 7, 9
+        // Also Mixolydian is common (10)
+        return [0, 2, 3, 4, 7, 9, 10].sort((a,b)=>a-b);
+    }
+    if (style === 'metal') {
+        // Metal: Natural Minor / Aeolian (0, 2, 3, 5, 7, 8, 10)
+        // Or Harmonic Minor (0, 2, 3, 5, 7, 8, 11)
+        // Let's stick to Aeolian for now as safe default, maybe Harmonic if dominant
+        if (isDominant || chord.quality === 'major') return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant-ish for major
+        return [0, 2, 3, 5, 7, 8, 10]; // Minor
+    }
+
     if (style === 'blues' || style === 'disco' || style === 'funk') {
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
              return [0, 2, 4, 5, 7, 9, 11]; 

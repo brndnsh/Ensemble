@@ -77,6 +77,15 @@ export function isBassActive(style, step, stepInChord) {
         if (ctx.bandIntensity > 0.6 && Math.random() < 0.15) return true;
         return false;
     }
+    if (style === 'country') {
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        return step % (ts.stepsPerBeat * 2) === 0; // Quarter notes (1 and 3)
+    }
+    if (style === 'metal') {
+        // Continuous 8th notes (gallop handled in pattern gen or via ghosts)
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        return step % (ts.stepsPerBeat / 2) === 0; // 8ths
+    }
 
     return false;
 }
@@ -85,7 +94,7 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
     if (!chord) return null;
 
     if (style === 'smart') {
-        const mapping = { 'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Disco': 'disco', 'Reggae': 'dub', 'Neo-Soul': 'neo', 'Bossa Nova': 'bossa' };
+        const mapping = { 'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Disco': 'disco', 'Reggae': 'dub', 'Neo-Soul': 'neo', 'Bossa Nova': 'bossa', 'Country': 'country', 'Metal': 'metal' };
         style = mapping[gb.genreFeel] || mapping[gb.lastDrumPreset] || 'rock';
     }
 
@@ -312,6 +321,59 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         const intervals = chord.intervals; 
         let targetInterval = (beatInPattern === 1 || beatInPattern === 3) ? (intervals[1] || 4) : (intervals[2] || 7);
         return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + targetInterval))));
+    }
+
+    // --- COUNTRY STYLE (Root-Five) ---
+    if (style === 'country') {
+        // Root on beat 1, Fifth on beat 3
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const isBeat3 = (stepInMeasure % (ts.stepsPerBeat * 4) === (ts.stepsPerBeat * 2));
+        
+        let note = baseRoot;
+        if (isBeat3) {
+            // Alternate bass
+            note = normalizeToRange(baseRoot - 5); // Down a fourth (or up a fifth)
+            if (note > baseRoot) note -= 12; // Prefer lower 5th
+        }
+        
+        // Occasional walk-up on beat 4
+        if (stepInMeasure % ts.stepsPerBeat === 0 && Math.floor(beatInMeasure) === 3 && Math.random() < 0.4) {
+             const nextTarget = nextChord ? nextChord.rootMidi : baseRoot;
+             const approach = normalizeToRange(nextTarget - 1);
+             return result(getFrequency(approach), 1, 1.1);
+        }
+
+        return result(getFrequency(note), 2, 1.1); // Plucky
+    }
+
+    // --- METAL STYLE (Pedal Point / Gallop) ---
+    if (style === 'metal') {
+        // Pedal point on Root usually
+        // Occasional riffing
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const subDiv = ts.stepsPerBeat / 2;
+        const isEighth = step % subDiv === 0;
+        
+        if (isEighth) {
+            const isDownbeat = (step % ts.stepsPerBeat === 0);
+            const note = baseRoot; // Chug on root
+            
+            // Accent logic
+            const vel = isDownbeat ? 1.25 : 1.1;
+            
+            // Riffing on beats 3 and 4 (high intensity)
+            if (intensity > 0.7 && beatInMeasure >= 2) {
+                 const scale = getScaleForBass(chord);
+                 if (Math.random() < 0.3) {
+                     const idx = Math.floor(Math.random() * 3); // Root, 2nd, b3
+                     const riffNote = normalizeToRange(baseRoot + scale[idx]);
+                     return result(getFrequency(riffNote), 0.5, vel);
+                 }
+            }
+            
+            return result(getFrequency(note), 0.5, vel);
+        }
+        return null;
     }
 
     // --- ROCK STYLE (8th Note Pedal) ---

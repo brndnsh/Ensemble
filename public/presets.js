@@ -370,6 +370,43 @@ export const DRUM_PRESETS = {
             'HiHat': "101010101010101010101010"
         }
     },
+    'Country (Two-Step)': {
+        category: 'Country/Folk', swing: 55, sub: '8th',
+        'Kick': "2000000020000000", 
+        'Snare': "0000200000002000", // Simple backbeat
+        'HiHat': "1010101010101010", // Closed 8ths
+        'Open': "0000000000000000",
+        '3/4': { // Country Waltz
+            'Kick': "200000000000",
+            'Snare': "000020002000",
+            'HiHat': "101010101010"
+        },
+        '6/8': {
+            'Kick': "200000200000",
+            'Snare': "000000200000",
+            'HiHat': "101010101010"
+        }
+    },
+    'Metal (Speed)': {
+        category: 'Rock/Metal', swing: 0, sub: '16th',
+        'Kick': "2222222222222222", // Double bass 16ths
+        'Snare': "0000200000002000", // Hard backbeat
+        'HiHat': "1010101010101010", 
+        'Open': "2000200020002000", 
+        '3/4': {
+            'Kick': "222222222222",
+            'Snare': "000020000000"
+        },
+        '6/8': { // Gallop
+            'Kick': "211211211211",
+            'Snare': "000000200000"
+        },
+        '7/4': {
+            measures: 1,
+            'Kick': "2222222222222222222222222222",
+            'Snare': "0000200000002000000020000000"
+        }
+    },
     'DnB': { 
         category: 'Electronic', swing: 0, sub: '16th', 
         'Kick': "2000000000200100", 
@@ -586,6 +623,8 @@ export const CHORD_STYLES = [
     { id: 'smart', name: 'Smart (Rhythmic)', category: 'Modern' },
     { id: 'pad', name: 'Pad (Sustain)', category: 'Modern' },
     { id: 'strum8', name: 'Strum (8th)', category: 'Pop/Rock' },
+    { id: 'strum-country', name: 'Country Strum', category: 'Country/Folk' },
+    { id: 'power-metal', name: 'Power Metal', category: 'Rock/Metal' },
     { id: 'jazz', name: 'Jazz Comp', category: 'Jazz' },
     { id: 'funk', name: 'Funk Scratch', category: 'Soul/Funk' }
 ];
@@ -596,6 +635,8 @@ export const BASS_STYLES = [
     { id: 'half', name: 'Half', category: 'Basic' },
     { id: 'arp', name: 'Arp (1-3-5-3)', category: 'Basic' },
     { id: 'rock', name: 'Rock (8th)', category: 'Pop/Rock' },
+    { id: 'country', name: 'Country (1-5)', category: 'Country/Folk' },
+    { id: 'metal', name: 'Metal (Gallop)', category: 'Rock/Metal' },
     { id: 'quarter', name: 'Walking', category: 'Jazz' },
     { id: 'funk', name: 'Funk', category: 'Soul/Funk' },
     { id: 'rocco', name: 'Rocco (16ths)', category: 'Soul/Funk' },
@@ -608,7 +649,9 @@ export const BASS_STYLES = [
 export const SOLOIST_STYLES = [
     { id: 'smart', name: 'Smart (Auto)', category: 'Experimental' },
     { id: 'scalar', name: 'Scalar', category: 'Basic' },
+    { id: 'country', name: 'Country', category: 'Country/Folk' },
     { id: 'shred', name: 'Shreddy', category: 'Rock/Metal' },
+    { id: 'metal', name: 'Metal', category: 'Rock/Metal' },
     { id: 'blues', name: 'Blues', category: 'Blues' },
     { id: 'neo', name: 'Neo-Soul', category: 'Soul/R&B' },
     { id: 'minimal', name: 'Minimal', category: 'Basic' },
@@ -628,6 +671,19 @@ export const CHORD_PRESETS = [
         sections: [{ label: 'Main', value: "vi | IV | I | V" }], 
         category: "Pop/Rock",
         settings: { bpm: 85, style: 'pad' }
+    },
+    { 
+        name: "Country Standard", 
+        sections: [{ label: 'Main', value: "I | I | IV | IV | I | V | I | I" }], 
+        category: "Country/Folk",
+        settings: { bpm: 100, style: 'strum-country' }
+    },
+    { 
+        name: "Metal Core", 
+        sections: [{ label: 'Main', value: "im | bVI | bVII | im" }], 
+        category: "Rock/Metal",
+        isMinor: true,
+        settings: { bpm: 160, style: 'power-metal' }
     },
     { 
         name: "50s Rock", 

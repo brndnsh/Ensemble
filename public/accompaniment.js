@@ -183,6 +183,8 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
     if (cb.style === 'jazz') genre = 'Jazz';
     else if (cb.style === 'funk') genre = 'Funk';
     else if (cb.style === 'strum8') genre = 'Rock';
+    else if (cb.style === 'strum-country') genre = 'Country';
+    else if (cb.style === 'power-metal') genre = 'Metal';
 
     // --- Sticky Groove Logic ---
     const stickyGenres = ['Funk', 'Soul', 'Reggae', 'Neo-Soul'];
@@ -308,6 +310,105 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
     updateRhythmicIntent(step, (sb.enabled && sb.busySteps > 0), spm, chord.sectionId);
 
     // --- GENRE LANES ---
+
+    if (cb.style === 'strum-country') {
+        // Boom-Chick Pattern (Root/5th Bass, Chord Strum)
+        // Beats 1 and 3 (0 and 8 in 4/4): Bass Note
+        // Beats 2 and 4 (4 and 12 in 4/4): Chord Strum
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const isBass = (measureStep % ts.stepsPerBeat === 0) && ((measureStep / ts.stepsPerBeat) % 2 === 0);
+        const isStrum = (measureStep % ts.stepsPerBeat === 0) && ((measureStep / ts.stepsPerBeat) % 2 === 1);
+        
+        // Train Beat / Bluegrass 16th fills (ghost strums on offbeats)
+        const isGhost = (measureStep % 4 !== 0) && (Math.random() < (intensity * 0.6));
+
+        if (isBass) {
+            // Alternate Root and Fifth (if possible)
+            // measureStep 0 = Root, measureStep 8 (Beat 3) = Fifth
+            let note = chord.rootMidi;
+            // Simple logic: if it's the second strong beat, try fifth
+            if (measureStep > 0 && Math.random() < 0.9) {
+                note += 7; // Up a fifth (or down a fourth, logic usually wraps)
+                if (note > 60) note -= 12; // Keep it low
+            } else {
+                // Ensure root is in bass register
+                while (note > 55) note -= 12;
+            }
+            
+            notes.push({
+                midi: note,
+                velocity: 0.6 + (intensity * 0.2),
+                durationSteps: 2,
+                ccEvents: ccEvents,
+                timingOffset: 0.005,
+                instrument: 'Piano', // Using piano for "Clean Guitar" approx
+                dry: true
+            });
+            return notes;
+        } else if (isStrum || isGhost) {
+            const v = isStrum ? (0.5 + intensity * 0.3) : (0.2 + intensity * 0.1);
+            let voicing = [...chord.freqs];
+            if (voicing.length > 3) voicing = voicing.slice(0, 3); // Simple triads
+            
+            voicing.forEach((f, i) => {
+                notes.push({
+                    midi: getMidi(f),
+                    velocity: v,
+                    durationSteps: isGhost ? 0.5 : 2,
+                    ccEvents: (i===0) ? ccEvents : [],
+                    timingOffset: (i * 0.015) + (isGhost ? 0.02 : 0), // Slower strum for country
+                    instrument: 'Piano',
+                    dry: true
+                });
+            });
+            return notes;
+        }
+        if (ccEvents.length > 0) return [{ midi: 0, velocity: 0, durationSteps: 0, ccEvents, instrument: 'Piano', muted: true }];
+        return [];
+    }
+
+    if (cb.style === 'power-metal') {
+        // Driving 8th notes (chugs) with Power Chords (Root + 5th + Octave)
+        // 4/4: 0, 2, 4, 6, 8, 10, 12, 14
+        const isEighth = (measureStep % 2 === 0);
+        
+        if (isEighth) {
+            // Power Chord Voicing: Root, 5th, Octave
+            const root = chord.rootMidi;
+            const voicing = [root, root + 7, root + 12];
+            
+            const isDownbeat = (measureStep % 4 === 0);
+            const isBackbeat = (measureStep === 4 || measureStep === 12);
+            
+            // "Palm Mute" simulation via velocity/filter in synth
+            // Low velocity = Muted, High velocity = Open
+            let vel = 0.45; // Default chug
+            let dur = 0.8; // Short
+            
+            if (isDownbeat || isBackbeat) {
+                vel = 0.7 + (intensity * 0.3); // Accent
+                dur = 1.5; // Let ring slightly more
+            } else {
+                // Random chug variations
+                if (Math.random() < intensity) vel += 0.1;
+            }
+            
+            voicing.forEach((m, i) => {
+                notes.push({
+                    midi: m,
+                    velocity: vel,
+                    durationSteps: dur,
+                    ccEvents: (i===0) ? ccEvents : [],
+                    timingOffset: i * 0.002, // Tight unison
+                    instrument: 'Warm', // Warm preset has a saw-like character suitable for distortion
+                    dry: false // Use reverb/effects
+                });
+            });
+            return notes;
+        }
+        if (ccEvents.length > 0) return [{ midi: 0, velocity: 0, durationSteps: 0, ccEvents, instrument: 'Piano', muted: true }];
+        return [];
+    }
 
     if (genre === 'Neo-Soul') {
         // "Quartal" and "Rootless" Voicings for Neo-Soul

@@ -40,6 +40,7 @@
 .preset-chip[data-category="Jazz"] { border-color: var(--green); }
 .preset-chip[data-category="Classical/Trad"] { border-color: var(--red); }
 .preset-chip[data-category="Theory"] { border-color: var(--yellow); }
+.preset-chip[data-category="Country/Folk"] { border-color: var(--yellow); }
 .preset-chip[data-category="Rock/Metal"] { border-color: var(--red); }
 .preset-chip[data-category="Keys"] { border-color: var(--blue); }
 .preset-chip[data-category="Synth"] { border-color: var(--violet); }
@@ -85,6 +86,7 @@
 .preset-chip.active[data-category="Jazz"] { background: var(--green); color: white; }
 .preset-chip.active[data-category="Classical/Trad"] { background: var(--red); color: white; }
 .preset-chip.active[data-category="Theory"] { background: var(--yellow); color: white; }
+.preset-chip.active[data-category="Country/Folk"] { background: var(--yellow); color: white; }
 .preset-chip.active[data-category="Rock/Metal"] { background: var(--red); color: white; }
 .preset-chip.active[data-category="Keys"] { background: var(--blue); color: white; }
 .preset-chip.active[data-category="Synth"] { background: var(--violet); color: white; }
