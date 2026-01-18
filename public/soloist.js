@@ -121,6 +121,16 @@ const STYLE_CONFIG = {
 
 // --- Helpers ---
 
+/**
+ * Determines the most appropriate musical scale for a given chord and style.
+ * Uses harmonic context, tension levels, and genre-specific rules to select
+ * scales like Altered, Lydian Dominant, or various Pentatonics.
+ * 
+ * @param {Object} chord - The current chord object.
+ * @param {Object} nextChord - The upcoming chord object for resolution lookahead.
+ * @param {string} style - The soloist style (e.g., 'smart', 'blues', 'bird').
+ * @returns {number[]} An array of semitone intervals representing the selected scale.
+ */
 export function getScaleForChord(chord, nextChord, style) {
     if (style === 'smart') {
         const mapping = { 
@@ -246,6 +256,21 @@ export function getScaleForChord(chord, nextChord, style) {
 
 // --- Main Generator ---
 
+/**
+ * Generates a soloist note (or notes for double stops) for a specific step.
+ * Implements phrasing logic, rhythmic cell selection, melodic contour resolution, 
+ * and probabilistic melodic devices (runs, enclosures, flurry).
+ * 
+ * @param {Object} currentChord - The chord active at the current step.
+ * @param {Object} nextChord - The upcoming chord for anticipation logic.
+ * @param {number} step - The global step counter.
+ * @param {number|null} prevFreq - The frequency of the previously generated note.
+ * @param {number} octave - The base MIDI octave for the soloist.
+ * @param {string} style - The soloing style ID.
+ * @param {number} stepInChord - The relative step index within the current chord.
+ * @param {boolean} [isPriming=false] - Whether the engine is in a context-building priming phase.
+ * @returns {Object|Object[]|null} A note object, an array of note objects (for double stops), or null if resting.
+ */
 export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, style, stepInChord, isPriming) {
     if (!currentChord) return null;
     

@@ -1,3 +1,4 @@
+import { ACTIONS } from './types.js';
 import { ui, showToast, renderChordVisualizer, renderSections, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
 import { ctx, cb, bb, sb, gb, arranger, dispatch } from './state.js';
 import { saveCurrentState } from './persistence.js';
@@ -27,12 +28,12 @@ export function updateStyle(type, styleId) {
     const c = UPDATE_STYLE_CONFIG[type];
     if (!c) return;
     
-    dispatch('SET_STYLE', { module: c.module, style: styleId });
+    dispatch(ACTIONS.SET_STYLE, { module: c.module, style: styleId });
 
     // When a manual style is selected, we switch the tab to 'classic' automatically
     // unless the style being set is 'smart' (though usually smart is set via tabs)
     if (styleId !== 'smart') {
-        dispatch('SET_ACTIVE_TAB', { module: c.module, tab: 'classic' });
+        dispatch(ACTIONS.SET_ACTIVE_TAB, { module: c.module, tab: 'classic' });
         // Update UI Tabs
         document.querySelectorAll(`.instrument-tab-btn[data-module="${c.module}"]`).forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === 'classic');
@@ -153,8 +154,6 @@ export function setupPresets(refs = {}) {
         validateAndAnalyze();
         flushBuffers();
         document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
-        // We'll need to find the chip again or just re-render. Since setupPresets is usually called once, 
-        // and chips are updated via 'active' class elsewhere, let's just remove the reference.
         saveCurrentState();
     });
 }
@@ -179,7 +178,7 @@ export function setupUIHandlers(refs) {
     if (ui.intensitySlider) {
         ui.intensitySlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
-            dispatch('SET_BAND_INTENSITY', val / 100);
+            dispatch(ACTIONS.SET_BAND_INTENSITY, val / 100);
             if (ui.intensityValue) ui.intensityValue.textContent = `${val}%`;
             applyConductor();
         });
@@ -188,7 +187,7 @@ export function setupUIHandlers(refs) {
     if (ui.complexitySlider) {
         ui.complexitySlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
-            dispatch('SET_COMPLEXITY', val / 100);
+            dispatch(ACTIONS.SET_COMPLEXITY, val / 100);
             if (ui.complexityValue) {
                 let label = 'Low';
                 if (val > 33) label = 'Medium';
@@ -201,7 +200,7 @@ export function setupUIHandlers(refs) {
 
     if (ui.autoIntensityCheck) {
         ui.autoIntensityCheck.addEventListener('change', (e) => {
-            dispatch('SET_AUTO_INTENSITY', e.target.checked);
+            dispatch(ACTIONS.SET_AUTO_INTENSITY, e.target.checked);
             ui.intensitySlider.disabled = ctx.autoIntensity;
             if (ctx.autoIntensity) {
                 ui.intensitySlider.style.opacity = 0.5;
@@ -218,13 +217,10 @@ export function setupUIHandlers(refs) {
             const genre = btn.dataset.genre;
             
             if (ctx.isPlaying) {
-                // Remove existing pending classes
                 document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('pending'));
-                // Mark this one as pending
                 btn.classList.add('pending');
                 showToast(`Queued ${genre} for next measure...`);
             } else {
-                // Immediate change if not playing
                 document.querySelectorAll('.genre-btn').forEach(b => {
                     b.classList.remove('active', 'pending');
                     b.setAttribute('aria-pressed', 'false');
@@ -236,7 +232,7 @@ export function setupUIHandlers(refs) {
             
             const config = SMART_GENRES[genre];
             if (config) {
-                dispatch('SET_GENRE_FEEL', {
+                dispatch(ACTIONS.SET_GENRE_FEEL, {
                     genreName: genre,
                     feel: config.feel,
                     swing: config.swing,
@@ -247,7 +243,6 @@ export function setupUIHandlers(refs) {
                     soloist: config.soloist
                 });
                 
-                // If not playing, update UI controls immediately
                 if (!ctx.isPlaying) {
                     ui.swingSlider.value = config.swing;
                     if (config.sub) ui.swingBase.value = config.sub;
@@ -261,7 +256,7 @@ export function setupUIHandlers(refs) {
 
                     modules.forEach(m => {
                         if (m.state.activeTab === 'smart') {
-                            dispatch('SET_STYLE', { module: m.state === cb ? 'cb' : (m.state === bb ? 'bb' : 'sb'), style: 'smart' });
+                            dispatch(ACTIONS.SET_STYLE, { module: m.state === cb ? 'cb' : (m.state === bb ? 'bb' : 'sb'), style: 'smart' });
                             const chipSelector = { 'chord': '.chord-style-chip', 'bass': '.bass-style-chip', 'soloist': '.soloist-style-chip' }[m.id];
                             document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
                         }
@@ -486,9 +481,8 @@ export function setupUIHandlers(refs) {
 
     ui.timeSigSelect.addEventListener('change', () => {
         arranger.timeSignature = ui.timeSigSelect.value;
-        arranger.grouping = null; // Reset to default for new time signature
+        arranger.grouping = null; 
         
-        // Reload drum preset to adapt to new time signature (e.g. 4/4 -> 7/4)
         if (gb.lastDrumPreset) {
             loadDrumPreset(gb.lastDrumPreset);
         }
@@ -540,7 +534,7 @@ export function setupUIHandlers(refs) {
     });
 
     ui.densitySelect.addEventListener('change', e => { 
-        dispatch('SET_DENSITY', e.target.value); 
+        dispatch(ACTIONS.SET_DENSITY, e.target.value); 
         validateAndAnalyze(); 
         flushBuffers(); 
         saveCurrentState();
@@ -584,8 +578,6 @@ export function setupUIHandlers(refs) {
         el.addEventListener('change', () => saveCurrentState());
     });
 
-    // --- Volume Sliders ---
-
     ui.swingSlider.addEventListener('input', e => { gb.swing = parseInt(e.target.value); saveCurrentState(); });
     ui.swingBase.addEventListener('change', e => { gb.swingSub = e.target.value; saveCurrentState(); });
     ui.humanizeSlider.addEventListener('input', e => { gb.humanize = parseInt(e.target.value); saveCurrentState(); });
@@ -593,10 +585,9 @@ export function setupUIHandlers(refs) {
     ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
 
     ui.haptic.addEventListener('change', () => {
-        dispatch('SET_PARAM', { module: 'ctx', param: 'haptic', value: ui.haptic.checked });
+        dispatch(ACTIONS.SET_PARAM, { module: 'ctx', param: 'haptic', value: ui.haptic.checked });
     });
 
-    // --- Session Timer UI Logic ---
     if (ui.sessionTimerCheck && ui.sessionTimerInput) {
         const updateTimerUI = (isChecked) => {
             ui.sessionTimerDurationContainer.style.opacity = isChecked ? '1' : '0.4';
@@ -607,7 +598,6 @@ export function setupUIHandlers(refs) {
             }
         };
 
-        // Initialize UI from State
         const currentTimer = ctx.sessionTimer || 0;
         ui.sessionTimerCheck.checked = currentTimer > 0;
         ui.sessionTimerInput.value = currentTimer > 0 ? currentTimer : 5;
@@ -617,12 +607,12 @@ export function setupUIHandlers(refs) {
             const isChecked = e.target.checked;
             const duration = isChecked ? parseFloat(ui.sessionTimerInput.value) : 0;
             updateTimerUI(isChecked);
-            dispatch('SET_SESSION_TIMER', duration);
+            dispatch(ACTIONS.SET_SESSION_TIMER, duration);
         });
 
         ui.sessionTimerInput.addEventListener('change', (e) => {
             if (ui.sessionTimerCheck.checked) {
-                dispatch('SET_SESSION_TIMER', parseFloat(e.target.value));
+                dispatch(ACTIONS.SET_SESSION_TIMER, parseFloat(e.target.value));
             }
         });
 
@@ -631,7 +621,7 @@ export function setupUIHandlers(refs) {
             const next = Math.max(1, Math.min(20, current + delta));
             ui.sessionTimerInput.value = next;
             if (ui.sessionTimerCheck.checked) {
-                dispatch('SET_SESSION_TIMER', next);
+                dispatch(ACTIONS.SET_SESSION_TIMER, next);
             }
         };
 
@@ -640,12 +630,12 @@ export function setupUIHandlers(refs) {
     }
 
     ui.applyPresetSettings.addEventListener('change', () => {
-        dispatch('SET_PRESET_SETTINGS_MODE', ui.applyPresetSettings.checked);
+        dispatch(ACTIONS.SET_PRESET_SETTINGS_MODE, ui.applyPresetSettings.checked);
     });
 
     if (ui.soloistDoubleStops) {
         ui.soloistDoubleStops.addEventListener('change', (e) => {
-            dispatch('SET_DOUBLE_STOPS', e.target.checked);
+            dispatch(ACTIONS.SET_DOUBLE_STOPS, e.target.checked);
             flushBuffers();
             syncWorker();
             saveCurrentState();
@@ -664,7 +654,7 @@ export function setupUIHandlers(refs) {
         updateLarsUI(gb.larsMode);
         
         ui.larsModeCheck.addEventListener('change', (e) => {
-            dispatch('SET_LARS_MODE', e.target.checked);
+            dispatch(ACTIONS.SET_LARS_MODE, e.target.checked);
             updateLarsUI(e.target.checked);
             updateBpmUI();
             saveCurrentState();
@@ -677,7 +667,7 @@ export function setupUIHandlers(refs) {
 
         ui.larsIntensitySlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
-            dispatch('SET_LARS_INTENSITY', val / 100);
+            dispatch(ACTIONS.SET_LARS_INTENSITY, val / 100);
             if (ui.larsIntensityValue) ui.larsIntensityValue.textContent = `${val}%`;
         });
         ui.larsIntensitySlider.addEventListener('change', () => saveCurrentState());
@@ -695,9 +685,7 @@ export function setupUIHandlers(refs) {
             const module = btn.dataset.module;
             const tab = btn.dataset.tab;
             if (tab === 'smart' && module !== 'gb') {
-                // Explicitly set style to smart when entering Smart tab
-                dispatch('SET_STYLE', { module, style: 'smart' });
-                // Clear manual chips in the Classic tab
+                dispatch(ACTIONS.SET_STYLE, { module, style: 'smart' });
                 const chipSelector = { 'cb': '.chord-style-chip', 'bb': '.bass-style-chip', 'sb': '.soloist-style-chip' }[module];
                 if (chipSelector) document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
                 
@@ -711,7 +699,6 @@ export function setupUIHandlers(refs) {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             if (ctx.audio?.state === 'suspended' || ctx.audio?.state === 'interrupted') ctx.audio.resume();
-            if (ctx.isPlaying && refs.iosAudioUnlocked) refs.silentAudio.play().catch(() => {});
         }
     });
 
@@ -750,7 +737,6 @@ export function setupUIHandlers(refs) {
     let resizeTimeout;
     window.addEventListener('resize', () => { if (resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = setTimeout(() => recalculateScrollOffsets(), 150); });
 
-    // Final UI Sync
     updateGroupingUI();
     setupMIDIHandlers();
 }
@@ -770,7 +756,7 @@ export function setupMIDIHandlers() {
         } else {
             panic();
         }
-        dispatch('SET_MIDI_CONFIG', { enabled });
+        dispatch(ACTIONS.SET_MIDI_CONFIG, { enabled });
         updateMIDIControlsUI(enabled);
         restoreGains();
         saveCurrentState();
@@ -778,14 +764,14 @@ export function setupMIDIHandlers() {
 
     if (ui.midiMuteLocalCheck) {
         ui.midiMuteLocalCheck.addEventListener('change', (e) => {
-            dispatch('SET_MIDI_CONFIG', { muteLocal: e.target.checked });
+            dispatch(ACTIONS.SET_MIDI_CONFIG, { muteLocal: e.target.checked });
             restoreGains();
             saveCurrentState();
         });
     }
 
     ui.midiOutputSelect.addEventListener('change', (e) => {
-        dispatch('SET_MIDI_CONFIG', { selectedOutputId: e.target.value });
+        dispatch(ACTIONS.SET_MIDI_CONFIG, { selectedOutputId: e.target.value });
         saveCurrentState();
     });
 
@@ -795,7 +781,7 @@ export function setupMIDIHandlers() {
         if (el) {
             el.addEventListener('change', (e) => {
                 const val = parseInt(e.target.value);
-                dispatch('SET_MIDI_CONFIG', { [`${ch.toLowerCase()}Channel`]: val });
+                dispatch(ACTIONS.SET_MIDI_CONFIG, { [`${ch.toLowerCase()}Channel`]: val });
                 saveCurrentState();
             });
         }
@@ -804,7 +790,7 @@ export function setupMIDIHandlers() {
         if (octEl) {
             octEl.addEventListener('change', (e) => {
                 const val = parseInt(e.target.value);
-                dispatch('SET_MIDI_CONFIG', { [`${ch.toLowerCase()}Octave`]: val });
+                dispatch(ACTIONS.SET_MIDI_CONFIG, { [`${ch.toLowerCase()}Octave`]: val });
                 saveCurrentState();
             });
         }
@@ -813,7 +799,7 @@ export function setupMIDIHandlers() {
     if (ui.midiLatencySlider) {
         ui.midiLatencySlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
-            dispatch('SET_MIDI_CONFIG', { latency: val });
+            dispatch(ACTIONS.SET_MIDI_CONFIG, { latency: val });
             if (ui.midiLatencyValue) ui.midiLatencyValue.textContent = `${val > 0 ? '+' : ''}${val}ms`;
         });
         ui.midiLatencySlider.addEventListener('change', () => saveCurrentState());
@@ -822,13 +808,12 @@ export function setupMIDIHandlers() {
     if (ui.midiVelocitySlider) {
         ui.midiVelocitySlider.addEventListener('input', (e) => {
             const val = parseFloat(e.target.value);
-            dispatch('SET_MIDI_CONFIG', { velocitySensitivity: val });
+            dispatch(ACTIONS.SET_MIDI_CONFIG, { velocitySensitivity: val });
             if (ui.midiVelocityValue) ui.midiVelocityValue.textContent = val.toFixed(1);
         });
         ui.midiVelocitySlider.addEventListener('change', () => saveCurrentState());
     }
 
-    // Initial Sync from State
     ui.midiEnableCheck.checked = midiState.enabled;
     if (ui.midiChordsChannel) ui.midiChordsChannel.value = midiState.chordsChannel;
     if (ui.midiBassChannel) ui.midiBassChannel.value = midiState.bassChannel;
@@ -846,10 +831,9 @@ export function setupMIDIHandlers() {
     updateMIDIControlsUI(midiState.enabled);
     renderMIDIOutputs();
 
-    // Subscribe to MIDI state changes (to update output list)
     import('./state.js').then(({ subscribe }) => {
         subscribe((action, payload) => {
-            if (action === 'SET_MIDI_CONFIG' && payload.outputs) {
+            if (action === ACTIONS.SET_MIDI_CONFIG && payload.outputs) {
                 renderMIDIOutputs();
             }
         });
@@ -878,7 +862,7 @@ function renderMIDIOutputs() {
     });
 
     if (!currentId && midiState.outputs.length > 0) {
-        dispatch('SET_MIDI_CONFIG', { selectedOutputId: midiState.outputs[0].id });
+        dispatch(ACTIONS.SET_MIDI_CONFIG, { selectedOutputId: midiState.outputs[0].id });
     }
 }
 

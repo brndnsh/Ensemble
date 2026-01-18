@@ -1,0 +1,127 @@
+# Ensemble: Worker-Client Communication Contract
+
+Ensemble offloads heavy musical generation and MIDI processing to a background Web Worker (`logic-worker.js`). This document defines the message schema and synchronization logic between the Main Thread and the Worker.
+
+## Architectural Overview
+
+*   **Main Thread (`worker-client.js`)**: Orchestrates the worker lifecycle, dispatches state updates, and requests note generation.
+*   **Worker (`logic-worker.js`)**: Maintains a partial mirror of the application state and generates musical events (Bass, Soloist, Accompaniment) ahead of time.
+
+## Message Types (Main → Worker)
+
+### `start`
+Starts the worker's internal timer for periodic buffer filling.
+```json
+{ "type": "start" }
+```
+
+### `stop`
+Stops the worker's internal timer.
+```json
+{ "type": "stop" }
+```
+
+### `syncState`
+Synchronizes the worker's internal state with the global state. Supports partial updates.
+```json
+{
+  "type": "syncState",
+  "data": {
+    "arranger": { ... },
+    "cb": { ... },
+    "bb": { ... },
+    "sb": { ... },
+    "gb": { ... },
+    "ctx": { ... }
+  }
+}
+```
+
+### `requestBuffer`
+Explicitly requests the worker to fill the musical buffers for a specific step.
+```json
+{
+  "type": "requestBuffer",
+  "data": { "step": 128 },
+  "timestamp": 123456789.0
+}
+```
+
+### `flush`
+Clears all internal buffers and primes the engine for a specific step. Used during genre switches or transport restarts.
+```json
+{
+  "type": "flush",
+  "data": {
+    "step": 0,
+    "syncData": { ... },
+    "primeSteps": 32
+  },
+  "timestamp": null
+}
+```
+
+### `export`
+Triggers a MIDI file generation process.
+```json
+{
+  "type": "export",
+  "data": {
+    "includedTracks": ["chords", "bass"],
+    "targetDuration": 3,
+    "loopMode": "time",
+    "filename": "my-song"
+  }
+}
+```
+
+## Message Types (Worker → Main)
+
+### `notes`
+Returns a list of generated notes to be scheduled by the audio engine.
+```json
+{
+  "type": "notes",
+  "notes": [
+    {
+      "module": "bb",
+      "step": 0,
+      "freq": 440.0,
+      "midi": 69,
+      "velocity": 0.8,
+      "durationSteps": 4,
+      "timingOffset": 0.01
+    }
+  ],
+  "timestamp": 123456789.0
+}
+```
+
+### `tick`
+Heartbeat message sent periodically by the worker's timer.
+
+### `exportComplete`
+Returns the generated MIDI file as a `Uint8Array`.
+```json
+{
+  "type": "exportComplete",
+  "blob": Uint8Array,
+  "filename": "song.mid"
+}
+```
+
+### `error`
+Reports an internal worker error.
+```json
+{
+  "type": "error",
+  "data": "Error message",
+  "stack": "..."
+}
+```
+
+## Synchronization Rules
+
+1.  **Step Mapping**: Both threads must use the same `arranger.stepMap` and `totalSteps` to ensure harmonic alignment.
+2.  **Lookahead**: The worker targets a `LOOKAHEAD` of 64 steps (typically 4 measures in 4/4) to prevent buffer underruns during CPU spikes.
+3.  **Priming**: During a `flush` operation, the worker can "prime" the engine by simulating multiple measures of playback to establish musical context (e.g., updating `bb.lastFreq`).

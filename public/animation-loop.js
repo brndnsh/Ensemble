@@ -1,3 +1,4 @@
+import { ACTIONS } from './types.js';
 import { ctx, gb, cb, bb, sb, vizState, dispatch, arranger } from './state.js';
 import { ui, triggerFlash, clearActiveVisuals, updateActiveChordUI } from './ui.js';
 import { getVisualTime } from './engine.js';
@@ -35,7 +36,7 @@ export function draw(viz) {
         if (delta > 35) { // Missed at least 2 frames (at 60fps)
             missedFrames++;
             if (missedFrames > 15) {
-                dispatch('TRIGGER_EMERGENCY_LOOKAHEAD');
+                dispatch(ACTIONS.TRIGGER_EMERGENCY_LOOKAHEAD);
                 missedFrames = 0;
             }
         } else if (delta < 20) {

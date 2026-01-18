@@ -711,21 +711,26 @@ export function validateProgression(renderCallback) {
     let lastMidis = [];
 
     arranger.sections.forEach(section => {
-        const repeats = section.repeat || 1;
-        const sectionKey = section.key || arranger.key;
-        const sectionTS = section.timeSignature || arranger.timeSignature;
+        try {
+            const repeats = section.repeat || 1;
+            const sectionKey = section.key || arranger.key;
+            const sectionTS = section.timeSignature || arranger.timeSignature;
 
-        for (let r = 0; r < repeats; r++) {
-            const { chords, finalMidis } = parseProgressionPart(section.value, sectionKey, sectionTS, lastMidis);
-            const taggedChords = chords.map((c, idx) => ({
-                ...c,
-                sectionId: section.id,
-                sectionLabel: section.label,
-                localIndex: idx,
-                repeatIndex: r
-            }));
-            allChords = allChords.concat(taggedChords);
-            lastMidis = finalMidis;
+            for (let r = 0; r < repeats; r++) {
+                const { chords, finalMidis } = parseProgressionPart(section.value, sectionKey, sectionTS, lastMidis);
+                const taggedChords = chords.map((c, idx) => ({
+                    ...c,
+                    sectionId: section.id,
+                    sectionLabel: section.label,
+                    localIndex: idx,
+                    repeatIndex: r
+                }));
+                allChords = allChords.concat(taggedChords);
+                lastMidis = finalMidis;
+            }
+        } catch (e) {
+            console.error(`[Arranger] Error parsing section "${section.label}":`, e);
+            // Optionally add a placeholder "Error" chord to the progression to keep the structure intact
         }
     });
 

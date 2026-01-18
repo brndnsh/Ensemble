@@ -1,3 +1,4 @@
+import { ACTIONS } from './types.js';
 import { ctx, cb, bb, sb, gb, arranger, vizState, storage, dispatch } from './state.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { ui, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
@@ -113,7 +114,7 @@ export function hydrateState() {
         if (ui.applyPresetSettings) ui.applyPresetSettings.checked = ctx.applyPresetSettings;
         
         if (savedState.midi) {
-            dispatch('SET_MIDI_CONFIG', {
+            dispatch(ACTIONS.SET_MIDI_CONFIG, {
                 enabled: savedState.midi.enabled || false,
                 selectedOutputId: savedState.midi.selectedOutputId || null,
                 chordsChannel: savedState.midi.chordsChannel || 1,
@@ -181,7 +182,8 @@ export function loadFromUrl(viz) {
         const btn = document.querySelector(`.genre-btn[data-genre="${genre}"]`);
         if (btn) {
             btn.click();
-        } else {
+        }
+        else {
             // Fallback if UI not yet ready
             gb.lastSmartGenre = genre;
             gb.genreFeel = genre;
@@ -189,7 +191,7 @@ export function loadFromUrl(viz) {
     }
     if (params.get('int')) {
         const val = parseFloat(params.get('int'));
-        dispatch('SET_BAND_INTENSITY', val);
+        dispatch(ACTIONS.SET_BAND_INTENSITY, val);
         if (ui.intensitySlider) {
             ui.intensitySlider.value = Math.round(val * 100);
             if (ui.intensityValue) ui.intensityValue.textContent = `${ui.intensitySlider.value}%`;
@@ -197,7 +199,7 @@ export function loadFromUrl(viz) {
     }
     if (params.get('comp')) {
         const val = parseFloat(params.get('comp'));
-        dispatch('SET_COMPLEXITY', val);
+        dispatch(ACTIONS.SET_COMPLEXITY, val);
         if (ui.complexitySlider) {
             ui.complexitySlider.value = Math.round(val * 100);
         }

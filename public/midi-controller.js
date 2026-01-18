@@ -1,3 +1,4 @@
+import { ACTIONS } from './types.js';
 import { ctx, midi, dispatch } from './state.js';
 
 let midiAccess = null;
@@ -24,7 +25,7 @@ function handleMIDIMessage(event) {
         // Controller 11 (Expression) or 1 (Modulation) maps to Band Intensity
         if (data1 === 11 || data1 === 1) {
             const intensity = data2 / 127;
-            dispatch('SET_BAND_INTENSITY', intensity);
+            dispatch(ACTIONS.SET_BAND_INTENSITY, intensity);
         }
     }
 }
@@ -68,7 +69,7 @@ export function syncMIDIOutputs() {
     for (const output of midiAccess.outputs.values()) {
         outputs.push({ id: output.id, name: output.name });
     }
-    dispatch('SET_MIDI_CONFIG', { outputs });
+    dispatch(ACTIONS.SET_MIDI_CONFIG, { outputs });
 }
 
 /**

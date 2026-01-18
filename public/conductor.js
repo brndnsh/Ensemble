@@ -1,3 +1,4 @@
+import { ACTIONS } from './types.js';
 import { ctx, sb, gb, arranger, dispatch } from './state.js';
 import { ui, triggerFlash } from './ui.js';
 import { getSectionEnergy } from './form-analysis.js';
@@ -36,7 +37,7 @@ export function applyConductor() {
     const isSoloistBusy = sb.enabled && sb.busySteps > 0;
     const targetIntentDensity = isSoloistBusy ? (0.3 * (1 - complexity)) : (0.5 + intensity * 0.4);
 
-    dispatch('UPDATE_CONDUCTOR_DECISION', {
+    dispatch(ACTIONS.UPDATE_CONDUCTOR_DECISION, {
         density: targetDensity,
         velocity: targetVelocity,
         hookProb: targetHookProb,
@@ -49,7 +50,7 @@ export function applyConductor() {
     if (genre === 'Neo-Soul') targetBassPocket = 0.025; // 25ms "Dilla" lag
     else if (genre === 'Funk') targetBassPocket = -0.005; // 5ms "Ahead of the beat" push for Funk energy
     
-    dispatch('SET_PARAM', { module: 'bb', param: 'pocketOffset', value: targetBassPocket });
+    dispatch(ACTIONS.SET_PARAM, { module: 'bb', param: 'pocketOffset', value: targetBassPocket });
 
     // --- 5. Intensity-Aware Mixing ---
     if (ctx.masterLimiter && ctx.audio) {
@@ -76,7 +77,10 @@ export function updateAutoConductor() {
         let newIntensity = ctx.bandIntensity + ((ctx.bandIntensity < conductorState.target) ? Math.abs(conductorState.stepSize) : -Math.abs(conductorState.stepSize)) * multiplier;
         newIntensity = Math.max(0.01, Math.min(1.0, newIntensity));
         
-        dispatch('SET_BAND_INTENSITY', newIntensity);
+    if (newIntensity !== ctx.bandIntensity) {
+        dispatch(ACTIONS.SET_BAND_INTENSITY, newIntensity);
+    }
+
         
         const val = Math.round(newIntensity * 100);
         if (ui.intensitySlider) {
@@ -275,7 +279,7 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
                 }
 
                 const fillSteps = generateProceduralFill(gb.genreFeel, ctx.bandIntensity, stepsPerMeasure);
-                dispatch('TRIGGER_FILL', { steps: fillSteps, startStep: currentStep, length: stepsPerMeasure, crash: true });
+                dispatch(ACTIONS.TRIGGER_FILL, { steps: fillSteps, startStep: currentStep, length: stepsPerMeasure, crash: true });
                 if (ui.visualFlash && ui.visualFlash.checked) triggerFlash(0.25);
                 
                 if (ctx.autoIntensity) {
@@ -298,7 +302,7 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
         const isTransition = !nextEntry || nextEntry.chord.sectionId !== entry.chord.sectionId;
 
         if (isTransition && !gb.fillActive && ctx.bandIntensity > 0.4) {
-            dispatch('TRIGGER_FILL', {
+            dispatch(ACTIONS.TRIGGER_FILL, {
                 steps: { 0: [{ name: 'Kick', vel: 0.6 }, { name: 'Open', vel: 0.9 }] },
                 startStep: currentStep,
                 length: 1,

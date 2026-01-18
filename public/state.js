@@ -370,6 +370,8 @@ export const midi = {
     velocitySensitivity: 1.0
 };
 
+import { ACTIONS } from './types.js';
+
 // Persistence Helpers
 export const storage = {
     get: (key) => {
@@ -389,38 +391,38 @@ const stateMap = { ctx, cb, bb, sb, gb, arranger, vizState, midi };
 
 /**
  * Dispatch a state change action.
- * @param {string} action - The action type (e.g., 'SET_INTENSITY', 'UPDATE_STYLE').
+ * @param {string} action - The action type (e.g., ACTIONS.SET_INTENSITY).
  * @param {*} [payload] - The data associated with the action.
  */
 export function dispatch(action, payload) {
     switch (action) {
         // --- MIDI ---
-        case 'SET_MIDI_CONFIG':
+        case ACTIONS.SET_MIDI_CONFIG:
             Object.assign(midi, payload);
             break;
         // --- Global / Conductor ---
-        case 'SET_BAND_INTENSITY':
+        case ACTIONS.SET_BAND_INTENSITY:
             ctx.bandIntensity = Math.max(0, Math.min(1, payload));
             break;
-        case 'SET_PARAM':
+        case ACTIONS.SET_PARAM:
             if (stateMap[payload.module]) stateMap[payload.module][payload.param] = payload.value;
             break;
-        case 'SET_COMPLEXITY':
+        case ACTIONS.SET_COMPLEXITY:
             ctx.complexity = Math.max(0, Math.min(1, payload));
             break;
-        case 'SET_AUTO_INTENSITY':
+        case ACTIONS.SET_AUTO_INTENSITY:
             ctx.autoIntensity = !!payload;
             break;
-        case 'SET_DOUBLE_STOPS':
+        case ACTIONS.SET_DOUBLE_STOPS:
             sb.doubleStops = !!payload;
             break;
-        case 'RESET_SESSION':
+        case ACTIONS.RESET_SESSION:
             sb.sessionSteps = 0;
             break;
-        case 'SET_SESSION_STEPS':
+        case ACTIONS.SET_SESSION_STEPS:
             sb.sessionSteps = payload;
             break;
-        case 'UPDATE_CONDUCTOR_DECISION': 
+        case ACTIONS.UPDATE_CONDUCTOR_DECISION: 
             // Composite update from Conductor
             if (payload.density) cb.density = payload.density;
             if (payload.velocity) ctx.conductorVelocity = payload.velocity;
@@ -429,44 +431,44 @@ export function dispatch(action, payload) {
             break;
 
         // --- Instrument Settings ---
-        case 'SET_STYLE':
+        case ACTIONS.SET_STYLE:
             // payload: { module: 'cb'|'bb'|'sb', style: 'smart' }
             if (stateMap[payload.module]) stateMap[payload.module].style = payload.style;
             break;
-        case 'SET_DENSITY':
+        case ACTIONS.SET_DENSITY:
             cb.density = payload;
             break;
-        case 'SET_VOLUME':
+        case ACTIONS.SET_VOLUME:
             // payload: { module: 'cb', value: 0.5 }
             if (stateMap[payload.module]) stateMap[payload.module].volume = payload.value;
             break;
-        case 'SET_REVERB':
+        case ACTIONS.SET_REVERB:
             if (stateMap[payload.module]) stateMap[payload.module].reverb = payload.value;
             break;
-        case 'SET_OCTAVE':
+        case ACTIONS.SET_OCTAVE:
             if (stateMap[payload.module]) stateMap[payload.module].octave = payload.value;
             break;
         
         // --- Groove / Drums ---
-        case 'SET_SWING':
+        case ACTIONS.SET_SWING:
             gb.swing = payload;
             break;
-        case 'SET_SWING_SUB':
+        case ACTIONS.SET_SWING_SUB:
             gb.swingSub = payload;
             break;
-        case 'SET_HUMANIZE':
+        case ACTIONS.SET_HUMANIZE:
             gb.humanize = payload;
             break;
-        case 'SET_FOLLOW_PLAYBACK':
+        case ACTIONS.SET_FOLLOW_PLAYBACK:
             gb.followPlayback = payload;
             break;
-        case 'SET_LARS_MODE':
+        case ACTIONS.SET_LARS_MODE:
             gb.larsMode = !!payload;
             break;
-        case 'SET_LARS_INTENSITY':
+        case ACTIONS.SET_LARS_INTENSITY:
             gb.larsIntensity = Math.max(0, Math.min(1, payload));
             break;
-        case 'SET_GENRE_FEEL':
+        case ACTIONS.SET_GENRE_FEEL:
             // payload: { feel: 'Rock', swing: 0, sub: '8th', drum: '...', ... }
             if (ctx.isPlaying) {
                 gb.pendingGenreFeel = payload;
@@ -477,41 +479,41 @@ export function dispatch(action, payload) {
                 gb.pendingGenreFeel = null;
             }
             break;
-        case 'TRIGGER_FILL':
+        case ACTIONS.TRIGGER_FILL:
             gb.fillSteps = payload.steps;
             gb.fillActive = true;
             gb.fillStartStep = payload.startStep;
             gb.fillLength = payload.length;
             gb.pendingCrash = !!payload.crash;
             break;
-        case 'SET_ACTIVE_TAB':
+        case ACTIONS.SET_ACTIVE_TAB:
             // payload: { module: 'cb', tab: 'smart' }
-            stateMap[payload.module].activeTab = payload.tab;
+            if (stateMap[payload.module]) stateMap[payload.module].activeTab = payload.tab;
             break;
         
         // --- Options ---
-        case 'SET_METRONOME':
+        case ACTIONS.SET_METRONOME:
             ctx.metronome = payload;
             break;
-        case 'SET_PRESET_SETTINGS_MODE':
+        case ACTIONS.SET_PRESET_SETTINGS_MODE:
             ctx.applyPresetSettings = payload;
             break;
-        case 'SET_PRACTICE_MODE':
+        case ACTIONS.SET_PRACTICE_MODE:
             cb.practiceMode = payload;
             break;
-        case 'SET_NOTATION':
+        case ACTIONS.SET_NOTATION:
             arranger.notation = payload;
             break;
-        case 'SET_SESSION_TIMER':
+        case ACTIONS.SET_SESSION_TIMER:
             ctx.sessionTimer = payload;
             break;
-        case 'SET_STOP_AT_END':
+        case ACTIONS.SET_STOP_AT_END:
             ctx.stopAtEnd = payload;
             break;
-        case 'SET_ENDING_PENDING':
+        case ACTIONS.SET_ENDING_PENDING:
             ctx.isEndingPending = payload;
             break;
-        case 'TRIGGER_EMERGENCY_LOOKAHEAD':
+        case ACTIONS.TRIGGER_EMERGENCY_LOOKAHEAD:
             if (ctx.scheduleAheadTime < 0.4) {
                 ctx.scheduleAheadTime *= 2.0;
                 console.warn(`[Performance] Emergency Lookahead Triggered: ${ctx.scheduleAheadTime}s`);

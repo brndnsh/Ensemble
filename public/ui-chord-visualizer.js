@@ -1,0 +1,152 @@
+import { arranger, cb } from './state.js';
+import { formatUnicodeSymbols } from './utils.js';
+import { TIME_SIGNATURES } from './config.js';
+
+/**
+ * Handles the rendering and updating of the Chord Visualizer UI.
+ */
+export function renderChordVisualizer(ui) {
+    if (!ui.chordVisualizer) return;
+    
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const sections = [];
+    let currentSection = null;
+    let currentMeasure = null;
+    let currentMeasureBeats = 0;
+
+    arranger.progression.forEach((chord, i) => {
+        if (!currentSection || currentSection.id !== chord.sectionId) {
+            currentSection = { id: chord.sectionId, label: chord.sectionLabel, measures: [] };
+            sections.push(currentSection);
+            currentMeasure = null;
+        }
+
+        if (!currentMeasure || currentMeasureBeats >= ts.beats) {
+            currentMeasure = { chords: [] };
+            currentSection.measures.push(currentMeasure);
+            currentMeasureBeats = 0;
+        }
+
+        currentMeasure.chords.push({ ...chord, globalIndex: i });
+        currentMeasureBeats += chord.beats;
+    });
+
+    const totalMeasures = sections.reduce((acc, s) => acc + s.measures.length, 0);
+    ui.chordVisualizer.dataset.totalMeasures = totalMeasures;
+
+    // DOM RECYCLING STRATEGY
+    const existingCards = Array.from(ui.chordVisualizer.querySelectorAll('.chord-card'));
+    const progressionChanged = existingCards.length !== arranger.progression.length;
+    const existingBlocks = ui.chordVisualizer.querySelectorAll('.section-block');
+    const structureChanged = existingBlocks.length !== sections.length;
+
+    if (!progressionChanged && !structureChanged) {
+        let cardIndex = 0;
+        sections.forEach((section, sIdx) => {
+            const block = existingBlocks[sIdx];
+            const header = block.querySelector('.section-block-header');
+            if (header.textContent !== formatUnicodeSymbols(section.label)) {
+                header.textContent = formatUnicodeSymbols(section.label);
+            }
+
+            section.measures.forEach(measure => {
+                measure.chords.forEach(chord => {
+                    const card = existingCards[cardIndex];
+                    const isMinor = chord.isMinor;
+                    const isActive = chord.globalIndex === cb.lastActiveChordIndex;
+                    
+                    if (card.classList.contains('minor') !== isMinor) card.classList.toggle('minor', isMinor);
+                    if (card.classList.contains('active') !== isActive) card.classList.toggle('active', isActive);
+
+                    const notation = arranger.notation || 'roman';
+                    const disp = chord.display ? chord.display[notation] : null;
+                    const html = `<span class="root">${formatUnicodeSymbols(disp.root)}</span><span class="suffix">${formatUnicodeSymbols(disp.suffix)}</span>${disp.bass ? `<span class="bass-note">/${formatUnicodeSymbols(disp.bass)}</span>` : ''}`;
+                    if (card.innerHTML !== html) card.innerHTML = html;
+                    
+                    card.onclick = (e) => {
+                        e.stopPropagation();
+                        if (window.previewChord) window.previewChord(chord.globalIndex);
+                    };
+
+                    cardIndex++;
+                });
+            });
+        });
+        return;
+    }
+
+    ui.chordVisualizer.innerHTML = '';
+    let activeBlockContent = null;
+    let pendingKeyLabel = null;
+
+    sections.forEach((section) => {
+        const sectionData = arranger.sections.find(s => s.id === section.id);
+        const isSeamless = sectionData && sectionData.seamless;
+        let content;
+
+        if (isSeamless && activeBlockContent) {
+            content = activeBlockContent;
+            pendingKeyLabel = section.label; 
+        } else {
+            const block = document.createElement('div');
+            block.className = 'section-block';
+            block.onclick = () => {
+                const detail = { detail: { sectionId: section.id } };
+                document.dispatchEvent(new CustomEvent('open-editor', detail));
+            };
+
+            const header = document.createElement('div');
+            header.className = 'section-block-header';
+            header.textContent = formatUnicodeSymbols(section.label);
+            block.appendChild(header);
+
+            content = document.createElement('div');
+            content.className = 'section-block-content';
+            block.appendChild(content);
+            ui.chordVisualizer.appendChild(block);
+            activeBlockContent = content;
+            pendingKeyLabel = null;
+        }
+
+        section.measures.forEach((measure, mIdx) => {
+            const mBox = document.createElement('div');
+            mBox.className = 'measure-box';
+
+            if (pendingKeyLabel && mIdx === 0) {
+                const label = document.createElement('div');
+                label.className = 'key-label';
+                label.textContent = formatUnicodeSymbols(pendingKeyLabel);
+                mBox.appendChild(label);
+                mBox.classList.add('has-key-label');
+                pendingKeyLabel = null;
+            }
+
+            measure.chords.forEach(chord => {
+                const card = document.createElement('div');
+                card.className = 'chord-card';
+                if (chord.isMinor) card.classList.add('minor');
+                if (chord.globalIndex === cb.lastActiveChordIndex) card.classList.add('active');
+
+                const notation = arranger.notation || 'roman';
+                const disp = chord.display ? chord.display[notation] : null;
+                
+                if (disp) {
+                    card.innerHTML = `<span class="root">${formatUnicodeSymbols(disp.root)}</span><span class="suffix">${formatUnicodeSymbols(disp.suffix)}</span>`;
+                    if (disp.bass) {
+                        card.innerHTML += `<span class="bass-note">/${formatUnicodeSymbols(disp.bass)}</span>`;
+                    }
+                } else {
+                    card.textContent = formatUnicodeSymbols(chord.absName) || '...';
+                }
+
+                card.onclick = (e) => {
+                    e.stopPropagation();
+                    if (window.previewChord) window.previewChord(chord.globalIndex);
+                };
+
+                mBox.appendChild(card);
+            });
+            content.appendChild(mBox);
+        });
+    });
+}

@@ -1,12 +1,13 @@
 /* eslint-disable */
 import { describe, it, expect, vi } from 'vitest';
+import { ACTIONS } from '../../../public/types.js';
 import { gb, cb, bb, sb, dispatch, ctx } from '../../../public/state.js';
 
 describe('Smart Genre Switching', () => {
     it('should queue a genre change during playback (pending)', () => {
         ctx.isPlaying = true;
         
-        dispatch('SET_GENRE_FEEL', {
+        dispatch(ACTIONS.SET_GENRE_FEEL, {
             feel: 'Jazz',
             swing: 60,
             sub: '8th',
@@ -23,7 +24,7 @@ describe('Smart Genre Switching', () => {
     it('should apply genre change immediately if not playing', () => {
         ctx.isPlaying = false;
         
-        dispatch('SET_GENRE_FEEL', {
+        dispatch(ACTIONS.SET_GENRE_FEEL, {
             feel: 'Funk',
             swing: 15,
             sub: '16th',
@@ -43,10 +44,10 @@ describe('Smart Genre Switching', () => {
         
         const JAZZ_CONFIG = { feel: 'Jazz', swing: 60, sub: '8th', drum: 'Jazz', feel: 'Jazz', chord: 'jazz', bass: 'quarter', soloist: 'bird' };
         
-        dispatch('SET_GENRE_FEEL', JAZZ_CONFIG);
-        dispatch('SET_STYLE', { module: 'cb', style: JAZZ_CONFIG.chord });
-        dispatch('SET_STYLE', { module: 'bb', style: JAZZ_CONFIG.bass });
-        dispatch('SET_STYLE', { module: 'sb', style: JAZZ_CONFIG.soloist });
+        dispatch(ACTIONS.SET_GENRE_FEEL, JAZZ_CONFIG);
+        dispatch(ACTIONS.SET_STYLE, { module: 'cb', style: JAZZ_CONFIG.chord });
+        dispatch(ACTIONS.SET_STYLE, { module: 'bb', style: JAZZ_CONFIG.bass });
+        dispatch(ACTIONS.SET_STYLE, { module: 'sb', style: JAZZ_CONFIG.soloist });
 
         expect(cb.style).toBe('jazz');
         expect(bb.style).toBe('quarter');

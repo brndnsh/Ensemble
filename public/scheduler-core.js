@@ -1,3 +1,4 @@
+import { ACTIONS } from './types.js';
 import { ctx, gb, cb, bb, sb, arranger, vizState, dispatch } from './state.js';
 import { ui, updateGenreUI, triggerFlash, clearActiveVisuals } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, updateSustain, restoreGains, killAllNotes } from './engine.js';
@@ -66,8 +67,8 @@ export function togglePlay(viz) {
 
         ctx.step = 0;
         isResolutionTriggered = false;
-        dispatch('RESET_SESSION'); // Reset warm-up counters
-        dispatch('SET_ENDING_PENDING', false);
+        dispatch(ACTIONS.RESET_SESSION); // Reset warm-up counters
+        dispatch(ACTIONS.SET_ENDING_PENDING, false);
         sessionStartTime = performance.now();
         syncWorker(); 
         const primeSteps = (arranger.totalSteps > 0) ? arranger.totalSteps * 2 : 0;
@@ -180,7 +181,7 @@ export function scheduler() {
                 if (ctx.sessionTimer > 0 && !ctx.isEndingPending) {
                     const elapsedMins = (performance.now() - sessionStartTime) / 60000;
                     if (elapsedMins >= ctx.sessionTimer) {
-                        dispatch('SET_ENDING_PENDING', true);
+                        dispatch(ACTIONS.SET_ENDING_PENDING, true);
                     }
                 }
 

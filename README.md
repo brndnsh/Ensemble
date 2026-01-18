@@ -70,8 +70,8 @@ The scripts will create a `dist/` folder, bundle and minify JavaScript and CSS u
 
 *   **Engine**: Vanilla JavaScript (ES Modules) & Web Audio API. Modularized core for high-precision scheduling and synthesis.
 *   **Background Processing**: Web Workers (`logic-worker.js`) for glitch-free algorithmic generation.
-*   **UI**: Pure CSS (Solarized variables) with no external frameworks.
-*   **State**: Centralized reactive state with JSDoc typing.
+*   **UI**: Pure CSS (Solarized variables) with componentized renderers for high-performance DOM recycling.
+*   **State**: Centralized reactive state with formalized action types and JSDoc typing.
 
 ## License
 
