@@ -42,6 +42,8 @@ export function initUI() {
         'chordPowerBtnDesktop', 'groovePowerBtnDesktop', 'bassPowerBtnDesktop', 'soloistPowerBtnDesktop',
         'vizPowerBtn', 'sectionList', 'addSectionBtn', 'templatesBtn', 'templatesOverlay', 'templateChips', 'closeTemplatesBtn',
         'activeSectionLabel', 'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
+        'analyzeAudioBtn', 'analyzerOverlay', 'closeAnalyzerBtn', 'analyzerDropZone', 'analyzerFileInput',
+        'analyzerProcessing', 'analyzerProgressBar', 'analyzerResults', 'analyzerSummary', 'applyAnalysisBtn',
         'clearProgBtn', 'saveBtn', 'shareBtn', 'chordVisualizer', 'chordPresets', 'userPresetsContainer',
         'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'groupingToggle', 'groupingLabel',
         'chordReverb', 'bassReverb', 'soloistReverb', 'drumPresets', 'userDrumPresetsContainer',

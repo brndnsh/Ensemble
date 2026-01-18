@@ -102,6 +102,76 @@
     }
 }
 
+/* --- Audio Analyzer --- */
+.analyzer-drop-zone {
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    background: rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    margin: 1rem 0;
+}
+
+.analyzer-drop-zone:hover, .analyzer-drop-zone.drag-over {
+    border-color: var(--accent-color);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.drop-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.drop-subtext {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.analyzer-processing {
+    text-align: center;
+    padding: 2rem;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: var(--input-bg);
+    border-radius: 4px;
+    margin-top: 1rem;
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background: var(--accent-color);
+    transition: width 0.3s ease;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.analyzer-results {
+    padding: 1rem;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
 /* Disabled state for grouped UI elements */
 .disabled-group {
     opacity: 0.4;

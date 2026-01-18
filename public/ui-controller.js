@@ -739,6 +739,141 @@ export function setupUIHandlers(refs) {
 
     updateGroupingUI();
     setupMIDIHandlers();
+    setupAnalyzerHandlers();
+}
+
+export function setupAnalyzerHandlers() {
+    if (!ui.analyzeAudioBtn) return;
+
+    let detectedChords = [];
+
+    const resetAnalyzer = () => {
+        ui.analyzerDropZone.style.display = 'block';
+        ui.analyzerProcessing.style.display = 'none';
+        ui.analyzerResults.style.display = 'none';
+        ui.analyzerProgressBar.style.width = '0%';
+        ui.analyzerFileInput.value = '';
+        detectedChords = [];
+    };
+
+    ui.analyzeAudioBtn.addEventListener('click', () => {
+        ui.arrangerActionMenu.classList.remove('open');
+        ui.arrangerActionTrigger.classList.remove('active');
+        resetAnalyzer();
+        ui.analyzerOverlay.classList.add('active');
+    });
+
+    ui.closeAnalyzerBtn.addEventListener('click', () => {
+        ui.analyzerOverlay.classList.remove('active');
+    });
+
+    ui.analyzerDropZone.addEventListener('click', () => ui.analyzerFileInput.click());
+
+    ui.analyzerDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        ui.analyzerDropZone.classList.add('drag-over');
+    });
+
+    ui.analyzerDropZone.addEventListener('dragleave', () => {
+        ui.analyzerDropZone.classList.remove('drag-over');
+    });
+
+    ui.analyzerDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        ui.analyzerDropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    ui.analyzerFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    const handleFile = async (file) => {
+        ui.analyzerDropZone.style.display = 'none';
+        ui.analyzerProcessing.style.display = 'block';
+        
+        try {
+            const { ChordAnalyzerLite } = await import('./audio-analyzer-lite.js');
+            const analyzer = new ChordAnalyzerLite();
+            
+            const arrayBuffer = await file.arrayBuffer();
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            
+            detectedChords = await analyzer.analyze(audioBuffer, { 
+                bpm: ctx.bpm,
+                onProgress: (pct) => {
+                    ui.analyzerProgressBar.style.width = `${pct}%`;
+                }
+            });
+            
+            ui.analyzerProgressBar.style.width = '100%';
+            ui.analyzerProcessing.style.display = 'none';
+            ui.analyzerResults.style.display = 'block';
+            
+            const chordCount = detectedChords.length;
+            ui.analyzerSummary.textContent = `Detected ${chordCount} chord changes in "${file.name}".`;
+            
+        } catch (err) {
+            console.error("[Analyzer] Error:", err);
+            showToast("Analysis failed: " + err.message);
+            resetAnalyzer();
+        }
+    };
+
+    ui.applyAnalysisBtn.addEventListener('click', () => {
+        if (detectedChords.length === 0) return;
+        
+        pushHistory();
+        
+        // Convert detected chords to a sequence string
+        // We group them by measure for better readability
+        const chordsPerMeasure = 4; // Assume 4/4 for now
+        let result = "";
+        
+        // We need to fill in the gaps between detected changes
+        // Chord detections are at specific beats
+        const maxBeat = detectedChords[detectedChords.length - 1].beat;
+        const timeline = new Array(maxBeat + 1).fill("");
+        
+        detectedChords.forEach(c => {
+            timeline[c.beat] = c.chord;
+        });
+
+        // Forward fill
+        let current = timeline[0] || "C";
+        for (let i = 0; i < timeline.length; i++) {
+            if (timeline[i]) current = timeline[i];
+            else timeline[i] = current;
+        }
+
+        timeline.forEach((chord, i) => {
+            result += chord + " ";
+            if ((i + 1) % chordsPerMeasure === 0) result += "| ";
+        });
+
+        // Add to a new section or replace current
+        const targetId = arranger.lastInteractedSectionId;
+        const section = arranger.sections.find(s => s.id === targetId);
+        if (section) {
+            section.value = result.trim();
+            showToast(`Applied analysis to ${section.label}`);
+        } else {
+            arranger.sections.push({ 
+                id: generateId(), 
+                label: 'Extracted', 
+                value: result.trim() 
+            });
+            showToast("Added 'Extracted' section");
+        }
+
+        refreshArrangerUI();
+        ui.analyzerOverlay.classList.remove('active');
+    });
 }
 
 export function setupMIDIHandlers() {

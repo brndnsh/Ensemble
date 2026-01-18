@@ -810,6 +810,7 @@
             <div class="arranger-action-container">
                 <div id="arrangerActionMenu" class="action-menu-content">
                     <button id="templatesBtn" title="Song Templates">📋 <span>Templates</span></button>
+                    <button id="analyzeAudioBtn" title="Analyze Audio Demo">👂 <span>Analyze Audio</span></button>
                     <button id="randomizeBtn" title="Randomize Progression" aria-label="Randomize Progression">🎲 <span>Random</span></button>
                     <button id="mutateBtn" title="Mutate Progression" aria-label="Mutate Progression">✨ <span>Mutate</span></button>
                     <button id="undoBtn" title="Undo Last Change" aria-label="Undo Last Change">↩️ <span>Undo</span></button>
@@ -832,6 +833,41 @@
             Select a template to replace your current arrangement:
         </div>
         <div id="templateChips" class="template-chips"></div>
+    </div>
+</div>
+
+<!-- Analyzer Overlay -->
+<div id="analyzerOverlay" class="settings-overlay">
+    <div class="settings-content">
+        <div class="modal-header">
+            <h2>Analyze Audio Demo</h2>
+            <button id="closeAnalyzerBtn" class="primary-btn">Cancel</button>
+        </div>
+        
+        <div id="analyzerDropZone" class="analyzer-drop-zone">
+            <div class="drop-zone-content">
+                <span class="drop-icon">🎵</span>
+                <p>Drag & drop an MP3/WAV here</p>
+                <p class="drop-subtext">or click to browse</p>
+                <input type="file" id="analyzerFileInput" accept="audio/*" style="display: none;">
+            </div>
+        </div>
+
+        <div id="analyzerProcessing" class="analyzer-processing" style="display: none;">
+            <div class="spinner"></div>
+            <p>Ensemble is listening...</p>
+            <div class="progress-bar-container">
+                <div id="analyzerProgressBar" class="progress-bar"></div>
+            </div>
+        </div>
+
+        <div id="analyzerResults" class="analyzer-results" style="display: none;">
+            <h3>Analysis Complete</h3>
+            <p id="analyzerSummary">Detected 8 chords in C Major.</p>
+            <div class="analyzer-actions">
+                <button id="applyAnalysisBtn" class="primary-btn" style="width: 100%;">Apply to Arrangement</button>
+            </div>
+        </div>
     </div>
 </div>
 
