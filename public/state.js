@@ -33,6 +33,12 @@
  * @property {boolean} stopAtEnd - Whether to stop at the end of the current progression/loop.
  * @property {boolean} isEndingPending - Whether the resolution sequence is about to trigger.
  * @property {Object} intent - Current rhythmic intent (syncopation, anticipation, etc).
+ * @property {Array<HTMLElement>|null} lastActiveDrumElements - Cache of currently animating drum UI elements.
+ * @property {number} lastPlayingStep - The last step index processed by the UI loop.
+ * @property {boolean} workerLogging - Whether to log messages from the audio worker.
+ * @property {Object|null} viz - Reference to the Visualizer instance.
+ * @property {number|null} suspendTimeout - ID of the timeout for audio context suspension.
+ * @property {number} conductorVelocity - Dynamic velocity modifier (0.0-1.0) applied by Conductor.
  */
 export const ctx = {
     audio: null,
@@ -114,6 +120,7 @@ export const ctx = {
  * @property {string} lastInteractedSectionId - ID of the last edited section.
  * @property {string} lastChordPreset - Name of the last loaded chord preset.
  * @property {boolean} isDirty - Whether the arrangement has been manually modified.
+ * @property {Array<number>|null} grouping - Custom rhythmic grouping array (e.g. [3, 2]).
  */
 export const arranger = {
     sections: [{ id: 's1', label: 'Intro', value: 'I | V | vi | IV', color: '#3b82f6', repeat: 1 }],
@@ -135,6 +142,7 @@ export const arranger = {
 };
 
 /**
+ * @typedef {Object} ChordState
  * @property {boolean} enabled - Whether the accompanist is active.
  * @property {string} style - The comping style ('smart', 'pad', etc).
  * @property {number} volume - Output gain multiplier.
@@ -143,6 +151,8 @@ export const arranger = {
  * @property {string} density - Voicing density ('thin', 'standard', 'rich').
  * @property {boolean} practiceMode - Whether to use rootless voicings even if bass is off.
  * @property {number|null} lastActiveChordIndex - Index of the currently playing chord.
+ * @property {Map<number, Object>} buffer - Scheduled notes buffer.
+ * @property {string} activeTab - Currently active UI tab ('classic' or 'smart').
  */
 export const cb = {
     enabled: true,
@@ -184,6 +194,12 @@ export const cb = {
  * @property {number} larsIntensity - Intensity of tempo drift (0.0 - 1.0).
  * @property {boolean} fillActive - Whether a drum fill is currently being played.
  * @property {Object} fillSteps - Transient storage for the generated fill pattern.
+ * @property {string} activeTab - Currently active UI tab.
+ * @property {string} mobileTab - Currently active mobile tab.
+ * @property {number|null} lastHatGain - Last velocity for the hi-hat (for dynamics).
+ * @property {number} fillStartStep - Step index where the current fill began.
+ * @property {number} fillLength - Length of the current fill in steps.
+ * @property {boolean} pendingCrash - Whether a crash cymbal is queued for the next downbeat.
  */
 export const gb = {
     enabled: true,
@@ -230,6 +246,8 @@ export const gb = {
  * @property {string} style - Playing style ID (e.g., 'walking', 'funk').
  * @property {number} pocketOffset - Micro-timing offset in seconds (e.g. 0.02 for 20ms lag).
  * @property {number} busySteps - Counter for "busy" playing periods.
+ * @property {string} activeTab - Currently active UI tab.
+ * @property {number|null} lastBassGain - Last velocity/gain value for dynamic continuity.
  */
 export const bb = {
     enabled: false,
@@ -272,6 +290,11 @@ export const bb = {
  * @property {number} motifReplayIndex - Current index in motif/hook replay.
  * @property {number} hookRetentionProb - Probability of retaining a motif as a "hook".
  * @property {number} tension - Current harmonic tension level (0.0 - 1.0).
+ * @property {boolean} doubleStops - Whether to play double stops (two notes at once).
+ * @property {Array<GainNode>} activeVoices - List of active gain nodes for voice stealing.
+ * @property {number} sessionSteps - Total steps elapsed since playback started.
+ * @property {Array<Object>} deviceBuffer - Buffer for multi-step melodic devices.
+ * @property {string} activeTab - Currently active UI tab.
  */
 export const sb = {
     enabled: false,
@@ -323,6 +346,12 @@ export const vizState = {
  * @property {number} soloistChannel - MIDI channel for Soloist (1-16).
  * @property {number} drumsChannel - MIDI channel for Drums (1-16).
  * @property {number} latency - Global MIDI latency offset in ms.
+ * @property {boolean} muteLocal - Whether to mute internal audio when MIDI is active.
+ * @property {number} chordsOctave - Octave offset for chords.
+ * @property {number} bassOctave - Octave offset for bass.
+ * @property {number} soloistOctave - Octave offset for soloist.
+ * @property {number} drumsOctave - Octave offset for drums.
+ * @property {number} velocitySensitivity - Velocity scaling factor.
  */
 export const midi = {
     enabled: false,
