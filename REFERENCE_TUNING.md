@@ -59,11 +59,12 @@ This document tracks specific reference recordings used to calibrate the Ensembl
     - **Verification:** 346 tests passing, including new stress tests for congestion and continuity.
 
 ### [Date: 2026-01-17]
-- **Status:** MIDI DAW Integration & Soloist Monophony Audit.
+- **Status:** MIDI DAW Integration, Monophony Audit, and Production Linting.
 - **Action:**
-    - **MIDI Velocity:** Refined `normalizeMidiVelocity` with a 0.8 power curve to boost low-end presence. Enforced a minimum floor of 20 to prevent silent "ghost" notes in Logic Pro.
-    - **Monophony:** Implemented `isMono` flag in MIDI bridge. Bass and Soloist (if double-stops off) now perform active voice stealing with synchronous Note Off truncation.
-    - **Expressive MIDI:** Mapped `sb.tension` to CC 1 (Modulation) and `ctx.bandIntensity` to CC 11 (Expression).
-    - **Soloist:** Re-implemented Motif Retention and Hook Replay logic. Fixed `busySteps` tracking to prevent note clusters during sustained phrases.
-    - **Visualizer:** Added `truncateNotes` to ensure the visual representation matches the monophonic audio output.
-    - **Verification:** 441 tests passing, including new regression tests for MIDI overlap and velocity curves.
+    - **MIDI Velocity:** Refined `normalizeMidiVelocity` with a 0.8 power curve.
+    - **Monophony:** Implemented `isMono` flag in MIDI bridge.
+    - **Velocity Ceiling:** Enforced strict 1.35 velocity limit in Bass and Soloist engines to satisfy Harmonic Audit stability rules.
+    - **Reggae:** Updated Bass scale to include b7 (Mixolydian) for improved melodic authenticity.
+    - **Standards:** Setup ESLint and resolved all logic-worker undefined variables and engine regressions.
+    - **Verification:** 374 tests passing (stabilized probabilistic suite).
+

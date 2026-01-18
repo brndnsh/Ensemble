@@ -134,6 +134,13 @@
 - [x] **Velocity Normalization Test**: Verify that the sum of `bandIntensity`, `accent`, and `conductorVelocity` never exceeds the MIDI 127 limit across any module.
 - [x] **Polychord Parser Stress**: Expand `tests/engines/chords.test.js` to include high-complexity jazz extensions (e.g., `C13(#11b9)`) and non-standard slash chords.
 
+# Standards & Quality Assurance (v2.29)
+
+- [x] **Project-Wide Linting**: Implement ESLint configuration and resolve all formatting/logic warnings across the codebase.
+- [x] **Engine Regression Fixes**: Stabilize Bass and Soloist procedural logic to pass probabilistic "Harmonic Audit" suites at all intensity levels.
+- [x] **Worker Integrity**: Resolve undefined variable and scope issues in `logic-worker.js` during engine priming and generation.
+- [x] **Code Cleanup**: Remove unused imports, dead parameters, and redundant state properties to reduce bundle size.
+
 # Performance Optimization (v2.1)
 
 - [x] **Synth Bass Optimization**: Cache `createSoftClipCurve` in `engine.js` or `utils.js` to avoid re-calculating it on every bass note (currently 44k ops/note).
