@@ -83,7 +83,7 @@ export function triggerFlash(intensity) {
 export function updateOctaveLabel(labelEl, octave, headerEl) {
     if (!labelEl) return;
     const { name, octave: octNum } = midiToNote(octave);
-    labelEl.textContent = `${name}${octNum}`;
+    labelEl.textContent = `${formatUnicodeSymbols(name)}${octNum}`;
     if (headerEl) headerEl.textContent = `(C${octNum})`;
 }
 
