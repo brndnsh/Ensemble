@@ -164,9 +164,9 @@ describe('Arranger Controller', () => {
             expect(arranger.sections[0].value).toBe('I | IV');
         });
 
-        it('should handle Unicode accidentals (e.g., ♭, ♯)', () => {
+        it('should handle Unicode accidentals (e.g., \u266D, \u266F)', () => {
             arranger.key = 'C';
-            arranger.sections = [{ id: 's1', value: 'A♭maj7 | C♯m7' }];
+            arranger.sections = [{ id: 's1', value: 'A\u266Dmaj7 | C\u266Fm7' }];
             
             // Transpose +1 semitone (Ab -> A, C# -> D)
             transposeKey(1, vi.fn());

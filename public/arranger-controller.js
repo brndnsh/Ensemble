@@ -125,17 +125,17 @@ export function transposeKey(delta, updateRelKeyButton) {
     
     const isMusicalNotation = (part) => {
         return part.match(/^(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i) || 
-               part.match(/^[#b♯♭](III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i);
+               part.match(/^[#b\u266F\u266D](III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i);
     };
 
     arranger.sections.forEach(section => {
         const parts = section.value.split(/([\s,|,-]+)/);
         const transposed = parts.map(part => {
-            const noteMatch = part.match(/^([A-G](?:[#b♯♭])?)(.*)/i);
+            const noteMatch = part.match(/^([A-G](?:[#b\u266F\u266D])?)(.*)/i);
             if (noteMatch && !isMusicalNotation(part)) {
                 let rootStr = noteMatch[1];
                 // Normalize Unicode to ASCII for lookup
-                rootStr = rootStr.replace('♯', '#').replace('♭', 'b');
+                rootStr = rootStr.replace('\u266F', '#').replace('\u266D', 'b');
                 
                 const root = normalizeKey(rootStr.charAt(0).toUpperCase() + rootStr.slice(1).toLowerCase());
                 const rootIndex = KEY_ORDER.indexOf(root);
