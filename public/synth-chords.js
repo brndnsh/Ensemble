@@ -29,16 +29,6 @@ export const INSTRUMENT_PRESETS = {
     }
 };
 
-/**
- * Tracks all active piano notes currently held by the sustain pedal.
- */
-const heldNotes = new Set();
-
-/**
- * Creates a custom PeriodicWave that models the harmonic profile of a Grand Piano.
- * @param {AudioContext} audioCtx 
- * @returns {PeriodicWave}
- */
 function createPianoWave(audioCtx) {
     // Fourier coefficients: [fundamental, 2nd, 3rd, 4th, 5th, ...]
     // Grand pianos have strong early harmonics and a rich mid-spectrum.
@@ -56,12 +46,12 @@ export function updateSustain(active, time = null) {
     const scheduleTime = time !== null ? time : (ctx.audio?.currentTime || 0);
     ctx.sustainActive = active;
     
-    if (!active) {
+    if (!active && ctx.heldNotes) {
         // Release all held notes
-        heldNotes.forEach((note) => {
+        ctx.heldNotes.forEach((note) => {
             note.stop(scheduleTime);
         });
-        heldNotes.clear();
+        ctx.heldNotes.clear();
     }
 }
 
@@ -70,12 +60,14 @@ export function updateSustain(active, time = null) {
  */
 export function killAllPianoNotes() {
     const now = ctx.audio?.currentTime || 0;
-    heldNotes.forEach(note => {
-        if (typeof note.stop === 'function') {
-            note.stop(now, true);
-        }
-    });
-    heldNotes.clear();
+    if (ctx.heldNotes) {
+        ctx.heldNotes.forEach(note => {
+            if (typeof note.stop === 'function') {
+                note.stop(now, true);
+            }
+        });
+        ctx.heldNotes.clear();
+    }
     ctx.sustainActive = false;
 }
 
@@ -88,6 +80,9 @@ export function killAllPianoNotes() {
  */
 export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrument = 'Piano', muted = false, dry = false } = {}) {
     if (!Number.isFinite(freq)) return;
+    
+    // Ensure heldNotes exists on ctx
+    if (!ctx.heldNotes) ctx.heldNotes = new Set();
     
     try {
         // Fallback safety for legacy instruments
@@ -164,13 +159,13 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
             try { osc.stop(t + 0.5); } catch(e) {}
         };
 
-        if (isPiano && ctx.sustainActive && !muted) {
+        if (ctx.sustainActive && !muted) {
             const noteRef = { stop: stopNote };
-            heldNotes.add(noteRef);
-            if (heldNotes.size > 64) {
-                const firstNote = heldNotes.values().next().value;
+            ctx.heldNotes.add(noteRef);
+            if (ctx.heldNotes.size > 64) {
+                const firstNote = ctx.heldNotes.values().next().value;
                 firstNote.stop(now);
-                heldNotes.delete(firstNote);
+                ctx.heldNotes.delete(firstNote);
             }
         } else {
             const actualDuration = muted ? 0.015 : duration;

@@ -12,6 +12,25 @@ const activeNoteOffs = new Map();
 const activeNotes = new Set();
 
 /**
+ * Handles incoming MIDI messages from controllers.
+ */
+function handleMIDIMessage(event) {
+    if (!midi.enabled) return;
+    
+    const [status, data1, data2] = event.data;
+    const type = status & 0xF0;
+
+    // CC Messages (0xB0)
+    if (type === 0xB0) {
+        // Controller 11 (Expression) or 1 (Modulation) maps to Band Intensity
+        if (data1 === 11 || data1 === 1) {
+            const intensity = data2 / 127;
+            dispatch('SET_BAND_INTENSITY', intensity);
+        }
+    }
+}
+
+/**
  * Initializes Web MIDI access and populates available outputs.
  */
 export async function initMIDI() {
@@ -25,6 +44,14 @@ export async function initMIDI() {
         midiAccess.onstatechange = (e) => {
             syncMIDIOutputs();
         };
+
+        // Setup input listeners
+        if (midiAccess.inputs) {
+            for (const input of midiAccess.inputs.values()) {
+                input.onmidimessage = handleMIDIMessage;
+            }
+        }
+
         syncMIDIOutputs();
         return true;
     } catch (err) {
