@@ -56,10 +56,10 @@ vi.mock('../../../public/instrument-controller.js', () => ({ flushBuffers: vi.fn
 vi.mock('../../../public/engine.js', () => ({ restoreGains: vi.fn() }));
 vi.mock('../../../public/persistence.js', () => ({ saveCurrentState: vi.fn(), debounceSaveState: vi.fn() }));
 vi.mock('../../../public/history.js', () => ({ pushHistory: vi.fn() }));
-vi.mock('../../../public/form-analysis.js', () => ({ analyzeForm: vi.fn() }));
 
 import { validateProgression, updateProgressionCache } from '../../../public/chords.js';
 import { onSectionUpdate, addSection } from '../../../public/arranger-controller.js';
+import { getSectionEnergy, analyzeForm } from '../../../public/form-analysis.js';
 import { arranger } from '../../../public/state.js';
 
 describe('Arrangement Logic & Mixed Meter', () => {
@@ -68,10 +68,31 @@ describe('Arrangement Logic & Mixed Meter', () => {
         vi.clearAllMocks();
         arranger.sections = [];
         arranger.progression = [];
+        arranger.stepMap = [];
         arranger.measureMap = [];
+        arranger.totalSteps = 0;
         arranger.isDirty = false;
         arranger.timeSignature = '4/4';
         arranger.key = 'C';
+    });
+
+    describe('Section Energy & Analysis', () => {
+        it('should return correct energy levels for labels', () => {
+            expect(getSectionEnergy('Chorus')).toBe(0.9);
+            expect(getSectionEnergy('Intro')).toBe(0.4);
+            expect(getSectionEnergy('Verse')).toBe(0.5);
+        });
+
+        it('should identify structural roles in analyzeForm', () => {
+            const section1Id = 's1';
+            const introSteps = Array.from({ length: 16 }, (_, i) => ({
+                chord: { sectionId: section1Id, sectionLabel: 'Intro', value: 'I', rootMidi: 60 },
+                start: i, end: i + 1
+            }));
+            arranger.stepMap = introSteps;
+            const form = analyzeForm();
+            expect(form.sections[0].role).toBe('Exposition');
+        });
     });
 
     describe('Section Repeats (x2, x3)', () => {

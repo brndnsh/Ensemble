@@ -333,9 +333,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq = null, c
     if (sb.currentCell && sb.currentCell[stepInBeat] === 1) {} else return null;                
     sb.notesInPhrase++;
 
-    // --- 5. Pitch Selection ---
-    const scaleIntervals = getScaleForChord(currentChord, nextChord, style);
-    const rootMidi = currentChord.rootMidi;
+    // --- 5. Pitch Selection & Anticipation ---
+    let targetChord = currentChord;
+    const isLateInChord = stepInChord >= (currentChord.beats * stepsPerBeat) - 2;
+    if (nextChord && isLateInChord && Math.random() < (config.anticipationProb || 0)) {
+        targetChord = nextChord;
+    }
+
+    const scaleIntervals = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
+    const rootMidi = targetChord.rootMidi;
     const scaleTones = scaleIntervals.map(i => rootMidi + i);
     const chordTones = currentChord.intervals.map(i => rootMidi + i);
     
