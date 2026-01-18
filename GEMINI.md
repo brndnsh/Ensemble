@@ -42,6 +42,7 @@ Ensemble is a zero-dependency project and requires no build step.
 *   **Vanilla JS**: No external frameworks or libraries (except for PWA polyfills if needed).
 *   **ES Modules**: Use `import`/`export` for all logic. Maintain a flat or shallow directory structure.
 *   **Styling**: Use CSS variables defined in `:root` (Solarized theme). Avoid hardcoded hex values in component styles.
+*   **Modular CSS**: Styles are split into domain-specific files in `public/css/` (e.g., `layout.css`, `controls.css`) and aggregated in `styles.css`. Add new styles to the appropriate module.
 *   **State Access**: Read state through the exported objects (`ctx`, `arranger`, `gb`, etc.). **NEVER** modify these objects directly. Use `dispatch(action, payload)` from `state.js` to trigger updates.
 *   **Precision Timing**: Use `ctx.audio.currentTime` for all audio scheduling. Visual events should be pushed to `ctx.drawQueue` for synchronization in the `requestAnimationFrame` loop. Always snap `ctx.nextNoteTime` to `ctx.unswungNextNoteTime` at measure boundaries to prevent drift accumulation.
 *   **Worker Sync**: When refreshing the engine state, use `syncWorker(action, payload)` for delta-based updates or a full sync before `flushBuffers()`. Monitor **Logic Latency** via `performance.now()` in worker messages.
