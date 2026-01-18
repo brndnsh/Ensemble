@@ -220,10 +220,8 @@ export function getStepInfo(step, tsConfig, measureMap, allTSConfigs) {
         if (!str) return str;
         return str
             .replace(/#/g, '♯')
-            // Replace 'b' with '♭' if it's at the end of the string (note names like Bb)
-            // or if it's followed by a number (suffixes like b9)
-            // or if it's followed by a Roman numeral (bII, bVII)
-            .replace(/b(?=[0-9IVi|$])/g, '♭');
+            .replace(/([A-G])b/g, '$1♭')
+            .replace(/b(?=[0-9IVi/])/g, '♭');
     }
 
 let cachedSoftClipCurve = null;

@@ -1,8 +1,34 @@
 /* eslint-disable */
 import { describe, it, expect } from 'vitest';
-import { normalizeKey, getFrequency, midiToNote, getMidi, getStepsPerMeasure } from '../../public/utils.js';
+import { normalizeKey, getFrequency, midiToNote, getMidi, getStepsPerMeasure, formatUnicodeSymbols } from '../../public/utils.js';
 
 describe('Utility Functions', () => {
+    describe('formatUnicodeSymbols', () => {
+        it('should convert # to ♯', () => {
+            expect(formatUnicodeSymbols('C#')).toBe('C♯');
+            expect(formatUnicodeSymbols('F#m7')).toBe('F♯m7');
+            expect(formatUnicodeSymbols('#IV')).toBe('♯IV');
+        });
+
+        it('should convert b to ♭ for notes and suffixes', () => {
+            expect(formatUnicodeSymbols('Bb')).toBe('B♭');
+            expect(formatUnicodeSymbols('Ebmaj7')).toBe('E♭maj7');
+            expect(formatUnicodeSymbols('bII')).toBe('♭II');
+            expect(formatUnicodeSymbols('m7b5')).toBe('m7♭5');
+            expect(formatUnicodeSymbols('7b9')).toBe('7♭9');
+        });
+
+        it('should not convert b in quality names like halfdim or maj', () => {
+            expect(formatUnicodeSymbols('halfdim')).toBe('halfdim');
+            expect(formatUnicodeSymbols('maj7')).toBe('maj7');
+        });
+
+        it('should handle bass notes with slashes', () => {
+            expect(formatUnicodeSymbols('Ab/Gb')).toBe('A♭/G♭');
+            expect(formatUnicodeSymbols('C/E')).toBe('C/E');
+        });
+    });
+
     describe('normalizeKey', () => {
         it('should normalize C# to Db', () => {
             expect(normalizeKey('C#')).toBe('Db');
