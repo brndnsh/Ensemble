@@ -14,7 +14,6 @@ export function extractForm(chordSequence, beatsPerMeasure = 4) {
 
     // 2. Identify patterns (segments of 2, 4, or 8 measures)
     const suggestedSections = [];
-    let currentSection = { label: 'Section 1', measures: [measures[0]], startIdx: 0 };
     
     const findPattern = (startIdx, length) => {
         if (startIdx + length * 2 > measures.length) return false;

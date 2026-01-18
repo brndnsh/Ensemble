@@ -792,21 +792,52 @@ export function setupAnalyzerHandlers() {
         }
     });
 
+    let currentAudioBuffer = null;
+    let currentFileName = "";
+
     const handleFile = async (file) => {
         ui.analyzerDropZone.style.display = 'none';
         ui.analyzerProcessing.style.display = 'block';
+        currentFileName = file.name;
         
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const audioCtx = ctx.audio || new (window.AudioContext || window.webkitAudioContext)();
+            currentAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            
+            // Initialize trim inputs
+            ui.analyzerStartInput.value = 0;
+            ui.analyzerEndInput.value = Math.floor(currentAudioBuffer.duration);
+            ui.analyzerDurationLabel.textContent = `Total Duration: ${currentAudioBuffer.duration.toFixed(1)}s`;
+            
+            await performAnalysis();
+            
+        } catch (err) {
+            console.error("[Analyzer] Error:", err);
+            showToast("Loading failed: " + err.message);
+            resetAnalyzer();
+        }
+    };
+
+    const performAnalysis = async () => {
+        if (!currentAudioBuffer) return;
+        
+        ui.analyzerProcessing.style.display = 'block';
+        ui.analyzerResults.style.display = 'none';
+        ui.analyzerProgressBar.style.width = '0%';
+
         try {
             const { ChordAnalyzerLite } = await import('./audio-analyzer-lite.js');
             const { extractForm } = await import('./form-extractor.js');
             const analyzer = new ChordAnalyzerLite();
-            
-            const arrayBuffer = await file.arrayBuffer();
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            
-            const detectedRaw = await analyzer.analyze(audioBuffer, { 
+
+            const startTime = parseFloat(ui.analyzerStartInput.value) || 0;
+            const endTime = parseFloat(ui.analyzerEndInput.value) || currentAudioBuffer.duration;
+
+            const detectedRaw = await analyzer.analyze(currentAudioBuffer, { 
                 bpm: ctx.bpm,
+                startTime,
+                endTime,
                 onProgress: (pct) => {
                     ui.analyzerProgressBar.style.width = `${pct}%`;
                 }
@@ -845,14 +876,15 @@ export function setupAnalyzerHandlers() {
                 container.appendChild(item);
             });
 
-            ui.analyzerSummary.textContent = `Identified ${detectedChords.length} song sections in "${file.name}".`;
+            ui.analyzerSummary.textContent = `Successfully analyzed "${currentFileName}". Detected ${detectedChords.length} song sections.`;
             
         } catch (err) {
-            console.error("[Analyzer] Error:", err);
+            console.error("[Analyzer] Analysis Error:", err);
             showToast("Analysis failed: " + err.message);
-            resetAnalyzer();
         }
     };
+
+    ui.reanalyzeBtn.addEventListener('click', performAnalysis);
 
     ui.applyAnalysisBtn.addEventListener('click', () => {
         if (detectedChords.length === 0) return;

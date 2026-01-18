@@ -25,7 +25,13 @@ export class ChordAnalyzerLite {
     async analyze(audioBuffer, options = {}) {
         const bpm = options.bpm || 120;
         const sampleRate = audioBuffer.sampleRate;
-        const signal = audioBuffer.getChannelData(0); // Mono
+        
+        let fullSignal = audioBuffer.getChannelData(0); // Mono
+        
+        // Handle Trimming
+        const startSample = Math.floor((options.startTime || 0) * sampleRate);
+        const endSample = options.endTime ? Math.floor(options.endTime * sampleRate) : fullSignal.length;
+        const signal = fullSignal.slice(startSample, endSample);
         
         // We analyze every beat to keep it musically relevant
         const secondsPerBeat = 60 / bpm;
