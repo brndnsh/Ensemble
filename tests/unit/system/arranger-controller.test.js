@@ -62,7 +62,10 @@ vi.mock('../../../public/persistence.js', () => ({
 
 vi.mock('../../../public/utils.js', () => ({
     generateId: vi.fn(() => 'mock-id'),
-    normalizeKey: vi.fn((k) => k)
+    normalizeKey: vi.fn((k) => {
+        const map = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
+        return map[k] || k;
+    })
 }));
 
 vi.mock('../../../public/history.js', () => ({
@@ -159,6 +162,16 @@ describe('Arranger Controller', () => {
             expect(arranger.key).toBe('D');
             // Roman numerals stay relative
             expect(arranger.sections[0].value).toBe('I | IV');
+        });
+
+        it('should handle Unicode accidentals (e.g., ♭, ♯)', () => {
+            arranger.key = 'C';
+            arranger.sections = [{ id: 's1', value: 'A♭maj7 | C♯m7' }];
+            
+            // Transpose +1 semitone (Ab -> A, C# -> D)
+            transposeKey(1, vi.fn());
+            
+            expect(arranger.sections[0].value).toBe('Amaj7 | Dm7');
         });
     });
 

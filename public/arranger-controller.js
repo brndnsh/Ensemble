@@ -125,17 +125,25 @@ export function transposeKey(delta, updateRelKeyButton) {
     
     const isMusicalNotation = (part) => {
         return part.match(/^(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i) || 
-               part.match(/^[#b](III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i);
+               part.match(/^[#b♯♭](III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i);
     };
 
     arranger.sections.forEach(section => {
         const parts = section.value.split(/([\s,|,-]+)/);
         const transposed = parts.map(part => {
-            const noteMatch = part.match(/^([A-G][#b]?)(.*)/i);
+            const noteMatch = part.match(/^([A-G](?:[#b♯♭])?)(.*)/i);
             if (noteMatch && !isMusicalNotation(part)) {
-                const root = normalizeKey(noteMatch[1].charAt(0).toUpperCase() + noteMatch[1].slice(1).toLowerCase());
-                const newRoot = KEY_ORDER[(KEY_ORDER.indexOf(root) + delta + 12) % 12];
-                return newRoot + noteMatch[2];
+                let rootStr = noteMatch[1];
+                // Normalize Unicode to ASCII for lookup
+                rootStr = rootStr.replace('♯', '#').replace('♭', 'b');
+                
+                const root = normalizeKey(rootStr.charAt(0).toUpperCase() + rootStr.slice(1).toLowerCase());
+                const rootIndex = KEY_ORDER.indexOf(root);
+                
+                if (rootIndex !== -1) {
+                    const newRoot = KEY_ORDER[(rootIndex + delta + 12) % 12];
+                    return newRoot + noteMatch[2];
+                }
             }
             return part;
         });
