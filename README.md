@@ -38,11 +38,12 @@ npm test
 
 ## Deployment
 
-Ensemble includes scripts for automated deployment to remote servers using `esbuild` for minification and `scp` for file transfer.
+Ensemble includes scripts for automated deployment to remote servers using `esbuild` for minification and `rsync` for efficient, clean file transfer.
 
 ### Prerequisites
 
 - `esbuild` (installed via `npm install`)
+- `rsync` (available on local and remote machines)
 - SSH access with the `root` user to the target servers (`ensembletest` and `ensemble`).
 
 ### Commands
@@ -63,7 +64,7 @@ You can test the build process without uploading by using the `-whatif` flag dir
 ./scripts/deploy-prod.sh -whatif
 ```
 
-The scripts will create a `dist/` folder, bundle and minify JavaScript and CSS using `esbuild`, apply cache-busting hashes, sync assets, and upload the contents to `/var/www/html/` on the target server.
+The scripts will create a `dist/` folder, bundle and minify JavaScript and CSS using `esbuild`, apply cache-busting hashes, sync assets, and upload the contents to `/var/www/html/` on the target server. Old files on the server will be automatically removed.
 
 ## Tech Stack
 

@@ -56,11 +56,11 @@ sed -i "s#/\* ASSETS_PLACEHOLDER \*/#$ASSETS_LIST#" dist/sw.js
 
 # 8. Deploy to PROD server
 if [ "$DRY_RUN" = true ]; then
-    echo "🔍 (Simulated) scp -r dist/* root@ensemble:/var/www/html/"
+    echo "🔍 (Simulated) rsync -avz --delete -e ssh dist/ root@ensemble:/var/www/html/"
     echo "✅ Dry run complete. Artifacts available in 'dist/' for inspection."
 else
-    echo "🚚 Uploading to ensemble..."
-    scp -r dist/* root@ensemble:/var/www/html/
+    echo "🚚 Syncing to ensemble (cleaning old files)..."
+    rsync -avz --delete -e ssh dist/ root@ensemble:/var/www/html/
     
     # 9. Cleanup
     echo "🧹 Cleaning up..."
