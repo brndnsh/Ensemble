@@ -54,6 +54,7 @@ describe('Soloist Engine Logic', () => {
         sb.lastInterval = 0;
         sb.sessionSteps = 1000;
         sb.tension = 0;
+        sb.currentCell = [1, 1, 1, 1];
         gb.genreFeel = 'Rock';
     });
 
@@ -94,14 +95,17 @@ describe('Soloist Engine Logic', () => {
         });
 
         it('should anticipate the next chord on step 14 or 15', () => {
+            const chordCmaj = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major', beats: 4 };
             let anticipated = false;
-            for (let i = 0; i < 500; i++) {
+            for (let i = 0; i < 1000; i++) {
                 sb.busySteps = 0;
-                const result = getSoloistNote(chordC, chordF, 14, 440, 72, 'bird', 14);
+                sb.isResting = false;
+                const result = getSoloistNote(chordCmaj, chordF, 14, 440, 72, 'bird', 14);
                 if (result) {
                     const note = Array.isArray(result) ? result[0] : result;
                     const pc = note.midi % 12;
-                    if ([5, 9, 10].includes(pc)) { anticipated = true; break; }
+                    // pc 10 (Bb) is in F major but NOT in C major
+                    if (pc === 10) { anticipated = true; break; }
                 }
             }
             expect(anticipated).toBe(true);
@@ -118,9 +122,11 @@ describe('Soloist Engine Logic', () => {
 
             deviceTests.forEach(t => {
                 let triggered = false;
-                for (let i = 0; i < 200; i++) {
+                for (let i = 0; i < 500; i++) {
                     sb.deviceBuffer = [];
                     sb.busySteps = 0;
+                    sb.isResting = false;
+                    sb.currentPhraseSteps = 1;
                     getSoloistNote(chordC, null, 16, 440, 72, t.style, 0);
                     if (sb.deviceBuffer.length > 0) { triggered = true; break; }
                 }
