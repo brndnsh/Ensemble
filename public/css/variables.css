@@ -1,0 +1,80 @@
+:root {
+    color-scheme: dark light;
+    
+    /* Solarized Dark (Default) */
+    --base03: #002b36;
+    --base02: #073642;
+    --base01: #586e75;
+    --base00: #657b83;
+    --base0: #839496;
+    --base1: #93a1a1;
+    --base2: #eee8d5;
+    --base3: #fdf6e3;
+    --yellow: #b58900;
+    --orange: #cb4b16;
+    --red: #dc322f;
+    --magenta: #d33682;
+    --violet: #6c71c4;
+    --blue: #268bd2;
+    --cyan: #2aa198;
+    --green: #859900;
+
+    --bg-color: var(--base03);
+    --panel-color: var(--base02);
+    --text-color: var(--base1);
+    --text-secondary: var(--base0);
+    --text-muted: var(--base01);
+    --accent-color: var(--blue);
+    --accent-hover: var(--cyan);
+    --success-color: var(--green);
+    --soloist-color: var(--magenta);
+    --smart-color: var(--violet);
+    --error-color: var(--red);
+    --card-bg: #0a404e; /* Slightly lighter than base02 for contrast */
+    --card-bg-hover: var(--base01);
+    --border-color: rgba(147, 161, 161, 0.15);
+    --input-bg: rgba(0, 43, 54, 0.4);
+    --select-bg: var(--base03);
+    --select-text: var(--base2);
+    --select-border: var(--base01);
+    
+    /* Sequencer Specific */
+    --step-bg: rgba(147, 161, 161, 0.15);
+    --step-bg-hover: rgba(147, 161, 161, 0.25);
+
+    /* Metronome */
+    --beat-active: var(--yellow);
+    --beat-inactive-odd: var(--base02);
+    --beat-inactive-even: var(--base01);
+    --beat-playing: var(--orange);
+}
+
+[data-theme="light"] {
+    color-scheme: light;
+    --bg-color: var(--base3);
+    --panel-color: var(--base2);
+    --text-color: var(--base02);
+    --text-secondary: var(--base01);
+    --text-muted: var(--base00);
+    --accent-color: var(--blue);
+    --accent-hover: var(--cyan);
+    --success-color: var(--green);
+    --soloist-color: var(--magenta);
+    --error-color: var(--red);
+    --card-bg: var(--base3);
+    --card-bg-hover: var(--base2);
+    --border-color: rgba(7, 54, 66, 0.15);
+    --input-bg: rgba(238, 232, 213, 0.5);
+    --select-bg: var(--base3);
+    --select-text: var(--base02);
+    --select-border: var(--base1);
+
+    /* Sequencer Specific */
+    --step-bg: rgba(7, 54, 66, 0.1);
+    --step-bg-hover: rgba(7, 54, 66, 0.2);
+
+    /* Metronome */
+    --beat-active: var(--yellow);
+    --beat-inactive-odd: var(--base2);
+    --beat-inactive-even: var(--base3);
+}

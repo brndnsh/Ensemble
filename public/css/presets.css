@@ -1,0 +1,92 @@
+
+/* --- Presets & Genre Colors --- */
+.presets-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.preset-chip {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    background: var(--input-bg);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.preset-chip:hover {
+    background: var(--card-bg-hover);
+    color: var(--text-color);
+}
+
+.preset-chip.active {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border-color: transparent !important;
+    z-index: 1;
+}
+
+/* Genre Color Assignments - Slightly adjusted for Solarized palette harmony */
+.preset-chip[data-category="Basic"] { border-color: var(--base01); }
+.preset-chip[data-category="Pop/Rock"] { border-color: var(--blue); }
+.preset-chip[data-category="Electronic"] { border-color: var(--violet); }
+.preset-chip[data-id="Disco"] { border-color: var(--violet); }
+.preset-chip[data-category="Soul/R&B"], .preset-chip[data-category="Soul/Funk"] { border-color: var(--magenta); }
+.preset-chip[data-category="Blues"] { border-color: var(--cyan); }
+.preset-chip[data-category="World/Latin"] { border-color: var(--orange); }
+.preset-chip[data-category="Jazz"] { border-color: var(--green); }
+.preset-chip[data-category="Classical/Trad"] { border-color: var(--red); }
+.preset-chip[data-category="Theory"] { border-color: var(--yellow); }
+.preset-chip[data-category="Rock/Metal"] { border-color: var(--red); }
+.preset-chip[data-category="Keys"] { border-color: var(--blue); }
+.preset-chip[data-category="Synth"] { border-color: var(--violet); }
+.preset-chip[data-category="String"] { border-color: var(--orange); }
+.preset-chip[data-category="Experimental"] { border-color: var(--violet); }
+.preset-chip[data-category="User"] { border-color: var(--text-color); opacity: 0.8; }
+
+/* Special Smart/Auto Styling */
+.preset-chip[data-id="smart"] {
+    border-color: var(--smart-color) !important;
+    color: var(--smart-color);
+    background: rgba(108, 113, 196, 0.08);
+    font-weight: 600;
+}
+
+.preset-chip[data-id="smart"]:hover {
+    background: rgba(108, 113, 196, 0.15);
+}
+
+.preset-chip.active[data-id="smart"] {
+    background: var(--smart-color) !important;
+    color: white !important;
+    box-shadow: 0 0 12px rgba(108, 113, 196, 0.5);
+}
+
+.groove-tab-btn[data-tab="smart"].active {
+    color: var(--smart-color);
+    border-bottom-color: var(--smart-color);
+}
+
+/* Auto-checkboxes and Smart elements */
+#autoIntensityCheck, #autoFollowCheck, #applyPresetSettingsCheck {
+    accent-color: var(--smart-color);
+}
+
+.preset-chip.active[data-category="Basic"] { background: var(--base01); color: white; }
+.preset-chip.active[data-category="Pop/Rock"] { background: var(--blue); color: white; }
+.preset-chip.active[data-category="Electronic"] { background: var(--violet); color: white; }
+.preset-chip.active[data-id="Disco"] { background: var(--violet); color: white; }
+.preset-chip.active[data-category="Soul/R&B"], .preset-chip.active[data-category="Soul/Funk"] { background: var(--magenta); color: white; }
+.preset-chip.active[data-category="Blues"] { background: var(--cyan); color: white; }
+.preset-chip.active[data-category="World/Latin"] { background: var(--orange); color: white; }
+.preset-chip.active[data-category="Jazz"] { background: var(--green); color: white; }
+.preset-chip.active[data-category="Classical/Trad"] { background: var(--red); color: white; }
+.preset-chip.active[data-category="Theory"] { background: var(--yellow); color: white; }
+.preset-chip.active[data-category="Rock/Metal"] { background: var(--red); color: white; }
+.preset-chip.active[data-category="Keys"] { background: var(--blue); color: white; }
+.preset-chip.active[data-category="Synth"] { background: var(--violet); color: white; }
+.preset-chip.active[data-category="String"] { background: var(--orange); color: white; }
+.preset-chip.active[data-category="Experimental"] { background: var(--violet); color: white; }

@@ -1,0 +1,83 @@
+
+/* --- Smart Controls --- */
+.smart-control-group {
+    margin-bottom: 1.5rem;
+}
+
+.genre-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.genre-btn {
+    flex: none; /* Reset flex since we're using grid now */
+    padding: 0.75rem 0.25rem; /* Slightly narrower horizontal padding for 3-col fit */
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.genre-btn:hover {
+    border-color: var(--accent-color);
+    background: var(--card-bg-hover);
+}
+
+.genre-btn[data-genre="Rock"] { border-color: var(--blue); }
+.genre-btn[data-genre="Jazz"] { border-color: var(--green); }
+.genre-btn[data-genre="Funk"] { border-color: var(--magenta); }
+.genre-btn[data-genre="Disco"] { border-color: var(--violet); }
+.genre-btn[data-genre="Blues"] { border-color: var(--cyan); }
+    .genre-btn[data-genre="Neo-Soul"] { border-color: var(--magenta); }
+    .genre-btn[data-genre="Reggae"] { border-color: var(--orange); }
+    .genre-btn[data-genre="Acoustic"] { border-color: var(--yellow); }
+    .genre-btn[data-genre="Bossa"] { border-color: var(--green); }
+    
+.genre-btn.active {
+    background: var(--accent-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.genre-btn.pending {
+    position: relative;
+    animation: genre-pulse 1s infinite alternate;
+    border-style: dashed !important;
+}
+
+.genre-btn.pending::after {
+    content: attr(data-countdown);
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--error-color);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+@keyframes genre-pulse {
+    from { opacity: 0.7; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1.02); }
+}
+
+.genre-btn.active[data-genre="Rock"] { background: var(--blue); border-color: var(--blue); }
+    .genre-btn.active[data-genre="Jazz"] { background: var(--green); border-color: var(--green); }
+    .genre-btn.active[data-genre="Funk"] { background: var(--magenta); border-color: var(--magenta); }
+    .genre-btn.active[data-genre="Disco"] { background: var(--violet); border-color: var(--violet); }
+    .genre-btn.active[data-genre="Blues"] { background: var(--cyan); border-color: var(--cyan); }
+    .genre-btn.active[data-genre="Neo-Soul"] { background: var(--magenta); border-color: var(--magenta); }
+    .genre-btn.active[data-genre="Reggae"] { background: var(--orange); border-color: var(--orange); }
+    .genre-btn.active[data-genre="Acoustic"] { background: var(--yellow); border-color: var(--yellow); }
+    .genre-btn.active[data-genre="Bossa"] { background: var(--green); border-color: var(--green); }
