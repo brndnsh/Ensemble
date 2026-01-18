@@ -25,17 +25,21 @@ Ensemble is a high-performance Progressive Web App (PWA) designed for generative
 
 ## Building and Running
 
-Ensemble is a zero-dependency project and requires no build step.
+Ensemble is designed for a zero-dependency development workflow, but uses a bundled build process for production performance.
 
-*   **Development Server**: Serve the root directory using any static file server.
+*   **Development Server**: Serve the root directory using any static file server. No build step required; uses native ES Modules.
     ```bash
     # Python
     python3 -m http.server 8000
     # Node.js
     npx serve .
     ```
+*   **Production Build**: The deployment scripts (`deploy-prod.sh`, `deploy-test.sh`) handle bundling, minification, and cache-busting using `esbuild`.
+    *   **Bundle**: `main.js`, `logic-worker.js`, and `styles.css` are bundled to reduce network requests.
+    *   **Cache Busting**: Filenames are hashed (e.g., `main.a1b2c.js`) based on the git commit.
+    *   **Dry Run**: Use `-whatif` to test the build without deploying: `./scripts/deploy-prod.sh -whatif`
 *   **Testing**: Automated unit tests are located in the `tests/` directory and use Vitest. Run `npm test` to execute them. Covers `chords.js`, `utils.js`, `arranger-controller.js`, `soloist.js`, etc. Includes integration tests for **performance resilience (congestion)** and **harmonic continuity**.
-*   **PWA**: Service worker (`sw.js`) and manifest (`manifest.json`) are configured for offline use and installation.
+*   **PWA**: Service worker (`sw.js`) and manifest (`manifest.json`) are configured for offline use. The asset list in `sw.js` is dynamically generated during the production build.
 
 ## Development Conventions
 

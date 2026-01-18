@@ -57,7 +57,13 @@ To deploy to the production environment:
 npm run deploy:prod
 ```
 
-The scripts will create a `dist/` folder, minify all JavaScript files, sync assets, and upload the contents to `/var/www/html/` on the target server.
+**Dry Run:**
+You can test the build process without uploading by using the `-whatif` flag directly with the script:
+```bash
+./scripts/deploy-prod.sh -whatif
+```
+
+The scripts will create a `dist/` folder, bundle and minify JavaScript and CSS using `esbuild`, apply cache-busting hashes, sync assets, and upload the contents to `/var/www/html/` on the target server.
 
 ## Tech Stack
 
