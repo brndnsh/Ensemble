@@ -1,3 +1,32 @@
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    touch-action: manipulation;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+#flashOverlay {
+    position: fixed;
+    inset: 0;
+    background-color: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 0.05s;
+}
+
 /* --- Layout --- */
 .stepper-btn:hover {
     background: rgba(147, 161, 161, 0.1) !important;
