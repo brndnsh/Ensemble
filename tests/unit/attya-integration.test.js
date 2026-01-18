@@ -35,6 +35,7 @@ vi.mock('../../public/state.js', () => ({
     cb: { enabled: true, octave: 60, density: 'standard', practiceMode: false, buffer: new Map() },
     bb: { enabled: true, style: 'quarter', pocketOffset: 0, lastFreq: 110, volume: 0.5, buffer: new Map() },
     ctx: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 }, intent: {}, drawQueue: [] },
+    midi: { enabled: false, selectedOutputId: null, soloistChannel: 3, chordsChannel: 1, bassChannel: 2, drumsChannel: 10, soloistOctave: 0, chordsOctave: 0, bassOctave: 0, drumsOctave: 0 },
     arranger: { 
         key: 'Ab', 
         isMinor: false,
