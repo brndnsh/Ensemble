@@ -1,137 +1,106 @@
 /**
  * Analyzes a raw sequence of chords to find repeating structures and suggest sections.
- * Optimized to 'think like a lead sheet' by favoring strong beats (1 and 3).
+ * Optimized for both standard songs and long, improvisational jam sessions.
  */
 export function extractForm(chordSequence, beatsPerMeasure = 4) {
     if (!chordSequence || chordSequence.length < 4) return [];
 
-    // 1. LEAD SHEET PARSING (Beat Anchoring)
-    // Real charts usually don't have chords changing on beats 2 or 4 unless it's very complex.
-    // We snap changes to the nearest strong beat (1 or 3).
-    const leadSheetMeasures = [];
+    // 1. HARMONIC SIMPLIFICATION (The "Ear" Pass)
+    const simplify = (c) => {
+        if (!c || c === 'Rest' || c === '-') return '-';
+        return c.replace(/maj7|m7|7|sus4|sus2|dim|5/g, (match) => {
+            if (match.startsWith('m')) return 'm'; 
+            return ''; 
+        });
+    };
+
+    // 2. MEASURE CONSOLIDATION
+    const measures = [];
+    const originalMeasures = []; 
+    
     for (let i = 0; i < chordSequence.length; i += beatsPerMeasure) {
         const slice = chordSequence.slice(i, i + beatsPerMeasure);
         if (slice.length < beatsPerMeasure) break;
 
-        // Extract the most stable chord for the first half (Beats 1 & 2) 
-        // and second half (Beats 3 & 4)
-        const half1 = slice.slice(0, 2);
-        const half2 = slice.slice(2, 4);
-
-        const getConsensus = (beats) => {
-            const counts = {};
-            beats.forEach(b => counts[b] = (counts[b] || 0) + 1);
-            return Object.entries(counts).reduce((a, b) => a[1] >= b[1] ? a : b)[0];
-        };
-
-        const chord1 = getConsensus(half1);
-        const chord2 = getConsensus(half2);
-
-        // Standard lead sheet measure format: 
-        // If chord is the same for the whole bar: "C"
-        // If it changes on the 3: "C G"
-        if (chord1 === chord2) {
-            leadSheetMeasures.push(chord1);
+        const counts = {};
+        slice.forEach(c => counts[c] = (counts[c] || 0) + 1);
+        const majority = Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+        
+        if (counts[majority] >= beatsPerMeasure * 0.5) {
+            measures.push(simplify(majority));
+            originalMeasures.push(majority);
         } else {
-            leadSheetMeasures.push(`${chord1} ${chord2}`);
+            measures.push(`${simplify(slice[0])} ${simplify(slice[2])}`);
+            originalMeasures.push(`${slice[0]} ${slice[2]}`);
         }
     }
 
-    // 2. STRUCTURAL GROUPING
-    // We look for patterns of 8, 4, or 2 measures (Standard song blocks)
-    const suggestedSections = [];
+    // 3. PATTERN MINING (Multi-scale: 16, 8, 4, 2)
+    const sections = [];
     let i = 0;
-    let sectionCount = 1;
 
-    const getPattern = (start, len) => leadSheetMeasures.slice(start, start + len).join('|');
+    const getSimilarity = (idx1, idx2, len) => {
+        let matches = 0;
+        for (let k = 0; k < len; k++) {
+            if (measures[idx1 + k] === measures[idx2 + k]) matches++;
+        }
+        return matches / len;
+    };
 
-    while (i < leadSheetMeasures.length) {
-        let foundPattern = false;
-        
-        // Look for the largest repeating blocks first (8 -> 4 -> 2)
-        for (let len of [8, 4, 2]) {
-            if (i + len * 2 <= leadSheetMeasures.length) {
-                const p1 = getPattern(i, len);
-                const p2 = getPattern(i + len, len);
-                
-                if (p1 === p2) {
-                    const value = leadSheetMeasures.slice(i, i + len).join(' | ');
-                    
-                    // Check if we can merge with previous identical section
-                    const last = suggestedSections[suggestedSections.length - 1];
-                    if (last && last.value === value) {
-                        last.repeat += 2;
-                    } else {
-                        suggestedSections.push({
-                            label: `Section ${sectionCount++}`,
-                            value: value,
-                            repeat: 2
-                        });
+    while (i < measures.length) {
+        let bestLen = 0;
+        let bestRepeat = 0;
+
+        // Try to find the longest possible repeating block
+        for (let len of [16, 8, 4, 2]) {
+            if (i + len * 2 <= measures.length) {
+                if (getSimilarity(i, i + len, len) >= 0.75) {
+                    bestLen = len;
+                    bestRepeat = 2;
+                    while (i + (bestRepeat + 1) * len <= measures.length && 
+                           getSimilarity(i, i + bestRepeat * len, len) >= 0.75) {
+                        bestRepeat++;
                     }
-                    
-                    i += len * 2;
-                    // Check for further repeats
-                    while (i + len <= leadSheetMeasures.length && getPattern(i, len) === p1) {
-                        suggestedSections[suggestedSections.length - 1].repeat++;
-                        i += len;
-                    }
-                    foundPattern = true;
                     break;
                 }
             }
         }
 
-        if (!foundPattern) {
-            // No repeat found, capture a standard 4-bar or 8-bar unique block
-            const remaining = leadSheetMeasures.length - i;
-            let len = Math.min(4, remaining);
-            if (remaining <= 6) len = remaining;
-
-            const value = leadSheetMeasures.slice(i, i + len).join(' | ');
-            const last = suggestedSections[suggestedSections.length - 1];
-            
-            if (last && last.value === value) {
-                last.repeat++;
-            } else {
-                suggestedSections.push({
-                    label: `Section ${sectionCount++}`,
-                    value: value,
-                    repeat: 1
-                });
-            }
+        if (bestLen > 0) {
+            const value = originalMeasures.slice(i, i + bestLen).join(' | ');
+            sections.push({ value, repeat: bestRepeat });
+            i += bestLen * bestRepeat;
+        } else {
+            // Look ahead to see if a repeat of the current 4-bar block starts soon
+            const len = Math.min(4, measures.length - i);
+            const value = originalMeasures.slice(i, i + len).join(' | ');
+            sections.push({ value, repeat: 1 });
             i += len;
         }
     }
 
-    // 3. MUSICIAN LABELING
-    // Apply standard labels based on common song forms
-    if (suggestedSections.length >= 2) {
-        // Section 1 is almost always Intro or Verse
-        if (suggestedSections[0].repeat <= 2) suggestedSections[0].label = 'Intro';
-        else suggestedSections[0].label = 'Verse';
+    // 4. AGGRESSIVE CONSOLIDATION (Merging consecutive similar segments)
+    const consolidated = [];
+    sections.forEach(s => {
+        const last = consolidated[consolidated.length - 1];
+        if (last && last.value === s.value) {
+            last.repeat += s.repeat;
+        } else {
+            consolidated.push(s);
+        }
+    });
 
-        // Find the most frequent repeating section - that's likely the Chorus or Verse
-        const valueCounts = {};
-        suggestedSections.forEach(s => valueCounts[s.value] = (valueCounts[s.value] || 0) + (s.repeat));
-        const mostFrequentValue = Object.entries(valueCounts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+    // 5. MUSICIAN LABELING
+    consolidated.forEach((s, idx) => {
+        const totalMeasures = s.value.split('|').length * s.repeat;
+        const isVamp = s.value.split('|').every(m => m.trim() === s.value.split('|')[0].trim());
 
-        let hasVerse = false;
-        let hasChorus = false;
+        if (s.repeat >= 4 || totalMeasures >= 16) s.label = "Main Theme";
+        else if (isVamp) s.label = "Vamp";
+        else if (idx === 0) s.label = "Intro";
+        else if (idx === consolidated.length - 1) s.label = "Outro";
+        else s.label = "Section";
+    });
 
-        suggestedSections.forEach((s, idx) => {
-            if (s.value === mostFrequentValue) {
-                if (!hasVerse) { s.label = 'Verse'; hasVerse = true; }
-                else { s.label = 'Chorus'; hasChorus = true; }
-            } else if (idx === suggestedSections.length - 1 && s.repeat === 1) {
-                s.label = 'Outro';
-            } else if (idx > 0 && !hasChorus && s.repeat >= 2) {
-                s.label = 'Chorus';
-                hasChorus = true;
-            } else if (idx > 0) {
-                s.label = `Bridge ${idx}`;
-            }
-        });
-    }
-
-    return suggestedSections;
+    return consolidated;
 }
