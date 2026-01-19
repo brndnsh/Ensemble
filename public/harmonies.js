@@ -104,7 +104,7 @@ let lastMidis = [];
 /**
  * Generates harmony notes for a given step.
  */
-export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInChord) {
+export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInChord, soloistResult = null) {
     if (!chord) return [];
 
     const notes = [];
@@ -131,9 +131,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         const genrePatterns = RHYTHMIC_PATTERNS[gb.genreFeel] || RHYTHMIC_PATTERNS['Pop'];
         motifCache.set(sectionId, {
             patternIdx: Math.floor(Math.random() * genrePatterns.length),
-            // Select 2-3 intervals from the scale for this section's "hook"
-            // We'll update actual midis per chord, but keep the "scale degree" logic consistent
-            intervals: [0, 4, 7] // Tonic triad as base
+            intervals: [0, 4, 7] 
         });
     }
     const motif = motifCache.get(sectionId);
@@ -141,21 +139,33 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     // --- 3. Rhythm Logic ---
     let shouldPlay = false;
     let durationSteps = 1;
+    let isLatched = false;
 
-    if (rhythmicStyle === 'pads') {
-        // Pads play on the downbeat of a chord or measure
-        if (stepInChord === 0 || measureStep === 0) {
+    // LATCH LOGIC: Reinforce Soloist Hooks
+    // If the soloist is replaying a hook and intensity is high, "Latch on" to their rhythm
+    if (sb.enabled && sb.isReplayingMotif && ctx.bandIntensity > 0.4 && soloistResult) {
+        // Only latch if the soloist is actually playing a note on THIS step
+        const hasSoloNote = Array.isArray(soloistResult) ? soloistResult.length > 0 : !!soloistResult;
+        if (hasSoloNote) {
             shouldPlay = true;
-            durationSteps = Math.min(stepsPerMeasure, chord.beats * ts.stepsPerBeat);
+            durationSteps = 2; // Match the stab duration
+            isLatched = true;
         }
-    } else {
-        // Stabs/Hooks use the genre pattern
-        const genrePatterns = RHYTHMIC_PATTERNS[gb.genreFeel] || RHYTHMIC_PATTERNS['Pop'];
-        const pattern = genrePatterns[motif.patternIdx % genrePatterns.length];
-        
-        if (pattern && pattern[measureStep] === 1) {
-            shouldPlay = true;
-            durationSteps = 2; // Short stabs
+    }
+
+    if (!shouldPlay) {
+        if (rhythmicStyle === 'pads') {
+            if (stepInChord === 0 || measureStep === 0) {
+                shouldPlay = true;
+                durationSteps = Math.min(stepsPerMeasure, chord.beats * ts.stepsPerBeat);
+            }
+        } else {
+            const genrePatterns = RHYTHMIC_PATTERNS[gb.genreFeel] || RHYTHMIC_PATTERNS['Pop'];
+            const pattern = genrePatterns[motif.patternIdx % genrePatterns.length];
+            if (pattern && pattern[measureStep] === 1) {
+                shouldPlay = true;
+                durationSteps = 2;
+            }
         }
     }
 
@@ -170,57 +180,51 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const baseDensity = config.density || 2;
     let density = Math.max(1, Math.floor(baseDensity * (0.4 + ctx.bandIntensity * 0.3 + hb.complexity * 0.3)));
     
+    // If latched, thicken the reinforcement over time (based on session steps)
+    if (isLatched) {
+        const buildUp = Math.min(2, Math.floor(sb.sessionSteps / 64)); // Add 1-2 voices every 4 bars
+        density = Math.max(density, 1 + buildUp);
+    }
+
     // Select notes based on Genre-Specific Theory
-    let intervals = [0, 4, 7]; // Fallback triad
+    let intervals = [0, 4, 7]; 
 
     if (feel === 'Jazz' || feel === 'Blues') {
-        // Shell Voicings: 3rd and 7th are the priority
-        // We MUST find the 3rd and 7th explicitly in the provided scale to avoid clashing with the chords' voicing
         const third = scale.find(i => i === 3 || i === 4);
         const seventh = scale.find(i => i === 10 || i === 11);
-        
         if (third !== undefined && seventh !== undefined) {
             intervals = [third, seventh];
         } else {
-            // Fallback to chord-type sensitive defaults if scale is missing them (unlikely but safe)
             const isMinor = chord.type?.includes('m') || chord.symbol?.includes('m');
             intervals = [isMinor ? 3 : 4, 10];
         }
-
         if (density > 2) {
-            // Add 9th or 13th for richness
             const extension = scale.find(i => i === 2 || i === 9);
             if (extension !== undefined) intervals.push(extension);
-            else if (scale.includes(7)) intervals.push(7); // Fallback to 5th
+            else if (scale.includes(7)) intervals.push(7);
         }
     } 
     else if (feel === 'Rock' || feel === 'Metal') {
-        // Power chords: 1 and 5
         intervals = [0, 7];
-        if (density > 2) intervals.push(12); // Octave
+        if (density > 2) intervals.push(12);
     }
     else if (feel === 'Neo-Soul') {
-        // Quartal Stacks: stacks of 4ths
         intervals = [0, 5, 10]; 
         if (density > 3) intervals.push(15);
     }
     else {
-        // Default color tones
         const colorTones = [0, 4, 7, 10, 2, 9].filter(i => scale.includes(i));
         intervals = colorTones.slice(0, density);
     }
 
-    // Disco Special: High-octave stabs
     const isDisco = feel === 'Disco';
     if (isDisco && ctx.bandIntensity > 0.7) density = Math.max(density, 2);
 
     // --- 5. Melodic Trend (Soaring) ---
-    // Calculate a 4-bar "Lift" cycle
     const cycleMeasure = Math.floor(step / stepsPerMeasure) % 4;
-    const liftShift = isDisco ? (cycleMeasure * 2) : 0; // Soar up by 2 semitones per bar
+    const liftShift = isDisco ? (cycleMeasure * 2) : 0; 
 
-    // Force octaves for Disco hits
-    if (isDisco && ctx.bandIntensity > 0.6 && rhythmicStyle === 'stabs') {
+    if (isDisco && ctx.bandIntensity > 0.6 && rhythmicStyle === 'stabs' && !isLatched) {
         intervals = [intervals[0], intervals[0] + 12];
     }
 
@@ -231,10 +235,11 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         const finalMidi = midi + liftShift;
         notes.push({
             midi: finalMidi,
-            velocity: config.velocity * (0.8 + Math.random() * 0.2),
+            velocity: config.velocity * (0.8 + Math.random() * 0.2) * (isLatched ? 1.2 : 1.0), // Accented hits when latched
             durationSteps: durationSteps,
             timingOffset: (i * 0.01) + (Math.random() * config.timingJitter),
-            style: rhythmicStyle
+            style: rhythmicStyle,
+            isLatched: isLatched
         });
     });
 

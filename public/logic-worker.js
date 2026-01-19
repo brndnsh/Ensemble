@@ -163,11 +163,12 @@ function fillBuffers(currentStep, timestamp = null) {
         }
 
         // --- Soloist ---
+        let soloResult = null;
         if (sb.enabled && step >= sbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
-                const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord);
+                soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord);
                 
                 if (soloResult) {
                     const results = Array.isArray(soloResult) ? soloResult : [soloResult];
@@ -206,7 +207,7 @@ function fillBuffers(currentStep, timestamp = null) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
-                const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, step, hb.octave, hb.style, stepInChord);
+                const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, step, hb.octave, hb.style, stepInChord, soloResult);
                 if (harmonyNotes.length > 0) {
                     harmonyNotes.forEach(n => {
                         if (!n.freq) n.freq = 440 * Math.pow(2, (n.midi - 69) / 12);

@@ -9,7 +9,7 @@ vi.mock('../../../public/state.js', () => ({
     },
     cb: { enabled: true, octave: 60, density: 'standard' },
     bb: { enabled: true, octave: 36 },
-    sb: { enabled: true, isResting: false, notesInPhrase: 0 },
+    sb: { enabled: true, isResting: false, notesInPhrase: 0, sessionSteps: 0, isReplayingMotif: false },
     ctx: { bandIntensity: 0.5, bpm: 120 },
     arranger: { 
         key: 'C', 
@@ -134,6 +134,27 @@ describe('Harmony Engine Logic', () => {
             }
             
             expect(hits1).toEqual(hits2);
+        });
+    });
+
+    describe('Soloist Hook Reinforcement', () => {
+        it('should reinforce (latch onto) the soloist hook at high intensity', () => {
+            sb.enabled = true;
+            sb.isReplayingMotif = true;
+            sb.sessionSteps = 128; // 8 bars into the jam
+            ctx.bandIntensity = 0.8;
+
+            const chord = { rootMidi: 60, symbol: 'Cmaj7', quality: 'major7', beats: 4, sectionId: 'A' };
+            const soloistNote = { midi: 72, freq: 523.25 };
+
+            const notes = getHarmonyNotes(chord, null, 0, 60, 'smart', 0, soloistNote);
+            
+            expect(notes.length).toBeGreaterThan(0);
+            expect(notes[0].isLatched).toBe(true);
+            // Build-up logic: at 128 steps, density should be boosted
+            expect(notes.length).toBeGreaterThanOrEqual(2);
+            // Should have a velocity boost
+            expect(notes[0].velocity).toBeGreaterThan(0.6);
         });
     });
 });
