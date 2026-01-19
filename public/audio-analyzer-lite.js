@@ -17,6 +17,34 @@ export class ChordAnalyzerLite {
                 bin: m % 12
             });
         }
+
+        // Krumhansl-Schmuckler Key Profiles (Major and Minor)
+        this.keyProfiles = {
+            major: [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88],
+            minor: [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17]
+        };
+    }
+
+    /**
+     * Identifies the global key of the audio based on the total chromagram.
+     */
+    identifyGlobalKey(totalChroma) {
+        let bestScore = -1;
+        let bestKey = { root: 0, type: 'major' };
+
+        for (let root = 0; root < 12; root++) {
+            ['major', 'minor'].forEach(type => {
+                let score = 0;
+                for (let i = 0; i < 12; i++) {
+                    score += totalChroma[(root + i) % 12] * this.keyProfiles[type][i];
+                }
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestKey = { root, type };
+                }
+            });
+        }
+        return bestKey;
     }
 
     /**
@@ -47,6 +75,17 @@ export class ChordAnalyzerLite {
         const samplesPerBeat = Math.floor(secondsPerBeat * sampleRate);
         const beats = Math.floor(signal.length / samplesPerBeat);
         
+        // --- PASS 1: Global Key Inference ---
+        // Analyze a sparse sample of the signal to find the consensus key efficiently
+        const sampleStep = Math.max(1, Math.floor(signal.length / 500000)); // Sample ~500k points
+        const sparseSignal = new Float32Array(Math.floor(signal.length / sampleStep));
+        for (let i = 0, j = 0; i < signal.length; i += sampleStep, j++) {
+            sparseSignal[j] = signal[i];
+        }
+        const globalChroma = this.calculateChromagram(sparseSignal, sampleRate, { minMidi: 36, maxMidi: 72, step: 8 });
+        const globalKey = this.identifyGlobalKey(globalChroma);
+        console.log(`[Analyzer-Lite] Global Key Detected: ${this.notes[globalKey.root]} ${globalKey.type}`);
+
         const results = [];
 
         console.log(`[Analyzer-Lite] Processing ${beats} beats...`);
@@ -54,10 +93,28 @@ export class ChordAnalyzerLite {
         for (let b = 0; b < beats; b++) {
             const start = b * samplesPerBeat;
             const end = start + samplesPerBeat;
+            const window = signal.subarray(start, end);
             
-            // Extract Chromagram for this window
-            const chroma = this.calculateChromagram(signal.subarray(start, end), sampleRate);
-            const chord = this.identifyChord(chroma);
+            // 1. Full Chromagram (for quality)
+            const chroma = this.calculateChromagram(window, sampleRate);
+            
+            // 2. Bass Chromagram (for inversions)
+            const bassChroma = this.calculateChromagram(window, sampleRate, { minMidi: 24, maxMidi: 42 });
+            let bassNoteIdx = -1;
+            let maxBass = 0;
+            for (let i = 0; i < 12; i++) {
+                if (bassChroma[i] > maxBass) {
+                    maxBass = bassChroma[i];
+                    bassNoteIdx = i;
+                }
+            }
+
+            // Identify Chord with Key Bias
+            const chord = this.identifyChord(chroma, { 
+                keyBias: globalKey,
+                bassNote: bassNoteIdx > -1 ? this.notes[bassNoteIdx] : null
+            });
+            
             results.push({ beat: b, chord });
 
             if (options.onProgress) {
@@ -218,12 +275,16 @@ export class ChordAnalyzerLite {
      * Calculates energy in 12 semitone bins using a bank of targeted 
      * single-frequency filters with frequency weighting.
      */
-    calculateChromagram(signal, sampleRate) {
+    calculateChromagram(signal, sampleRate, options = {}) {
         const chroma = new Float32Array(12).fill(0);
         const len = signal.length;
-        const step = 4; // Downsample for performance
+        const step = options.step || 4; // Downsample for performance
+        const minMidi = options.minMidi || 0;
+        const maxMidi = options.maxMidi || 127;
 
         this.pitchFrequencies.forEach(p => {
+            if (p.midi < minMidi || p.midi > maxMidi) return;
+
             let real = 0;
             let imag = 0;
             const angleStep = (2 * Math.PI * p.freq) / sampleRate;
@@ -231,9 +292,10 @@ export class ChordAnalyzerLite {
             // Apply Frequency Weighting:
             // High weight for Bass (C1-C3), Medium for Mids (C4-C5), Low for Highs (C6+)
             let weight = 1.0;
-            if (p.midi < 48) weight = 3.0;      // Bass depth
+            if (p.midi < 36) weight = 5.0;      // Very low bass
+            else if (p.midi < 48) weight = 3.0; // Bass depth
             else if (p.midi < 60) weight = 2.0; // Low mids
-            else if (p.midi > 80) weight = 0.2; // Ignore high melody noise
+            else if (p.midi > 80) weight = 0.1; // Ignore high melody noise
 
             for (let i = 0; i < len; i += step) {
                 const angle = i * angleStep;
@@ -266,7 +328,7 @@ export class ChordAnalyzerLite {
         return sharpened;
     }
 
-    identifyChord(chroma) {
+    identifyChord(chroma, options = {}) {
         // Weighted profiles: Root and 3rd are the most defining characteristics.
         // 1.5 = Essential (Root), 1.3 = Quality (3rd), 1.0 = Supporting (5th/7th)
         const profiles = {
@@ -279,30 +341,38 @@ export class ChordAnalyzerLite {
             'dim':  { 0: 1.5, 3: 1.2, 6: 1.2 }
         };
 
+        // Diatonic Bias: Chords in the key are much more likely.
+        const majorDiatonic = [0, 2, 4, 5, 7, 9, 11]; // I ii iii IV V vi vii°
+        const minorDiatonic = [0, 2, 3, 5, 7, 8, 10]; // i ii° III iv v VI VII
+
         let bestScore = -1;
-        let bestChord = 'C';
+        let bestChordData = { root: 0, type: 'maj' };
 
         for (let root = 0; root < 12; root++) {
             for (const [type, profile] of Object.entries(profiles)) {
                 let score = 0;
                 
-                // Calculate match score
+                // 1. Profile Match
                 for (let i = 0; i < 12; i++) {
                     const chromaIdx = (root + i) % 12;
                     const val = chroma[chromaIdx];
+                    if (profile[i]) score += val * profile[i];
+                    else score -= val * 0.5;
+                }
+
+                // 2. Global Key Bias
+                if (options.keyBias) {
+                    const relativeRoot = (root - options.keyBias.root + 12) % 12;
+                    const isDiatonic = options.keyBias.type === 'major' 
+                        ? majorDiatonic.includes(relativeRoot)
+                        : minorDiatonic.includes(relativeRoot);
                     
-                    if (profile[i]) {
-                        // Reward note present in chord
-                        score += val * profile[i];
-                    } else {
-                        // Penalty for energy where it shouldn't be
-                        score -= val * 0.5;
-                    }
+                    if (isDiatonic) score *= 1.15; // 15% boost for diatonic chords
                 }
                 
                 if (score > bestScore) {
                     bestScore = score;
-                    bestChord = this.notes[root] + (type === 'maj' ? '' : type);
+                    bestChordData = { root, type };
                 }
             }
         }
@@ -310,6 +380,27 @@ export class ChordAnalyzerLite {
         const energy = chroma.reduce((a, b) => a + b, 0);
         if (energy < 0.05) return 'Rest';
 
-        return bestChord;
+        let chordName = this.notes[bestChordData.root] + (bestChordData.type === 'maj' ? '' : bestChordData.type);
+
+        // 3. Slash Chord Detection (Inversions)
+        if (options.bassNote && options.bassNote !== this.notes[bestChordData.root]) {
+            // Check if bass note is strong relative to total energy
+            const totalEnergy = chroma.reduce((a, b) => a + b, 0);
+            const bassIdx = this.notes.indexOf(options.bassNote);
+            const bassEnergy = chroma[bassIdx];
+            
+            // Significant bass presence (at least 20% of total chromagram energy)
+            if (bassEnergy > totalEnergy * 0.2) {
+                const root = bestChordData.root;
+                const interval = (bassIdx - root + 12) % 12;
+                const isChordTone = [3, 4, 5, 7, 10, 11].includes(interval);
+                
+                if (isChordTone) {
+                    chordName += '/' + options.bassNote;
+                }
+            }
+        }
+
+        return chordName;
     }
 }

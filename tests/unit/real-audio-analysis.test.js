@@ -70,21 +70,16 @@ describe('Real Audio Analysis: Multiple Files', () => {
         expect(results.beatsPerMeasure).toBeGreaterThan(0);
 
         if (filename === 'dgda.mp3') {
-            // User says: "one measure of D, one measure of Dsus4, etc..."
-            // At 85 BPM, one measure is 4 beats.
-            // Let's check if we see D and Dsus4/G-ish chords.
             const chords = results.results.map(r => r.chord);
             expect(chords).toContain('D');
-            // Dsus4 might be detected as G or something similar if it's transient
-            // But let's see what we actually get first.
         }
     };
 
     it('should detect BPM and meter for dgda.mp3', async () => {
         await testFile('dgda.mp3', 'dgda.wav');
-    });
+    }, 20000);
 
     it('should detect BPM and meter for Sands.m4a', async () => {
         await testFile('Sands.m4a', 'sands.wav');
-    });
+    }, 30000);
 });
