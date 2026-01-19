@@ -130,7 +130,7 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
     }
 
     // 4. AGGRESSIVE CONSOLIDATION
-    const consolidated = [];
+    let consolidated = [];
     sections.forEach(s => {
         const last = consolidated[consolidated.length - 1];
         if (last && last.value === s.value) {
@@ -198,6 +198,75 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
             s.label = "Vamp (" + s.label + ")";
         }
     });
+
+    // 5.5 META-STRUCTURE CONSOLIDATION (Finding the "12 Bar Loop")
+    // If we have A, B, C, A, B, C -> Merge into (A+B+C) x 2
+    const metaConsolidated = [];
+    let processedIdx = 0;
+    
+    while (processedIdx < consolidated.length) {
+        let bestLen = 0;
+        let bestRepeats = 0;
+        
+        const maxLen = Math.floor((consolidated.length - processedIdx) / 2);
+        
+        for (let len = 1; len <= maxLen; len++) {
+            // Check if block [processedIdx ... processedIdx+len] repeats immediately
+            let repeats = 1;
+            let currentIdx = processedIdx + len;
+            
+            while (currentIdx + len <= consolidated.length) {
+                let match = true;
+                for (let k = 0; k < len; k++) {
+                    if (consolidated[processedIdx + k].label !== consolidated[currentIdx + k].label) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    repeats++;
+                    currentIdx += len;
+                } else {
+                    break;
+                }
+            }
+            
+            // Prefer longer sequences or more repeats
+            if (repeats > 1 && len * repeats > bestLen * bestRepeats) {
+                bestLen = len;
+                bestRepeats = repeats;
+            }
+        }
+        
+        if (bestLen > 0) {
+            // Merge!
+            const subSections = consolidated.slice(processedIdx, processedIdx + bestLen);
+            const combinedValue = subSections.map(s => s.value).join(' | ');
+            const combinedEnergy = subSections.reduce((acc, s) => acc + s.energy, 0) / subSections.length;
+            const combinedStart = subSections[0].startMeasureIndex;
+            const combinedLength = subSections.reduce((acc, s) => acc + s.lengthInMeasures * s.repeat, 0); 
+            
+            // If it repeats a lot or is long, it's likely the Main Theme
+            let label = "Main Theme";
+            if (combinedLength === 12) label = "12-Bar Blues Form";
+            if (combinedLength === 32) label = "32-Bar Form";
+
+            metaConsolidated.push({
+                label,
+                value: combinedValue,
+                repeat: bestRepeats,
+                energy: combinedEnergy,
+                startMeasureIndex: combinedStart,
+                lengthInMeasures: combinedLength
+            });
+            
+            processedIdx += bestLen * bestRepeats;
+        } else {
+            metaConsolidated.push(consolidated[processedIdx]);
+            processedIdx++;
+        }
+    }
+    consolidated = metaConsolidated;
 
     // 6. LOOP ANALYSIS
     consolidated.forEach(s => {
