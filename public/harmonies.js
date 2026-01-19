@@ -70,6 +70,30 @@ const RHYTHMIC_PATTERNS = {
         [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight quarters (Chic)
         [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Offbeat 8ths
         [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0]  // Dotted 8ths (Modern Pop)
+    ],
+    'Rock': [
+        [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], // 1 and 3
+        [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0]  // Syncopated pulse
+    ],
+    'Metal': [
+        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], // Constant 8ths
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  // Constant 16ths
+    ],
+    'Reggae': [
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], // Traditional skank (2 and 4)
+        [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]  // Double skank
+    ],
+    'Country': [
+        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight quarters
+        [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]  // Chugging 8ths
+    ],
+    'Acoustic': [
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Whole notes
+        [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  // Half notes
+    ],
+    'Hip Hop': [
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], // 2 and 4
+        [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]  // Syncopated
     ]
 };
 
@@ -140,13 +164,40 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     // --- 4. Voicing Selection ---
     const scale = getScaleForChord(chord, nextChord, 'smart');
     const rootMidi = chord.rootMidi;
+    const feel = gb.genreFeel;
     
     // Intensity and local complexity scale the number of voices
     const baseDensity = config.density || 2;
     let density = Math.max(1, Math.floor(baseDensity * (0.4 + ctx.bandIntensity * 0.3 + hb.complexity * 0.3)));
     
+    // Select notes based on Genre-Specific Theory
+    let intervals = [0, 4, 7]; // Fallback triad
+
+    if (feel === 'Jazz' || feel === 'Blues') {
+        // Shell Voicings: 3rd and 7th are the priority
+        const third = scale.find(i => i === 3 || i === 4) || 4;
+        const seventh = scale.find(i => i === 10 || i === 11) || 10;
+        intervals = [third, seventh];
+        if (density > 2) intervals.push(scale.find(i => i === 2 || i === 9) || 7); // Add color (9 or 13)
+    } 
+    else if (feel === 'Rock' || feel === 'Metal') {
+        // Power chords: 1 and 5
+        intervals = [0, 7];
+        if (density > 2) intervals.push(12); // Octave
+    }
+    else if (feel === 'Neo-Soul') {
+        // Quartal Stacks: stacks of 4ths
+        intervals = [0, 5, 10]; 
+        if (density > 3) intervals.push(15);
+    }
+    else {
+        // Default color tones
+        const colorTones = [0, 4, 7, 10, 2, 9].filter(i => scale.includes(i));
+        intervals = colorTones.slice(0, density);
+    }
+
     // Disco Special: High-octave stabs
-    const isDisco = gb.genreFeel === 'Disco';
+    const isDisco = feel === 'Disco';
     if (isDisco && ctx.bandIntensity > 0.7) density = Math.max(density, 2);
 
     // --- 5. Melodic Trend (Soaring) ---
@@ -154,12 +205,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const cycleMeasure = Math.floor(step / stepsPerMeasure) % 4;
     const liftShift = isDisco ? (cycleMeasure * 2) : 0; // Soar up by 2 semitones per bar
 
-    // Select notes from scale: Root, 3rd, 5th, 7th depending on density
-    // For Harmonies, we focus on smooth voice leading of color tones
-    const colorTones = [0, 4, 7, 10, 2, 9].filter(i => scale.includes(i));
-    let intervals = colorTones.slice(0, density);
-
-    // If Disco and high intensity, force octaves for certain hits
+    // Force octaves for Disco hits
     if (isDisco && ctx.bandIntensity > 0.6 && rhythmicStyle === 'stabs') {
         intervals = [intervals[0], intervals[0] + 12];
     }

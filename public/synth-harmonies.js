@@ -1,4 +1,4 @@
-import { ctx, hb } from './state.js';
+import { ctx, hb, gb } from './state.js';
 import { safeDisconnect } from './utils.js';
 
 /**
@@ -27,37 +27,40 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     
     const now = ctx.audio.currentTime;
     const playTime = Math.max(time, now);
+    const feel = gb.genreFeel;
 
     if (!hb.activeVoices) hb.activeVoices = [];
-    
-    // Voice Management (Polyphonic Limit: 6)
-    hb.activeVoices = hb.activeVoices.filter(v => (v.time + v.duration + 0.5) > playTime);
-    if (hb.activeVoices.length >= 6) {
-        const oldest = hb.activeVoices.shift();
-        if (oldest) {
-            oldest.gain.gain.cancelScheduledValues(playTime);
-            oldest.gain.gain.setTargetAtTime(0, playTime, 0.01);
-        }
-    }
-
-    const gain = ctx.audio.createGain();
-    gain.gain.value = 0;
-    hb.activeVoices.push({ gain, time: playTime, duration });
-
+...
     // Synthesis: Multi-oscillator setup for "Ensemble" feel
     const osc1 = ctx.audio.createOscillator();
     const osc2 = ctx.audio.createOscillator();
     const sub = ctx.audio.createOscillator();
     
-    if (style === 'stabs') {
-        // Horn-like: Bright Sawtooth with sharp envelope
+    if (feel === 'Rock' || feel === 'Metal') {
+        // Aggressive Brass/Synth: Bright Sawtooths
         osc1.type = 'sawtooth';
         osc2.type = 'sawtooth';
-        osc2.detune.setValueAtTime(12, playTime); // Brass-like chorusing
+        osc2.detune.setValueAtTime(15, playTime); 
+        sub.type = 'sawtooth';
+        sub.frequency.setValueAtTime(freq * 0.5, playTime);
+    } 
+    else if (feel === 'Neo-Soul' || feel === 'Acoustic') {
+        // Warm/Soulful: Triangles and Sines
+        osc1.type = 'triangle';
+        osc2.type = 'sine';
+        osc2.detune.setValueAtTime(5, playTime);
         sub.type = 'triangle';
-        sub.frequency.setValueAtTime(freq * 0.5, playTime); // Sub-octave for body
+        sub.frequency.setValueAtTime(freq * 0.5, playTime);
+    }
+    else if (style === 'stabs') {
+        // Horn-like: Bright Sawtooth with body
+        osc1.type = 'sawtooth';
+        osc2.type = 'triangle';
+        osc2.detune.setValueAtTime(12, playTime); 
+        sub.type = 'triangle';
+        sub.frequency.setValueAtTime(freq * 0.5, playTime);
     } else {
-        // String-like: Smooth Triangles/Saws with slow attack
+        // Lush Strings: Mixed waveforms
         osc1.type = 'triangle';
         osc2.type = 'sawtooth';
         osc2.detune.setValueAtTime(8, playTime);
@@ -68,18 +71,22 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     osc1.frequency.setValueAtTime(freq, playTime);
     osc2.frequency.setValueAtTime(freq, playTime);
 
-    // Filter Envelope (VITAL for Horn stabs)
+    // Filter Envelope
     const filter = ctx.audio.createBiquadFilter();
     filter.type = 'lowpass';
     
     if (style === 'stabs') {
+        const qVal = (feel === 'Rock' || feel === 'Metal') ? 5 : 3;
         const startFreq = Math.min(freq * 8, 8000);
         filter.frequency.setValueAtTime(startFreq, playTime);
         filter.frequency.exponentialRampToValueAtTime(freq * 2, playTime + 0.1);
-        filter.Q.setValueAtTime(3, playTime);
+        filter.Q.setValueAtTime(qVal, playTime);
     } else {
-        filter.frequency.setValueAtTime(freq * 3, playTime);
-        filter.frequency.exponentialRampToValueAtTime(freq * 2, playTime + duration);
+        // Swell for pads
+        const cutoff = (feel === 'Neo-Soul') ? freq * 1.5 : freq * 3;
+        filter.frequency.setValueAtTime(cutoff, playTime);
+        filter.frequency.exponentialRampToValueAtTime(cutoff * 1.2, playTime + duration * 0.5);
+        filter.frequency.exponentialRampToValueAtTime(cutoff, playTime + duration);
         filter.Q.setValueAtTime(1, playTime);
     }
 
