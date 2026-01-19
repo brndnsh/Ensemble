@@ -33,7 +33,8 @@ export class ChordAnalyzerLite {
             major: [6.5, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 5.0, 2.0, 3.5, 2.0, 3.0],
             minor: [6.5, 2.5, 3.5, 5.0, 2.5, 3.5, 2.5, 4.5, 4.0, 2.5, 3.5, 3.0],
             dominant: [7.5, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 5.0, 2.0, 3.5, 4.5, 2.0], // Stronger Root and b7
-            blues: [7.5, 1.5, 2.5, 5.0, 5.0, 4.0, 2.0, 3.5, 1.5, 2.5, 5.0, 0.5] // Reduced 5th (idx 7) and Maj7 (idx 11) to distinguish I vs V
+            bluesMaj: [7.5, 1.0, 2.0, 2.5, 6.0, 4.0, 1.5, 4.5, 1.5, 2.0, 5.5, 1.0], // Strong 3, b7
+            bluesMin: [7.5, 1.0, 2.0, 6.0, 2.0, 4.0, 1.5, 4.5, 1.5, 2.0, 5.5, 1.0]  // Strong b3, b7
         };
     }
 
@@ -50,7 +51,7 @@ export class ChordAnalyzerLite {
             const rotatedChroma = this.rotateChroma(totalChroma, offset * 0.1);
             
             for (let root = 0; root < 12; root++) {
-                ['major', 'minor', 'dominant', 'blues'].forEach(type => {
+                ['major', 'minor', 'dominant', 'bluesMaj', 'bluesMin'].forEach(type => {
                     let score = 0;
                     for (let i = 0; i < 12; i++) {
                         score += rotatedChroma[(root + i) % 12] * this.keyProfiles[type][i];
@@ -59,7 +60,7 @@ export class ChordAnalyzerLite {
                     // Bias towards zero tuning offset (favors standard 440Hz)
                     const offsetBias = 1.0 - (Math.abs(offset) * 0.02);
                     // Strong bias towards dominant/blues for groovier signals
-                    const typeBias = (type === 'blues') ? 1.2 : (type === 'dominant') ? 1.15 : 1.0;
+                    const typeBias = (type.startsWith('blues')) ? 1.2 : (type === 'dominant') ? 1.15 : 1.0;
                     
                     score *= (offsetBias * typeBias);
 
@@ -137,9 +138,9 @@ export class ChordAnalyzerLite {
         
         // --- PASS 1: Global Key Inference ---
         // Analyze the entire signal with a large step to find the consensus key.
-        // We lower minMidi to 36 (C2) to capture the bass roots, which are crucial for Blues/Jazz.
+        // We raise minMidi to 48 (C3) to ignore the walking bass, which is chromatical and confusing for key detection.
         const globalChroma = this.calculateChromagram(signal, sampleRate, { 
-            minMidi: 36, 
+            minMidi: 48, 
             maxMidi: 84, 
             skipSharpening: true,
             suppressHarmonics: false,
@@ -583,6 +584,8 @@ export class ChordAnalyzerLite {
             '7':    { 0: 1.6, 4: 1.3, 7: 1.1, 10: 1.5 },
             'maj7': { 0: 1.6, 4: 1.3, 7: 1.1, 11: 1.2 },
             'm7':   { 0: 1.6, 3: 1.3, 7: 1.1, 10: 1.2 },
+            '6':    { 0: 1.6, 4: 1.4, 7: 1.1, 9: 1.2 },
+            'm6':   { 0: 1.6, 3: 1.4, 7: 1.1, 9: 1.2 },
             'sus4': { 0: 1.6, 5: 1.4, 7: 1.1 },
             'dim':  { 0: 1.6, 3: 1.3, 6: 1.3 }
         };
@@ -618,7 +621,7 @@ export class ChordAnalyzerLite {
                         isDiatonic = [0, 2, 4, 5, 7, 9, 10].includes(relativeRoot);
                         if (isDiatonic && type === '7' && [0, 5, 7, 10].includes(relativeRoot)) score *= 1.20; // Extra boost for 7th chords in blues
                     }
-                    else if (options.keyBias.type === 'blues') {
+                    else if (options.keyBias.type.startsWith('blues')) {
                          // Blues Scale-ish: I7, IV7, V7 are kings. bIII, bVI, bVII are common.
                          // Major: I, IV, V.  Minor: i, iv, v.
                          // Roots: 0, 3, 5, 7, 10

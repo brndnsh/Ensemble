@@ -21,7 +21,7 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
     // 1. HARMONIC SIMPLIFICATION (The "Ear" Pass)
     const simplify = (c) => {
         if (!c || c === 'Rest' || c === '-') return '-';
-        return c.replace(/maj7|m7|7|sus4|sus2|dim|5/g, (match) => {
+        return c.replace(/maj7|m7|m6|7|6|sus4|sus2|dim|5/g, (match) => {
             if (match.startsWith('m')) return 'm'; 
             return ''; 
         });
