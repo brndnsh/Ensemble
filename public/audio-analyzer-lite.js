@@ -20,16 +20,25 @@ export class ChordAnalyzerLite {
     }
 
     /**
-     * Analyzes an AudioBuffer and returns detected chords.
+     * Analyzes an AudioBuffer and returns detected chords and pulse metadata.
      */
     async analyze(audioBuffer, options = {}) {
-        const bpm = options.bpm || 120;
-        const sampleRate = audioBuffer.sampleRate;
+        // 1. Identify Pulse (BPM, Meter, Downbeat)
+        const pulse = this.identifyPulse(audioBuffer);
+        const bpm = options.bpm || pulse.bpm || 120;
+        const beatsPerMeasure = pulse.beatsPerMeasure || 4;
         
+        console.log(`[Analyzer-Lite] Pulse Detected: ${bpm} BPM, ${beatsPerMeasure}/4 Meter, Offset: ${pulse.downbeatOffset.toFixed(3)}s`);
+        
+        const sampleRate = audioBuffer.sampleRate;
         let fullSignal = audioBuffer.getChannelData(0); // Mono
         
-        // Handle Trimming
-        const startSample = Math.floor((options.startTime || 0) * sampleRate);
+        // Handle Trimming & Downbeat Alignment
+        // We start analysis exactly on the detected downbeat to ensure measures align.
+        const startOffset = options.startTime || 0;
+        const alignmentOffset = (pulse.downbeatOffset > 0) ? pulse.downbeatOffset : 0;
+        
+        const startSample = Math.floor((startOffset + alignmentOffset) * sampleRate);
         const endSample = options.endTime ? Math.floor(options.endTime * sampleRate) : fullSignal.length;
         const signal = fullSignal.slice(startSample, endSample);
         
@@ -71,12 +80,101 @@ export class ChordAnalyzerLite {
             const consensus = Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
 
             if (consensus !== lastConsensus) {
-                smoothed.push({ beat: i, time: i * secondsPerBeat, chord: consensus });
+                smoothed.push({ beat: i, time: i * secondsPerBeat, chord: consensus, bpm });
                 lastConsensus = consensus;
             }
         }
 
-        return smoothed;
+        return {
+            results: smoothed,
+            bpm,
+            beatsPerMeasure,
+            downbeatOffset: pulse.downbeatOffset
+        };
+    }
+
+    /**
+     * Identifies the "Pulse" (BPM, Meter, and Downbeat) of the audio using 
+     * autocorrelation and phase folding.
+     */
+    identifyPulse(audioBuffer) {
+        const signal = audioBuffer.getChannelData(0);
+        const sampleRate = audioBuffer.sampleRate;
+        
+        // 1. Calculate Energy Envelope (20ms windows)
+        const winSize = Math.floor(sampleRate * 0.02);
+        const envelope = [];
+        for (let i = 0; i < Math.min(signal.length, sampleRate * 30); i += winSize) { // Analyze first 30s
+            let sum = 0;
+            const end = Math.min(i + winSize, signal.length);
+            for (let j = i; j < end; j++) sum += signal[j] * signal[j];
+            envelope.push(Math.sqrt(sum / (end - i)));
+        }
+
+        // 2. Extract Onsets (Flux)
+        const onsets = new Float32Array(envelope.length);
+        for (let i = 1; i < envelope.length; i++) {
+            onsets[i] = Math.max(0, envelope[i] - envelope[i - 1]);
+        }
+
+        // 3. Find BPM via autocorrelation
+        // Search range: 60 - 180 BPM (150 - 50 steps at 20ms)
+        const minLag = 16; 
+        const maxLag = 150;
+        let bestLag = 75;
+        let maxCorr = -1;
+
+        for (let lag = minLag; lag <= maxLag; lag++) {
+            let corr = 0;
+            // Weighted autocorrelation: favor multiples of 5 for stability
+            const weight = (lag % 5 === 0) ? 1.05 : 1.0;
+            for (let i = 0; i < onsets.length - lag; i++) {
+                corr += onsets[i] * onsets[i + lag];
+            }
+            if (corr * weight > maxCorr) {
+                maxCorr = corr * weight;
+                bestLag = lag;
+            }
+        }
+
+        const guessedBPM = Math.round((60 / (bestLag * 0.02)) / 5) * 5;
+
+        // 4. Meter Detection (3/4 vs 4/4)
+        let score3 = 0;
+        let score4 = 0;
+        const lag3 = bestLag * 3;
+        const lag4 = bestLag * 4;
+
+        if (onsets.length > lag4) {
+            for (let i = 0; i < onsets.length - lag4; i++) {
+                score3 += onsets[i] * onsets[i + lag3];
+                score4 += onsets[i] * onsets[i + lag4];
+            }
+        }
+
+        const beatsPerMeasure = score3 > (score4 * 1.1) ? 3 : 4;
+
+        // 5. Downbeat Detection (Phase Alignment)
+        const measureSteps = bestLag * beatsPerMeasure;
+        const phaseScores = new Float32Array(measureSteps);
+        for (let i = 0; i < onsets.length; i++) {
+            phaseScores[i % measureSteps] += onsets[i];
+        }
+
+        let bestPhase = 0;
+        let maxPhaseScore = -1;
+        for (let p = 0; p < measureSteps; p++) {
+            if (phaseScores[p] > maxPhaseScore) {
+                maxPhaseScore = phaseScores[p];
+                bestPhase = p;
+            }
+        }
+
+        return {
+            bpm: guessedBPM,
+            beatsPerMeasure,
+            downbeatOffset: bestPhase * 0.02
+        };
     }
 
     /**

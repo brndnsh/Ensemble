@@ -882,8 +882,18 @@
 
         <div id="analyzerResults" class="analyzer-results" style="display: none;">
             <h3>Analysis Complete</h3>
-            <p id="analyzerSummary" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;"></p>
+            <p id="analyzerSummary" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
             
+            <div id="analyzerBpmInfo" class="analyzer-bpm-info" style="margin-bottom: 1.5rem; padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border: 1px dashed var(--accent-color);">
+                <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-weight: bold; font-size: 0.9rem;">Detected Tempo: <span id="detectedBpmLabel">120</span> BPM</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Sync project BPM to this demo?</span>
+                    </div>
+                    <input type="checkbox" id="analyzerSyncBpmCheck" checked>
+                </label>
+            </div>
+
             <div id="suggestedSectionsContainer" class="suggested-sections-list">
                 <!-- Sections will be injected here -->
             </div>

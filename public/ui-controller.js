@@ -892,14 +892,16 @@ export function setupAnalyzerHandlers() {
             const startTime = parseFloat(ui.analyzerStartInput.value) || 0;
             const endTime = parseFloat(ui.analyzerEndInput.value) || currentAudioBuffer.duration;
 
-            const detectedRaw = await analyzer.analyze(currentAudioBuffer, { 
-                bpm: ctx.bpm,
+            const analysis = await analyzer.analyze(currentAudioBuffer, { 
+                bpm: 0, // Favor natural pulse detection for uploaded files
                 startTime,
                 endTime,
                 onProgress: (pct) => {
                     ui.analyzerProgressBar.style.width = `${pct}%`;
                 }
             });
+
+            const { results: detectedRaw, bpm, beatsPerMeasure } = analysis;
 
             // Flatten beat results into a full timeline
             const maxBeat = detectedRaw.length > 0 ? detectedRaw[detectedRaw.length - 1].beat : 0;
@@ -911,8 +913,8 @@ export function setupAnalyzerHandlers() {
                 else timeline[i] = current;
             }
 
-            // Extract structural sections
-            detectedChords = extractForm(timeline);
+            // Extract structural sections using detected meter
+            detectedChords = extractForm(timeline, beatsPerMeasure);
             
             ui.analyzerProgressBar.style.width = '100%';
             ui.analyzerProcessing.style.display = 'none';
@@ -934,7 +936,11 @@ export function setupAnalyzerHandlers() {
                 container.appendChild(item);
             });
 
-            ui.analyzerSummary.textContent = `Successfully analyzed "${currentFileName}". Detected ${detectedChords.length} song sections.`;
+            ui.analyzerSummary.textContent = `Successfully analyzed "${currentFileName}" at ${bpm} BPM (${beatsPerMeasure}/4). Detected ${detectedChords.length} song sections.`;
+            
+            // Show BPM sync info
+            ui.detectedBpmLabel.textContent = bpm;
+            ui.analyzerSyncBpmCheck.checked = true; // Default to sync if we found a pulse
             
         } catch (err) {
             console.error("[Analyzer] Analysis Error:", err);
@@ -996,6 +1002,14 @@ export function setupAnalyzerHandlers() {
             arranger.sections = newSections;
         } else {
             arranger.sections.push(...newSections);
+        }
+
+        // Apply BPM Sync if checked
+        if (ui.analyzerSyncBpmCheck && ui.analyzerSyncBpmCheck.checked) {
+            const detectedBpm = parseInt(ui.detectedBpmLabel.textContent);
+            if (detectedBpm && detectedBpm !== ctx.bpm) {
+                setBpm(detectedBpm, ctx.viz);
+            }
         }
 
         arranger.isDirty = true;
