@@ -22,7 +22,7 @@ export function killHarmonyNote() {
 /**
  * Plays a harmony note with genre-specific synthesis.
  */
-export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs') {
+export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs', midi = null) {
     if (!Number.isFinite(freq) || !ctx.audio) return;
     
     const now = ctx.audio.currentTime;
@@ -31,9 +31,22 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
 
     if (!hb.activeVoices) hb.activeVoices = [];
     
-    // Voice Management (Polyphonic Limit: 6)
-    hb.activeVoices = hb.activeVoices.filter(v => (v.time + v.duration + 0.5) > playTime);
-    if (hb.activeVoices.length >= 6) {
+    // 1. Strict Voice Management & Stealing
+    // Remove expired voices
+    hb.activeVoices = hb.activeVoices.filter(v => (v.time + v.duration + 0.1) > playTime);
+    
+    // Pitch-aware Stealing: If this exact MIDI note is already playing, kill it immediately
+    if (midi !== null) {
+        const existing = hb.activeVoices.find(v => v.midi === midi);
+        if (existing) {
+            existing.gain.gain.cancelScheduledValues(playTime);
+            existing.gain.gain.setTargetAtTime(0, playTime, 0.005);
+            hb.activeVoices = hb.activeVoices.filter(v => v !== existing);
+        }
+    }
+
+    // Polyphonic Limit (Max 5 voices for clarity)
+    if (hb.activeVoices.length >= 5) {
         const oldest = hb.activeVoices.shift();
         if (oldest) {
             oldest.gain.gain.cancelScheduledValues(playTime);
@@ -43,7 +56,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
 
     const gain = ctx.audio.createGain();
     gain.gain.value = 0;
-    hb.activeVoices.push({ gain, time: playTime, duration });
+    hb.activeVoices.push({ gain, time: playTime, duration, midi });
 
     // Synthesis: Multi-oscillator setup for "Ensemble" feel
     const osc1 = ctx.audio.createOscillator();

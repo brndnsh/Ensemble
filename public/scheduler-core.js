@@ -483,15 +483,20 @@ export function scheduleHarmonies(chordData, step, time) {
     if (notes && notes.length > 0) {
         const spb = 60.0 / ctx.bpm;
         notes.forEach(n => {
-            const { freq, velocity, timingOffset, durationSteps, midi, style } = n;
+            const { freq, velocity, timingOffset, durationSteps, midi, style, isChordStart } = n;
             const playTime = time + (timingOffset || 0);
             const m = midi || getMidi(freq);
+
+            if (isChordStart) {
+                // Kill previous pads/stabs to ensure the anchor is firm
+                killHarmonyNote();
+            }
 
             if (freq || m) {
                 const duration = (durationSteps || 1) * 0.25 * spb;
                 const finalVel = velocity * (ctx.conductorVelocity || 1.0);
                 
-                playHarmonyNote(freq || 440, playTime, duration, finalVel, style);
+                playHarmonyNote(freq || 440, playTime, duration, finalVel, style, m);
                 sendMIDINote(midiState.harmonyChannel, m + (midiState.harmonyOctave * 12), normalizeMidiVelocity(finalVel), playTime, duration);
                 
                 if (vizState.enabled && ctx.viz) {

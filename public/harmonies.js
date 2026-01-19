@@ -18,7 +18,7 @@ const STYLE_CONFIG = {
     horns: {
         density: 2, // Number of voices
         rhythmicStyle: 'stabs',
-        timingJitter: 0.01,
+        timingJitter: 0.005, // Tightened for focus
         velocity: 0.85,
         octaveOffset: 0,
         padProb: 0.2 // Probability of playing a pad even if style is stabs
@@ -26,7 +26,7 @@ const STYLE_CONFIG = {
     strings: {
         density: 3,
         rhythmicStyle: 'pads',
-        timingJitter: 0.03,
+        timingJitter: 0.02, // Reduced for focus
         velocity: 0.6,
         octaveOffset: 0,
         padProb: 0.9
@@ -34,7 +34,7 @@ const STYLE_CONFIG = {
     smart: {
         density: 2,
         rhythmicStyle: 'auto', // Depends on genre
-        timingJitter: 0.015,
+        timingJitter: 0.008, // Tightened for focus
         velocity: 0.75,
         octaveOffset: 0,
         padProb: 0.5
@@ -107,6 +107,10 @@ let lastPlayedStep = -1;
  */
 export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInChord, soloistResult = null) {
     if (!chord) return [];
+
+    // Stab Termination: If we are at the start of a chord, ensure any hanging stabs are cleared
+    // This provides the "Anchor" feel by ensuring chord changes are clean
+    const isChordStart = stepInChord === 0;
 
     // Debounce: Prevent rapid-fire re-triggering on consecutive steps (common in latch mode)
     if (step === lastPlayedStep + 1 && soloistResult) {
@@ -252,9 +256,10 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             midi: finalMidi,
             velocity: config.velocity * (0.8 + Math.random() * 0.2) * (isLatched ? 1.2 : 1.0), // Accented hits when latched
             durationSteps: durationSteps,
-            timingOffset: (i * 0.01) + (Math.random() * config.timingJitter),
+            timingOffset: (i * 0.005) + (Math.random() * config.timingJitter), // Tightened inter-voice timing
             style: rhythmicStyle,
-            isLatched: isLatched
+            isLatched: isLatched,
+            isChordStart: isChordStart // Signal to kill previous stabs if needed
         });
     });
 

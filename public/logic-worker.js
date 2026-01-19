@@ -211,7 +211,8 @@ function fillBuffers(currentStep, timestamp = null) {
                 if (harmonyNotes.length > 0) {
                     harmonyNotes.forEach(n => {
                         if (!n.freq) n.freq = 440 * Math.pow(2, (n.midi - 69) / 12);
-                        notesToMain.push({ ...n, step, module: 'hb' });
+                        // Explicitly ensure midi is passed for voice stealing
+                        notesToMain.push({ ...n, midi: n.midi, step, module: 'hb' });
                     });
                 }
             }
