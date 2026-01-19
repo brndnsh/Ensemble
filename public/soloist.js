@@ -202,6 +202,7 @@ export function getScaleForChord(chord, nextChord, style) {
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
         case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
         case 'aug': return [0, 2, 4, 6, 8, 10];
+        case 'augmaj7': return [0, 2, 4, 6, 8, 9, 11];
         case 'm9': case 'm11': case 'm13': case 'm6': return [0, 2, 3, 5, 7, 9, 10]; 
         case 'sus4': return [0, 2, 5, 7, 9, 10]; 
         case '7alt': return [0, 1, 3, 4, 6, 8, 10];

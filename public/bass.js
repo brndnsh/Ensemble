@@ -14,6 +14,11 @@ import { TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
 
 export function getScaleForBass(chord) {
     if (!chord) return [0, 2, 4, 5, 7, 9, 11]; // Default Major
+    if (chord.quality === 'aug') return [0, 2, 4, 6, 8, 10]; // Whole Tone
+    if (chord.quality === 'augmaj7') return [0, 2, 4, 6, 8, 9, 11]; // Lydian Augmented
+    if (chord.quality === 'dim') return [0, 2, 3, 5, 6, 8, 9];
+    if (chord.quality === 'halfdim') return [0, 1, 3, 5, 6, 8, 10];
+
     const isMinor = chord.quality.startsWith('m') && !chord.quality.startsWith('maj');
     const isDominant = chord.is7th && !isMinor;
     
@@ -265,7 +270,8 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         // Neo-soul bass should be extremely foundational.
         if (isSecondaryAnchor || isUpbeat) {
             const hasFlat5 = scale.includes(6) && !scale.includes(7);
-            const fifth = hasFlat5 ? 6 : 7;
+            const hasSharp5 = scale.includes(8) && !scale.includes(7);
+            const fifth = hasFlat5 ? 6 : (hasSharp5 ? 8 : 7);
             if (Math.random() < 0.85) {
                 const note = Math.random() < 0.6 ? baseRoot : baseRoot + fifth;
                 return result(getFrequency(clampAndNormalize(note)), null, velocity);
@@ -307,7 +313,8 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         if (stepInChord % halfStep === 0) {
             if (stepInChord === 0) return result(getFrequency(withOctaveJump(baseRoot)));
             const hasFlat5 = chord.quality === 'dim' || chord.quality === 'halfdim';
-            let fifth = baseRoot + (hasFlat5 ? 6 : 7);
+            const hasSharp5 = chord.quality === 'aug' || chord.quality === 'augmaj7';
+            let fifth = baseRoot + (hasFlat5 ? 6 : (hasSharp5 ? 8 : 7));
             return result(getFrequency(clampAndNormalize(withOctaveJump(fifth))));
         }
         return null;
@@ -468,14 +475,16 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         if (!isHalfPulse) return null;
         if (stepInMeasure === 0 || (stepInMeasure % stepsPerMeasure === 0)) return result(getFrequency(withOctaveJump(baseRoot)), 2, 1.05);
         const hasFlat5 = chord.quality === 'dim' || chord.quality === 'halfdim';
-        return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + (hasFlat5 ? 6 : 7)))), 2, 1.05);
+        const hasSharp5 = chord.quality === 'aug' || chord.quality === 'augmaj7';
+        return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + (hasFlat5 ? 6 : (hasSharp5 ? 8 : 7))))), 2, 1.05);
     }
 
     if (beatIndex % 1 !== 0) return null;
 
     if (intBeat === 2 && style === 'quarter' && Math.random() < 0.8) {
         const hasFlat5 = chord.quality === 'dim' || chord.quality === 'halfdim';
-        return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + (hasFlat5 ? 6 : 7)))), null, velocity);
+        const hasSharp5 = chord.quality === 'aug' || chord.quality === 'augmaj7';
+        return result(getFrequency(clampAndNormalize(withOctaveJump(baseRoot + (hasFlat5 ? 6 : (hasSharp5 ? 8 : 7))))), null, velocity);
     }
 
     if (intBeat === beatsInChord - 1 && nextChord) {
