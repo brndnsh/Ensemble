@@ -772,6 +772,7 @@ export function setupAnalyzerHandlers() {
 
     const resetAnalyzer = () => {
         ui.analyzerDropZone.style.display = 'block';
+        if (ui.liveListenContainer) ui.liveListenContainer.style.display = 'flex';
         ui.analyzerTrimView.style.display = 'none';
         ui.analyzerProcessing.style.display = 'none';
         ui.analyzerResults.style.display = 'none';
@@ -842,6 +843,7 @@ export function setupAnalyzerHandlers() {
     const handleFile = async (file) => {
         console.log(`[Analyzer] Handling file: ${file.name} (${file.size} bytes)`);
         ui.analyzerDropZone.style.display = 'none';
+        if (ui.liveListenContainer) ui.liveListenContainer.style.display = 'none';
         ui.analyzerProcessing.style.display = 'block'; 
         currentFileName = file.name;
         
@@ -876,7 +878,7 @@ export function setupAnalyzerHandlers() {
         }
     };
 
-    const performAnalysis = async () => {
+    const performAnalysis = async (customBpm = 0) => {
         if (!currentAudioBuffer) return;
         
         ui.analyzerTrimView.style.display = 'none';
@@ -893,7 +895,7 @@ export function setupAnalyzerHandlers() {
             const endTime = parseFloat(ui.analyzerEndInput.value) || currentAudioBuffer.duration;
 
             const analysis = await analyzer.analyze(currentAudioBuffer, { 
-                bpm: 0, // Favor natural pulse detection for uploaded files
+                bpm: customBpm, // Use custom BPM if provided
                 startTime,
                 endTime,
                 onProgress: (pct) => {
@@ -901,7 +903,7 @@ export function setupAnalyzerHandlers() {
                 }
             });
 
-            const { results: beatData, bpm, beatsPerMeasure } = analysis;
+            const { results: beatData, bpm, candidates, beatsPerMeasure } = analysis;
 
             // Extract structural sections using detected meter and energy
             detectedChords = extractForm(beatData, beatsPerMeasure);
@@ -910,6 +912,18 @@ export function setupAnalyzerHandlers() {
             ui.analyzerProcessing.style.display = 'none';
             ui.analyzerResults.style.display = 'block';
             
+            // Render BPM Candidates
+            if (ui.bpmChips && candidates) {
+                ui.bpmChips.innerHTML = '';
+                candidates.forEach(c => {
+                    const chip = document.createElement('div');
+                    chip.className = `preset-chip ${c.bpm === bpm ? 'active' : ''}`;
+                    chip.textContent = `${c.bpm} BPM`;
+                    chip.onclick = () => performAnalysis(c.bpm);
+                    ui.bpmChips.appendChild(chip);
+                });
+            }
+
             const container = ui.suggestedSectionsContainer;
             container.innerHTML = '<h4>Suggested Structure</h4>';
             
