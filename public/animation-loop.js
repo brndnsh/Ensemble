@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { ctx, gb, cb, bb, sb, vizState, dispatch, arranger } from './state.js';
+import { ctx, gb, cb, bb, sb, hb, vizState, dispatch, arranger } from './state.js';
 import { ui, triggerFlash, clearActiveVisuals, updateActiveChordUI } from './ui.js';
 import { getVisualTime } from './engine.js';
 import { getStepsPerMeasure } from './utils.js';

@@ -1,4 +1,4 @@
-import { arranger, cb, ctx, gb, bb, sb } from './state.js';
+import { arranger, cb, ctx, gb, bb, sb, hb } from './state.js';
 import { midiToNote, formatUnicodeSymbols } from './utils.js';
 import { saveCurrentState } from './persistence.js';
 import { TIME_SIGNATURES, KEY_ORDER } from './config.js';

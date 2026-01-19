@@ -1,10 +1,14 @@
+import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
 import { getHarmonyNotes } from './harmonies.js';
 import { getAccompanimentNotes, compingState } from './accompaniment.js';
 import { generateResolutionNotes } from './resolution.js';
 import { arranger, cb, bb, sb, gb, hb, ctx } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
-...
+import { getStepInfo } from './utils.js';
+import { generateProceduralFill } from './fills.js';
+import { analyzeForm } from './form-analysis.js';
+
 // --- WORKER STATE ---
 let timerID = null;
 let interval = 25;
@@ -133,8 +137,14 @@ function fillBuffers(currentStep, timestamp = null) {
     if (cb.enabled) head = Math.min(head, cbBufferHead);
     if (hb.enabled) head = Math.min(head, hbBufferHead);
     if (head === 999999) head = currentStep;
-...
-        // --- Chords ---
+
+    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    
+    while (head < targetStep) {
+        const step = head;
+        const chordData = getChordAtStep(step);
+        
+        // --- Bass ---
         if (cb.enabled && step >= cbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;

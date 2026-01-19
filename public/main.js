@@ -1,4 +1,4 @@
-import { ctx, cb, bb, sb, arranger, subscribe, storage } from './state.js';
+import { ctx, cb, bb, sb, hb, arranger, subscribe, storage } from './state.js';
 import { initUI, renderChordVisualizer, renderGrid, renderSections, initTabs, renderMeasurePagination, setupPanelMenus } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';

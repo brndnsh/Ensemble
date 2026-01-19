@@ -1,6 +1,6 @@
 import { ACTIONS } from './types.js';
 import { ui, showToast, renderChordVisualizer, renderSections, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
-import { ctx, cb, bb, sb, gb, arranger, dispatch } from './state.js';
+import { ctx, cb, bb, sb, hb, gb, arranger, dispatch } from './state.js';
 import { saveCurrentState } from './persistence.js';
 import { restoreGains, initAudio } from './engine.js';
 import { syncWorker } from './worker-client.js';

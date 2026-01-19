@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { ctx, cb, bb, sb, gb, arranger, vizState, storage, dispatch } from './state.js';
+import { ctx, cb, bb, sb, hb, gb, arranger, vizState, storage, dispatch } from './state.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { ui, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
 import { decompressSections, generateId, normalizeKey } from './utils.js';

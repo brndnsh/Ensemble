@@ -2,7 +2,6 @@ import { getScaleForChord } from './soloist.js';
 import { getBestInversion } from './chords.js';
 import { ctx, gb, hb, sb, arranger } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
-import { getMidi, getFrequency } from './utils.js';
 
 /**
  * HARMONIES.JS
