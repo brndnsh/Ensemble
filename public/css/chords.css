@@ -182,6 +182,10 @@
     color: var(--soloist-color);
 }
 
+.chord-card.aug {
+    color: #a78bfa; /* Violet / Light Purple */
+}
+
 .suffix {
     font-size: 0.6em;
     vertical-align: super;

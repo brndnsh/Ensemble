@@ -273,7 +273,7 @@ export function renderSections(sections, onUpdate, onDelete, onDuplicate) {
             };
             document.addEventListener('click', closeMenu);
 
-            const symbols = ['|', 'maj7', 'm7', '7', 'ø', 'o', 'sus4', 'sus2', '#', 'b', ',', '-'];
+            const symbols = ['|', 'maj7', 'm7', '7', 'ø', 'o', 'aug', 'aug7', 'sus4', 'sus2', '#', 'b', ',', '-'];
             symbols.forEach(sym => {
                 const btn = document.createElement('button');
                 btn.className = 'symbol-btn';

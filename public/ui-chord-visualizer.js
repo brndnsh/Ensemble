@@ -125,6 +125,7 @@ export function renderChordVisualizer(ui) {
                 const card = document.createElement('div');
                 card.className = 'chord-card';
                 if (chord.isMinor) card.classList.add('minor');
+                if (chord.quality === 'aug' || chord.quality === 'augmaj7') card.classList.add('aug');
                 if (chord.globalIndex === cb.lastActiveChordIndex) card.classList.add('active');
 
                 const notation = arranger.notation || 'roman';
