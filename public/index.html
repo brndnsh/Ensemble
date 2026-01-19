@@ -901,7 +901,11 @@
             <div id="bpmCandidateContainer" style="margin-bottom: 1.5rem;">
                 <label class="setting-label" style="display: block; margin-bottom: 0.5rem;">Select Tempo:</label>
                 <div id="bpmChips" class="template-chips" style="justify-content: flex-start;"></div>
-                <p class="drop-subtext" style="margin-top: 0.5rem;">Changing tempo will re-analyze the audio for better accuracy.</p>
+                
+                <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.85rem;">Sync project BPM (<span id="detectedBpmLabel">---</span>)</span>
+                    <input type="checkbox" id="analyzerSyncBpmCheck" checked>
+                </div>
             </div>
 
             <div id="suggestedSectionsContainer" class="suggested-sections-container"></div>

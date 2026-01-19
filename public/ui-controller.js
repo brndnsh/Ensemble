@@ -881,6 +881,9 @@ export function setupAnalyzerHandlers() {
     const performAnalysis = async (customBpm = 0) => {
         if (!currentAudioBuffer) return;
         
+        // Ensure customBpm is a number (it might be a PointerEvent if called directly from an event listener)
+        const targetBpm = typeof customBpm === 'number' ? customBpm : 0;
+
         ui.analyzerTrimView.style.display = 'none';
         ui.analyzerProcessing.style.display = 'block';
         ui.analyzerResults.style.display = 'none';
@@ -895,7 +898,7 @@ export function setupAnalyzerHandlers() {
             const endTime = parseFloat(ui.analyzerEndInput.value) || currentAudioBuffer.duration;
 
             const analysis = await analyzer.analyze(currentAudioBuffer, { 
-                bpm: customBpm, // Use custom BPM if provided
+                bpm: targetBpm, // Use custom BPM if provided
                 startTime,
                 endTime,
                 onProgress: (pct) => {
@@ -1054,7 +1057,7 @@ export function setupAnalyzerHandlers() {
 
     ui.analyzerStartInput.addEventListener('input', updateSelectionUI);
     ui.analyzerEndInput.addEventListener('input', updateSelectionUI);
-    ui.startAnalysisBtn.addEventListener('click', performAnalysis);
+    ui.startAnalysisBtn.addEventListener('click', () => performAnalysis());
 
     ui.analyzerFileInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) {
