@@ -67,11 +67,29 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
         return matches / len;
     };
 
+    const getConsensusValue = (startIdx, len, repeats) => {
+        const consensus = [];
+        for (let k = 0; k < len; k++) {
+            const counts = {};
+            for (let r = 0; r < repeats; r++) {
+                // Use originalMeasures to preserve chord quality (C7 vs C)
+                const measure = originalMeasures[startIdx + r * len + k];
+                counts[measure] = (counts[measure] || 0) + 1;
+            }
+            // Pick the most frequent chord for this measure slot
+            // If tie, prefer the one from the first iteration (stability)
+            const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+            consensus.push(best);
+        }
+        return consensus.join(' | ');
+    };
+
     while (i < measures.length) {
         let bestLen = 0;
         let bestRepeat = 0;
 
-        for (let len of [16, 8, 4, 2]) {
+        // Expanded lengths to catch 32-bar forms, 12-bar blues, etc.
+        for (let len of [32, 24, 16, 12, 8, 6, 4, 2]) {
             if (i + len * 2 <= measures.length) {
                 if (getSimilarity(i, i + len, len) >= 0.75) {
                     bestLen = len;
@@ -86,7 +104,7 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
         }
 
         if (bestLen > 0) {
-            const value = originalMeasures.slice(i, i + bestLen).join(' | ');
+            const value = getConsensusValue(i, bestLen, bestRepeat);
             const avgEnergy = measureEnergy.slice(i, i + bestLen * bestRepeat).reduce((a, b) => a + b, 0) / (bestLen * bestRepeat);
             sections.push({ value, repeat: bestRepeat, energy: avgEnergy });
             i += bestLen * bestRepeat;
@@ -121,23 +139,46 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
     const labelMap = new Map();
     let currentLetterCode = 65; // 'A'
 
+    const getSequenceSimilarity = (seq1, seq2) => {
+        const m1 = seq1.split(' | ').map(simplify);
+        const m2 = seq2.split(' | ').map(simplify);
+        if (m1.length !== m2.length) return 0;
+        let matches = 0;
+        for (let k = 0; k < m1.length; k++) {
+            if (m1[k] === m2[k]) matches++;
+        }
+        return matches / m1.length;
+    };
+
     consolidated.forEach((s, idx) => {
         const totalMeasures = s.value.split('|').length * s.repeat;
         const relEnergy = range > 0 ? (s.energy - minE) / range : 0.5;
         
-        // Use a persistent label for same chord progressions
-        if (!labelMap.has(s.value)) {
-            // First time seeing this progression
-            if (idx === 0 && totalMeasures <= 8 && relEnergy < 0.4) {
-                labelMap.set(s.value, "Intro");
-            } else if (idx === consolidated.length - 1 && totalMeasures <= 8 && relEnergy < 0.4) {
-                labelMap.set(s.value, "Outro");
-            } else {
-                labelMap.set(s.value, "Section " + String.fromCharCode(currentLetterCode++));
-            }
+        // Use a persistent label for similar chord progressions
+        let matchedKey = null;
+        for (const key of labelMap.keys()) {
+             if (s.value === key || getSequenceSimilarity(s.value, key) >= 0.7) {
+                 matchedKey = key;
+                 break;
+             }
         }
 
-        s.label = labelMap.get(s.value);
+        if (!matchedKey) {
+            // First time seeing this progression
+            let label = "Section " + String.fromCharCode(currentLetterCode++);
+            if (idx === 0 && totalMeasures <= 8 && relEnergy < 0.4) {
+                label = "Intro";
+                currentLetterCode--; // Don't burn a letter
+            } else if (idx === consolidated.length - 1 && totalMeasures <= 8 && relEnergy < 0.4) {
+                label = "Outro";
+                currentLetterCode--; 
+            }
+            
+            labelMap.set(s.value, label);
+            matchedKey = s.value;
+        }
+
+        s.label = labelMap.get(matchedKey);
         
         // Special override for single-chord loops
         const isVamp = s.value.split('|').every(m => m.trim() === s.value.split('|')[0].trim());
