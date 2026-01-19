@@ -2,7 +2,7 @@ import { ACTIONS } from './types.js';
 import { ui, showToast, renderChordVisualizer, renderSections, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
 import { ctx, cb, bb, sb, gb, arranger, dispatch } from './state.js';
 import { saveCurrentState } from './persistence.js';
-import { restoreGains } from './engine.js';
+import { restoreGains, initAudio } from './engine.js';
 import { syncWorker } from './worker-client.js';
 import { generateId, formatUnicodeSymbols } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
@@ -324,16 +324,9 @@ export function setupUIHandlers(refs) {
                 ui.arrangerActionTrigger.classList.remove('active');
             }
         }],
-        [ui.analyzeAudioBtn, 'click', (e) => {
-            console.log("[Analyzer] analyzeAudioBtn triggered");
-            e.stopPropagation();
-            ui.arrangerActionMenu.classList.remove('open');
-            ui.arrangerActionTrigger.classList.remove('active');
-            
-            // Trigger the reset logic from the specialized handler
-            if (window.resetAnalyzer) window.resetAnalyzer();
-            
-            ui.analyzerOverlay.classList.add('active');
+        [document.getElementById('analyzeAudioBtn'), 'click', () => {
+            // console.log("[Analyzer] analyzeAudioBtn triggered");
+            document.getElementById('analyzerOverlay').classList.add('active');
         }],
         [ui.randomizeBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
@@ -784,7 +777,7 @@ export function setupAnalyzerHandlers() {
     window.resetAnalyzer = resetAnalyzer;
 
     const drawWaveform = (buffer) => {
-        console.log("[Analyzer] Drawing waveform...");
+        // console.log("[Analyzer] Drawing waveform...");
         const canvas = ui.analyzerWaveformCanvas;
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
@@ -824,7 +817,13 @@ export function setupAnalyzerHandlers() {
             }
             ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
         }
-        console.log("[Analyzer] Waveform draw complete.");
+        
+        drawSelectionOverlay();
+        // console.log("[Analyzer] Waveform draw complete.");
+    };
+
+    const drawSelectionOverlay = () => {
+
     };
 
     const updateSelectionUI = () => {
@@ -841,24 +840,24 @@ export function setupAnalyzerHandlers() {
     };
 
     const handleFile = async (file) => {
-        console.log(`[Analyzer] Handling file: ${file.name} (${file.size} bytes)`);
+        // console.log(`[Analyzer] Handling file: ${file.name} (${file.size} bytes)`);
         ui.analyzerDropZone.style.display = 'none';
         if (ui.liveListenContainer) ui.liveListenContainer.style.display = 'none';
         ui.analyzerProcessing.style.display = 'block'; 
         currentFileName = file.name;
         
         try {
-            console.log("[Analyzer] Reading arrayBuffer...");
+            // console.log("[Analyzer] Reading arrayBuffer...");
             const arrayBuffer = await file.arrayBuffer();
-            console.log("[Analyzer] Decoding audio data...");
             
-            const audioCtx = ctx.audio || new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') {
-                await audioCtx.resume();
+            // console.log("[Analyzer] Decoding audio data...");
+            // Use the global audio context to decode
+            if (!ctx.audio) {
+                initAudio();
             }
 
-            currentAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            console.log(`[Analyzer] Decoded: ${currentAudioBuffer.duration.toFixed(2)}s`);
+            currentAudioBuffer = await ctx.audio.decodeAudioData(arrayBuffer);
+            // console.log(`[Analyzer] Decoded: ${currentAudioBuffer.duration.toFixed(2)}s`);
             
             ui.analyzerProcessing.style.display = 'none';
             ui.analyzerTrimView.style.display = 'block';

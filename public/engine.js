@@ -27,9 +27,9 @@ export function initAudio() {
         ctx.audio = new (window.AudioContext || window.webkitAudioContext)();
 
         ctx.audio.onstatechange = () => {
-            console.log(`[DSP] AudioContext state changed to: ${ctx.audio.state}`);
+            // console.log(`[DSP] AudioContext state changed to: ${ctx.audio.state}`);
             if (ctx.audio.state === 'suspended' && ctx.isPlaying) {
-                console.log("[DSP] Unexpected suspension. Attempting auto-resume...");
+                // console.log("[DSP] Unexpected suspension. Attempting auto-resume...");
                 ctx.audio.resume().catch(e => console.error("[DSP] Auto-resume failed:", e));
             }
         };
@@ -133,7 +133,7 @@ export function initAudio() {
         for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
         gb.audioBuffers.noise = buffer;
 
-        console.log(`[DSP] Audio Context Initialized: SampleRate=${ctx.audio.sampleRate}, Latency=${(ctx.audio.baseLatency * 1000).toFixed(1)}ms`);
+        // console.log(`[DSP] Audio Context Initialized: SampleRate=${ctx.audio.sampleRate}, Latency=${(ctx.audio.baseLatency * 1000).toFixed(1)}ms`);
     }
     if (ctx.audio.state === 'suspended') ctx.audio.resume();
 }
@@ -143,7 +143,7 @@ export function initAudio() {
  */
 export function monitorMasterLimiter() {
     if (ctx.masterLimiter && ctx.masterLimiter.reduction.value < -0.1) {
-        console.log(`[DSP] Master Limiting: ${ctx.masterLimiter.reduction.value.toFixed(2)}dB`);
+        // console.log(`[DSP] Master Limiting: ${ctx.masterLimiter.reduction.value.toFixed(2)}dB`);
     }
 }
 
@@ -152,7 +152,7 @@ export function monitorMasterLimiter() {
  */
 window.bypassVisuals = (shouldBypass) => {
     ctx.isDrawing = !shouldBypass;
-    console.log(`[DSP] Visual Updates ${shouldBypass ? 'DISABLED' : 'ENABLED'}`);
+    // console.log(`[DSP] Visual Updates ${shouldBypass ? 'DISABLED' : 'ENABLED'}`);
 };
 
 /**
@@ -163,10 +163,10 @@ window.bypassMaster = (shouldBypass) => {
     ctx.masterGain.disconnect();
     if (shouldBypass) {
         ctx.masterGain.connect(ctx.audio.destination);
-        console.log("[DSP] Master Chain BYPASSED");
+        // console.log("[DSP] Master Chain BYPASSED");
     } else {
         ctx.masterGain.connect(ctx.saturator);
-        console.log("[DSP] Master Chain ACTIVE");
+        // console.log("[DSP] Master Chain ACTIVE");
     }
 };
 

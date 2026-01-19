@@ -132,7 +132,7 @@ export class ChordAnalyzerLite {
         
         const beatsPerMeasure = pulse.beatsPerMeasure || 4;
         
-        console.log(`[Analyzer-Lite] Pulse Detected: ${bpm} BPM, ${beatsPerMeasure}/4 Meter, Offset: ${pulse.downbeatOffset.toFixed(3)}s`);
+        // console.log(`[Analyzer-Lite] Pulse Detected: ${bpm} BPM, ${beatsPerMeasure}/4 Meter, Offset: ${pulse.downbeatOffset.toFixed(3)}s`);
         
         const sampleRate = audioBuffer.sampleRate;
         let fullSignal = audioBuffer.getChannelData(0); // Mono
@@ -178,7 +178,7 @@ export class ChordAnalyzerLite {
         const tuningOffset = globalKey.tuningOffset;
         
         if (options.onProgress) options.onProgress(15);
-        console.log(`[Analyzer-Lite] Global Key Detected: ${this.notes[globalKey.root]} ${globalKey.type} (Tuning: ${tuningOffset.toFixed(2)} semitones)`);
+        // console.log(`[Analyzer-Lite] Global Key Detected: ${this.notes[globalKey.root]} ${globalKey.type} (Tuning: ${tuningOffset.toFixed(2)} semitones)`);
         
         const results = [];
         let lastChord = 'Rest';
@@ -187,7 +187,7 @@ export class ChordAnalyzerLite {
         const rollingChroma = new Float32Array(12).fill(0);
         const ROLL_DECAY = 0.1; // Fast adaptation for rapid modulation (Coltrane changes)
 
-        console.log(`[Analyzer-Lite] Processing ${beats} beats...`);
+        // console.log(`[Analyzer-Lite] Processing ${beats} beats...`);
 
         for (let b = 0; b < beats; b++) {
             if (b % 10 === 0) await yieldToMain();
@@ -390,7 +390,7 @@ export class ChordAnalyzerLite {
                         }
                         if (options.onProgress) options.onProgress(5);
                         
-                        console.log(`[Pulse Debug] Initial Best Lag: ${bestLag} (${Math.round(60/(bestLag*0.01))} BPM)`);
+                        // console.log(`[Pulse Debug] Initial Best Lag: ${bestLag} (${Math.round(60/(bestLag*0.01))} BPM)`);
                         
                         // Harmonic Check: Detect if we picked a "sub-beat" pulse (too fast) instead of a "beat" pulse.
                         const checkHarmonic = (targetLag) => {
@@ -440,7 +440,7 @@ export class ChordAnalyzerLite {
                                     // If the faster pulse is at least 40% of the slow one, take it.
                                     // It's better to tap twice as fast than fall asleep.
                                     if (scoreFaster > scoreCurrent * 0.4) {
-                                        console.log(`[Pulse Debug] Upgrading from ${Math.round(60/(currentLag*0.01))} BPM to ${Math.round(60/(fasterLag*0.01))} BPM (Double Time)`);
+                                        // console.log(`[Pulse Debug] Upgrading from ${Math.round(60/(currentLag*0.01))} BPM to ${Math.round(60/(fasterLag*0.01))} BPM (Double Time)`);
                                         currentLag = fasterLag;
                                     }
                                 }
