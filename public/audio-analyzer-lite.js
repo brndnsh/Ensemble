@@ -3,6 +3,10 @@
  * Pure JavaScript implementation of Chromagram-based Chord Recognition.
  * Complexity: O(N) where N is audio samples.
  */
+
+// Helper to allow UI updates during heavy processing
+const yieldToMain = () => new Promise(r => setTimeout(r, 0));
+
 export class ChordAnalyzerLite {
     constructor() {
         /** @type {string[]} */
@@ -90,7 +94,7 @@ export class ChordAnalyzerLite {
      */
     async analyze(audioBuffer, options = {}) {
         // 1. Identify Pulse (BPM, Meter, Downbeat)
-        const pulse = this.identifyPulse(audioBuffer, options);
+        const pulse = await this.identifyPulse(audioBuffer, options);
         
         // Ensure we have a valid numeric BPM
         let bpm = 120;
@@ -153,6 +157,8 @@ export class ChordAnalyzerLite {
         console.log(`[Analyzer-Lite] Processing ${beats} beats...`);
 
         for (let b = 0; b < beats; b++) {
+            if (b % 10 === 0) await yieldToMain();
+
             const start = b * samplesPerBeat;
             const end = start + samplesPerBeat;
             const window = signal.subarray(start, end);
@@ -256,7 +262,7 @@ export class ChordAnalyzerLite {
      * Identifies the "Pulse" (BPM, Meter, and Downbeat) of the audio using 
      * Spectral Flux for robust onset detection and autocorrelation.
      */
-    identifyPulse(audioBuffer, options = {}) {
+    async identifyPulse(audioBuffer, options = {}) {
         const signal = audioBuffer.getChannelData(0);
         const sampleRate = audioBuffer.sampleRate;
         
@@ -273,6 +279,8 @@ export class ChordAnalyzerLite {
         let lastSpectrum = new Float32Array(12); // Use 12-bin chroma spectrum for flux
 
         for (let w = 0; w < numWindows; w++) {
+            if (w % 500 === 0) await yieldToMain();
+
             const start = w * hopSize;
             const window = signal.subarray(start, start + winSize);
             
@@ -314,6 +322,8 @@ export class ChordAnalyzerLite {
                         } else {
                             // Compute correlation for all lags
                             for (let lag = minLag; lag <= maxLag; lag++) {
+                                if (lag % 20 === 0) await yieldToMain();
+
                                 let corr = 0;
                                 for (let i = 0; i < onsets.length - lag; i++) {
                                     corr += onsets[i] * onsets[i + lag];
