@@ -85,14 +85,17 @@ describe('Mix Stress & Headroom Test', () => {
         restoreGains();
 
         // Calculate sum of all instrument gains based on actual config.js multipliers:
-        // Drums: 0.5 * 0.45 = 0.225
-        // Bass: 0.45 * 0.35 = 0.1575
-        // Chords: 0.5 * 0.22 = 0.11
-        // Soloist: 0.5 * 0.32 = 0.16
-        // Harmony: 0.4 * 0.28 = 0.112
-        // Total = 0.7645
+        // Drums: 0.5 * 0.40 = 0.20
+        // Bass: 0.45 * 0.32 = 0.144
+        // Chords: 0.5 * 0.30 = 0.15
+        // Soloist: 0.5 * 0.38 = 0.19
+        // Harmony: 0.4 * 0.22 = 0.088
+        // Total = 0.772 (Original was 0.7645)
         
-        // We'll verify the gain nodes were actually set to these values
+        // Wait, let's re-calculate with updated playNote (it has internal gainMult 1.25 for piano)
+        // Actually the test checks the gainNode.setTargetAtTime which is set in restoreGains
+        // restoreGains uses state.volume * mult.
+        
         const drumGain = ctx.drumsGain.gain.setTargetAtTime.mock.calls[0][0];
         const bassGain = ctx.bassGain.gain.setTargetAtTime.mock.calls[0][0];
         const chordsGain = ctx.chordsGain.gain.setTargetAtTime.mock.calls[0][0];
@@ -101,9 +104,9 @@ describe('Mix Stress & Headroom Test', () => {
 
         const totalInstrumentGain = drumGain + bassGain + chordsGain + soloistGain + harmonyGain;
         
-        // Verification: The sum should be very safe (~0.76)
+        // Verification: The sum should be very safe (~0.77)
         expect(totalInstrumentGain).toBeLessThan(1.0);
-        expect(totalInstrumentGain).toBeCloseTo(0.7645, 4);
+        expect(totalInstrumentGain).toBeCloseTo(0.772, 4);
     });
 
     it('should have additional master headroom when Master Vol is 0.4', () => {

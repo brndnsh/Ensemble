@@ -25,7 +25,7 @@ export const INSTRUMENT_PRESETS = {
         filterBase: 400, // Lower base for a warmer tone
         filterDepth: 2400, // Reduced from 4200 to significantly cut harsh high-end
         resonance: 1.2, // Smoother resonance
-        gainMult: 1.1 // Reduced from 1.25 to prevent overpowering the mix
+        gainMult: 1.25 // Boosted from 1.1 to anchor the mix
     }
 };
 
@@ -129,7 +129,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
             strikeFilter.Q.setValueAtTime(1.5, startTime);
             
             strikeGain.gain.setValueAtTime(0, startTime);
-            strikeGain.gain.setTargetAtTime(finalVol * 0.25, startTime, 0.001); // Reduced from 0.4
+            strikeGain.gain.setTargetAtTime(finalVol * 0.15, startTime, 0.001); // Reduced from 0.25
             strikeGain.gain.setTargetAtTime(0, startTime + 0.01, 0.01);
             
             strike.connect(strikeFilter);

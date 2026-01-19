@@ -468,7 +468,8 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
                 }
             }
             if (isLongNote && intensity > 0.4) {
-                vibrato = { rate: 3.5, depth: 10 + (intensity * 10) };
+                // Reduced depth from 10 + intensity*10 to 5 + intensity*5 for less 'warble'
+                vibrato = { rate: 3.5, depth: 5 + (intensity * 5) };
             }
         } 
         else if (feel === 'Jazz' || feel === 'Blues') {

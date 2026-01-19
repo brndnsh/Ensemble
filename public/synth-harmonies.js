@@ -104,10 +104,10 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         sub.frequency.setValueAtTime(freq * 0.5, playTime);
     } 
     else if (feel === 'Neo-Soul' || feel === 'Acoustic') {
-        // Warm/Soulful: Triangles and Sines
+        // Warm/Soulful: Multi-Triangle for clarity
         osc1.type = 'triangle';
-        osc2.type = 'sine';
-        osc2.detune.setValueAtTime(5, playTime);
+        osc2.type = 'triangle';
+        osc2.detune.setValueAtTime(2, playTime); // Reduced from 5
         sub.type = 'triangle';
         sub.frequency.setValueAtTime(freq * 0.5, playTime);
     }

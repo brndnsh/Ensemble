@@ -12,6 +12,13 @@ export function killBassNote() {
     }
 }
 
+// Internal mix state for density-aware normalization
+const mixState = {
+    recentHits: 0,
+    densityDuck: 1.0,
+    lastTick: 0
+};
+
 /**
  * P-Bass Synthesis: Layered physical model
  * 1. Thump: Triangle fundamental + Passive Pickup Warmth (WaveShaper)
@@ -25,8 +32,19 @@ export function playBassNote(freq, time, duration, velocity = 1.0, muted = false
         const now = ctx.audio.currentTime;
         const startTime = Math.max(time, now);
         
+        // --- Density Normalization Logic ---
+        if (now - mixState.lastTick > 0.5) {
+            mixState.recentHits *= 0.5;
+            mixState.lastTick = now;
+        }
+        mixState.recentHits++;
+        
+        // If we're chugging (8th/16th notes), duck volume slightly to keep the mix clear.
+        const densityThreshold = 4;
+        mixState.densityDuck = Math.max(0.85, 1.0 - (Math.max(0, mixState.recentHits - densityThreshold) * 0.02));
+
         // Square-root compression for even volume, Motown usually has a very consistent level
-        const vol = 1.0 * Math.sqrt(velocity) * (0.95 + Math.random() * 0.1);
+        const vol = 1.0 * Math.sqrt(velocity) * mixState.densityDuck * (0.95 + Math.random() * 0.1);
         if (vol < 0.005) return;
 
         const tonalVol = muted ? vol * 0.15 : vol;

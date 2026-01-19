@@ -20,11 +20,11 @@ export const TIME_SIGNATURES = {
 
 export const MIXER_GAIN_MULTIPLIERS = {
     master: 0.85,
-    chords: 0.22,
-    bass: 0.35,
-    soloist: 0.32,
-    harmonies: 0.28,
-    drums: 0.45
+    chords: 0.30,    // Primary harmonic focus
+    bass: 0.32,      // Tucked from 0.35
+    soloist: 0.38,   // Primary melodic focus
+    harmonies: 0.22, // Supportive background
+    drums: 0.40      // Supportive rhythm
 };
 
 export const REGGAE_RIDDIMS = {

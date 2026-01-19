@@ -29,7 +29,12 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     // clean up voices that have finished their release (roughly duration + 0.5s)
     sb.activeVoices = sb.activeVoices.filter(v => (v.time + v.duration + 0.5) > playTime);
 
-    const randomizedVol = vol * (0.95 + Math.random() * 0.1);
+    // Intensity-driven Volume Scaling:
+    // At high intensity, the soloist gets a small gain boost to stay on top of the busy mix.
+    const intensity = ctx.bandIntensity;
+    const intensityGain = 0.85 + (intensity * 0.3); // 0.85x to 1.15x scaling
+
+    const randomizedVol = vol * intensityGain * (0.95 + Math.random() * 0.1);
     const gain = ctx.audio.createGain();
     gain.gain.value = 0;
     gain.gain.setValueAtTime(0, playTime);

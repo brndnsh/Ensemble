@@ -12,15 +12,39 @@ export function killDrumNote() {
     }
 }
 
+// Internal mix state for density-aware normalization
+const mixState = {
+    recentHits: 0,
+    densityDuck: 1.0,
+    lastTick: 0
+};
+
 export function playDrumSound(name, time, velocity = 1.0) {
     if (!name) return;
     const now = ctx.audio.currentTime;
+    
+    // --- Density Normalization Logic ---
+    // Tracks hits over a rolling window to prevent dense presets from blowing out the mix.
+    if (now - mixState.lastTick > 0.5) {
+        // Decay hits every 500ms
+        mixState.recentHits *= 0.5;
+        mixState.lastTick = now;
+    }
+    mixState.recentHits++;
+    
+    // Density Ducking: If more than 8 hits are scheduled in a short window (~2 bars of 16ths),
+    // we start ducking to keep integrated loudness consistent.
+    const densityThreshold = 12;
+    mixState.densityDuck = Math.max(0.75, 1.0 - (Math.max(0, mixState.recentHits - densityThreshold) * 0.015));
+
     // Add a tiny 2ms buffer to ensure scheduling always happens slightly in the future,
     // which prevents the "immediate-start" clicks common in Firefox.
     const playTime = Math.max(time, now + 0.002);
     const humanizeFactor = (gb.humanize || 0) / 100;
     const velJitter = 1.0 + (Math.random() - 0.5) * (humanizeFactor * 0.4);
-    const masterVol = velocity * 1.35 * velJitter;
+    
+    // Apply the density ducking factor to the master drum volume
+    const masterVol = velocity * 1.3 * velJitter * mixState.densityDuck;
     
     // Round-robin variation (±1.5%)
     const rr = (amt = 0.03) => 1 + (Math.random() - 0.5) * amt;
