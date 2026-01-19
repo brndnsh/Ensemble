@@ -39,7 +39,6 @@ export class ChordAnalyzerLite {
         const beats = Math.floor(signal.length / samplesPerBeat);
         
         const results = [];
-        let lastChord = null;
 
         console.log(`[Analyzer-Lite] Processing ${beats} beats...`);
 
@@ -63,9 +62,12 @@ export class ChordAnalyzerLite {
         let lastConsensus = null;
 
         for (let i = 0; i < results.length; i++) {
+            // Sliding window: [Previous, Current, Next]
             const window = results.slice(Math.max(0, i - 1), Math.min(results.length, i + 2));
             const counts = {};
             window.forEach(r => counts[r.chord] = (counts[r.chord] || 0) + 1);
+            
+            // Pick the winner
             const consensus = Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
 
             if (consensus !== lastConsensus) {
