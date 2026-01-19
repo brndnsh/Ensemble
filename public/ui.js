@@ -45,7 +45,7 @@ export function initUI() {
         'analyzeAudioBtn', 'analyzerOverlay', 'closeAnalyzerBtn', 'analyzerDropZone', 'analyzerFileInput',
         'analyzerTrimView', 'analyzerWaveformCanvas', 'analyzerSelectionOverlay', 'startAnalysisBtn',
         'analyzerProcessing', 'analyzerProgressBar', 'analyzerResults', 'analyzerSummary', 'applyAnalysisBtn',
-        'analyzerStartInput', 'analyzerEndInput', 'analyzerDurationLabel', 
+        'analyzerStartInput', 'analyzerEndInput', 'analyzerDurationLabel', 'suggestedSectionsContainer', 'analyzerReplaceCheck',
         'clearProgBtn', 'saveBtn', 'shareBtn', 'chordVisualizer', 'chordPresets', 'userPresetsContainer',
         'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'groupingToggle', 'groupingLabel',
         'chordReverb', 'bassReverb', 'soloistReverb', 'drumPresets', 'userDrumPresetsContainer',

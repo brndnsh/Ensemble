@@ -130,14 +130,16 @@ export class ChordAnalyzerLite {
     }
 
     identifyChord(chroma) {
+        // Weighted profiles: Root and 3rd are the most defining characteristics.
+        // 1.5 = Essential (Root), 1.3 = Quality (3rd), 1.0 = Supporting (5th/7th)
         const profiles = {
-            'maj': [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0],
-            'm':   [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
-            '7':   [1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0],
-            'maj7':[1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1],
-            'm7':  [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0],
-            'sus4':[1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
-            'dim': [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0]
+            'maj':  { 0: 1.5, 4: 1.3, 7: 1.0 },
+            'm':    { 0: 1.5, 3: 1.3, 7: 1.0 },
+            '7':    { 0: 1.5, 4: 1.2, 7: 1.0, 10: 1.1 },
+            'maj7': { 0: 1.5, 4: 1.2, 7: 1.0, 11: 1.1 },
+            'm7':   { 0: 1.5, 3: 1.2, 7: 1.0, 10: 1.1 },
+            'sus4': { 0: 1.5, 5: 1.3, 7: 1.0 },
+            'dim':  { 0: 1.5, 3: 1.2, 6: 1.2 }
         };
 
         let bestScore = -1;
@@ -146,14 +148,18 @@ export class ChordAnalyzerLite {
         for (let root = 0; root < 12; root++) {
             for (const [type, profile] of Object.entries(profiles)) {
                 let score = 0;
+                
+                // Calculate match score
                 for (let i = 0; i < 12; i++) {
                     const chromaIdx = (root + i) % 12;
-                    // Boost the score if the note exists in the profile
-                    if (profile[i] > 0) {
-                        score += chroma[chromaIdx];
+                    const val = chroma[chromaIdx];
+                    
+                    if (profile[i]) {
+                        // Reward note present in chord
+                        score += val * profile[i];
                     } else {
-                        // Penalty for energy where it shouldn't be (helps distinguish maj from maj7)
-                        score -= chroma[chromaIdx] * 0.3;
+                        // Penalty for energy where it shouldn't be
+                        score -= val * 0.5;
                     }
                 }
                 
@@ -164,9 +170,8 @@ export class ChordAnalyzerLite {
             }
         }
 
-        // If very low energy, call it a rest (silent or too noisy)
         const energy = chroma.reduce((a, b) => a + b, 0);
-        if (energy < 0.1) return 'Rest';
+        if (energy < 0.05) return 'Rest';
 
         return bestChord;
     }
