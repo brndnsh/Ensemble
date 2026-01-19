@@ -149,11 +149,16 @@ describe('Mix & Signal Integrity Audit', () => {
         initAudio();
         
         // mixer gain = state.volume * MIXER_GAIN_MULTIPLIERS[module]
-        // From config.js: bass multiplier is now 0.38. state.bb.volume is 0.45.
-        // Target should be 0.45 * 0.38 = 0.171
+        // From config.js: bass multiplier is now 0.35. state.bb.volume is 0.45.
+        // Target should be 0.45 * 0.35 = 0.1575
         
         const bassTarget = ctx.bassGain.gain.exponentialRampToValueAtTime.mock.calls[0][0];
-        expect(bassTarget).toBeCloseTo(0.171, 4);
+        expect(bassTarget).toBeCloseTo(0.1575, 4);
+
+        // Harmony multiplier is 0.28. state.hb.volume is 0.4.
+        // Target should be 0.4 * 0.28 = 0.112
+        const harmonyTarget = ctx.harmoniesGain.gain.exponentialRampToValueAtTime.mock.calls[0][0];
+        expect(harmonyTarget).toBeCloseTo(0.112, 4);
     });
 
     it('should ensure the saturator uses an oversampled soft-clip curve', () => {

@@ -159,6 +159,11 @@ export function flushBuffer(type, primeSteps = 0) {
         killAllPianoNotes();
         killChordBus();
     }
+    if (type === 'harmony' || type === 'all') {
+        hb.buffer.clear();
+        killHarmonyNote();
+        killHarmonyBus();
+    }
     if (type === 'groove' || type === 'all') {
         killDrumNote();
         killDrumBus();
@@ -234,6 +239,8 @@ export function togglePower(type) {
         if (c.onEnable) c.onEnable();
         restoreGains();
     }
+
+    saveCurrentState();
 }
 
 export function resetToDefaults() {
