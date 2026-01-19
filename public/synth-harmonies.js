@@ -84,9 +84,15 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     }
 
     // Amplitude Envelope
-    const attack = style === 'stabs' ? 0.01 : 0.2;
+    // Velocity-to-Attack mapping: higher velocity = sharper attack (stabs)
+    const baseAttack = style === 'stabs' ? 0.01 : 0.2;
+    const attack = Math.max(0.005, baseAttack - (vol * 0.15));
     const release = style === 'stabs' ? 0.1 : 0.5;
     
+    // Ensemble Widening: Increase detune for higher velocities
+    const detuneMult = 1.0 + (vol * 0.5);
+    osc2.detune.setValueAtTime((style === 'stabs' ? 12 : 8) * detuneMult, playTime);
+
     gain.gain.setValueAtTime(0, playTime);
     gain.gain.linearRampToValueAtTime(vol, playTime + attack);
     gain.gain.setTargetAtTime(0, playTime + duration - release, release);

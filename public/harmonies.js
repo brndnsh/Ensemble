@@ -64,6 +64,12 @@ const RHYTHMIC_PATTERNS = {
     'Bossa Nova': [
         [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Clave-adjacent
         [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0]
+    ],
+    'Disco': [
+        [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1], // The "And-4" 16th stabs
+        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Straight quarters (Chic)
+        [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // Offbeat 8ths
+        [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0]  // Dotted 8ths (Modern Pop)
     ]
 };
 
@@ -137,19 +143,34 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     
     // Intensity and local complexity scale the number of voices
     const baseDensity = config.density || 2;
-    const density = Math.max(1, Math.floor(baseDensity * (0.4 + ctx.bandIntensity * 0.3 + hb.complexity * 0.3)));
+    let density = Math.max(1, Math.floor(baseDensity * (0.4 + ctx.bandIntensity * 0.3 + hb.complexity * 0.3)));
     
+    // Disco Special: High-octave stabs
+    const isDisco = gb.genreFeel === 'Disco';
+    if (isDisco && ctx.bandIntensity > 0.7) density = Math.max(density, 2);
+
+    // --- 5. Melodic Trend (Soaring) ---
+    // Calculate a 4-bar "Lift" cycle
+    const cycleMeasure = Math.floor(step / stepsPerMeasure) % 4;
+    const liftShift = isDisco ? (cycleMeasure * 2) : 0; // Soar up by 2 semitones per bar
+
     // Select notes from scale: Root, 3rd, 5th, 7th depending on density
     // For Harmonies, we focus on smooth voice leading of color tones
     const colorTones = [0, 4, 7, 10, 2, 9].filter(i => scale.includes(i));
-    const intervals = colorTones.slice(0, density);
+    let intervals = colorTones.slice(0, density);
+
+    // If Disco and high intensity, force octaves for certain hits
+    if (isDisco && ctx.bandIntensity > 0.6 && rhythmicStyle === 'stabs') {
+        intervals = [intervals[0], intervals[0] + 12];
+    }
 
     const currentMidis = getBestInversion(rootMidi, intervals, lastMidis, stepInChord === 0);
     lastMidis = currentMidis;
 
     currentMidis.forEach((midi, i) => {
+        const finalMidi = midi + liftShift;
         notes.push({
-            midi: midi,
+            midi: finalMidi,
             velocity: config.velocity * (0.8 + Math.random() * 0.2),
             durationSteps: durationSteps,
             timingOffset: (i * 0.01) + (Math.random() * config.timingJitter),
