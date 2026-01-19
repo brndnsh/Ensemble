@@ -61,7 +61,7 @@ const SMART_GENRES = {
     'Hip Hop': { swing: 25, sub: '16th', drum: 'Hip Hop', feel: 'Hip Hop', chord: 'smart', bass: 'neo', soloist: 'neo', harmony: 'smart' },
     'Blues': { swing: 100, sub: '8th', drum: 'Blues Shuffle', feel: 'Blues', chord: 'jazz', bass: 'quarter', soloist: 'blues', harmony: 'horns' },
     'Neo-Soul': { swing: 30, sub: '16th', drum: 'Neo-Soul', feel: 'Neo-Soul', chord: 'smart', bass: 'neo', soloist: 'neo', harmony: 'strings' },
-    'Reggae': { swing: 20, sub: '16th', drum: 'Reggae', feel: 'Reggae', chord: 'smart', bass: 'dub', soloist: 'blues', harmony: 'smart' },
+    'Reggae': { swing: 20, sub: '16th', drum: 'Reggae', feel: 'Reggae', chord: 'smart', bass: 'dub', soloist: 'minimal', harmony: 'smart' },
     'Acoustic': { swing: 15, sub: '8th', drum: 'Acoustic', feel: 'Acoustic', chord: 'pad', bass: 'half', soloist: 'minimal', harmony: 'strings' },
     'Bossa': { swing: 0, sub: '16th', drum: 'Bossa Nova', feel: 'Bossa Nova', chord: 'jazz', bass: 'bossa', soloist: 'bossa', harmony: 'strings' },
     'Country': { swing: 55, sub: '16th', drum: 'Country (Two-Step)', feel: 'Country', chord: 'strum-country', bass: 'country', soloist: 'country', harmony: 'smart' },
@@ -614,29 +614,33 @@ export function setupUIHandlers(refs) {
 
     if (ui.sessionTimerCheck && ui.sessionTimerInput) {
         const updateTimerUI = (isChecked) => {
-            ui.sessionTimerDurationContainer.style.opacity = isChecked ? '1' : '0.4';
-            ui.sessionTimerDurationContainer.style.pointerEvents = isChecked ? 'auto' : 'none';
+            if (ui.sessionTimerDurationContainer) {
+                ui.sessionTimerDurationContainer.style.opacity = isChecked ? '1' : '0.4';
+                ui.sessionTimerDurationContainer.style.pointerEvents = isChecked ? 'auto' : 'none';
+            }
             if (ui.sessionTimerStepper) {
                 ui.sessionTimerStepper.style.borderColor = isChecked ? 'var(--accent-color)' : 'var(--border-color)';
                 ui.sessionTimerStepper.style.backgroundColor = isChecked ? 'var(--card-bg)' : 'var(--input-bg)';
             }
         };
 
-        const currentTimer = ctx.sessionTimer || 0;
-        ui.sessionTimerCheck.checked = currentTimer > 0;
-        ui.sessionTimerInput.value = currentTimer > 0 ? currentTimer : 5;
-        updateTimerUI(currentTimer > 0);
+        // Sync initial UI from potentially hydrated state
+        ui.sessionTimerCheck.checked = ctx.sessionTimer > 0;
+        ui.sessionTimerInput.value = ctx.sessionTimer > 0 ? ctx.sessionTimer : 5;
+        updateTimerUI(ctx.sessionTimer > 0);
 
         ui.sessionTimerCheck.addEventListener('change', (e) => {
             const isChecked = e.target.checked;
             const duration = isChecked ? parseFloat(ui.sessionTimerInput.value) : 0;
             updateTimerUI(isChecked);
             dispatch(ACTIONS.SET_SESSION_TIMER, duration);
+            saveCurrentState();
         });
 
         ui.sessionTimerInput.addEventListener('change', (e) => {
             if (ui.sessionTimerCheck.checked) {
                 dispatch(ACTIONS.SET_SESSION_TIMER, parseFloat(e.target.value));
+                saveCurrentState();
             }
         });
 
@@ -646,6 +650,7 @@ export function setupUIHandlers(refs) {
             ui.sessionTimerInput.value = next;
             if (ui.sessionTimerCheck.checked) {
                 dispatch(ACTIONS.SET_SESSION_TIMER, next);
+                saveCurrentState();
             }
         };
 

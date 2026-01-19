@@ -24,7 +24,7 @@ const STYLE_CONFIG = {
         padProb: 0.2 // Probability of playing a pad even if style is stabs
     },
     strings: {
-        density: 3,
+        density: 2, // Capped at 2 for polyphonic clarity
         rhythmicStyle: 'pads',
         timingJitter: 0.02, // Reduced for focus
         velocity: 0.6,
@@ -32,7 +32,7 @@ const STYLE_CONFIG = {
         padProb: 0.9
     },
     smart: {
-        density: 2,
+        density: 2, // Capped at 2
         rhythmicStyle: 'auto', // Depends on genre
         timingJitter: 0.008, // Tightened for focus
         velocity: 0.75,
@@ -98,9 +98,18 @@ const RHYTHMIC_PATTERNS = {
 };
 
 // Internal memory for motif consistency
-const motifCache = new Map(); // Key: sectionId, Value: { patternIdx, noteIntervals }
+const motifCache = new Map(); // Key: sectionId, Value: { patternIdx, noteIntervals, responseMask, motionMask }
 let lastMidis = [];
 let lastPlayedStep = -1;
+
+/**
+ * Clears the internal motif memory. Used for section changes or testing.
+ */
+export function clearHarmonyMemory() {
+    motifCache.clear();
+    lastMidis = [];
+    lastPlayedStep = -1;
+}
 
 /**
  * Generates harmony notes for a given step.
@@ -117,7 +126,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const isChordStart = stepInChord === 0;
 
     // Debounce: Prevent rapid-fire re-triggering on consecutive steps (common in latch mode)
-    if (step === lastPlayedStep + 1 && soloistResult) {
+    if (lastPlayedStep !== -1 && step === lastPlayedStep + 1 && soloistResult) {
         return [];
     }
 
@@ -126,6 +135,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
     const measureStep = step % stepsPerMeasure;
     const sectionId = chord.sectionId || 'default';
+    const feel = gb.genreFeel;
     
     // --- 1. Decide on Pad vs Stab ---
     let config = STYLE_CONFIG[style] || STYLE_CONFIG.smart;
@@ -143,32 +153,90 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     // --- 2. Motif / Pattern Selection ---
     if (!motifCache.has(sectionId)) {
         const genrePatterns = RHYTHMIC_PATTERNS[gb.genreFeel] || RHYTHMIC_PATTERNS['Pop'];
+        // Generate deterministic masks for this section based on sectionId string hash
+        let hash = 0;
+        for (let i = 0; i < sectionId.length; i++) {
+            hash = ((hash << 5) - hash) + sectionId.charCodeAt(i);
+            hash |= 0; 
+        }
+        const seed = Math.abs(hash);
+
         motifCache.set(sectionId, {
-            patternIdx: Math.floor(Math.random() * genrePatterns.length),
-            intervals: [0, 4, 7] 
+            patternIdx: seed % genrePatterns.length,
+            intervals: [0, 4, 7],
+            responseMask: (seed >> 8) & 0xFFFF,
+            motionMask: (seed >> 16) & 0xFFFF
         });
     }
     const motif = motifCache.get(sectionId);
 
-    // --- 3. Rhythm Logic ---
     let shouldPlay = false;
     let durationSteps = 1;
     let isLatched = false;
+    let isMovement = false;
 
-    // LATCH LOGIC: Reinforce Soloist Hooks
+    // 1. LATCH LOGIC: Reinforce Soloist Hooks
     // If the soloist is replaying a hook and intensity is high, "Latch on" to their rhythm
     if (sb.enabled && sb.isReplayingMotif && ctx.bandIntensity > 0.4 && soloistResult) {
-        // Optimization: Only latch if the soloist is playing a note on a "strong" step of their rhythmic cell
-        // This prevents the harmony from playing every single note in a fast run (16ths), 
-        // which sounds glitchy/distracting.
         const stepInCell = step % 4;
         const isStrongStep = stepInCell === 0 || (stepInCell === 2 && ctx.bandIntensity > 0.7);
         
         const hasSoloNote = Array.isArray(soloistResult) ? soloistResult.length > 0 : !!soloistResult;
         if (hasSoloNote && isStrongStep) {
             shouldPlay = true;
-            durationSteps = 2; // Match the stab duration
+            durationSteps = 2; 
             isLatched = true;
+        }
+    }
+
+    // 2. RESPONSE LOGIC: "Big Band" Call & Response
+    // If the soloist is resting, we play small melodic responses.
+    // Deterministic per section but scaled by hb.complexity.
+    if (!shouldPlay && sb.enabled && sb.isResting) {
+        const baseProb = feel === 'Jazz' ? 0.45 : (feel === 'Funk' || feel === 'Disco' ? 0.35 : 0.2);
+        const responseProb = baseProb * hb.complexity; 
+        
+        const isResponseStep = [6, 7, 10, 14].includes(measureStep);
+        // Use deterministic mask + complexity check
+        const bit = (motif.responseMask >> (measureStep % 16)) & 1;
+        if (isResponseStep && bit && (measureStep / 16) < responseProb + 0.2) {
+            shouldPlay = true;
+            durationSteps = 2;
+            isMovement = true;
+        }
+    }
+
+    // 3. INNER VOICE MOTION: Subtle movement within a held chord
+    // Deterministic per section but scales with global intensity.
+    if (!shouldPlay && rhythmicStyle === 'pads') {
+        const motionProb = (ctx.bandIntensity - 0.3) * 0.6; // Starts appearing at 30% intensity
+        const isMotionStep = (measureStep === 8 || measureStep === 12);
+        const bit = (motif.motionMask >> (measureStep % 16)) & 1;
+        if (isMotionStep && bit && (measureStep / 16) < motionProb + 0.1) {
+            shouldPlay = true;
+            durationSteps = 4;
+            isMovement = true;
+        }
+    }
+
+    // 4. APPROACH & ANTICIPATION: "Lead-ins" to the next chord
+    // Harmonic Anticipation: Play the NEXT chord a 16th early (Big Band style)
+    let isAnticipating = false;
+    if (!shouldPlay && nextChord && measureStep === stepsPerMeasure - 1) {
+        if (Math.random() < (hb.complexity * 0.3 * ctx.bandIntensity)) {
+            shouldPlay = true;
+            durationSteps = 2;
+            isAnticipating = true;
+        }
+    }
+
+    // Chromatic Approach: A single voice leading into the next chord
+    let isApproach = false;
+    if (!shouldPlay && nextChord && measureStep === stepsPerMeasure - 1) {
+        if (Math.random() < (hb.complexity * 0.5)) {
+            shouldPlay = true;
+            durationSteps = 1;
+            isApproach = true;
         }
     }
 
@@ -178,7 +246,8 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
                 shouldPlay = true;
                 durationSteps = Math.min(stepsPerMeasure, chord.beats * ts.stepsPerBeat);
             }
-        } else {
+        }
+        else {
             const genrePatterns = RHYTHMIC_PATTERNS[gb.genreFeel] || RHYTHMIC_PATTERNS['Pop'];
             const pattern = genrePatterns[motif.patternIdx % genrePatterns.length];
             if (pattern && pattern[measureStep] === 1) {
@@ -191,9 +260,10 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     if (!shouldPlay) return [];
 
     // --- 4. Voicing Selection ---
-    const scale = getScaleForChord(chord, nextChord, 'smart');
-    const rootMidi = chord.rootMidi;
-    const feel = gb.genreFeel;
+    // Use the next chord for anticipation, otherwise the current one
+    const targetChord = isAnticipating ? nextChord : chord;
+    const scale = getScaleForChord(targetChord, nextChord, 'smart');
+    const rootMidi = targetChord.rootMidi;
     
     // Intensity and local complexity scale the number of voices
     const baseDensity = config.density || 2;
@@ -201,39 +271,101 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     
     // If latched, thicken the reinforcement over time (based on session steps)
     if (isLatched) {
-        const buildUp = Math.min(2, Math.floor(sb.sessionSteps / 64)); // Add 1-2 voices every 4 bars
+        const buildUp = Math.min(1, Math.floor(sb.sessionSteps / 64)); 
         density = Math.max(density, 1 + buildUp);
     }
 
     // Select notes based on Genre-Specific Theory
     let intervals = [0, 4, 7]; 
+    const isAltered5 = targetChord.quality?.includes('b5') || targetChord.quality?.includes('#5') || targetChord.quality?.includes('alt') || targetChord.quality?.includes('dim') || targetChord.quality?.includes('aug') || targetChord.quality === '7#9';
 
-    if (feel === 'Jazz' || feel === 'Blues') {
+    if (isApproach && nextChord) {
+        // Find a note 1 semitone away from the next root or 3rd
+        const nextRoot = nextChord.rootMidi % 12;
+        const targetPC = Math.random() > 0.5 ? nextRoot : (nextRoot + (nextChord.quality?.includes('m') ? 3 : 4)) % 12;
+        const approachPC = (targetPC + (Math.random() > 0.5 ? 1 : 11)) % 12;
+        intervals = [(approachPC - (rootMidi % 12) + 12) % 12];
+        density = 1;
+    }
+    else if (isMovement) {
+        // Melodic Movement: Usually just 1-2 voices moving to a "color" tone
+        density = Math.min(density, 2);
+        if (feel === 'Jazz' || feel === 'Blues') {
+            intervals = [scale.find(i => i === 9 || i === 2 || i === 5) || 7];
+        } else if (feel === 'Neo-Soul') {
+            const movingNote = [2, 5, 10].find(i => scale.includes(i));
+            intervals = movingNote !== undefined ? [movingNote] : [0];
+        } else {
+            intervals = [scale.find(i => ![0, 4, 7].includes(i)) || 4];
+        }
+    } 
+    else if (feel === 'Jazz' || feel === 'Blues') {
         const third = scale.find(i => i === 3 || i === 4);
         const seventh = scale.find(i => i === 10 || i === 11);
         if (third !== undefined && seventh !== undefined) {
             intervals = [third, seventh];
         } else {
-            const isMinor = chord.type?.includes('m') || chord.symbol?.includes('m');
+            const isMinor = chord.quality?.startsWith('m') && !chord.quality?.startsWith('maj');
             intervals = [isMinor ? 3 : 4, 10];
         }
         if (density > 2) {
-            const extension = scale.find(i => i === 2 || i === 9);
+            const extension = scale.find(i => i === 2 || i === 9 || i === 5 || i === 6);
             if (extension !== undefined) intervals.push(extension);
             else if (scale.includes(7)) intervals.push(7);
         }
     } 
     else if (feel === 'Rock' || feel === 'Metal') {
         intervals = [0, 7];
-        if (density > 2) intervals.push(12);
+        if (isAltered5) {
+            // If chord is altered, use 3rd or b5 instead of natural 5th
+            const alt5 = scale.find(i => i === 6 || i === 8);
+            if (alt5 !== undefined) intervals = [0, alt5];
+            else intervals = [0, scale.find(i => i === 3 || i === 4) || 7];
+        }
+        if (density > 2) {
+            const highRoot = 12;
+            intervals.push(highRoot);
+        }
     }
     else if (feel === 'Neo-Soul') {
-        intervals = [0, 5, 10]; 
-        if (density > 3) intervals.push(15);
+        // Intelligent Quartal stack: 1, 4, b7 (filtered by scale)
+        // Avoid natural 4th (5) if Major 3rd (4) is in chord
+        const hasMajor3rd = chord.intervals?.includes(4) || chord.quality?.includes('major') || chord.quality === '7';
+        const fourth = (scale.includes(5) && !hasMajor3rd) ? 5 : (scale.includes(4) ? 4 : (scale.includes(5) ? 5 : 0));
+        const seventh = scale.includes(10) ? 10 : (scale.includes(11) ? 11 : (scale.includes(9) ? 9 : 0));
+        intervals = [0, fourth, seventh].filter(i => scale.includes(i) && i !== 0);
+        intervals.unshift(0); // Root is always first
+        
+        if (density > 3) {
+            const ninth = scale.find(i => i === 2 || i === 1 || i === 3);
+            if (ninth !== undefined) intervals.push(ninth + 12);
+        }
     }
     else {
-        const colorTones = [0, 4, 7, 10, 2, 9].filter(i => scale.includes(i));
+        // Defensive filtering for Pop/Disco/Acoustic
+        // Fundamental tones first, then color tones, but avoid semitone clashes with chord tones
+        const chordTones = chord.intervals || [0, 4, 7];
+        const hasMajor3rd = chordTones.includes(4);
+
+        const colorTones = [0, 4, 7, 10, 11, 2, 9, 5].filter(i => {
+            if (!scale.includes(i)) return false;
+            
+            // Special Avoid Note Rule: natural 4th (5) against Major 3rd (4)
+            if (i === 5 && hasMajor3rd) return false;
+
+            // Avoid semitone clash with ANY fundamental chord tone
+            const hasClash = chordTones.some(ct => {
+                const dist = Math.abs(i - ct);
+                return dist === 1 || dist === 11;
+            });
+            // Exception: Maj7 (11) against Root (0) is fine if it's in scale
+            if (hasClash && i === 11 && chordTones.includes(0)) return true;
+            // Exception: b9 (1) or #9 (3) against Root/2nd is okay in some contexts, 
+            // but for simple styles we avoid it.
+            return !hasClash;
+        });
         intervals = colorTones.slice(0, density);
+        if (intervals.length === 0) intervals = [0, 7].filter(i => scale.includes(i));
     }
 
     const isDisco = feel === 'Disco';
@@ -263,6 +395,58 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     currentMidis.forEach((midi, i) => {
         const finalMidi = midi + liftShift;
         
+        // --- 6. Articulation Logic (The "New Tricks") ---
+        // These are gated by intensity to ensure they sound "earned".
+        let slideInterval = 0;
+        let slideDuration = 0;
+        let vibrato = { rate: 0, depth: 0 };
+
+        const isLongNote = durationSteps >= 4;
+        const lastMidi = lastMidis[i] || lastMidis[0];
+        const intensity = ctx.bandIntensity;
+
+        if (feel === 'Neo-Soul') {
+            // "Dilla" lazy slides: frequency grows with intensity
+            if (lastMidi && Math.abs(finalMidi - lastMidi) < 5 && Math.abs(finalMidi - lastMidi) > 0) {
+                if (Math.random() < intensity) {
+                    slideInterval = lastMidi - finalMidi;
+                    slideDuration = 0.1 + (intensity * 0.1);
+                }
+            }
+            if (isLongNote && intensity > 0.4) {
+                vibrato = { rate: 3.5, depth: 10 + (intensity * 10) };
+            }
+        } 
+        else if (feel === 'Jazz' || feel === 'Blues') {
+            // Quick scoop from a semitone below (common for horns)
+            // Probability scales with complexity
+            if (Math.random() < (0.2 + hb.complexity * 0.3)) {
+                slideInterval = -1;
+                slideDuration = 0.05 + (intensity * 0.03);
+            }
+            if (isLongNote && intensity > 0.5) {
+                vibrato = { rate: 5.0, depth: 5 + (intensity * 10) };
+            }
+        }
+        else if (feel === 'Rock' || feel === 'Metal') {
+            // Wide power-chord vibrato only at high intensity
+            if (isLongNote && intensity > 0.75) {
+                vibrato = { rate: 6.0, depth: 15 + (intensity * 15) };
+            }
+            // Aggressive scoop for stabs at higher complexity
+            if (rhythmicStyle === 'stabs' && Math.random() < (hb.complexity * 0.4)) {
+                slideInterval = Math.random() < 0.5 ? -12 : -5;
+                slideDuration = 0.08 + (intensity * 0.05);
+            }
+        }
+        else if (feel === 'Disco') {
+            // Soaring trend: Slides only if intensity is building (> 0.5)
+            if (liftShift > 0 && stepInChord === 0 && intensity > 0.5) {
+                slideInterval = -2; 
+                slideDuration = 0.15 + (intensity * 0.1);
+            }
+        }
+
         // Soft Latch: Reinforcement should be felt, not heard as a solo instrument.
         // We reduce the accent multiplier from 1.2 to 1.1 and apply the polyphony compensation.
         const baseVol = config.velocity * (0.8 + Math.random() * 0.2);
@@ -272,10 +456,13 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             midi: finalMidi,
             velocity: baseVol * latchMult * polyphonyComp,
             durationSteps: durationSteps,
-            timingOffset: (i * 0.005) + (Math.random() * config.timingJitter), // Tightened inter-voice timing
+            timingOffset: (i * 0.005) + (Math.random() * config.timingJitter), 
             style: rhythmicStyle,
             isLatched: isLatched,
-            isChordStart: isChordStart // Signal to kill previous stabs if needed
+            isChordStart: isChordStart || isMovement || isAnticipating || isApproach, // Clean transitions
+            slideInterval,
+            slideDuration,
+            vibrato
         });
     });
 

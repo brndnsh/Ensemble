@@ -17,6 +17,7 @@ export function saveCurrentState() {
         bpm: ctx.bpm,
         metronome: ctx.metronome,
         applyPresetSettings: ctx.applyPresetSettings,
+        sessionTimer: ctx.sessionTimer,
         vizEnabled: vizState.enabled,
         autoIntensity: ctx.autoIntensity,
         cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb, practiceMode: cb.practiceMode },

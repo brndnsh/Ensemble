@@ -486,21 +486,23 @@ export function scheduleHarmonies(chordData, step, time) {
     
     if (notes && notes.length > 0) {
         const spb = 60.0 / ctx.bpm;
+
+        // If any note in this step is a chord start or movement, 
+        // clear previous voices once before scheduling the new ones.
+        if (notes.some(n => n.isChordStart)) {
+            killHarmonyNote();
+        }
+
         notes.forEach(n => {
-            const { freq, velocity, timingOffset, durationSteps, midi, style, isChordStart } = n;
+            const { freq, velocity, timingOffset, durationSteps, midi, style, slideInterval, slideDuration, vibrato } = n;
             const playTime = time + (timingOffset || 0);
             const m = midi || getMidi(freq);
-
-            if (isChordStart) {
-                // Kill previous pads/stabs to ensure the anchor is firm
-                killHarmonyNote();
-            }
 
             if (freq || m) {
                 const duration = (durationSteps || 1) * 0.25 * spb;
                 const finalVel = velocity * (ctx.conductorVelocity || 1.0);
                 
-                playHarmonyNote(freq || 440, playTime, duration, finalVel, style, m);
+                playHarmonyNote(freq || 440, playTime, duration, finalVel, style, m, slideInterval, slideDuration, vibrato);
                 sendMIDINote(midiState.harmonyChannel, m + (midiState.harmonyOctave * 12), normalizeMidiVelocity(finalVel), playTime, duration);
                 
                 if (vizState.enabled && ctx.viz) {
@@ -551,7 +553,8 @@ export function scheduleGlobalEvent(step, swungTime) {
         osc.onended = () => { g.disconnect(); osc.disconnect(); };
     }
 
-    const straightness = (sb.style === 'neo') ? 0.65 : ((sb.style === 'blues') ? 0.55 : (sb.style === 'bossa' ? 0.75 : 0.65));
+    const feel = gb.genreFeel;
+    const straightness = (feel === 'Reggae') ? 0.5 : ((sb.style === 'neo') ? 0.65 : ((sb.style === 'blues') ? 0.55 : (sb.style === 'bossa' ? 0.75 : 0.65)));
     const soloistTime = (ctx.unswungNextNoteTime * straightness) + (swungTime * (1.0 - straightness)) + (Math.random() - 0.5) * (gb.humanize / 100) * 0.025;
     
     if (gb.enabled) {

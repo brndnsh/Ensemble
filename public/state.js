@@ -73,7 +73,7 @@ export const ctx = {
     metronome: false,
     applyPresetSettings: false,
     sustainActive: false,
-    sessionTimer: 0,
+    sessionTimer: 5,
     stopAtEnd: false,
     isEndingPending: false,
     intent: {

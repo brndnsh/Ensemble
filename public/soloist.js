@@ -74,11 +74,11 @@ const STYLE_CONFIG = {
         motifProb: 0.3, hookProb: 0.15
     },
     minimal: {
-        restBase: 0.65, restGrowth: 0.2, cells: [11, 2, 12], registerSoar: 10,
-        tensionScale: 0.9, timingJitter: 20, maxNotesPerPhrase: 4,
-        doubleStopProb: 0.0, anticipationProb: 0.1, targetExtensions: [2, 7],
-        deviceProb: 0.1, allowedDevices: ['slide'],
-        motifProb: 0.6, hookProb: 0.4
+        restBase: 0.75, restGrowth: 0.15, cells: [11, 2, 12, 14], registerSoar: 6,
+        tensionScale: 0.95, timingJitter: 35, maxNotesPerPhrase: 3,
+        doubleStopProb: 0.0, anticipationProb: 0.25, targetExtensions: [2, 9, 11],
+        deviceProb: 0.25, allowedDevices: ['slide'],
+        motifProb: 0.7, hookProb: 0.5
     },
     bird: {
         restBase: 0.15, restGrowth: 0.03, cells: [0, 1, 7, 3], registerSoar: 8,
@@ -137,7 +137,7 @@ export function getScaleForChord(chord, nextChord, style) {
             'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 
             'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 
             'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal',
-            'Country': 'country', 'Metal': 'metal', 'Rock/Metal': 'metal'
+            'Reggae': 'minimal', 'Country': 'country', 'Metal': 'metal', 'Rock/Metal': 'metal'
         };
         style = mapping[gb.genreFeel] || 'scalar';
     }
@@ -277,7 +277,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     
     let activeStyle = style;
     if (activeStyle === 'smart') {
-        const mapping = { 'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal' };
+        const mapping = { 'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal', 'Reggae': 'minimal' };
         activeStyle = mapping[gb.genreFeel] || 'scalar';
     }
     const config = STYLE_CONFIG[activeStyle] || STYLE_CONFIG.scalar;
@@ -416,15 +416,26 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             else if (!isOppositeDir && dist > 2) weight -= 1000; 
         }
 
-        if (config.targetExtensions && config.targetExtensions.includes(interval)) weight += 8;
+        if (config.targetExtensions && config.targetExtensions.includes(interval)) weight += 12;
+        
+        // Sweet Note Targeting (3rds and 7ths)
+        const isGuideTone = [3, 4, 10, 11].includes(interval);
+        if (isGuideTone) {
+            weight += (activeStyle === 'minimal' ? 40 : 15);
+        }
+
         if (stepInBeat === 0) {
             if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) {
                 weight += 15; 
-                if ([3, 4, 10, 11].includes(interval)) weight += 20; 
-            } else weight -= 5;
+                if (isGuideTone) weight += 20; 
+            } else weight -= 15; // Penalize non-chord tones on downbeats more
         }
-        if (style === 'neo' && dist === 5) weight += 100; 
-        if (sb.qaState === 'Answer') { if (interval === 0) weight += 60; if (interval === 7) weight += 30; }
+
+        // Half-step resolutions between chords
+        const isChordChanging = stepInChord === 0;
+        if (isChordChanging && dist === 1 && chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) {
+            weight += (activeStyle === 'minimal' ? 2000 : 500); 
+        }
 
         if (dist === 0) weight -= 50; 
         if (dist > 0 && dist <= 2) weight += (50 + (ctx.bpm / 100) * 20); 

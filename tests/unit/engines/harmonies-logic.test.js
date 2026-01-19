@@ -29,13 +29,14 @@ vi.mock('../../../public/config.js', () => ({
     }
 }));
 
-import { getHarmonyNotes } from '../../../public/harmonies.js';
+import { getHarmonyNotes, clearHarmonyMemory } from '../../../public/harmonies.js';
 import { hb, sb, gb, ctx, arranger } from '../../../public/state.js';
 
 describe('Harmony Engine Logic', () => {
     const chordC = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major', beats: 4, sectionId: 'A' };
 
     beforeEach(() => {
+        clearHarmonyMemory();
         gb.genreFeel = 'Funk';
         hb.style = 'smart';
         ctx.bandIntensity = 0.5;

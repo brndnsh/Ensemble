@@ -20,8 +20,19 @@ export function hydrateState() {
         ctx.complexity = savedState.complexity !== undefined ? savedState.complexity : 0.3; 
         ctx.autoIntensity = savedState.autoIntensity !== undefined ? savedState.autoIntensity : true; 
         ctx.metronome = savedState.metronome || false; 
-        ctx.sessionTimer = savedState.sessionTimer || 0;
+        ctx.sessionTimer = savedState.sessionTimer !== undefined ? savedState.sessionTimer : 5;
         ctx.stopAtEnd = false;
+        
+        if (ui.sessionTimerCheck) ui.sessionTimerCheck.checked = ctx.sessionTimer > 0;
+        if (ui.sessionTimerInput) ui.sessionTimerInput.value = ctx.sessionTimer > 0 ? ctx.sessionTimer : 5;
+        
+        // Also ensure the visual container reflects the state
+        if (ui.sessionTimerDurationContainer) {
+            ui.sessionTimerDurationContainer.style.opacity = ctx.sessionTimer > 0 ? '1' : '0.4';
+            ui.sessionTimerDurationContainer.style.pointerEvents = ctx.sessionTimer > 0 ? 'auto' : 'none';
+        }
+
+
         ctx.applyPresetSettings = savedState.applyPresetSettings !== undefined ? savedState.applyPresetSettings : false; 
         vizState.enabled = savedState.vizEnabled !== undefined ? savedState.vizEnabled : false;
         

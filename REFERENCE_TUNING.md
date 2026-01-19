@@ -66,11 +66,11 @@ This document tracks specific reference recordings used to calibrate the Ensembl
     - **Bossa Smart Genre:** Implemented procedural 16th-note Shaker layer (accents on quarters) and intensity-driven Guiro/Tom surdo accents.
     - **Verification:** 433 tests passing (added Template Integrity suite for fills).
 
-### [Date: 2026-01-19]
-- **Status:** Harmony Module Implementation (v2.3).
+### [Date: 2026-01-19] (Update)
+- **Status:** Harmony Voicing Refinement & Compatibility.
 - **Action:**
-    - **Harmony Engine:** Implemented intelligent background engine with "Stabs" and "Pads" styles. Added Chic-style rhythmic patterns for Disco and soaring trend logic (melodic lift).
-    - **Voicing Logic:** Added genre-specific voicing rules: Shell voicings (Jazz/Blues), Power Chords (Rock/Metal), and Quartal Stacks (Neo-Soul).
-    - **Synthesis:** Implemented polyphonic synth with genre-aware timbres (aggressive sawtooths for Rock, warm sines/triangles for Neo-Soul).
-    - **Verification:** 461 tests passing (added Harmony Logic and expanded Audit suites).
+    - **Neo-Soul:** Refactored Quartal stack logic to be scale-aware. Specifically avoiding the natural 11th (interval 5) when a Major 3rd is present in the chord to adhere to the "Avoid Note" rule.
+    - **Rock/Metal:** Implemented "Hendrix Chord" (7#9) awareness. Harmonies now explicitly avoid the natural 5th over altered dominant chords to prevent harmonic clashes.
+    - **Global:** Implemented defensive semitone-clash filtering. All background harmony notes are now automatically filtered against fundamental chord tones to prevent harsh dissonances while preserving valid musical tensions.
+    - **Verification:** 739 tests passing (implemented Harmony-Chord Compatibility Audit for all library presets).
 

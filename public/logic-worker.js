@@ -211,8 +211,16 @@ function fillBuffers(currentStep, timestamp = null) {
                 if (harmonyNotes.length > 0) {
                     harmonyNotes.forEach(n => {
                         if (!n.freq) n.freq = 440 * Math.pow(2, (n.midi - 69) / 12);
-                        // Explicitly ensure midi is passed for voice stealing
-                        notesToMain.push({ ...n, midi: n.midi, step, module: 'hb' });
+                        // Explicitly ensure all articulation props are passed
+                        notesToMain.push({ 
+                            ...n, 
+                            midi: n.midi, 
+                            step, 
+                            module: 'hb',
+                            slideInterval: n.slideInterval,
+                            slideDuration: n.slideDuration,
+                            vibrato: n.vibrato
+                        });
                     });
                 }
             }

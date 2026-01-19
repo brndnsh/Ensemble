@@ -180,8 +180,21 @@ describe('Genre Specific Test: 12-Bar Blues in F', () => {
             }
         }
         
-        // In Answer state, with proximity helping, Roots should be dominant
+        // In Answer state, with proximity helping, Roots should be present but 
+        // Guide Tones (3rds and 7ths) are now the primary focus for melodic resolution.
         expect(notesCount).toBeGreaterThan(0);
-        expect(rootCount / notesCount).toBeGreaterThan(0.15); // Restored higher threshold reflecting improved logic
+        
+        let guideToneCount = 0;
+        for (let i = 0; i < 200; i++) {
+            const result = getSoloistNote(arranger.progression[0], null, 1, 349.23, 72, 'blues', 1);
+            if (result) {
+                const note = Array.isArray(result) ? result[0] : result;
+                const rel = (note.midi % 12 - 5 + 12) % 12;
+                if ([3, 4, 10, 11].includes(rel)) guideToneCount++;
+            }
+        }
+
+        expect(guideToneCount / notesCount).toBeGreaterThan(0.3); // High priority for sweet notes
+        expect(rootCount / notesCount).toBeGreaterThan(0.01); 
     });
 });
