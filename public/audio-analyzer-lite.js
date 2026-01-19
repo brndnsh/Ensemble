@@ -296,6 +296,37 @@ export class ChordAnalyzerLite {
         // Sort by score descending
         candidates.sort((a, b) => b.score - a.score);
 
+        // 4. Meter Detection (3/4 vs 4/4)
+        let score3 = 0;
+        let score4 = 0;
+        const lag3 = bestLag * 3;
+        const lag4 = bestLag * 4;
+
+        if (onsets.length > lag4) {
+            for (let i = 0; i < onsets.length - lag4; i++) {
+                score3 += onsets[i] * onsets[i + lag3];
+                score4 += onsets[i] * onsets[i + lag4];
+            }
+        }
+
+        const beatsPerMeasure = score3 > (score4 * 1.4) ? 3 : 4; // Stronger bias for 4/4
+
+        // 5. Downbeat Detection (Phase Alignment)
+        const measureSteps = bestLag * beatsPerMeasure;
+        const phaseScores = new Float32Array(measureSteps);
+        for (let i = 0; i < onsets.length; i++) {
+            phaseScores[i % measureSteps] += onsets[i];
+        }
+
+        let bestPhase = 0;
+        let maxPhaseScore = -1;
+        for (let p = 0; p < measureSteps; p++) {
+            if (phaseScores[p] > maxPhaseScore) {
+                maxPhaseScore = phaseScores[p];
+                bestPhase = p;
+            }
+        }
+
         return {
             bpm: candidates[0]?.bpm || primaryBPM,
             candidates: candidates.length > 0 ? candidates : [{ bpm: primaryBPM, score: 1 }],
