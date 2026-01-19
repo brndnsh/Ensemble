@@ -100,12 +100,18 @@ const RHYTHMIC_PATTERNS = {
 // Internal memory for motif consistency
 const motifCache = new Map(); // Key: sectionId, Value: { patternIdx, noteIntervals }
 let lastMidis = [];
+let lastPlayedStep = -1;
 
 /**
  * Generates harmony notes for a given step.
  */
 export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInChord, soloistResult = null) {
     if (!chord) return [];
+
+    // Debounce: Prevent rapid-fire re-triggering on consecutive steps (common in latch mode)
+    if (step === lastPlayedStep + 1 && soloistResult) {
+        return [];
+    }
 
     const notes = [];
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
@@ -144,9 +150,14 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     // LATCH LOGIC: Reinforce Soloist Hooks
     // If the soloist is replaying a hook and intensity is high, "Latch on" to their rhythm
     if (sb.enabled && sb.isReplayingMotif && ctx.bandIntensity > 0.4 && soloistResult) {
-        // Only latch if the soloist is actually playing a note on THIS step
+        // Optimization: Only latch if the soloist is playing a note on a "strong" step of their rhythmic cell
+        // This prevents the harmony from playing every single note in a fast run (16ths), 
+        // which sounds glitchy/distracting.
+        const stepInCell = step % 4;
+        const isStrongStep = stepInCell === 0 || (stepInCell === 2 && ctx.bandIntensity > 0.7);
+        
         const hasSoloNote = Array.isArray(soloistResult) ? soloistResult.length > 0 : !!soloistResult;
-        if (hasSoloNote) {
+        if (hasSoloNote && isStrongStep) {
             shouldPlay = true;
             durationSteps = 2; // Match the stab duration
             isLatched = true;
@@ -230,6 +241,10 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
 
     const currentMidis = getBestInversion(rootMidi, intervals, lastMidis, stepInChord === 0);
     lastMidis = currentMidis;
+    
+    if (currentMidis.length > 0) {
+        lastPlayedStep = step;
+    }
 
     currentMidis.forEach((midi, i) => {
         const finalMidi = midi + liftShift;
