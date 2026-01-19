@@ -91,26 +91,26 @@ export function analyzeForm() {
         const label = s.label.toLowerCase();
 
         // Hard overrides based on common naming conventions
-        if (label.includes('intro')) return 'Exposition';
-        if (label.includes('outro')) return 'Resolution';
-        if (label.includes('solo') || label.includes('chorus') || label.includes('drop')) return 'Climax';
+        if (label.includes('intro')) return 'Intro';
+        if (label.includes('outro')) return 'Outro';
+        if (label.includes('solo') || label.includes('chorus') || label.includes('drop')) return 'Peak';
         
         // Pattern-based roles
         if (isFirstOccurrence) {
-            if (i === 0) return 'Exposition';
-            if (label === 'b' || label.includes('bridge')) return 'Contrast';
-            if (s.flux > 2.8) return 'Development';
-            return 'Contrast';
+            if (i === 0) return 'Main Theme';
+            if (label === 'b' || label.includes('bridge')) return 'Bridge';
+            if (s.flux > 2.8) return 'Variation';
+            return 'Theme B';
         } else {
             // Repeated sections
-            if (label === 'b' || label.includes('bridge')) return 'Contrast';
+            if (label === 'b' || label.includes('bridge')) return 'Bridge';
             
-            // "Cool Down" heuristic: if we've shredded a section 3+ times, pull it back
-            if (s.iteration >= 3) return 'Recapitulation';
+            // "Cool Down" heuristic: if we've seen a section 3+ times, it's likely a refrain
+            if (s.iteration >= 3) return 'Refrain';
             
             if (s.flux > 2.2) return 'Build';
-            if (isLastSection) return 'Recapitulation';
-            return 'Development'; 
+            if (isLastSection) return 'Refrain';
+            return 'Main Theme'; 
         }
     });
 

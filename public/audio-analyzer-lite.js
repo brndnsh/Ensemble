@@ -476,13 +476,14 @@ export class ChordAnalyzerLite {
             const bassIdx = this.notes.indexOf(options.bassNote);
             const bassEnergy = chroma[bassIdx];
             
-            // Significant bass presence (at least 20% of total chromagram energy)
-            if (bassEnergy > totalEnergy * 0.2) {
+            // Significant bass presence (at least 35% of total chromagram energy to avoid jitter in walking lines)
+            if (bassEnergy > totalEnergy * 0.35) {
                 const root = bestChordData.root;
                 const interval = (bassIdx - root + 12) % 12;
-                const isChordTone = [3, 4, 5, 7, 10, 11].includes(interval);
+                // Only consider 3rd or 5th as stable inversions for this demo
+                const isStableInversion = [3, 4, 7].includes(interval);
                 
-                if (isChordTone) {
+                if (isStableInversion) {
                     chordName += '/' + options.bassNote;
                 }
             }

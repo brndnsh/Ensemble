@@ -92,7 +92,7 @@ describe('Arrangement Logic & Mixed Meter', () => {
             }));
             arranger.stepMap = introSteps;
             const form = analyzeForm();
-            expect(form.sections[0].role).toBe('Exposition');
+            expect(form.sections[0].role).toBe('Intro');
         });
     });
 

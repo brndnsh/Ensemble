@@ -118,20 +118,36 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
     const minE = Math.min(...allEnergies) || 0;
     const range = maxE - minE;
 
-    consolidated.forEach((s, idx) => {
-        const relEnergy = range > 0 ? (s.energy - minE) / range : 0.5;
-        const totalMeasures = s.value.split('|').length * s.repeat;
-        const isVamp = s.value.split('|').every(m => m.trim() === s.value.split('|')[0].trim());
+    const signatures = consolidated.map(s => s.value);
+    const labelMap = new Map();
+    let currentLetterCode = 65; // 'A'
 
-        if (idx === 0 && relEnergy < 0.4) s.label = "Intro";
-        else if (idx === consolidated.length - 1 && relEnergy < 0.4) s.label = "Outro";
-        else if (relEnergy > 0.85) s.label = "Climax";
-        else if (relEnergy > 0.6) s.label = "Chorus";
-        else if (relEnergy < 0.3 && totalMeasures >= 4) s.label = "Verse";
-        else if (isVamp) s.label = "Vamp";
-        else if (totalMeasures >= 16) s.label = "Main Theme";
-        else s.label = "Section " + (idx + 1);
+    consolidated.forEach((s, idx) => {
+        const totalMeasures = s.value.split('|').length * s.repeat;
+        const relEnergy = range > 0 ? (s.energy - minE) / range : 0.5;
+        
+        // Use a persistent label for same chord progressions
+        if (!labelMap.has(s.value)) {
+            // First time seeing this progression
+            if (idx === 0 && totalMeasures <= 8 && relEnergy < 0.4) {
+                labelMap.set(s.value, "Intro");
+            } else if (idx === consolidated.length - 1 && totalMeasures <= 8 && relEnergy < 0.4) {
+                labelMap.set(s.value, "Outro");
+            } else {
+                labelMap.set(s.value, "Section " + String.fromCharCode(currentLetterCode++));
+            }
+        }
+
+        s.label = labelMap.get(s.value);
+        
+        // Special override for single-chord loops
+        const isVamp = s.value.split('|').every(m => m.trim() === s.value.split('|')[0].trim());
+        if (isVamp && !s.label.includes("Intro") && !s.label.includes("Outro")) {
+            s.label = "Vamp (" + s.label + ")";
+        }
     });
+
+    return consolidated;
 
     return consolidated;
 }
