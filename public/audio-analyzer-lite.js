@@ -75,6 +75,34 @@ export class ChordAnalyzerLite {
     }
 
     /**
+     * Identifies the key from a chromagram without tuning search.
+     * Used for fast local key estimation during analysis.
+     */
+    identifySimpleKey(chroma) {
+        let bestScore = -1;
+        let bestKey = { root: 0, type: 'major' };
+
+        for (let root = 0; root < 12; root++) {
+            ['major', 'minor', 'dominant', 'bluesMaj', 'bluesMin'].forEach(type => {
+                let score = 0;
+                for (let i = 0; i < 12; i++) {
+                    score += chroma[(root + i) % 12] * this.keyProfiles[type][i];
+                }
+                
+                // Bias (same as Global)
+                const typeBias = (type.startsWith('blues')) ? 1.2 : (type === 'dominant') ? 1.15 : 1.0;
+                score *= typeBias;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestKey = { root, type, score };
+                }
+            });
+        }
+        return bestKey;
+    }
+
+    /**
      * Rotates a 12-bin chromagram by a fractional semitone using linear interpolation.
      */
     rotateChroma(chroma, amount) {
@@ -154,6 +182,10 @@ export class ChordAnalyzerLite {
         
         const results = [];
         let lastChord = 'Rest';
+        
+        // Local Key Tracking
+        const rollingChroma = new Float32Array(12).fill(0);
+        const ROLL_DECAY = 0.1; // Fast adaptation for rapid modulation (Coltrane changes)
 
         console.log(`[Analyzer-Lite] Processing ${beats} beats...`);
 
@@ -178,6 +210,14 @@ export class ChordAnalyzerLite {
             });
             if (tuningOffset !== 0) chroma = this.rotateChroma(chroma, tuningOffset);
             
+            // Update Rolling Chroma (Local Key Context)
+            if (energy > 0.0001) {
+                for (let i = 0; i < 12; i++) {
+                    rollingChroma[i] = rollingChroma[i] * ROLL_DECAY + chroma[i] * (1 - ROLL_DECAY);
+                }
+            }
+            const localKey = this.identifySimpleKey(rollingChroma);
+            
             // 2. Bass Chromagram (for inversions)
             let bassChroma = this.calculateChromagram(window, sampleRate, { 
                 minMidi: 24, 
@@ -186,11 +226,11 @@ export class ChordAnalyzerLite {
             });
             if (tuningOffset !== 0) bassChroma = this.rotateChroma(bassChroma, tuningOffset);
 
-            // Identify Chord with Key Bias
+            // Identify Chord with Local Key Bias
             let chord = 'Rest';
             if (energy > 0.0001) {
                 chord = this.identifyChord(chroma, { 
-                    keyBias: globalKey,
+                    keyBias: localKey,
                     bassNote: this.getStrongestBassNote(bassChroma)
                 });
                 
@@ -201,7 +241,7 @@ export class ChordAnalyzerLite {
                 }
             }
             
-            results.push({ beat: b, chord, energy });
+            results.push({ beat: b, chord, energy, localKey });
             lastChord = chord;
         
             if (options.onProgress) {
