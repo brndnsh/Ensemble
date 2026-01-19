@@ -1,4 +1,4 @@
-import { arranger, cb, bb, sb, gb, ctx } from './state.js';
+import { arranger, cb, bb, sb, hb, gb, ctx } from './state.js';
 
 let timerWorker = null;
 let schedulerRequestHandler = null;
@@ -88,6 +88,7 @@ export function syncWorker(action, payload) {
             cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled, volume: cb.volume },
             bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq, volume: bb.volume },
             sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume, doubleStops: sb.doubleStops, sessionSteps: sb.sessionSteps },
+            hb: { style: hb.style, octave: hb.octave, enabled: hb.enabled, volume: hb.volume, complexity: hb.complexity },
             gb: { 
                 genreFeel: gb.genreFeel, 
                 lastDrumPreset: gb.lastDrumPreset, 
@@ -104,8 +105,11 @@ export function syncWorker(action, payload) {
         // Delta Sync
         switch (action) {
             case 'SET_BAND_INTENSITY': data.ctx = { bandIntensity: ctx.bandIntensity }; break;
-            case 'SET_COMPLEXITY': data.ctx = { complexity: ctx.complexity }; break;
+            case 'SET_COMPLEXITY': data.ctx = { complexity: ctx.complexity }; data.hb = { complexity: hb.complexity }; break;
             case 'SET_AUTO_INTENSITY': data.ctx = { autoIntensity: ctx.autoIntensity }; break;
+            case 'UPDATE_HB':
+                data.hb = payload;
+                break;
             case 'SET_PARAM': 
                 if (payload.module) {
                     data[payload.module] = { [payload.param]: payload.value };
