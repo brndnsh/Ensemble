@@ -768,10 +768,10 @@ export const CHORD_PRESETS = [
     { 
         name: "Autumn Leaves", 
         sections: [
-            { label: "A", value: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7" },
-            { label: "A", value: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7 | vi7 | vi7" },
-            { label: "B", value: "viiø7 | III7 | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7" },
-            { label: "C", value: "viiø7 | III7 | vi7 | vi7 | viiø7 | III7 | vi7 | vi7" }
+            { label: "A", value: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7+ | vi7 | vi7" },
+            { label: "A", value: "ii7 | V7 | Imaj7 | IVmaj7 | viiø7 | III7+ | vi7 | vi7" },
+            { label: "B", value: "viiø7 | III7+ | vi7 | vi7 | ii7 | V7 | Imaj7 | IVmaj7" },
+            { label: "C", value: "viiø7 | III7+ | vi7 | vi7 | viiø7 | III7+ | vi7 | vi7" }
         ],
         category: "Jazz",
         isMinor: false,
@@ -796,8 +796,8 @@ export const CHORD_PRESETS = [
             { label: "A2 (Eb)", key: "Eb", value: "Cm7 | Fm7 | Bb7 | Ebmaj7 | Abmaj7" },
             { label: "A2 (G)", key: "G", value: "Am7 | D7 | Gmaj7", seamless: true },
             { label: "B (G)", key: "G", value: "Am7 | D7 | Gmaj7 | Gmaj7" },
-            { label: "B (E)", key: "E", value: "F#m7b5 | B7 | Emaj7 | C7alt", seamless: true },
-            { label: "A3 (Ab)", key: "Ab", value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7 | Dbm7 | Cm7 | Bdim7 | Bbm7 | Eb7 | Abmaj7 | Abmaj7" }
+            { label: "B (E)", key: "E", value: "F#m7b5 | B7 | Emaj7 | C7+", seamless: true },
+            { label: "A3 (Ab)", key: "Ab", value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7 | Dbm7 | Cm7 | Bdim7 | Bbm7 | Eb7+ | Abmaj7 | Abmaj7" }
         ],
         category: "Jazz",
         settings: { bpm: 135, style: 'jazz' }
