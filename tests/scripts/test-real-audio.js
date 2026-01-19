@@ -57,7 +57,6 @@ async function runTest() {
 
         // Detailed chord check for the first few measures
         console.log("\n--- First 12 Measures (Consolidated) ---");
-        const timeline = analysis.results.slice(0, 48); // First 12 bars at 4 beats/bar (approx)
         // Group by measure
         for (let i = 0; i < 12; i++) {
             const measure = analysis.results.filter(r => r.beat >= i*4 && r.beat < (i+1)*4);

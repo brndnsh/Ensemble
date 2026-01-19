@@ -118,7 +118,6 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
     const minE = Math.min(...allEnergies) || 0;
     const range = maxE - minE;
 
-    const signatures = consolidated.map(s => s.value);
     const labelMap = new Map();
     let currentLetterCode = 65; // 'A'
 
@@ -146,8 +145,6 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
             s.label = "Vamp (" + s.label + ")";
         }
     });
-
-    return consolidated;
 
     return consolidated;
 }
