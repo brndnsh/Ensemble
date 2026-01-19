@@ -30,7 +30,21 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     const feel = gb.genreFeel;
 
     if (!hb.activeVoices) hb.activeVoices = [];
-...
+    
+    // Voice Management (Polyphonic Limit: 6)
+    hb.activeVoices = hb.activeVoices.filter(v => (v.time + v.duration + 0.5) > playTime);
+    if (hb.activeVoices.length >= 6) {
+        const oldest = hb.activeVoices.shift();
+        if (oldest) {
+            oldest.gain.gain.cancelScheduledValues(playTime);
+            oldest.gain.gain.setTargetAtTime(0, playTime, 0.01);
+        }
+    }
+
+    const gain = ctx.audio.createGain();
+    gain.gain.value = 0;
+    hb.activeVoices.push({ gain, time: playTime, duration });
+
     // Synthesis: Multi-oscillator setup for "Ensemble" feel
     const osc1 = ctx.audio.createOscillator();
     const osc2 = ctx.audio.createOscillator();

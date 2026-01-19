@@ -71,7 +71,19 @@
 - [x] **Funk "Clav-Style" Rhythms**: Add high-syncopation percussive modes.
 - [x] **Neo-Soul "Quartal Clusters"**: Implement modern, open harmonies.
 
+# Harmony Engine (v2.3)
 
+- [x] **Intelligent Hook Generation**: Implement **Motif Memory** to create 2-bar rhythmic "seeds" that provide consistency within song sections.
+- [x] **Soloist Awareness**: Enable harmonies to automatically retreat to "pads" during soloist activity and step up with "stabs" during rests.
+- [x] **Genre-Specific Theory**: Implement specialized voicing rules: Jazz shell voicings, Rock power chords, and Neo-Soul quartal stacks.
+- [x] **Polyphonic Synthesis**: Create a high-performance polyphonic synth with genre-aware timbres and velocity-dependent articulation.
+- [x] **Dynamic Soaring Trend**: Implement melodic lift logic for Disco and Modern Pop genres.
+
+## Future Harmony Refinements
+
+- [ ] **Counter-Melody Expansion**: Implement a "Conversational" mode where harmonies play call-and-response melodies against the soloist.
+- [ ] **Custom Motif Editor**: Allow users to enter or record their own rhythmic seeds for the harmony engine to transpose and repeat.
+- [ ] **Instrument Swapping**: Add a selection of timbres (e.g., Rhodes, Brass Section, String Pad, Analog Lead) per genre.
 
 ## Verification & Research
 

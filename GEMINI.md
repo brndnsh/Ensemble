@@ -4,7 +4,7 @@ Ensemble is a high-performance Progressive Web App (PWA) designed for generative
 
 ## Project Overview
 
-*   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`, `midi`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `fills`). Core logic is modularized into high-precision scheduling (`scheduler-core.js`), visual rendering (`visualizer.js`), and decentralized synthesis (`synth-*.js`). UI logic is componentized into specialized renderers (`ui-chord-visualizer.js`, `ui-sequencer-grid.js`). UI-specific transient state and DOM caches are decoupled from the reactive state and stored in `ui-store.js`. Section-level error catching in `chords.js` ensures robust arrangement parsing.
+*   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`, `midi`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `harmonies`, `fills`). Core logic is modularized into high-precision scheduling (`scheduler-core.js`), visual rendering (`visualizer.js`), and decentralized synthesis (`synth-*.js`). UI logic is componentized into specialized renderers (`ui-chord-visualizer.js`, `ui-sequencer-grid.js`). UI-specific transient state and DOM caches are decoupled from the reactive state and stored in `ui-store.js`. Section-level error catching in `chords.js` ensures robust arrangement parsing.
 ...
 *   `ui-controller.js` / `ui.js`: Bridges DOM events with back-end logic and handles complex rendering.
 *   `ui-chord-visualizer.js`: Dedicated renderer for the dynamic chord chart and section blocks.
@@ -23,7 +23,7 @@ Ensemble is a high-performance Progressive Web App (PWA) designed for generative
 *   Ensure all new features respect the `bandIntensity` and `complexity` signals from the conductor.
 *   Always maintain JSDoc comments in `state.js` when updating the state schema.
 *   **Intensity Mapping**: Link features to `ctx.bandIntensity` for dynamic response (e.g., filter cutoffs, pattern density).
-*   **Buffer Integrity**: During a `flush` operation (e.g., genre switch), explicitly clear the client-side instrument buffers (`cb.buffer`, `bb.buffer`, `sb.buffer`) to prevent stale patterns from playing.
+*   **Buffer Integrity**: During a `flush` operation (e.g., genre switch), explicitly clear the client-side instrument buffers (`cb.buffer`, `bb.buffer`, `sb.buffer`, `hb.buffer`) to prevent stale patterns from playing.
 *   **Atomic Commits**: STRICTLY avoid "kitchen sink" commits. Break tasks into granular steps:
     1.  **Refactor**: Clean up or restructure code *without* changing behavior. Commit.
     2.  **Implementation**: Add the new feature or fix the bug. Commit.
@@ -40,5 +40,6 @@ The project has completed the **v2.29 Codebase Health & Standards Audit**, achie
 3.  **Accompaniment Engine**: COMPLETED "Expressive Phrasing" for Rock/Pop/Acoustic and conversational "Call & Response" logic.
 4.  **Authenticity Verification**: COMPLETED expansion of the probabilistic testing suite with integration tests for congestion, continuity, and velocity normalization.
 5.  **Standards & Linting (v2.29)**: COMPLETED project-wide ESLint configuration and resolved all engine regressions. Verified 374 tests passing.
-6.  **Latin/Bossa Percussion**: Expand procedural percussion synthesis (Shakers/Agogo/Guiro) for Latin styles to complement the existing Bossa kit.
-7.  **Reference-Driven Tuning**: Calibrating velocity maps and timing offsets against classic genre recordings to achieve a "pro-level" musical feel.
+6.  **Harmony Module (v2.3)**: COMPLETED implementation of intelligent background engine with "Stabs" and "Pads" styles, motif memory, and soloist-aware phrasing.
+7.  **Latin/Bossa Percussion**: Expand procedural percussion synthesis (Shakers/Agogo/Guiro) for Latin styles to complement the existing Bossa kit.
+8.  **Reference-Driven Tuning**: Calibrating velocity maps and timing offsets against classic genre recordings to achieve a "pro-level" musical feel.

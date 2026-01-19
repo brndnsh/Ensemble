@@ -5,7 +5,7 @@ import { getAccompanimentNotes, compingState } from './accompaniment.js';
 import { generateResolutionNotes } from './resolution.js';
 import { arranger, cb, bb, sb, gb, hb, ctx } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
-import { getStepInfo } from './utils.js';
+import { getMidi, getStepInfo } from './utils.js';
 import { generateProceduralFill } from './fills.js';
 import { analyzeForm } from './form-analysis.js';
 

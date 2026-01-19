@@ -31,6 +31,7 @@ Synchronizes the worker's internal state with the global state. Supports partial
     "cb": { ... },
     "bb": { ... },
     "sb": { ... },
+    "hb": { ... },
     "gb": { ... },
     "ctx": { ... }
   }
@@ -67,7 +68,7 @@ Triggers a MIDI file generation process.
 {
   "type": "export",
   "data": {
-    "includedTracks": ["chords", "bass"],
+    "includedTracks": ["chords", "bass", "soloist", "harmonies", "drums"],
     "targetDuration": 3,
     "loopMode": "time",
     "filename": "my-song"

@@ -89,7 +89,8 @@ export const ctx = {
     viz: null,
     suspendTimeout: null,
     conductorVelocity: 1.0,
-    masterLimiter: null
+    masterLimiter: null,
+    masterVolume: 0.4
 };
 
 /**

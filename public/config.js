@@ -19,12 +19,12 @@ export const TIME_SIGNATURES = {
 };
 
 export const MIXER_GAIN_MULTIPLIERS = {
-    master: 1.0,
-    chords: 0.25,
-    bass: 0.38,
-    soloist: 0.35,
-    harmonies: 0.3,
-    drums: 0.5
+    master: 0.85,
+    chords: 0.22,
+    bass: 0.35,
+    soloist: 0.32,
+    harmonies: 0.28,
+    drums: 0.45
 };
 
 export const REGGAE_RIDDIMS = {
