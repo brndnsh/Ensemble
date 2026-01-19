@@ -16,7 +16,7 @@ const NOTE_REGEX = /^([A-G][#b]?)/i;
  */
 export function getChordDetails(symbol) {
     let quality = 'major', is7th = symbol.includes('7') || symbol.includes('9') || symbol.includes('11') || symbol.includes('13') || symbol.includes('alt');
-    const suffixMatch = symbol.match(/(maj7#11|maj7#5|maj7\+|maj7|maj9|maj11|maj13|maj|M7#5|M7\+|M7|m13|m11|m9|m7b5|m7|m6|min|m|dim7|dim|o7|o|°7|°|aug7|aug|\+7|\+|-|ø7|ø|h7|7b5|sus4|sus2|add9|7alt|7b13|7#11|7b9|7#9|7|alt|13|11|9|6|5)/);
+    const suffixMatch = symbol.match(/(maj7#11|maj7#5|maj7\+|maj7|maj9|maj11|maj13|maj|M7#5|M7\+|M7|m13|m11|m9|m7b5|m7|m6|min|m|dim7|dim|o7|o|°7|°|7#5|7\+|7aug|aug7|aug|\+7|\+|-|ø7|ø|h7|7b5|sus4|sus2|add9|7alt|7b13|7#11|7b9|7#9|7|alt|13|11|9|6|5)/);
     const suffix = suffixMatch ? suffixMatch[1] : "";
 
     if (suffix === 'maj13') quality = 'maj13';
@@ -33,7 +33,7 @@ export function getChordDetails(symbol) {
     else if (suffix === 'm7' || suffix === 'min' || suffix === 'm' || suffix === '-') quality = 'minor';
     else if (suffix === 'o7' || (suffix === 'o' && is7th) || suffix === 'dim7' || suffix === '°7' || (suffix === '°' && is7th)) { quality = 'dim'; is7th = true; }
     else if (suffix === 'o' || suffix === 'dim' || suffix === '°') quality = 'dim';
-    else if (suffix === 'aug7' || suffix === '+7') { quality = 'aug'; is7th = true; }
+    else if (suffix === '7#5' || suffix === '7+' || suffix === '7aug' || suffix === 'aug7' || suffix === '+7') { quality = 'aug'; is7th = true; }
     else if (suffix.includes('aug') || suffix === '+') quality = 'aug';
     else if (suffix === 'sus4') quality = 'sus4';
     else if (suffix === 'sus2') quality = 'sus2';
@@ -404,6 +404,8 @@ function getRootlessVoicing(quality, is7th, isRich) {
 }
 
 export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnabled = false) {
+    const isAltered5 = ['dim', 'halfdim', 'aug', 'augmaj7', '7alt', '7b13', '7#11', '7b5'].includes(quality) || quality.includes('b5') || quality.includes('#5') || quality.includes('alt');
+    const isAug = quality === 'aug' || quality === 'augmaj7';
     const isPractice = cb.practiceMode;
     const shouldBeRootless = bassEnabled || isPractice;
     const isRich = density === 'rich';
@@ -424,13 +426,12 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     } 
     
     if (!intervals) {
-        intervals = [0, 4, 7]; // Default Major
         // Standard Triad Fallback for others
-        const isMinorQuality = (quality.startsWith('m') && !quality.startsWith('maj')) || quality === 'minor' || quality === 'halfdim';
-        if (isMinorQuality) intervals = [0, 3, 7];
+        const isMinorQuality = (quality.startsWith('m') && !quality.startsWith('maj')) || quality === 'minor';
         
-        if (quality === 'dim') intervals = [0, 3, 6];
-        else if (quality === 'halfdim') intervals = [0, 3, 6, 10]; 
+        if (quality === 'halfdim') intervals = [0, 3, 6, 10]; 
+        else if (isMinorQuality) intervals = [0, 3, 7];
+        else if (quality === 'dim') intervals = [0, 3, 6];
         else if (quality === 'aug') intervals = [0, 4, 8];
         else if (quality === 'augmaj7') intervals = [0, 4, 8, 11];
         else if (quality === 'sus4') intervals = [0, 5, 7];
@@ -453,12 +454,14 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
         else if (quality === '7#11') intervals = [0, 4, 7, 10, 14, 18];
         else if (quality === '7b9') intervals = [0, 4, 7, 10, 13];
         else if (quality === '7#9') intervals = [0, 4, 7, 10, 15];
+        else if (quality === '7b5') intervals = [0, 4, 6, 10];
         else if (quality === '5') intervals = [0, 7];
+        else intervals = [0, 4, 7]; // Default Major Triad
     }
 
     // 3. INTENSITY-BASED EXTENSIONS
     // 0.6 - 0.7: Add 7ths/9ths (Targeting Pop/Rock/Acoustic)
-    if (intensity >= 0.6 && quality !== '5' && !['Rock', 'Jazz', 'Funk'].includes(genre)) {
+    if (intensity >= 0.6 && quality !== '5' && !['Rock', 'Jazz', 'Funk'].includes(genre) && !isAltered5) {
         if (!is7th && quality !== '6' && quality !== 'm6') {
             const isMajor7th = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
             
@@ -482,8 +485,7 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     if (intensity >= 0.8) {
         if (!intervals.includes(12)) intervals.push(12);
         // Also ensure 5th is there for "Wall of Sound"
-        const isAltered5 = ['dim', 'halfdim', 'aug'].includes(quality) || quality.includes('b5') || quality.includes('#5') || quality.includes('alt');
-        if (!isAltered5 && !intervals.includes(7)) intervals.push(7);
+        if (!isAltered5 && !isAug && !intervals.includes(7)) intervals.push(7);
         // For Rock, if high intensity, also add the 7th for more "grit"
         if (genre === 'Rock' && !intervals.includes(10) && quality !== 'maj7') {
             if (!intervals.includes(10)) intervals.push(10);
@@ -501,14 +503,19 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
             'm7': [14, 17],     // 9, 11
             '7': [14, 21],      // 9, 13
             'halfdim': [17],    // 11
+            'aug': [14, 22],    // 9, #11
+            'augmaj7': [14, 18], // 9, #11
             '7alt': [13, 15, 20], // b9, #9, b13
             '9': [21],          // 13
             '13': [18]          // #11
         };
 
-        const potential = safeExtensions[quality] || [14];
+        const potential = safeExtensions[quality] || (isAltered5 ? [14, 18] : [14]);
         for (const ext of potential) {
             if (!intervals.includes(ext) && !intervals.includes(ext % 12)) {
+                // Final safety: don't add natural 5th if quality is altered/augmented
+                if (ext % 12 === 7 && (isAltered5 || isAug)) continue; 
+                
                 intervals.push(ext);
                 if (intervals.length >= 5) break; 
             }
@@ -529,7 +536,10 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
     if (quality === 'minor') { absSuffix = 'm'; nnsSuffix = '-'; }
     else if (quality === 'dim') { absSuffix = 'dim'; nnsSuffix = '°'; romSuffix = '°'; }
     else if (quality === 'halfdim') { absSuffix = 'm7b5'; nnsSuffix = 'ø'; romSuffix = 'ø'; }
-    else if (quality === 'aug') { absSuffix = 'aug'; nnsSuffix = '+'; romSuffix = '+'; }
+    else if (quality === 'aug') { 
+        if (is7th) { absSuffix = '7+'; nnsSuffix = '7+'; romSuffix = '7+'; }
+        else { absSuffix = 'aug'; nnsSuffix = '+'; romSuffix = '+'; }
+    }
     else if (quality === 'augmaj7') { absSuffix = 'maj7#5'; nnsSuffix = 'maj7+'; romSuffix = 'maj7+'; }
     else if (quality === 'maj7') { absSuffix = 'maj7'; nnsSuffix = 'maj7'; romSuffix = 'maj7'; }
     else if (quality === 'maj9') { absSuffix = 'maj9'; nnsSuffix = 'maj9'; romSuffix = 'maj9'; }
@@ -554,7 +564,7 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
     else if (quality === '7b13') { absSuffix = '7b13'; nnsSuffix = '7b13'; romSuffix = '7b13'; }
     else if (quality === '5') { absSuffix = '5'; nnsSuffix = '5'; romSuffix = '5'; }
     
-    if (is7th && !['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11', 'halfdim', '7b9', '7#9', '7alt', '7#11', '7b13', '9', '11', '13', 'm9', 'm11', 'm13'].includes(quality)) { 
+    if (is7th && !['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11', 'aug', 'augmaj7', 'halfdim', '7b9', '7#9', '7alt', '7#11', '7b13', '9', '11', '13', 'm9', 'm11', 'm13'].includes(quality)) { 
         absSuffix += '7'; nnsSuffix += '7'; romSuffix += '7';
     }
 
