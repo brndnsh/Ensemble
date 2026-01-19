@@ -82,4 +82,16 @@ describe('Real Audio Analysis: Multiple Files', () => {
     it('should detect BPM and meter for Sands.m4a', async () => {
         await testFile('Sands.m4a', 'sands.wav');
     }, 30000);
+
+    it('should detect BPM and meter for Gimme Filter in G.m4a', async () => {
+        await testFile('Gimme Filter in G.m4a', 'gimme_filter.wav');
+    }, 40000);
+
+    it('should detect BPM and meter for 12 Bar Blues with bass.m4a', async () => {
+        await testFile('12 Bar Blues with bass.m4a', '12_bar_blues.wav');
+    }, 40000);
+
+    it('should detect BPM and meter for jam.m4a', async () => {
+        await testFile('jam.m4a', 'jam.wav');
+    }, 60000);
 });

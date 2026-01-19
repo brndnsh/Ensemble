@@ -76,13 +76,13 @@ export class ChordAnalyzerLite {
         const beats = Math.floor(signal.length / samplesPerBeat);
         
         // --- PASS 1: Global Key Inference ---
-        // Analyze a sparse sample of the signal to find the consensus key efficiently
-        const sampleStep = Math.max(1, Math.floor(signal.length / 500000)); // Sample ~500k points
+        // Analyze a denser sample of the signal to find the consensus key accurately
+        const sampleStep = Math.max(1, Math.floor(signal.length / 1000000)); // Sample ~1M points
         const sparseSignal = new Float32Array(Math.floor(signal.length / sampleStep));
         for (let i = 0, j = 0; i < signal.length; i += sampleStep, j++) {
             sparseSignal[j] = signal[i];
         }
-        const globalChroma = this.calculateChromagram(sparseSignal, sampleRate, { minMidi: 36, maxMidi: 72, step: 8 });
+        const globalChroma = this.calculateChromagram(sparseSignal, sampleRate, { minMidi: 32, maxMidi: 76, step: 4 });
         const globalKey = this.identifyGlobalKey(globalChroma);
         
         if (options.onProgress) options.onProgress(15);
@@ -161,8 +161,8 @@ export class ChordAnalyzerLite {
         const signal = audioBuffer.getChannelData(0);
         const sampleRate = audioBuffer.sampleRate;
         
-        // 1. Calculate Energy Envelope (20ms windows)
-        const winSize = Math.floor(sampleRate * 0.02);
+        // 1. Calculate Energy Envelope (10ms windows for better transient resolution)
+        const winSize = Math.floor(sampleRate * 0.01);
         const envelope = [];
         for (let i = 0; i < Math.min(signal.length, sampleRate * 30); i += winSize) { // Analyze first 30s
             let sum = 0;
@@ -180,10 +180,10 @@ export class ChordAnalyzerLite {
         if (options.onProgress) options.onProgress(3);
 
         // 3. Find BPM via autocorrelation
-        // Search range: 60 - 180 BPM (150 - 50 steps at 20ms)
-        const minLag = 16; 
-        const maxLag = 150;
-        let bestLag = 75;
+        // Search range: 50 - 200 BPM (120 - 30 steps at 10ms)
+        const minLag = 30; 
+        const maxLag = 120;
+        let bestLag = 60;
         let maxCorr = -1;
         
         // Compute correlation for all lags
@@ -194,10 +194,15 @@ export class ChordAnalyzerLite {
             for (let i = 0; i < onsets.length - lag; i++) {
                 corr += onsets[i] * onsets[i + lag];
             }
+            
+            // Bias towards 80-130 BPM (Lag 75 to 45)
+            let bias = 1.0;
+            if (lag > 45 && lag < 75) bias = 1.1;
+
             correlations[lag] = corr;
             
-            if (corr > maxCorr) {
-                maxCorr = corr;
+            if (corr * bias > maxCorr) {
+                maxCorr = corr * bias;
                 bestLag = lag;
             }
         }
@@ -207,32 +212,33 @@ export class ChordAnalyzerLite {
         
         // Harmonic Check: Detect if we picked a "measure" pulse (slow) instead of a "beat" pulse (fast)
         const checkHarmonic = (targetLag) => {
-            const halfLag = Math.round(targetLag / 2);
-            
-            // Check for 2x/4x tempo (1/2 lag)
-            if (halfLag >= minLag) {
-                const scoreHalf = correlations[halfLag];
+            // Check for 1/2, 1/3, and 1/4 lags (2x, 3x, 4x tempo)
+            const divisors = [2, 3, 4];
+            let bestNewLag = targetLag;
+
+            for (const d of divisors) {
+                const subLag = Math.round(targetLag / d);
+                if (subLag < minLag) continue;
+
+                const scoreSub = correlations[subLag];
+                const targetScore = correlations[targetLag];
                 
                 // Dynamic Threshold:
-                // - If < 50 BPM (lag > 60), be stricter (0.75) to avoid double-timing slow vamps.
-                // - If > 130 BPM (halfLag < 23), be very strict (0.95) to avoid accidental double-time.
-                // - Otherwise, be conservative (0.8) to avoid double-timing acoustic songs.
-                let threshold = 0.8;
-                if (targetLag > 60) threshold = 0.75;
-                else if (halfLag < 23) threshold = 0.95;
+                let threshold = 0.75; // Fast pulses only need 75% of measure strength
+                if (subLag < 40) threshold = 0.85; // Faster than 150 BPM needs 85%
 
-                if (scoreHalf > correlations[targetLag] * threshold) {
-                    return checkHarmonic(halfLag);
+                if (scoreSub > targetScore * threshold) {
+                    bestNewLag = subLag;
+                    // Keep searching for even faster harmonics from this new base
+                    return checkHarmonic(bestNewLag);
                 }
             }
-            return targetLag;
+            return bestNewLag;
         };
 
         bestLag = checkHarmonic(bestLag);
-        
-        bestLag = checkHarmonic(bestLag);
 
-        const guessedBPM = Math.round((60 / (bestLag * 0.02)) / 5) * 5;
+        const guessedBPM = Math.round((60 / (bestLag * 0.01)) / 1) * 1; // 1 BPM precision
 
         // 4. Meter Detection (3/4 vs 4/4)
         let score3 = 0;
@@ -247,7 +253,7 @@ export class ChordAnalyzerLite {
             }
         }
 
-        const beatsPerMeasure = score3 > (score4 * 1.1) ? 3 : 4;
+        const beatsPerMeasure = score3 > (score4 * 1.4) ? 3 : 4; // Stronger bias for 4/4
 
         // 5. Downbeat Detection (Phase Alignment)
         const measureSteps = bestLag * beatsPerMeasure;
@@ -268,13 +274,13 @@ export class ChordAnalyzerLite {
         return {
             bpm: guessedBPM,
             beatsPerMeasure,
-            downbeatOffset: bestPhase * 0.02
+            downbeatOffset: bestPhase * 0.01
         };
     }
 
     /**
      * Calculates energy in 12 semitone bins using a bank of targeted 
-     * single-frequency filters with frequency weighting.
+     * single-frequency filters with Hann windowing.
      */
     calculateChromagram(signal, sampleRate, options = {}) {
         const chroma = new Float32Array(12).fill(0);
@@ -290,22 +296,26 @@ export class ChordAnalyzerLite {
             let imag = 0;
             const angleStep = (2 * Math.PI * p.freq) / sampleRate;
 
+            for (let i = 0; i < len; i += step) {
+                // Hann Window: 0.5 * (1 - cos(2*PI*i / N))
+                const window = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (len - 1)));
+                const angle = i * angleStep;
+                const sample = signal[i] * window;
+                real += sample * Math.cos(angle);
+                imag += sample * Math.sin(angle);
+            }
+
+            const mag = (real * real + imag * imag);
+            
             // Apply Frequency Weighting:
             // High weight for Bass (C1-C3), Medium for Mids (C4-C5), Low for Highs (C6+)
             let weight = 1.0;
-            if (p.midi < 36) weight = 5.0;      // Very low bass
-            else if (p.midi < 48) weight = 3.0; // Bass depth
+            if (p.midi < 36) weight = 6.0;      // Very low bass (emphasize root)
+            else if (p.midi < 48) weight = 3.5; // Bass depth
             else if (p.midi < 60) weight = 2.0; // Low mids
-            else if (p.midi > 80) weight = 0.1; // Ignore high melody noise
-
-            for (let i = 0; i < len; i += step) {
-                const angle = i * angleStep;
-                real += signal[i] * Math.cos(angle);
-                imag += signal[i] * Math.sin(angle);
-            }
-
-            const mag = (real * real + imag * imag) * weight;
-            chroma[p.bin] += mag;
+            else if (p.midi > 80) weight = 0.05; // Ignore high melody/noise
+            
+            chroma[p.bin] += mag * weight;
         });
 
         // Apply "Harmonic Sharpening"
@@ -368,7 +378,7 @@ export class ChordAnalyzerLite {
                         ? majorDiatonic.includes(relativeRoot)
                         : minorDiatonic.includes(relativeRoot);
                     
-                    if (isDiatonic) score *= 1.15; // 15% boost for diatonic chords
+                    if (isDiatonic) score *= 1.30; // 30% boost for diatonic chords
                 }
                 
                 if (score > bestScore) {
