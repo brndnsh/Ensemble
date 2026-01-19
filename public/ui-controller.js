@@ -783,12 +783,17 @@ export function setupAnalyzerHandlers() {
     window.resetAnalyzer = resetAnalyzer;
 
     const drawWaveform = (buffer) => {
+        console.log("[Analyzer] Drawing waveform...");
         const canvas = ui.analyzerWaveformCanvas;
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
         
-        // Match internal size to display size
         const rect = canvas.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            console.warn("[Analyzer] Canvas dimensions are zero, skipping draw.");
+            return;
+        }
+
         canvas.width = rect.width * dpr;
         canvas.height = rect.height * dpr;
         
@@ -818,6 +823,7 @@ export function setupAnalyzerHandlers() {
             }
             ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
         }
+        console.log("[Analyzer] Waveform draw complete.");
     };
 
     const updateSelectionUI = () => {
@@ -834,14 +840,23 @@ export function setupAnalyzerHandlers() {
     };
 
     const handleFile = async (file) => {
+        console.log(`[Analyzer] Handling file: ${file.name} (${file.size} bytes)`);
         ui.analyzerDropZone.style.display = 'none';
-        ui.analyzerProcessing.style.display = 'block'; // Show loading spinner
+        ui.analyzerProcessing.style.display = 'block'; 
         currentFileName = file.name;
         
         try {
+            console.log("[Analyzer] Reading arrayBuffer...");
             const arrayBuffer = await file.arrayBuffer();
+            console.log("[Analyzer] Decoding audio data...");
+            
             const audioCtx = ctx.audio || new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+
             currentAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            console.log(`[Analyzer] Decoded: ${currentAudioBuffer.duration.toFixed(2)}s`);
             
             ui.analyzerProcessing.style.display = 'none';
             ui.analyzerTrimView.style.display = 'block';
@@ -903,7 +918,7 @@ export function setupAnalyzerHandlers() {
             ui.analyzerProcessing.style.display = 'none';
             ui.analyzerResults.style.display = 'block';
             
-            const container = document.getElementById('suggestedSectionsContainer');
+            const container = ui.suggestedSectionsContainer;
             container.innerHTML = '<h4>Suggested Structure</h4>';
             
             detectedChords.forEach(s => {
@@ -932,6 +947,33 @@ export function setupAnalyzerHandlers() {
     ui.analyzerStartInput.addEventListener('input', updateSelectionUI);
     ui.analyzerEndInput.addEventListener('input', updateSelectionUI);
     ui.startAnalysisBtn.addEventListener('click', performAnalysis);
+
+    ui.analyzerFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    ui.analyzerDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ui.analyzerDropZone.classList.add('drag-over');
+    });
+
+    ui.analyzerDropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ui.analyzerDropZone.classList.remove('drag-over');
+    });
+
+    ui.analyzerDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ui.analyzerDropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
 
     ui.applyAnalysisBtn.addEventListener('click', () => {
         if (detectedChords.length === 0) return;
