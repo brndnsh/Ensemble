@@ -19,6 +19,7 @@ vi.mock('../../../public/state.js', () => ({
     },
     cb: { enabled: true },
     bb: { enabled: true, lastFreq: 110, pocketOffset: 0 },
+    hb: { enabled: true, volume: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
     ctx: { bandIntensity: 0.5, bpm: 120, intent: {} },
     arranger: { 
         key: 'C', 

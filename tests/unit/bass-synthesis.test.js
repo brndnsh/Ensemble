@@ -46,7 +46,8 @@ vi.mock('../../public/state.js', () => ({
         bassGain: { connect: vi.fn() }
     },
     bb: { lastBassGain: null },
-    gb: { audioBuffers: { noise: {} } }
+    gb: { audioBuffers: { noise: {} } },
+    hb: { enabled: false }
 }));
 
 // Mock utils

@@ -10,7 +10,8 @@ vi.mock('../../public/state.js', () => {
         ctx: { bandIntensity: 0.5 },
         arranger: { key: 'C', isMinor: false, progression: [], grouping: null, timeSignature: '4/4' },
         gb: { genreFeel: 'Funk', lastDrumPreset: 'Funk' },
-        bb: {}
+        bb: {},
+        hb: { enabled: false }
     };
 });
 

@@ -8,7 +8,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../../public/state.js', () => ({
     midi: { enabled: true },
     dispatch: vi.fn(),
-    ctx: { audio: { currentTime: 0 } }
+    ctx: { audio: { currentTime: 0 } },
+    hb: { enabled: false, buffer: new Map() }
 }));
 
 import { initMIDI } from '../../../public/midi-controller.js';

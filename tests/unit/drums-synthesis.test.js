@@ -48,7 +48,8 @@ vi.mock('../../public/state.js', () => ({
         humanize: 20, 
         audioBuffers: { noise: {} },
         lastHatGain: null 
-    }
+    },
+    hb: { enabled: false }
 }));
 
 // Mock utils

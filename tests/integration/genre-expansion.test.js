@@ -22,6 +22,7 @@ vi.mock('../../public/state.js', () => ({
     cb: { enabled: true, style: 'strum-country' },
     bb: { enabled: true, pocketOffset: 0 },
     sb: { enabled: true, tension: 0, busySteps: 0, motifBuffer: [] },
+    hb: { enabled: false },
     ctx: {
         bandIntensity: 0.5,
         complexity: 0.5,

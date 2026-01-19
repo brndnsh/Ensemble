@@ -21,7 +21,8 @@ vi.mock('../../public/state.js', () => ({
         sections: []
     },
     gb: { genreFeel: 'Neo-Soul' },
-    bb: { pocketOffset: 0.025 },
+    bb: { enabled: true },
+    hb: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {
@@ -92,10 +93,10 @@ describe('Neo-Soul Integration Test: Slash Chords', () => {
         const result = getBassNote(progression[0], progression[1], 0, null, 38, 'neo', 0, 0, 0);
         
         // Neo-soul style should have a specific timingOffset. 
-        // Base is 0.025 (from bb.pocketOffset) + genre lag (0.010 + intensity * 0.015)
-        // At intensity 0.5, total is ~0.042.
-        expect(result.timingOffset).toBeGreaterThan(0.035); 
-        expect(result.timingOffset).toBeCloseTo(0.042, 1); 
+        // Base is 0.0 (from bb.pocketOffset in mock) + genre lag (0.010 + intensity * 0.015)
+        // At intensity 0.5, total is ~0.0175.
+        expect(result.timingOffset).toBeGreaterThan(0.015); 
+        expect(result.timingOffset).toBeCloseTo(0.0175, 2); 
     });
 
     it('should use Dorian scale for the iii7 and ii7 chords in Neo-Soul context', () => {

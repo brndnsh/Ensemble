@@ -10,6 +10,7 @@ vi.mock('../../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
     return {
         ...actual,
+        hb: { enabled: false, buffer: new Map() },
         dispatch: vi.fn((action, payload) => {
             if (action === 'SET_BAND_INTENSITY') ctx.bandIntensity = payload;
         })

@@ -15,12 +15,14 @@ vi.mock('../../public/state.js', () => ({
         chordsGain: null,
         bassGain: null,
         soloistGain: null,
+        harmoniesGain: null,
         drumsGain: null,
         isPlaying: false
     },
     cb: { volume: 0.5, enabled: true, reverb: 0.2 },
     bb: { volume: 0.45, enabled: true, reverb: 0.05 },
     sb: { volume: 0.5, enabled: true, reverb: 0.6 },
+    hb: { volume: 0.4, enabled: true, reverb: 0.4 },
     gb: { volume: 0.5, enabled: true, reverb: 0.2, audioBuffers: { noise: {} } },
     midi: { enabled: false, muteLocal: false }
 }));

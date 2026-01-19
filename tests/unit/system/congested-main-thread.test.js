@@ -17,9 +17,10 @@ vi.mock('../../../public/state.js', () => ({
         drawQueue: []
     },
     gb: { enabled: true, swing: 0, humanize: 0, instruments: [] },
-    cb: { enabled: false, buffer: new Map() },
-    bb: { enabled: false, buffer: new Map() },
-    sb: { enabled: false, buffer: new Map() },
+    bb: { enabled: true, buffer: new Map() },
+    sb: { enabled: true, buffer: new Map() },
+    hb: { enabled: false, buffer: new Map() },
+    cb: { enabled: true, buffer: new Map() },
     arranger: { totalSteps: 64, stepMap: [], timeSignature: '4/4' },
     midi: { enabled: false, selectedOutputId: null, soloistChannel: 3, chordsChannel: 1, bassChannel: 2, drumsChannel: 10, soloistOctave: 0, chordsOctave: 0, bassOctave: 0, drumsOctave: 0 },
     dispatch: vi.fn(),

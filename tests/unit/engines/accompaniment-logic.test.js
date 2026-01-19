@@ -15,7 +15,8 @@ vi.mock('../../../public/state.js', () => ({
     },
     cb: { enabled: true, style: 'smart' },
     bb: { enabled: false },
-    sb: { enabled: false, busySteps: 0 }
+    sb: { enabled: false, busySteps: 0 },
+    hb: { enabled: false, buffer: new Map() }
 }));
 
 vi.mock('../../../public/config.js', () => ({

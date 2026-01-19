@@ -44,7 +44,8 @@ vi.mock('../../public/state.js', () => ({
         sustainActive: false
     },
     gb: { audioBuffers: { noise: {} } },
-    cb: { activeTab: 'smart' }
+    cb: { activeTab: 'smart' },
+    hb: { enabled: false }
 }));
 
 // Mock utils

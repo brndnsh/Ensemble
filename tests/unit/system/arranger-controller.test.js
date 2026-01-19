@@ -16,7 +16,9 @@ vi.mock('../../../public/state.js', () => ({
     },
     cb: {},
     ctx: {},
-    gb: {},
+    sb: { enabled: true },
+    hb: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
+    gb: { genreFeel: 'Rock', enabled: true },
     conductorState: {}
 }));
 

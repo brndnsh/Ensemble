@@ -9,7 +9,8 @@ vi.mock('../../../public/state.js', () => ({
     cb: { density: 'standard', octave: 60, practiceMode: false },
     arranger: { timeSignature: '4/4', key: 'C', isMinor: false, notation: 'roman' },
     gb: { genreFeel: 'Rock' },
-    bb: { enabled: true }
+    bb: { enabled: true },
+    hb: { enabled: false }
 }));
 
 vi.mock('../../../public/config.js', () => ({

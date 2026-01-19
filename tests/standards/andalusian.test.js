@@ -21,8 +21,9 @@ vi.mock('../../public/state.js', () => ({
         timeSignature: '4/4',
         sections: []
     },
-    gb: { genreFeel: 'Rock' },
-    bb: { enabled: true }
+    gb: { genreFeel: 'Jazz' },
+    bb: { enabled: true },
+    hb: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {

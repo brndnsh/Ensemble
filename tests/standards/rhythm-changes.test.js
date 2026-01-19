@@ -22,7 +22,7 @@ vi.mock('../../public/state.js', () => ({
     },
     gb: { genreFeel: 'Jazz' },
     bb: { enabled: true },
-    sb_enabled: true
+    hb: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {

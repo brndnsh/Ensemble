@@ -52,6 +52,9 @@ vi.mock('../../public/state.js', () => ({
     sb: { 
         activeVoices: [],
         doubleStops: false
+    },
+    hb: { 
+        activeVoices: []
     }
 }));
 

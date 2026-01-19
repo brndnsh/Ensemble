@@ -22,7 +22,8 @@ vi.mock('../../public/state.js', () => ({
         sections: []
     },
     gb: { genreFeel: 'Blues' },
-    bb: { enabled: true }
+    bb: { enabled: true },
+    hb: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {

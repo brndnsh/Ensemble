@@ -3,21 +3,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the state modules
 vi.mock('../../public/state.js', () => ({
+    ctx: { bandIntensity: 0.5, bpm: 120, intent: { syncopation: 0, anticipation: 0, layBack: 0 } },
     arranger: { 
         timeSignature: '4/4', 
         progression: []
     },
-    gb: { genreFeel: 'Funk' },
-    ctx: { 
-        bandIntensity: 0.5, 
-        complexity: 0.3,
-        intent: { anticipation: 0, syncopation: 0, layBack: 0 }
-    },
-    cb: { enabled: true, style: 'smart' },
-    bb: { enabled: false },
-    sb: { enabled: false, busySteps: 0 }
+    cb: { enabled: true, style: 'smart', density: 'standard', octave: 60 },
+    bb: { enabled: true },
+    sb: { enabled: false, busySteps: 0 },
+    gb: { genreFeel: 'Jazz' },
+    hb: { enabled: false, buffer: new Map() }
 }));
-
 // Mock config
 vi.mock('../../public/config.js', () => ({
     TIME_SIGNATURES: {
@@ -26,7 +22,7 @@ vi.mock('../../public/config.js', () => ({
 }));
 
 import { getAccompanimentNotes, compingState } from '../../public/accompaniment.js';
-import { gb, cb, bb, arranger } from '../../public/state.js';
+import { gb, cb, bb, hb, arranger } from '../../public/state.js';
 
 describe('Accompaniment Consistency Standards', () => {
     

@@ -9,6 +9,7 @@ vi.mock('../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
     return {
         ...actual,
+        hb: { enabled: false, buffer: new Map() },
         dispatch: vi.fn((action, payload) => {
             if (action === 'SET_BAND_INTENSITY') actual.ctx.bandIntensity = payload;
         })
@@ -35,7 +36,7 @@ vi.mock('../../public/fills.js', () => ({
 }));
 
 import { getAccompanimentNotes, compingState } from '../../public/accompaniment.js';
-import { ctx, gb, cb, bb, sb, arranger } from '../../public/state.js';
+import { ctx, gb, cb, bb, sb, hb, arranger } from '../../public/state.js';
 import { getMidi, getFrequency } from '../../public/utils.js';
 import { conductorState, checkSectionTransition } from '../../public/conductor.js';
 
@@ -45,6 +46,7 @@ describe('Musical Sanity & Collision Detection', () => {
         ctx.bandIntensity = 0.5;
         ctx.complexity = 0.5;
         gb.genreFeel = 'Jazz';
+        hb.enabled = false;
         cb.style = 'smart';
         bb.enabled = true;
         sb.enabled = false;

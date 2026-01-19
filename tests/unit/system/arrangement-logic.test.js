@@ -6,19 +6,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock State
 vi.mock('../../../public/state.js', () => ({
-    arranger: {
-        sections: [],
+    cb: { enabled: true, octave: 60 },
+    hb: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
+    arranger: { 
+        key: 'C', 
+        isMinor: false, 
         progression: [],
-        stepMap: [],
-        measureMap: [],
         totalSteps: 0,
-        key: 'C',
-        timeSignature: '4/4',
-        isMinor: false,
-        isDirty: false,
-        notation: 'name'
+        stepMap: [],
+        timeSignature: '4/4'
     },
-    cb: { enabled: true, style: 'smart', octave: 60, density: 'standard' },
     gb: { enabled: true, genreFeel: 'Rock' },
     bb: { enabled: false },
     sb: { enabled: false },

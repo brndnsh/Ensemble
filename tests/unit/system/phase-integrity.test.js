@@ -36,6 +36,7 @@ vi.mock('../../../public/state.js', () => ({
     bb: { enabled: false, buffer: new Map() },
     sb: { enabled: false, buffer: new Map() },
     cb: { enabled: false, buffer: new Map() },
+    hb: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
     midi: { enabled: false },
     vizState: { enabled: true },
     conductorState: { larsBpmOffset: 0 }

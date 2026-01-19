@@ -31,6 +31,7 @@ vi.mock('../../public/state.js', () => ({
     },
     gb: { genreFeel: 'Jazz' },
     bb: { enabled: true },
+    hb: { enabled: false },
     sb_enabled: true
 }));
 
