@@ -50,6 +50,14 @@ export function hydrateState() {
             sb.reverb = savedState.sb.reverb; 
             sb.doubleStops = savedState.sb.doubleStops !== undefined ? savedState.sb.doubleStops : false;
         }
+        if (savedState.hb) {
+            hb.enabled = savedState.hb.enabled !== undefined ? savedState.hb.enabled : false;
+            hb.style = savedState.hb.style || 'smart';
+            hb.octave = savedState.hb.octave || 60;
+            hb.volume = savedState.hb.volume;
+            hb.reverb = savedState.hb.reverb;
+            hb.complexity = savedState.hb.complexity !== undefined ? savedState.hb.complexity : 0.5;
+        }
         if (savedState.gb) { 
             gb.enabled = savedState.gb.enabled !== undefined ? savedState.gb.enabled : true; 
             gb.volume = savedState.gb.volume; 
@@ -105,6 +113,12 @@ export function hydrateState() {
         if (ui.soloistVol) ui.soloistVol.value = sb.volume;
         if (ui.soloistReverb) ui.soloistReverb.value = sb.reverb;
         if (ui.soloistDoubleStops) ui.soloistDoubleStops.checked = sb.doubleStops;
+        if (ui.harmonyVol) ui.harmonyVol.value = hb.volume;
+        if (ui.harmonyReverb) ui.harmonyReverb.value = hb.reverb;
+        if (ui.harmonyComplexity) {
+            ui.harmonyComplexity.value = hb.complexity;
+            if (ui.harmonyComplexityValue) ui.harmonyComplexityValue.textContent = `${Math.round(hb.complexity * 100)}%`;
+        }
         if (ui.drumVol) ui.drumVol.value = gb.volume;
         if (ui.drumReverb) ui.drumReverb.value = gb.reverb;
         if (ui.swingSlider) ui.swingSlider.value = gb.swing;
@@ -120,6 +134,7 @@ export function hydrateState() {
                 chordsChannel: savedState.midi.chordsChannel || 1,
                 bassChannel: savedState.midi.bassChannel || 2,
                 soloistChannel: savedState.midi.soloistChannel || 3,
+                harmonyChannel: savedState.midi.harmonyChannel || 4,
                 drumsChannel: savedState.midi.drumsChannel || 10,
                 latency: savedState.midi.latency || 0,
                 muteLocal: savedState.midi.muteLocal !== undefined ? savedState.midi.muteLocal : true,
@@ -135,6 +150,7 @@ export function hydrateState() {
             if (ui.midiChordsChannel) ui.midiChordsChannel.value = savedState.midi.chordsChannel || 1;
             if (ui.midiBassChannel) ui.midiBassChannel.value = savedState.midi.bassChannel || 2;
             if (ui.midiSoloistChannel) ui.midiSoloistChannel.value = savedState.midi.soloistChannel || 3;
+            if (ui.midiHarmonyChannel) ui.midiHarmonyChannel.value = savedState.midi.harmonyChannel || 4;
             if (ui.midiDrumsChannel) ui.midiDrumsChannel.value = savedState.midi.drumsChannel || 10;
             
             if (ui.midiVelocitySlider) {
@@ -144,6 +160,7 @@ export function hydrateState() {
             if (ui.midiChordsOctave) ui.midiChordsOctave.value = savedState.midi.chordsOctave || 0;
             if (ui.midiBassOctave) ui.midiBassOctave.value = savedState.midi.bassOctave || 0;
             if (ui.midiSoloistOctave) ui.midiSoloistOctave.value = savedState.midi.soloistOctave || 0;
+            if (ui.midiHarmonyOctave) ui.midiHarmonyOctave.value = savedState.midi.harmonyOctave || 0;
             if (ui.midiDrumsOctave) ui.midiDrumsOctave.value = savedState.midi.drumsOctave || 0;
 
             if (savedState.midi.enabled) {

@@ -97,6 +97,12 @@
     border-color: rgba(181, 137, 0, 0.3);
 }
 
+.harmony-panel-header .instrument-tab-btn.active {
+    background: rgba(108, 113, 196, 0.15); /* Violet */
+    color: var(--violet);
+    border-color: rgba(108, 113, 196, 0.3);
+}
+
 .instrument-tab-content {
     display: none;
     animation: fadeIn 0.2s ease-out;

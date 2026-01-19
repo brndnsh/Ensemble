@@ -8,7 +8,7 @@ import { getMidi } from './utils.js';
  *
  * @param {number} step - The global step where the resolution starts.
  * @param {Object} arranger - The arranger state { key, isMinor }.
- * @param {Object} enabled - Enabled tracks { bb, cb, sb, gb }.
+ * @param {Object} enabled - Enabled tracks { bb, cb, sb, hb, gb }.
  * @returns {Array} List of note events.
  */
 export function generateResolutionNotes(step, arranger, enabled) {
@@ -96,7 +96,28 @@ export function generateResolutionNotes(step, arranger, enabled) {
         });
     }
 
-    // 5. Drums Resolution (Kick + Crash)
+    // 5. Harmony Resolution (Clean ensemble voicing)
+    if (enabled.hb) {
+        // Simple Root-3rd-5th voicing in higher octave
+        const hbIntervals = arranger.isMinor ? [0, 3, 7] : [0, 4, 7];
+        hbIntervals.forEach(i => {
+            const midi = (keyPC % 12) + 72 + i;
+            const vel = 0.6;
+            const midiVel = Math.round(vel * 127);
+            notes.push({
+                midi: midi,
+                freq: 440 * Math.pow(2, (midi - 69) / 12),
+                velocity: vel,
+                midiVelocity: midiVel,
+                durationSteps: 16,
+                module: 'hb',
+                step: step,
+                timingOffset: 0
+            });
+        });
+    }
+
+    // 6. Drums Resolution (Kick + Crash)
     if (enabled.gb) {
         // Kick
         notes.push({

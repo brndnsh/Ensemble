@@ -23,6 +23,7 @@ export const MIXER_GAIN_MULTIPLIERS = {
     chords: 0.25,
     bass: 0.38,
     soloist: 0.35,
+    harmonies: 0.3,
     drums: 0.5
 };
 

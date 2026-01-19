@@ -1,7 +1,7 @@
 import { ACTIONS } from './types.js';
-import { ctx, gb, cb, bb, sb, arranger, vizState, dispatch } from './state.js';
+import { ctx, gb, cb, bb, sb, hb, arranger, vizState, dispatch } from './state.js';
 import { ui, updateGenreUI, triggerFlash, clearActiveVisuals } from './ui.js';
-import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, updateSustain, restoreGains, killAllNotes } from './engine.js';
+import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playHarmonyNote, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
 import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker, requestResolution } from './worker-client.js';
@@ -49,6 +49,8 @@ export function togglePlay(viz) {
         killAllNotes();
         panic(true); // Full MIDI reset
         sendMIDITransport('stop', ctx.audio.currentTime);
+        hb.buffer.clear();
+        flushBuffers();
         flushBuffers();
         ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
         if (ctx.audio) {
@@ -138,6 +140,7 @@ function scheduleResolution(time) {
     if (bb.enabled) scheduleBass({ chord: { freqs: [] } }, ctx.step, time);
     if (sb.enabled) scheduleSoloist({ chord: { freqs: [] } }, ctx.step, time, time);
     if (cb.enabled) scheduleChords({ chord: { freqs: [] } }, ctx.step, time);
+    if (hb.enabled) scheduleHarmonies({ chord: { freqs: [] } }, ctx.step, time);
     
     // 3. Add a final flash
     if (ui.visualFlash.checked) {
@@ -473,6 +476,33 @@ export function scheduleChords(chordData, step, time) {
     }
 }
 
+export function scheduleHarmonies(chordData, step, time) {
+    const notes = hb.buffer.get(step);
+    hb.buffer.delete(step);
+    
+    if (notes && notes.length > 0) {
+        const spb = 60.0 / ctx.bpm;
+        notes.forEach(n => {
+            const { freq, velocity, timingOffset, durationSteps, midi, style } = n;
+            const playTime = time + (timingOffset || 0);
+            const m = midi || getMidi(freq);
+
+            if (freq || m) {
+                const duration = (durationSteps || 1) * 0.25 * spb;
+                const finalVel = velocity * (ctx.conductorVelocity || 1.0);
+                
+                playHarmonyNote(freq || 440, playTime, duration, finalVel, style);
+                sendMIDINote(midiState.harmonyChannel, m + (midiState.harmonyOctave * 12), normalizeMidiVelocity(finalVel), playTime, duration);
+                
+                if (vizState.enabled && ctx.viz) {
+                    const { name, octave } = midiToNote(m);
+                    ctx.drawQueue.push({ type: 'harmony_vis', name, octave, midi: m, time: playTime, duration });
+                }
+            }
+        });
+    }
+}
+
 export function scheduleGlobalEvent(step, swungTime) {
     const globalTS = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const stepInfo = getStepInfo(step, globalTS, arranger.measureMap, TIME_SIGNATURES);
@@ -542,6 +572,7 @@ export function scheduleGlobalEvent(step, swungTime) {
         if (bb.enabled) scheduleBass(chordData, step, t);
         if (sb.enabled) scheduleSoloist(chordData, step, t, soloistTime);
         if (cb.enabled) scheduleChords(chordData, step, t);
+        if (hb.enabled) scheduleHarmonies(chordData, step, t);
     }
 }
 
@@ -558,26 +589,27 @@ export function syncAndFlushWorker(step) {
         },
         cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled, volume: cb.volume },
         bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq, volume: bb.volume },
-        sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume, doubleStops: sb.doubleStops },
-        gb: { 
-            genreFeel: gb.genreFeel, 
-            lastDrumPreset: gb.lastDrumPreset, 
-            enabled: gb.enabled, 
-            volume: gb.volume,
-            measures: gb.measures,
-            swing: gb.swing,
-            swingSub: gb.swingSub,
-            instruments: gb.instruments.map(i => ({ name: i.name, steps: [...i.steps], muted: i.muted }))
-        },
-        ctx: { bpm: ctx.bpm, bandIntensity: ctx.bandIntensity, complexity: ctx.complexity, autoIntensity: ctx.autoIntensity }
-    };
-
-    cb.buffer.clear();
-    bb.buffer.clear();
-    sb.buffer.clear();
-    gb.fillActive = false; 
-
-    killAllNotes();
-    flushWorker(step, syncData);
+                sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume, doubleStops: sb.doubleStops },
+                hb: { style: hb.style, octave: hb.octave, enabled: hb.enabled, volume: hb.volume, complexity: hb.complexity },
+                gb: {
+                    genreFeel: gb.genreFeel,
+                    lastDrumPreset: gb.lastDrumPreset,
+                    enabled: gb.enabled,
+                    volume: gb.volume,
+                    measures: gb.measures,
+                    swing: gb.swing,
+                    swingSub: gb.swingSub,
+                    instruments: gb.instruments.map(i => ({ name: i.name, steps: [...i.steps], muted: i.muted }))
+                },
+                ctx: { bpm: ctx.bpm, bandIntensity: ctx.bandIntensity, complexity: ctx.complexity, autoIntensity: ctx.autoIntensity }
+            };
+        
+            cb.buffer.clear();
+            bb.buffer.clear();
+            sb.buffer.clear();
+            hb.buffer.clear();
+            gb.fillActive = false;
+        
+            killAllNotes();    flushWorker(step, syncData);
     restoreGains();
 }

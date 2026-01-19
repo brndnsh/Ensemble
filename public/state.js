@@ -338,6 +338,30 @@ export const sb = {
 };
 
 /**
+ * @typedef {Object} HarmonyState
+ * @property {boolean} enabled - Whether the harmony engine is active.
+ * @property {number} volume - Volume level.
+ * @property {number} reverb - Reverb level.
+ * @property {Map<number, Object>} buffer - Map of scheduled notes from the worker.
+ * @property {number} octave - Base MIDI octave.
+ * @property {string} style - Playing style ID (e.g., 'horns', 'strings').
+ * @property {number} complexity - Local complexity override (0.0 - 1.0).
+ * @property {Array<Object>} motifBuffer - Short-term memory for current section hooks.
+ * @property {string} activeTab - Currently active UI tab.
+ */
+export const hb = {
+    enabled: false,
+    volume: 0.4,
+    reverb: 0.4,
+    buffer: new Map(),
+    octave: 60,
+    style: 'smart',
+    complexity: 0.5,
+    motifBuffer: [],
+    activeTab: 'smart'
+};
+
+/**
  * @typedef {Object} VisualizerState
  * @property {boolean} enabled - Whether the advanced visualizer is active.
  */
@@ -353,12 +377,14 @@ export const vizState = {
  * @property {number} chordsChannel - MIDI channel for Chords (1-16).
  * @property {number} bassChannel - MIDI channel for Bass (1-16).
  * @property {number} soloistChannel - MIDI channel for Soloist (1-16).
+ * @property {number} harmonyChannel - MIDI channel for Harmonies (1-16).
  * @property {number} drumsChannel - MIDI channel for Drums (1-16).
  * @property {number} latency - Global MIDI latency offset in ms.
  * @property {boolean} muteLocal - Whether to mute internal audio when MIDI is active.
  * @property {number} chordsOctave - Octave offset for chords.
  * @property {number} bassOctave - Octave offset for bass.
  * @property {number} soloistOctave - Octave offset for soloist.
+ * @property {number} harmonyOctave - Octave offset for harmonies.
  * @property {number} drumsOctave - Octave offset for drums.
  * @property {number} velocitySensitivity - Velocity scaling factor.
  */
@@ -369,12 +395,14 @@ export const midi = {
     chordsChannel: 1,
     bassChannel: 2,
     soloistChannel: 3,
+    harmonyChannel: 4,
     drumsChannel: 10,
     latency: 0,
     muteLocal: true,
     chordsOctave: 0,
     bassOctave: 0,
     soloistOctave: 0,
+    harmonyOctave: 0,
     drumsOctave: 0,
     velocitySensitivity: 1.0
 };
@@ -396,7 +424,7 @@ export const storage = {
 // --- Event Bus / State Manager ---
 
 const listeners = new Set();
-const stateMap = { ctx, cb, bb, sb, gb, arranger, vizState, midi };
+const stateMap = { ctx, cb, bb, sb, gb, hb, arranger, vizState, midi };
 
 /**
  * Dispatch a state change action.
@@ -494,6 +522,9 @@ export function dispatch(action, payload) {
             gb.fillStartStep = payload.startStep;
             gb.fillLength = payload.length;
             gb.pendingCrash = !!payload.crash;
+            break;
+        case ACTIONS.UPDATE_HB:
+            Object.assign(hb, payload);
             break;
         case ACTIONS.SET_ACTIVE_TAB:
             // payload: { module: 'cb', tab: 'smart' }

@@ -31,6 +31,7 @@ function init() {
         ctx.viz = viz;
         viz.addTrack('bass', 'var(--success-color)'); 
         viz.addTrack('soloist', 'var(--soloist-color)');
+        viz.addTrack('harmony', 'var(--violet)');
 
         hydrateState();
         loadFromUrl(viz);
@@ -82,6 +83,10 @@ function init() {
                         sbUpdatedSteps.add(n.step);
                     }
                     sb.buffer.get(n.step).push(n);
+                }
+                else if (n.module === 'hb') {
+                    if (!hb.buffer.has(n.step)) hb.buffer.set(n.step, []);
+                    hb.buffer.get(n.step).push(n);
                 }
                 else if (n.module === 'cb') {
                     if (!cb.buffer.has(n.step)) cb.buffer.set(n.step, []);

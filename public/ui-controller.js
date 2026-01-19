@@ -5,7 +5,7 @@ import { saveCurrentState } from './persistence.js';
 import { restoreGains, initAudio } from './engine.js';
 import { syncWorker } from './worker-client.js';
 import { generateId, formatUnicodeSymbols } from './utils.js';
-import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
+import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
 import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
 import { generateRandomProgression, mutateProgression } from './chords.js';
 import { applyTheme, setBpm } from './app-controller.js';
@@ -23,7 +23,8 @@ export function updateStyle(type, styleId) {
     const UPDATE_STYLE_CONFIG = {
         chord: { selector: '.chord-style-chip', module: 'cb', panelId: 'chord' },
         bass: { selector: '.bass-style-chip', module: 'bb', panelId: 'bass' },
-        soloist: { selector: '.soloist-style-chip', module: 'sb', panelId: 'soloist' }
+        soloist: { selector: '.soloist-style-chip', module: 'sb', panelId: 'soloist' },
+        harmony: { selector: '.harmony-style-chip', module: 'hb', panelId: 'harmony' }
     };
     const c = UPDATE_STYLE_CONFIG[type];
     if (!c) return;
@@ -53,18 +54,18 @@ export function updateStyle(type, styleId) {
 }
 
 const SMART_GENRES = {
-    'Rock': { swing: 0, sub: '8th', drum: 'Basic Rock', feel: 'Rock', chord: 'smart', bass: 'rock', soloist: 'shred' },
-    'Jazz': { swing: 60, sub: '8th', drum: 'Jazz', feel: 'Jazz', chord: 'jazz', bass: 'quarter', soloist: 'bird' },
-    'Funk': { swing: 15, sub: '16th', drum: 'Funk', feel: 'Funk', chord: 'funk', bass: 'funk', soloist: 'blues' },
-    'Disco': { swing: 0, sub: '16th', drum: 'Disco', feel: 'Disco', chord: 'smart', bass: 'disco', soloist: 'disco' },
-    'Hip Hop': { swing: 25, sub: '16th', drum: 'Hip Hop', feel: 'Hip Hop', chord: 'smart', bass: 'neo', soloist: 'neo' },
-    'Blues': { swing: 100, sub: '8th', drum: 'Blues Shuffle', feel: 'Blues', chord: 'jazz', bass: 'quarter', soloist: 'blues' },
-    'Neo-Soul': { swing: 30, sub: '16th', drum: 'Neo-Soul', feel: 'Neo-Soul', chord: 'smart', bass: 'neo', soloist: 'neo' },
-    'Reggae': { swing: 20, sub: '16th', drum: 'Reggae', feel: 'Reggae', chord: 'smart', bass: 'dub', soloist: 'blues' },
-    'Acoustic': { swing: 15, sub: '8th', drum: 'Acoustic', feel: 'Acoustic', chord: 'pad', bass: 'half', soloist: 'minimal' },
-    'Bossa': { swing: 0, sub: '16th', drum: 'Bossa Nova', feel: 'Bossa Nova', chord: 'jazz', bass: 'bossa', soloist: 'bossa' },
-    'Country': { swing: 55, sub: '16th', drum: 'Country (Two-Step)', feel: 'Country', chord: 'strum-country', bass: 'country', soloist: 'country' },
-    'Metal': { swing: 0, sub: '16th', drum: 'Metal (Speed)', feel: 'Metal', chord: 'power-metal', bass: 'metal', soloist: 'metal' }
+    'Rock': { swing: 0, sub: '8th', drum: 'Basic Rock', feel: 'Rock', chord: 'smart', bass: 'rock', soloist: 'shred', harmony: 'smart' },
+    'Jazz': { swing: 60, sub: '8th', drum: 'Jazz', feel: 'Jazz', chord: 'jazz', bass: 'quarter', soloist: 'bird', harmony: 'horns' },
+    'Funk': { swing: 15, sub: '16th', drum: 'Funk', feel: 'Funk', chord: 'funk', bass: 'funk', soloist: 'blues', harmony: 'horns' },
+    'Disco': { swing: 0, sub: '16th', drum: 'Disco', feel: 'Disco', chord: 'smart', bass: 'disco', soloist: 'disco', harmony: 'smart' },
+    'Hip Hop': { swing: 25, sub: '16th', drum: 'Hip Hop', feel: 'Hip Hop', chord: 'smart', bass: 'neo', soloist: 'neo', harmony: 'smart' },
+    'Blues': { swing: 100, sub: '8th', drum: 'Blues Shuffle', feel: 'Blues', chord: 'jazz', bass: 'quarter', soloist: 'blues', harmony: 'horns' },
+    'Neo-Soul': { swing: 30, sub: '16th', drum: 'Neo-Soul', feel: 'Neo-Soul', chord: 'smart', bass: 'neo', soloist: 'neo', harmony: 'strings' },
+    'Reggae': { swing: 20, sub: '16th', drum: 'Reggae', feel: 'Reggae', chord: 'smart', bass: 'dub', soloist: 'blues', harmony: 'smart' },
+    'Acoustic': { swing: 15, sub: '8th', drum: 'Acoustic', feel: 'Acoustic', chord: 'pad', bass: 'half', soloist: 'minimal', harmony: 'strings' },
+    'Bossa': { swing: 0, sub: '16th', drum: 'Bossa Nova', feel: 'Bossa Nova', chord: 'jazz', bass: 'bossa', soloist: 'bossa', harmony: 'strings' },
+    'Country': { swing: 55, sub: '16th', drum: 'Country (Two-Step)', feel: 'Country', chord: 'strum-country', bass: 'country', soloist: 'country', harmony: 'smart' },
+    'Metal': { swing: 0, sub: '16th', drum: 'Metal (Speed)', feel: 'Metal', chord: 'power-metal', bass: 'metal', soloist: 'metal', harmony: 'smart' }
 };
 
 export function setupPresets(refs = {}) {
@@ -88,8 +89,9 @@ export function setupPresets(refs = {}) {
     };
 
     renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', cb.style, (item) => updateStyle('chord', item.id));
-    renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', sb.style, (item) => updateStyle('soloist', item.id));
-    renderCategorized(ui.bassStylePresets, BASS_STYLES, 'bass-style', bb.style, (item) => updateStyle('bass', item.id));
+    renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', sb.state?.style || sb.style, (item) => updateStyle('soloist', item.id));
+    renderCategorized(ui.bassStylePresets, BASS_STYLES, 'bass-style', bb.state?.style || bb.style, (item) => updateStyle('bass', item.id));
+    renderCategorized(ui.harmonyStylePresets, HARMONY_STYLES, 'harmony-style', hb.style, (item) => updateStyle('harmony', item.id));
 
     const drumPresetsArray = Object.keys(DRUM_PRESETS).map(name => ({
         name,
@@ -251,14 +253,16 @@ export function setupUIHandlers(refs) {
                     const modules = [
                         { id: 'chord', state: cb, configKey: 'chord' },
                         { id: 'bass', state: bb, configKey: 'bass' },
-                        { id: 'soloist', state: sb, configKey: 'soloist' }
+                        { id: 'soloist', state: sb, configKey: 'soloist' },
+                        { id: 'harmony', state: hb, configKey: 'harmony' }
                     ];
 
                     modules.forEach(m => {
                         if (m.state.activeTab === 'smart') {
-                            dispatch(ACTIONS.SET_STYLE, { module: m.state === cb ? 'cb' : (m.state === bb ? 'bb' : 'sb'), style: 'smart' });
-                            const chipSelector = { 'chord': '.chord-style-chip', 'bass': '.bass-style-chip', 'soloist': '.soloist-style-chip' }[m.id];
-                            document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
+                            const moduleKey = m.state === cb ? 'cb' : (m.state === bb ? 'bb' : (m.state === sb ? 'sb' : 'hb'));
+                            dispatch(ACTIONS.SET_STYLE, { module: moduleKey, style: 'smart' });
+                            const chipSelector = { 'chord': '.chord-style-chip', 'bass': '.bass-style-chip', 'soloist': '.soloist-style-chip', 'harmony': '.harmony-style-chip' }[m.id];
+                            if (chipSelector) document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
                         }
                     });
                 }
@@ -410,6 +414,7 @@ export function setupUIHandlers(refs) {
             if (ui.exportChordsCheck.checked) includedTracks.push('chords');
             if (ui.exportBassCheck.checked) includedTracks.push('bass');
             if (ui.exportSoloistCheck.checked) includedTracks.push('soloist');
+            if (ui.exportHarmoniesCheck.checked) includedTracks.push('harmonies');
             if (ui.exportDrumsCheck.checked) includedTracks.push('drums');
             
             const loopMode = document.querySelector('input[name="exportMode"]:checked').value;
@@ -548,6 +553,7 @@ export function setupUIHandlers(refs) {
         { el: ui.chordVol, state: cb, gain: 'chordsGain', mult: MIXER_GAIN_MULTIPLIERS.chords },
         { el: ui.bassVol, state: bb, gain: 'bassGain', mult: MIXER_GAIN_MULTIPLIERS.bass },
         { el: ui.soloistVol, state: sb, gain: 'soloistGain', mult: MIXER_GAIN_MULTIPLIERS.soloist },
+        { el: ui.harmonyVol, state: hb, gain: 'harmoniesGain', mult: MIXER_GAIN_MULTIPLIERS.harmonies },
         { el: ui.drumVol, state: gb, gain: 'drumsGain', mult: MIXER_GAIN_MULTIPLIERS.drums },
         { el: ui.masterVol, state: ctx, gain: 'masterGain', mult: MIXER_GAIN_MULTIPLIERS.master }
     ];
@@ -568,6 +574,7 @@ export function setupUIHandlers(refs) {
         { el: ui.chordReverb, state: cb, gain: 'chordsReverb' },
         { el: ui.bassReverb, state: bb, gain: 'bassReverb' },
         { el: ui.soloistReverb, state: sb, gain: 'soloistReverb' },
+        { el: ui.harmonyReverb, state: hb, gain: 'harmoniesReverb' },
         { el: ui.drumReverb, state: gb, gain: 'drumsReverb' }
     ];
     reverbNodes.forEach(({ el, state, gain }) => {
@@ -591,6 +598,16 @@ export function setupUIHandlers(refs) {
     ui.haptic.addEventListener('change', () => {
         dispatch(ACTIONS.SET_PARAM, { module: 'ctx', param: 'haptic', value: ui.haptic.checked });
     });
+
+    if (ui.harmonyComplexity) {
+        ui.harmonyComplexity.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            hb.complexity = val;
+            if (ui.harmonyComplexityValue) ui.harmonyComplexityValue.textContent = `${Math.round(val * 100)}%`;
+            syncWorker();
+        });
+        ui.harmonyComplexity.addEventListener('change', () => saveCurrentState());
+    }
 
     if (ui.sessionTimerCheck && ui.sessionTimerInput) {
         const updateTimerUI = (isChecked) => {
@@ -1186,7 +1203,7 @@ export function setupMIDIHandlers() {
         saveCurrentState();
     });
 
-    const channels = ['Chords', 'Bass', 'Soloist', 'Drums'];
+    const channels = ['Chords', 'Bass', 'Soloist', 'Harmony', 'Drums'];
     channels.forEach(ch => {
         const el = ui[`midi${ch}Channel`];
         if (el) {
@@ -1229,10 +1246,12 @@ export function setupMIDIHandlers() {
     if (ui.midiChordsChannel) ui.midiChordsChannel.value = midiState.chordsChannel;
     if (ui.midiBassChannel) ui.midiBassChannel.value = midiState.bassChannel;
     if (ui.midiSoloistChannel) ui.midiSoloistChannel.value = midiState.soloistChannel;
+    if (ui.midiHarmonyChannel) ui.midiHarmonyChannel.value = midiState.harmonyChannel;
     if (ui.midiDrumsChannel) ui.midiDrumsChannel.value = midiState.drumsChannel;
     if (ui.midiChordsOctave) ui.midiChordsOctave.value = midiState.chordsOctave;
     if (ui.midiBassOctave) ui.midiBassOctave.value = midiState.bassOctave;
     if (ui.midiSoloistOctave) ui.midiSoloistOctave.value = midiState.soloistOctave;
+    if (ui.midiHarmonyOctave) ui.midiHarmonyOctave.value = midiState.harmonyOctave;
     if (ui.midiDrumsOctave) ui.midiDrumsOctave.value = midiState.drumsOctave;
     if (ui.midiVelocitySlider) ui.midiVelocitySlider.value = midiState.velocitySensitivity || 1.0;
     if (ui.midiVelocityValue) ui.midiVelocityValue.textContent = (midiState.velocitySensitivity || 1.0).toFixed(1);

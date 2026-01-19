@@ -162,6 +162,10 @@
             <button class="tab-btn" data-tab="soloist">Soloist</button>
             <button id="soloistPowerBtn" class="power-btn" aria-label="Toggle Soloist">⏻</button>
         </div>
+        <div class="tab-item">
+            <button class="tab-btn" data-tab="harmonies">Harmony</button>
+            <button id="harmonyPowerBtn" class="power-btn" aria-label="Toggle Harmonies">⏻</button>
+        </div>
     </div>
 
     <!-- SIDEBAR COLUMN (Right) -->
@@ -432,56 +436,60 @@
         </div>
 
         <!-- SOLOIST PANEL -->
-        <div class="panel dashboard-panel instrument-panel" id="panel-soloist" data-id="soloist">
-            <div class="panel-header soloist-panel-header">
+...
+        <!-- HARMONIES PANEL -->
+        <div class="panel dashboard-panel instrument-panel" id="panel-harmonies" data-id="harmonies">
+            <div class="panel-header harmony-panel-header">
                  <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <h2>Soloist</h2>
+                    <h2>Harmony</h2>
                 </div>
                 <!-- TAB NAV -->
                 <div class="instrument-tabs">
-                    <button class="instrument-tab-btn" data-module="sb" data-tab="classic">Classic</button>
-                    <button class="instrument-tab-btn active" data-module="sb" data-tab="smart">Smart</button>
+                    <button class="instrument-tab-btn" data-module="hb" data-tab="classic">Classic</button>
+                    <button class="instrument-tab-btn active" data-module="hb" data-tab="smart">Smart</button>
                 </div>
                  <div style="display: flex; gap: 0.5rem; align-items: center;">
                      <button class="panel-menu-btn" aria-label="Settings">⋮</button>
-                     <button class="power-btn desktop-power-btn" id="soloistPowerBtnDesktop" aria-label="Toggle Soloist">⏻</button>
+                     <button class="power-btn desktop-power-btn" id="harmonyPowerBtnDesktop" aria-label="Toggle Harmonies">⏻</button>
                  </div>
             </div>
 
             <!-- CLASSIC TAB -->
-            <div id="soloist-tab-classic" class="instrument-tab-content">
+            <div id="harmony-tab-classic" class="instrument-tab-content">
                 <div style="margin-bottom: 0;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
-                    <div class="presets-container" id="soloistStylePresets"></div>
+                    <div class="presets-container" id="harmonyStylePresets"></div>
                 </div>
             </div>
 
             <!-- SMART TAB -->
-            <div id="soloist-tab-smart" class="instrument-tab-content active">
-                <div class="smart-status" style="padding: 0.5rem; background: rgba(133, 153, 0, 0.05); border-radius: 8px; border: 1px dashed rgba(133, 153, 0, 0.2); text-align: center; display: flex; align-items: center; justify-content: center; gap: 1rem;">
-                    <p style="font-size: 0.8rem; color: var(--green); margin: 0;">✨ <strong>Smart Follow</strong> Active</p>
-                    <label style="font-size: 0.75rem; color: var(--green); display: flex; align-items: center; gap: 0.25rem; cursor: pointer; border-left: 1px solid rgba(133,153,0,0.2); padding-left: 1rem;">
-                        <input type="checkbox" id="soloistDoubleStops">
-                        Double Stops
-                    </label>
+            <div id="harmony-tab-smart" class="instrument-tab-content active">
+                <div class="smart-status" style="padding: 0.5rem; background: rgba(168, 85, 247, 0.05); border-radius: 8px; border: 1px dashed rgba(168, 85, 247, 0.2); text-align: center;">
+                    <p style="font-size: 0.8rem; color: var(--violet); margin: 0;">✨ <strong>Smart Follow</strong> Active</p>
                 </div>
             </div>
 
              <div class="panel-settings-menu">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <div>
-                        <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Instrument</h4>
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Voicing</h4>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">
+                                <span>Complexity</span>
+                                <span id="harmonyComplexityValue">50%</span>
+                            </label>
+                            <input type="range" id="harmonyComplexity" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Harmony Complexity">
+                        </div>
                     </div>
                     <div>
                         <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 0.9rem; color: var(--accent-color);">Mixer</h4>
-
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Volume</label>
-                            <input type="range" id="soloistVolume" min="0" max="1" step="0.05" value="0.5" style="width: 100%;" aria-label="Soloist Volume">
+                            <input type="range" id="harmonyVolume" min="0" max="1" step="0.05" value="0.4" style="width: 100%;" aria-label="Harmony Volume">
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-size: 0.8rem; color: #94a3b8;">Reverb</label>
-                            <input type="range" id="soloistReverb" min="0" max="1" step="0.05" value="0.6" style="width: 100%;" aria-label="Soloist Reverb">
+                            <input type="range" id="harmonyReverb" min="0" max="1" step="0.05" value="0.4" style="width: 100%;" aria-label="Harmony Reverb">
                         </div>
                     </div>
                 </div>
@@ -652,6 +660,16 @@
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                             <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Harmony Ch.</label>
+                                <input type="number" id="midiHarmonyChannel" min="1" max="16" value="4" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
+                                <input type="number" id="midiHarmonyOctave" min="-2" max="2" value="0" style="width: 100%;">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Drums Ch.</label>
                                 <input type="number" id="midiDrumsChannel" min="1" max="16" value="10" style="width: 100%;">
                             </div>
@@ -746,6 +764,10 @@
                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                         <input type="checkbox" id="exportSoloistCheck" checked>
                         Soloist
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="exportHarmoniesCheck" checked>
+                        Harmonies
                     </label>
                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                         <input type="checkbox" id="exportDrumsCheck" checked>

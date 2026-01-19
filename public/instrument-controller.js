@@ -1,4 +1,4 @@
-import { gb, arranger, ctx, cb, bb, sb, vizState } from './state.js';
+import { gb, arranger, ctx, cb, bb, sb, hb, vizState } from './state.js';
 import { ui, renderGrid, renderMeasurePagination, renderGridState, showToast, renderSections, renderChordVisualizer, initTabs } from './ui.js';
 import { DRUM_PRESETS } from './presets.js';
 import { saveCurrentState } from './persistence.js';
@@ -97,6 +97,7 @@ export function flushBuffers(primeSteps = 0) {
     bb.buffer.clear();
     sb.buffer.clear();
     cb.buffer.clear();
+    hb.buffer.clear();
     
     // 2. Kill current sounds and buses
     killAllPianoNotes();
@@ -122,6 +123,7 @@ export function flushBuffers(primeSteps = 0) {
         cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled, volume: cb.volume },
         bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq, volume: bb.volume },
         sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume, doubleStops: sb.doubleStops, sessionSteps: sb.sessionSteps },
+        hb: { style: hb.style, octave: hb.octave, enabled: hb.enabled, volume: hb.volume, complexity: hb.complexity },
         gb: { 
             genreFeel: gb.genreFeel, 
             enabled: gb.enabled, 
@@ -175,6 +177,7 @@ export function getPowerConfig() {
         groove: { state: gb, els: [ui.groovePowerBtn, ui.groovePowerBtnDesktop], cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
         bass: { state: bb, els: [ui.bassPowerBtn, ui.bassPowerBtnDesktop] },
         soloist: { state: sb, els: [ui.soloistPowerBtn, ui.soloistPowerBtnDesktop] },
+        harmony: { state: hb, els: [ui.harmonyPowerBtn, ui.harmonyPowerBtnDesktop] },
         viz: { 
             state: vizState, 
             els: [ui.vizPowerBtn], 
@@ -221,7 +224,7 @@ export function togglePower(type) {
     
     syncWorker(); // Essential: tell worker about state change BEFORE flushing/requesting new notes
 
-    if (['chord', 'bass', 'soloist'].includes(type)) {
+    if (['chord', 'bass', 'soloist', 'harmony'].includes(type)) {
         flushBuffer(type);
     } else {
         restoreGains(); // Ensure newly enabled buses are audible
@@ -261,6 +264,13 @@ export function resetToDefaults() {
     sb.activeTab = 'smart';
     sb.doubleStops = false;
     
+    hb.volume = 0.4;
+    hb.reverb = 0.4;
+    hb.octave = 60;
+    hb.style = 'smart';
+    hb.complexity = 0.5;
+    hb.activeTab = 'smart';
+    
     gb.volume = 0.5;
     gb.reverb = 0.2;
     gb.swing = 0;
@@ -279,6 +289,10 @@ export function resetToDefaults() {
     ui.bassReverb.value = 0.05;
     ui.soloistVol.value = 0.5;
     ui.soloistReverb.value = 0.6;
+    ui.harmonyVol.value = 0.4;
+    ui.harmonyReverb.value = 0.4;
+    ui.harmonyComplexity.value = 0.5;
+    if (ui.harmonyComplexityValue) ui.harmonyComplexityValue.textContent = '50%';
     ui.drumVol.value = 0.5;
     ui.drumReverb.value = 0.2;
     ui.swingSlider.value = 0;
@@ -297,6 +311,7 @@ export function resetToDefaults() {
             { node: ctx.chordsGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.chords },
             { node: ctx.bassGain, target: 0.45 * MIXER_GAIN_MULTIPLIERS.bass },
             { node: ctx.soloistGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.soloist },
+            { node: ctx.harmoniesGain, target: 0.4 * MIXER_GAIN_MULTIPLIERS.harmonies },
             { node: ctx.drumsGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.drums }
         ];
 

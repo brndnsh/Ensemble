@@ -16,7 +16,10 @@ export function initUI() {
         chordVol: 'chordVolume',
         bassVol: 'bassVolume',
         soloistVol: 'soloistVolume',
+        harmonyVol: 'harmonyVolume',
         drumVol: 'drumVolume',
+        harmonyComplexity: 'harmonyComplexity',
+        harmonyComplexityValue: 'harmonyComplexityValue',
         bpmLabel: 'bpm-label',
         bpmControlGroup: 'bpmControlGroup',
         larsIndicator: 'larsIndicator',
@@ -37,36 +40,36 @@ export function initUI() {
     };
 
     const uiIds = [
-        'playBtn', 'bpmInput', 'timeSigSelect', 'tapBtn', 'keySelect', 'relKeyBtn', 'transUpBtn', 'transDownBtn',
-        'maximizeChordBtn', 'chordPowerBtn', 'groovePowerBtn', 'bassPowerBtn', 'soloistPowerBtn',
-        'chordPowerBtnDesktop', 'groovePowerBtnDesktop', 'bassPowerBtnDesktop', 'soloistPowerBtnDesktop',
-        'vizPowerBtn', 'sectionList', 'addSectionBtn', 'templatesBtn', 'templatesOverlay', 'templateChips', 'closeTemplatesBtn',
-        'activeSectionLabel', 'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
-        'analyzeAudioBtn', 'analyzerOverlay', 'closeAnalyzerBtn', 'analyzerDropZone', 'analyzerFileInput',
-        'liveListenContainer', 'bpmChips', 'bpmCandidateContainer',
-        'liveListenBtn', 'liveListenView', 'stopLiveListenBtn', 'liveChordDisplay', 'liveStatusLabel', 'liveHistoryDisplay',
-        'analyzerTrimView', 'analyzerWaveformCanvas', 'analyzerSelectionOverlay', 'startAnalysisBtn',
-        'analyzerProcessing', 'analyzerProgressBar', 'analyzerResults', 'analyzerSummary', 'applyAnalysisBtn',
-        'detectedBpmLabel', 'analyzerSyncBpmCheck',
-        'analyzerStartInput', 'analyzerEndInput', 'analyzerDurationLabel', 'suggestedSectionsContainer', 'analyzerReplaceCheck',
-        'clearProgBtn', 'saveBtn', 'shareBtn', 'chordVisualizer', 'chordPresets', 'userPresetsContainer',
-        'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'groupingToggle', 'groupingLabel',
-        'chordReverb', 'bassReverb', 'soloistReverb', 'drumPresets', 'userDrumPresetsContainer',
-        'sequencerGrid', 'measurePagination', 'drumBarsSelect', 'cloneMeasureBtn', 'autoFollowCheck',
-        'humanizeSlider', 'saveDrumBtn', 'drumReverb', 'smartDrumPresets', 'settingsOverlay', 'settingsBtn',
-        'themeSelect', 'notationSelect', 'densitySelect', 'practiceModeCheck', 'swingSlider', 'exportMidiBtn',
-        'settingsExportMidiBtn', 'exportOverlay', 'closeExportBtn', 'confirmExportBtn', 'exportChordsCheck',
-        'exportBassCheck', 'exportSoloistCheck', 'exportDrumsCheck', 'exportDurationInput', 'exportDurationContainer',
-        'exportDurationDec', 'exportDurationInc', 'exportDurationStepper',
-        'exportFilenameInput', 'installAppBtn', 'flashOverlay', 'resetSettingsBtn', 'refreshAppBtn', 'editorOverlay',
-        'editArrangementBtn', 'closeEditorBtn', 'intensitySlider', 'complexitySlider', 'intensityValue',
-        'autoIntensityCheck', 'complexityValue', 'soloistDoubleStops', 'sessionTimerDec', 'sessionTimerInc', 'sessionTimerStepper',
-        'midiEnableCheck', 'midiMuteLocalCheck', 'midiOutputSelect', 'midiChordsChannel', 'midiBassChannel', 
-        'midiSoloistChannel', 'midiDrumsChannel', 'midiLatencySlider', 'midiLatencyValue', 'midiControls',
-        'midiChordsOctave', 'midiBassOctave', 'midiSoloistOctave', 'midiDrumsOctave',
-        'midiVelocitySlider', 'midiVelocityValue',
-        'larsModeCheck', 'larsIntensitySlider', 'larsIntensityValue', 'larsIntensityContainer'
-    ];
+                'playBtn', 'bpmInput', 'timeSigSelect', 'tapBtn', 'keySelect', 'relKeyBtn', 'transUpBtn', 'transDownBtn',
+                'maximizeChordBtn', 'chordPowerBtn', 'groovePowerBtn', 'bassPowerBtn', 'soloistPowerBtn', 'harmonyPowerBtn',
+                'chordPowerBtnDesktop', 'groovePowerBtnDesktop', 'bassPowerBtnDesktop', 'soloistPowerBtnDesktop', 'harmonyPowerBtnDesktop',
+                'vizPowerBtn', 'sectionList', 'addSectionBtn', 'templatesBtn', 'templatesOverlay', 'templateChips', 'closeTemplatesBtn',
+                'activeSectionLabel', 'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
+                'analyzeAudioBtn', 'analyzerOverlay', 'closeAnalyzerBtn', 'analyzerDropZone', 'analyzerFileInput',
+                'liveListenContainer', 'bpmChips', 'bpmCandidateContainer',
+                'liveListenBtn', 'liveListenView', 'stopLiveListenBtn', 'liveChordDisplay', 'liveStatusLabel', 'liveHistoryDisplay',
+                'analyzerTrimView', 'analyzerWaveformCanvas', 'analyzerSelectionOverlay', 'startAnalysisBtn',
+                'analyzerProcessing', 'analyzerProgressBar', 'analyzerResults', 'analyzerSummary', 'applyAnalysisBtn',
+                'detectedBpmLabel', 'analyzerSyncBpmCheck',
+                'analyzerStartInput', 'analyzerEndInput', 'analyzerDurationLabel', 'suggestedSectionsContainer', 'analyzerReplaceCheck',
+                'clearProgBtn', 'saveBtn', 'shareBtn', 'chordVisualizer', 'chordPresets', 'userPresetsContainer',
+                'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'harmonyStylePresets', 'groupingToggle', 'groupingLabel',
+                'chordReverb', 'bassReverb', 'soloistReverb', 'harmonyReverb', 'drumPresets', 'userDrumPresetsContainer',
+                'sequencerGrid', 'measurePagination', 'drumBarsSelect', 'cloneMeasureBtn', 'autoFollowCheck',
+                'humanizeSlider', 'saveDrumBtn', 'drumReverb', 'smartDrumPresets', 'settingsOverlay', 'settingsBtn',
+                'themeSelect', 'notationSelect', 'densitySelect', 'practiceModeCheck', 'swingSlider', 'exportMidiBtn',
+                'settingsExportMidiBtn', 'exportOverlay', 'closeExportBtn', 'confirmExportBtn', 'exportChordsCheck',
+                'exportBassCheck', 'exportSoloistCheck', 'exportHarmoniesCheck', 'exportDrumsCheck', 'exportDurationInput', 'exportDurationContainer',
+                'exportDurationDec', 'exportDurationInc', 'exportDurationStepper',
+                'exportFilenameInput', 'installAppBtn', 'flashOverlay', 'resetSettingsBtn', 'refreshAppBtn', 'editorOverlay',
+                'editArrangementBtn', 'closeEditorBtn', 'intensitySlider', 'complexitySlider', 'intensityValue',
+                'autoIntensityCheck', 'complexityValue', 'soloistDoubleStops', 'harmonyComplexity', 'harmonyComplexityValue',
+                'sessionTimerDec', 'sessionTimerInc', 'sessionTimerStepper',
+                'midiEnableCheck', 'midiMuteLocalCheck', 'midiOutputSelect', 'midiChordsChannel', 'midiBassChannel',
+                'midiSoloistChannel', 'midiHarmonyChannel', 'midiDrumsChannel', 'midiLatencySlider', 'midiLatencyValue', 'midiControls',
+                'midiChordsOctave', 'midiBassOctave', 'midiSoloistOctave', 'midiHarmonyOctave', 'midiDrumsOctave',
+                'midiVelocitySlider', 'midiVelocityValue',
+                'larsModeCheck', 'larsIntensitySlider', 'larsIntensityValue', 'larsIntensityContainer'    ];
 
     uiIds.forEach(id => ui[id] = document.getElementById(id));
     Object.keys(uiMap).forEach(key => ui[key] = document.getElementById(uiMap[key]));
@@ -347,7 +350,7 @@ export function initTabs() {
         const target = btn.dataset.tab;
         
         // Find panel context to scope button/content queries
-        const panelId = { cb: 'chord', bb: 'bass', sb: 'soloist', gb: 'groove' }[module];
+        const panelId = { cb: 'chord', bb: 'bass', sb: 'soloist', hb: 'harmony', gb: 'groove' }[module];
         
         // Update Buttons within the same panel
         document.querySelectorAll(`.instrument-tab-btn[data-module="${module}"]`).forEach(b => b.classList.remove('active'));
@@ -359,7 +362,7 @@ export function initTabs() {
         if (content) content.classList.add('active');
         
         // Update State
-        const stateMap = { cb, bb, sb, gb };
+        const stateMap = { cb, bb, sb, hb, gb };
         if (stateMap[module]) stateMap[module].activeTab = target;
     };
 
@@ -382,8 +385,8 @@ export function initTabs() {
         };
         
         const module = btn.dataset.module;
-        const stateMap = { cb, bb, sb, gb };
-        if (btn.dataset.tab === stateMap[module].activeTab) {
+        const stateMap = { cb, bb, sb, hb, gb };
+        if (stateMap[module] && btn.dataset.tab === stateMap[module].activeTab) {
             activateInstrumentTab(btn);
         }
     });

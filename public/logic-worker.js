@@ -1,19 +1,17 @@
-import { getBassNote, isBassActive } from './bass.js';
 import { getSoloistNote } from './soloist.js';
+import { getHarmonyNotes } from './harmonies.js';
 import { getAccompanimentNotes, compingState } from './accompaniment.js';
 import { generateResolutionNotes } from './resolution.js';
-import { arranger, cb, bb, sb, gb, ctx } from './state.js';
+import { arranger, cb, bb, sb, gb, hb, ctx } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
-import { getMidi, getStepInfo } from './utils.js';
-import { generateProceduralFill } from './fills.js';
-import { analyzeForm } from './form-analysis.js';
-
+...
 // --- WORKER STATE ---
 let timerID = null;
 let interval = 25;
 let bbBufferHead = 0;
 let sbBufferHead = 0;
 let cbBufferHead = 0;
+let hbBufferHead = 0;
 const LOOKAHEAD = 64;
 
 // --- EXPORT HELPERS ---
@@ -127,64 +125,15 @@ function fillBuffers(currentStep, timestamp = null) {
     if (bbBufferHead < currentStep) bbBufferHead = currentStep;
     if (sbBufferHead < currentStep) sbBufferHead = currentStep;
     if (cbBufferHead < currentStep) cbBufferHead = currentStep;
+    if (hbBufferHead < currentStep) hbBufferHead = currentStep;
     
     let head = 999999;
     if (bb.enabled) head = Math.min(head, bbBufferHead);
     if (sb.enabled) head = Math.min(head, sbBufferHead);
     if (cb.enabled) head = Math.min(head, cbBufferHead);
+    if (hb.enabled) head = Math.min(head, hbBufferHead);
     if (head === 999999) head = currentStep;
-
-    if (ctx.workerLogging) {
-        console.log(`[Worker] fillBuffers: head=${head}, targetStep=${targetStep}, LOOKAHEAD=${LOOKAHEAD}, arrangerSteps=${arranger.totalSteps}`);
-    }
-
-    const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-    
-    while (head < targetStep) {
-        const step = head;
-        const chordData = getChordAtStep(step);
-        
-        // --- Bass ---
-        if (bb.enabled && step >= bbBufferHead) {
-            if (chordData) {
-                const { chord, stepInChord } = chordData;
-                const nextChordData = getChordAtStep(step + 4);
-                if (isBassActive(bb.style, step, stepInChord)) {
-                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord);
-                    if (bassResult && (bassResult.freq || bassResult.midi)) {
-                        if (!bassResult.midi) bassResult.midi = getMidi(bassResult.freq);
-                        if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
-                        bb.lastFreq = bassResult.freq;
-                        notesToMain.push({ ...bassResult, step, module: 'bb' });
-                    }
-                }
-            }
-            bbBufferHead++;
-        }
-
-        // --- Soloist ---
-        if (sb.enabled && step >= sbBufferHead) {
-            if (chordData) {
-                const { chord, stepInChord } = chordData;
-                const nextChordData = getChordAtStep(step + 4);
-                const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord);
-                
-                if (soloResult) {
-                    const results = Array.isArray(soloResult) ? soloResult : [soloResult];
-                    results.forEach(res => {
-                        if (res.freq || res.midi) {
-                            if (!res.midi) res.midi = getMidi(res.freq);
-                            if (!res.freq) res.freq = 440 * Math.pow(2, (res.midi - 69) / 12);
-                            // We only update lastFreq for the primary note (usually the first one)
-                            if (!res.isDoubleStop) sb.lastFreq = res.freq;
-                            notesToMain.push({ ...res, step, module: 'sb' });
-                        }
-                    });
-                }
-            }
-            sbBufferHead++;
-        }
-
+...
         // --- Chords ---
         if (cb.enabled && step >= cbBufferHead) {
             if (chordData) {
@@ -200,6 +149,22 @@ function fillBuffers(currentStep, timestamp = null) {
             }
             cbBufferHead++;
         }
+
+        // --- Harmonies ---
+        if (hb.enabled && step >= hbBufferHead) {
+            if (chordData) {
+                const { chord, stepInChord } = chordData;
+                const nextChordData = getChordAtStep(step + 4);
+                const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, step, hb.octave, hb.style, stepInChord);
+                if (harmonyNotes.length > 0) {
+                    harmonyNotes.forEach(n => {
+                        if (!n.freq) n.freq = 440 * Math.pow(2, (n.midi - 69) / 12);
+                        notesToMain.push({ ...n, step, module: 'hb' });
+                    });
+                }
+            }
+            hbBufferHead++;
+        }
         
         head++;
     }
@@ -208,7 +173,7 @@ function fillBuffers(currentStep, timestamp = null) {
 
 export function handleExport(options) {
     try {
-        const { includedTracks = ['chords', 'bass', 'soloist', 'drums'], targetDuration = 3, loopMode = 'time', filename } = options;
+        const { includedTracks = ['chords', 'bass', 'soloist', 'harmonies', 'drums'], targetDuration = 3, loopMode = 'time', filename } = options;
         if (arranger.progression.length === 0) { postMessage({ type: 'error', data: "No progression to export" }); return; }
 
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
@@ -247,6 +212,7 @@ export function handleExport(options) {
         const chordTrack = new MidiTrack();
         const bassTrack = new MidiTrack();
         const soloistTrack = new MidiTrack();
+        const harmonyTrack = new MidiTrack();
         const drumTrack = new MidiTrack();
 
         metaTrack.setName(0, 'Ensemble Export');
@@ -258,10 +224,11 @@ export function handleExport(options) {
         chordTrack.setName(0, 'Chords'); chordTrack.programChange(0, 0, 4);
         bassTrack.setName(0, 'Bass'); bassTrack.programChange(0, 1, 34);
         soloistTrack.setName(0, 'Soloist'); soloistTrack.programChange(0, 2, 80);
+        harmonyTrack.setName(0, 'Harmonies'); harmonyTrack.programChange(0, 3, 61); // Brass/Synth
         drumTrack.setName(0, 'Drums');
 
-        const prevStates = { cb: cb.enabled, bb: bb.enabled, sb: sb.enabled, gb: gb.enabled, intensity: ctx.bandIntensity, doubleStops: sb.doubleStops, sessionSteps: sb.sessionSteps };
-        cb.enabled = true; bb.enabled = true; sb.enabled = true; gb.enabled = true;
+        const prevStates = { cb: cb.enabled, bb: bb.enabled, sb: sb.enabled, hb: hb.enabled, gb: gb.enabled, intensity: ctx.bandIntensity, doubleStops: sb.doubleStops, sessionSteps: sb.sessionSteps };
+        cb.enabled = true; bb.enabled = true; sb.enabled = true; hb.enabled = true; gb.enabled = true;
         sb.sessionSteps = 1000; // Bypass warm-up for export
         compingState.lockedUntil = 0; compingState.lastChordIndex = -1;
         sb.busySteps = 0; sb.isResting = false; sb.currentPhraseSteps = 0;
@@ -435,6 +402,26 @@ export function handleExport(options) {
                         });
                     }
                 }
+
+                if (includedTracks.includes('harmonies')) {
+                    const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, globalStep, hb.octave, hb.style, stepInChord);
+                    harmonyNotes.forEach(n => {
+                        const noteTimeS = stepTimeS + (n.timingOffset || 0);
+                        const notePulse = Math.max(0, toPulses(noteTimeS));
+                        const midiVel = Math.max(1, Math.min(127, Math.round(n.velocity * 127)));
+
+                        harmonyTrack.noteOn(notePulse, 3, n.midi, midiVel);
+
+                        let endTimeS;
+                        if (n.durationSteps < 1) {
+                            endTimeS = noteTimeS + (n.durationSteps * sixteenthSec);
+                        } else {
+                            const targetStepIdx = globalStep + Math.round(n.durationSteps);
+                            endTimeS = stepTimes[targetStepIdx] || (noteTimeS + (n.durationSteps * sixteenthSec));
+                        }
+                        harmonyTrack.noteOff(toPulses(endTimeS), 3, n.midi);
+                    });
+                }
             }
 
             if (includedTracks.includes('drums')) {
@@ -514,6 +501,7 @@ export function handleExport(options) {
             bb: includedTracks.includes('bass'), 
             cb: includedTracks.includes('chords'), 
             sb: includedTracks.includes('soloist'), 
+            hb: includedTracks.includes('harmonies'),
             gb: includedTracks.includes('drums') 
         });
 
@@ -523,6 +511,7 @@ export function handleExport(options) {
             if (n.module === 'bb') { track = bassTrack; channel = 1; }
             else if (n.module === 'cb') { track = chordTrack; channel = 0; }
             else if (n.module === 'sb') { track = soloistTrack; channel = 2; }
+            else if (n.module === 'hb') { track = harmonyTrack; channel = 3; }
             else if (n.module === 'gb') { track = drumTrack; channel = 9; }
             
             if (!track) return;
@@ -571,8 +560,8 @@ export function handleExport(options) {
 
         const finalPulse = toPulses(stepTimes[totalStepsExport - 1] + sixteenthSec);
         const finalTrackList = [metaTrack];
-        const trackRefs = { chords: chordTrack, bass: bassTrack, soloist: soloistTrack, drums: drumTrack };
-        ['chords', 'bass', 'soloist', 'drums'].forEach(key => {
+        const trackRefs = { chords: chordTrack, bass: bassTrack, soloist: soloistTrack, harmonies: harmonyTrack, drums: drumTrack };
+        ['chords', 'bass', 'soloist', 'harmonies', 'drums'].forEach(key => {
             if (includedTracks.includes(key)) {
                 trackRefs[key].endOfTrack(finalPulse);
                 finalTrackList.push(trackRefs[key]);
@@ -580,7 +569,7 @@ export function handleExport(options) {
         });
         metaTrack.endOfTrack(finalPulse);
 
-        cb.enabled = prevStates.cb; bb.enabled = prevStates.bb; sb.enabled = prevStates.sb; gb.enabled = prevStates.gb; ctx.bandIntensity = prevStates.intensity; sb.doubleStops = prevStates.doubleStops; sb.sessionSteps = prevStates.sessionSteps;
+        cb.enabled = prevStates.cb; bb.enabled = prevStates.bb; sb.enabled = prevStates.sb; hb.enabled = prevStates.hb; gb.enabled = prevStates.gb; ctx.bandIntensity = prevStates.intensity; sb.doubleStops = prevStates.doubleStops; sb.sessionSteps = prevStates.sessionSteps;
 
         const header = new Uint8Array([...writeString('MThd'), ...writeInt32(6), ...writeInt16(1), ...writeInt16(finalTrackList.length), ...writeInt16(PPQ)]);
         const trackChunks = finalTrackList.map(t => t.compile());
@@ -608,6 +597,7 @@ if (typeof self !== 'undefined') {
                     if (data.cb) Object.assign(cb, data.cb);
                     if (data.bb) Object.assign(bb, data.bb);
                     if (data.sb) Object.assign(sb, data.sb);
+                    if (data.hb) Object.assign(hb, data.hb);
                     if (data.gb) {
                         Object.assign(gb, data.gb);
                         if (data.gb.instruments) { data.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
@@ -627,6 +617,7 @@ if (typeof self !== 'undefined') {
                         if (syncData.cb) Object.assign(cb, syncData.cb);
                         if (syncData.bb) Object.assign(bb, syncData.bb);
                         if (syncData.sb) Object.assign(sb, syncData.sb);
+                        if (syncData.hb) Object.assign(hb, syncData.hb);
                         if (syncData.gb) {
                             Object.assign(gb, syncData.gb);
                             if (syncData.gb.instruments) { syncData.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
@@ -634,12 +625,13 @@ if (typeof self !== 'undefined') {
                         if (syncData.ctx) Object.assign(ctx, syncData.ctx);
                     }
                     
-                    bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step;
+                    bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step; hbBufferHead = data.step;
                     sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
                     sb.sessionSteps = 0;
                     sb.deviceBuffer = [];
                     bb.busySteps = 0;
                     sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;
+                    hb.motifBuffer = [];
                     
                     // Reset accompaniment memory
                     compingState.lastChordIndex = -1;
@@ -665,7 +657,7 @@ if (typeof self !== 'undefined') {
 }
 
 export function handleResolution(step, timestamp = null) {
-    const notesToMain = generateResolutionNotes(step, arranger, { bb: bb.enabled, cb: cb.enabled, sb: sb.enabled, gb: gb.enabled });
+    const notesToMain = generateResolutionNotes(step, arranger, { bb: bb.enabled, cb: cb.enabled, sb: sb.enabled, hb: hb.enabled, gb: gb.enabled });
     postMessage({ type: 'notes', notes: notesToMain, timestamp });
 }
 

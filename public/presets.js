@@ -661,6 +661,12 @@ export const SOLOIST_STYLES = [
     { id: 'disco', name: 'Disco', category: 'Soul/Funk' }
 ];
 
+export const HARMONY_STYLES = [
+    { id: 'smart', name: 'Smart (Auto)', category: 'Experimental' },
+    { id: 'horns', name: 'Horns (Stabs)', category: 'Modern' },
+    { id: 'strings', name: 'Strings (Pads)', category: 'Classical/Trad' }
+];
+
 export const CHORD_PRESETS = [
     { 
         name: "Pop (Standard)", 

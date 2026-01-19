@@ -1,4 +1,4 @@
-import { ctx, gb, cb, bb, sb, midi } from './state.js';
+import { ctx, gb, cb, bb, sb, hb, midi } from './state.js';
 import { ui } from './ui.js';
 import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { createReverbImpulse, createSoftClipCurve } from './utils.js';
@@ -7,11 +7,13 @@ import { createReverbImpulse, createSoftClipCurve } from './utils.js';
 import { playNote, playChordScratch, updateSustain, killAllPianoNotes, INSTRUMENT_PRESETS } from './synth-chords.js';
 import { playBassNote, killBassNote } from './synth-bass.js';
 import { playSoloNote, killSoloistNote } from './synth-soloist.js';
+import { playHarmonyNote, killHarmonyNote } from './synth-harmonies.js';
 import { playDrumSound, killDrumNote } from './synth-drums.js';
 
 export { playNote, playChordScratch, updateSustain, killAllPianoNotes, INSTRUMENT_PRESETS };
 export { playBassNote, killBassNote };
 export { playSoloNote, killSoloistNote };
+export { playHarmonyNote, killHarmonyNote };
 export { playDrumSound, killDrumNote };
 
 /**
@@ -62,6 +64,7 @@ export function initAudio() {
             { name: 'chords', state: cb, mult: MIXER_GAIN_MULTIPLIERS.chords },
             { name: 'bass', state: bb, mult: MIXER_GAIN_MULTIPLIERS.bass },
             { name: 'soloist', state: sb, mult: MIXER_GAIN_MULTIPLIERS.soloist },
+            { name: 'harmonies', state: hb, mult: MIXER_GAIN_MULTIPLIERS.harmonies },
             { name: 'drums', state: gb, mult: MIXER_GAIN_MULTIPLIERS.drums }
         ];
 
@@ -191,6 +194,13 @@ export function killSoloistBus() {
     }
 }
 
+export function killHarmonyBus() {
+    if (ctx.harmoniesGain) {
+        ctx.harmoniesGain.gain.cancelScheduledValues(ctx.audio.currentTime);
+        ctx.harmoniesGain.gain.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
+    }
+}
+
 export function killDrumBus() {
     if (ctx.drumsGain) {
         ctx.drumsGain.gain.cancelScheduledValues(ctx.audio.currentTime);
@@ -202,11 +212,13 @@ export async function killAllNotes() {
     killAllPianoNotes();
     killSoloistNote();
     killBassNote();
+    killHarmonyNote();
     killDrumNote();
     
     killChordBus();
     killBassBus();
     killSoloistBus();
+    killHarmonyBus();
     killDrumBus();
 
     try {
@@ -225,6 +237,7 @@ export function restoreGains() {
         { node: ctx.chordsGain, state: cb, mult: MIXER_GAIN_MULTIPLIERS.chords },
         { node: ctx.bassGain, state: bb, mult: MIXER_GAIN_MULTIPLIERS.bass },
         { node: ctx.soloistGain, state: sb, mult: MIXER_GAIN_MULTIPLIERS.soloist },
+        { node: ctx.harmoniesGain, state: hb, mult: MIXER_GAIN_MULTIPLIERS.harmonies },
         { node: ctx.drumsGain, state: gb, mult: MIXER_GAIN_MULTIPLIERS.drums }
     ];
     modules.forEach(m => {

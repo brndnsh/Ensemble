@@ -67,10 +67,12 @@ export function draw(viz) {
             if (viz && vizState.enabled && ctx.isDrawing) viz.pushNote('bass', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
         } else if (ev.type === 'soloist_vis') {
             if (viz && vizState.enabled && ctx.isDrawing) viz.pushNote('soloist', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+        } else if (ev.type === 'harmony_vis') {
+            if (viz && vizState.enabled && ctx.isDrawing) viz.pushNote('harmony', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
         } else if (ev.type === 'flash') triggerFlash(ev.intensity);
     }
     if (viz && vizState.enabled && ctx.isDrawing) {
-        viz.setRegister('bass', bb.octave); viz.setRegister('soloist', sb.octave); viz.setRegister('chords', cb.octave);
+        viz.setRegister('bass', bb.octave); viz.setRegister('soloist', sb.octave); viz.setRegister('chords', cb.octave); viz.setRegister('harmony', hb.octave);
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         viz.render(now, ctx.bpm, ts.beats);
     }

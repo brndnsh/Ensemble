@@ -31,6 +31,7 @@ export const ACTIONS = {
     SET_LARS_INTENSITY: 'SET_LARS_INTENSITY',
     SET_GENRE_FEEL: 'SET_GENRE_FEEL',
     TRIGGER_FILL: 'TRIGGER_FILL',
+    UPDATE_HB: 'UPDATE_HB',
 
     // --- Options / Arranger ---
     SET_METRONOME: 'SET_METRONOME',

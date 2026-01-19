@@ -28,6 +28,7 @@
     --accent-hover: var(--cyan);
     --success-color: var(--green);
     --soloist-color: var(--magenta);
+    --harmony-color: var(--violet);
     --smart-color: var(--violet);
     --error-color: var(--red);
     --card-bg: #0a404e; /* Slightly lighter than base02 for contrast */
@@ -60,6 +61,7 @@
     --accent-hover: var(--cyan);
     --success-color: var(--green);
     --soloist-color: var(--magenta);
+    --harmony-color: var(--violet);
     --error-color: var(--red);
     --card-bg: var(--base3);
     --card-bg-hover: var(--base2);

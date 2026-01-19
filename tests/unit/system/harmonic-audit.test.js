@@ -3,9 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SONG_TEMPLATES, CHORD_PRESETS } from '../../../public/presets.js';
 import { getBassNote, isBassActive, getScaleForBass } from '../../../public/bass.js';
 import { getSoloistNote, getScaleForChord } from '../../../public/soloist.js';
+import { getHarmonyNotes } from '../../../public/harmonies.js';
 import { getAccompanimentNotes } from '../../../public/accompaniment.js';
 import { validateProgression } from '../../../public/chords.js';
-import { ctx, arranger, gb, cb, bb, sb, dispatch } from '../../../public/state.js';
+import { ctx, arranger, gb, cb, bb, sb, hb, dispatch } from '../../../public/state.js';
 import { getMidi } from '../../../public/utils.js';
 
 // Mock UI and Worker
@@ -29,10 +30,12 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
         gb.enabled = true;
         bb.enabled = true;
         sb.enabled = true;
+        hb.enabled = true;
         cb.enabled = true;
         cb.style = 'smart';
         bb.style = 'smart';
         sb.style = 'smart';
+        hb.style = 'smart';
     });
 
     const runAudit = (presetName, sections, isMinor = false) => {
@@ -114,6 +117,23 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
                             if (n.midi > 0 && !n.muted) {
                                 const finalVel = n.velocity * ctx.conductorVelocity;
                                 if (finalVel > 1.5) errors.push(`[${genre} @ ${intensity}] Accomp Vel Overload: ${finalVel.toFixed(2)} at step ${step}`);
+                            }
+                        });
+
+                        // 4. Harmony Check
+                        const harmonyNotes = getHarmonyNotes(chord, null, step, 60, hb.style, stepInChord);
+                        harmonyNotes.forEach(n => {
+                            const finalVel = n.velocity * ctx.conductorVelocity;
+                            if (finalVel > 1.5) errors.push(`[${genre} @ ${intensity}] Harmony Vel Overload: ${finalVel.toFixed(2)} at step ${step}`);
+                            if (n.midi < 30 || n.midi > 100) errors.push(`[${genre} @ ${intensity}] Harmony Range Warning: MIDI ${n.midi} at step ${step}`);
+                            
+                            // Scale Check
+                            if (genre !== 'Jazz' && genre !== 'Blues') {
+                                const scale = getScaleForChord(chord, null, 'smart');
+                                const interval = (n.midi - chord.rootMidi + 120) % 12;
+                                if (!scale.includes(interval)) {
+                                    errors.push(`[${genre} @ ${intensity}] Harmony Out-of-Scale: ${n.midi % 12} over ${chord.absName}`);
+                                }
                             }
                         });
                     }

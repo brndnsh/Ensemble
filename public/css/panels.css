@@ -219,12 +219,14 @@
 #panel-grooves { border-top: 4px solid var(--yellow); }
 #panel-bass { border-top: 4px solid var(--success-color); }
 #panel-soloist { border-top: 4px solid var(--soloist-color); }
+#panel-harmonies { border-top: 4px solid var(--harmony-color); }
 #panel-visualizer { border-top: 4px solid var(--soloist-color); }
 
 .chord-panel-header h2 { color: var(--accent-color); }
 .groove-panel-header h2 { color: var(--yellow); }
 .bass-panel-header h2 { color: var(--success-color); }
 .soloist-panel-header h2 { color: var(--soloist-color); }
+.harmony-panel-header h2 { color: var(--harmony-color); }
 
 h2 {
     margin: 0;
