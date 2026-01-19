@@ -1,9 +1,22 @@
 /**
  * Analyzes a raw sequence of chords to find repeating structures and suggest sections.
  * Optimized for both standard songs and long, improvisational jam sessions.
+ * @param {Array} beatData Array of { chord, energy } objects
  */
-export function extractForm(chordSequence, beatsPerMeasure = 4) {
-    if (!chordSequence || chordSequence.length < 4) return [];
+export function extractForm(beatData, beatsPerMeasure = 4) {
+    if (!beatData || beatData.length < 4) return [];
+
+    // Flatten beat results into a full timeline
+    const maxBeat = beatData[beatData.length - 1].beat;
+    const timeline = new Array(maxBeat + 1).fill(null);
+    beatData.forEach(b => { timeline[b.beat] = b; });
+    
+    // Fill gaps
+    let current = timeline.find(b => b !== null) || { chord: "C", energy: 0 };
+    for (let i = 0; i < timeline.length; i++) {
+        if (timeline[i]) current = timeline[i];
+        else timeline[i] = { ...current, beat: i };
+    }
 
     // 1. HARMONIC SIMPLIFICATION (The "Ear" Pass)
     const simplify = (c) => {
@@ -17,21 +30,28 @@ export function extractForm(chordSequence, beatsPerMeasure = 4) {
     // 2. MEASURE CONSOLIDATION
     const measures = [];
     const originalMeasures = []; 
+    const measureEnergy = [];
     
-    for (let i = 0; i < chordSequence.length; i += beatsPerMeasure) {
-        const slice = chordSequence.slice(i, i + beatsPerMeasure);
+    for (let i = 0; i < timeline.length; i += beatsPerMeasure) {
+        const slice = timeline.slice(i, i + beatsPerMeasure);
         if (slice.length < beatsPerMeasure) break;
 
         const counts = {};
-        slice.forEach(c => counts[c] = (counts[c] || 0) + 1);
-        const majority = Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+        let totalEnergy = 0;
+        slice.forEach(b => {
+            counts[b.chord] = (counts[b.chord] || 0) + 1;
+            totalEnergy += b.energy;
+        });
         
+        const majority = Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+        measureEnergy.push(totalEnergy / beatsPerMeasure);
+
         if (counts[majority] >= beatsPerMeasure * 0.5) {
             measures.push(simplify(majority));
             originalMeasures.push(majority);
         } else {
-            measures.push(`${simplify(slice[0])} ${simplify(slice[2])}`);
-            originalMeasures.push(`${slice[0]} ${slice[2]}`);
+            measures.push(`${simplify(slice[0].chord)} ${simplify(slice[2].chord)}`);
+            originalMeasures.push(`${slice[0].chord} ${slice[2].chord}`);
         }
     }
 
@@ -51,7 +71,6 @@ export function extractForm(chordSequence, beatsPerMeasure = 4) {
         let bestLen = 0;
         let bestRepeat = 0;
 
-        // Try to find the longest possible repeating block
         for (let len of [16, 8, 4, 2]) {
             if (i + len * 2 <= measures.length) {
                 if (getSimilarity(i, i + len, len) >= 0.75) {
@@ -68,38 +87,50 @@ export function extractForm(chordSequence, beatsPerMeasure = 4) {
 
         if (bestLen > 0) {
             const value = originalMeasures.slice(i, i + bestLen).join(' | ');
-            sections.push({ value, repeat: bestRepeat });
+            const avgEnergy = measureEnergy.slice(i, i + bestLen * bestRepeat).reduce((a, b) => a + b, 0) / (bestLen * bestRepeat);
+            sections.push({ value, repeat: bestRepeat, energy: avgEnergy });
             i += bestLen * bestRepeat;
         } else {
-            // Look ahead to see if a repeat of the current 4-bar block starts soon
             const len = Math.min(4, measures.length - i);
             const value = originalMeasures.slice(i, i + len).join(' | ');
-            sections.push({ value, repeat: 1 });
+            const avgEnergy = measureEnergy.slice(i, i + len).reduce((a, b) => a + b, 0) / len;
+            sections.push({ value, repeat: 1, energy: avgEnergy });
             i += len;
         }
     }
 
-    // 4. AGGRESSIVE CONSOLIDATION (Merging consecutive similar segments)
+    // 4. AGGRESSIVE CONSOLIDATION
     const consolidated = [];
     sections.forEach(s => {
         const last = consolidated[consolidated.length - 1];
         if (last && last.value === s.value) {
             last.repeat += s.repeat;
+            // Update running average energy
+            last.energy = (last.energy + s.energy) / 2;
         } else {
             consolidated.push(s);
         }
     });
 
-    // 5. MUSICIAN LABELING
+    // 5. MUSICIAN LABELING (using relative energy)
+    const allEnergies = consolidated.map(s => s.energy);
+    const maxE = Math.max(...allEnergies) || 1;
+    const minE = Math.min(...allEnergies) || 0;
+    const range = maxE - minE;
+
     consolidated.forEach((s, idx) => {
+        const relEnergy = range > 0 ? (s.energy - minE) / range : 0.5;
         const totalMeasures = s.value.split('|').length * s.repeat;
         const isVamp = s.value.split('|').every(m => m.trim() === s.value.split('|')[0].trim());
 
-        if (s.repeat >= 4 || totalMeasures >= 16) s.label = "Main Theme";
+        if (idx === 0 && relEnergy < 0.4) s.label = "Intro";
+        else if (idx === consolidated.length - 1 && relEnergy < 0.4) s.label = "Outro";
+        else if (relEnergy > 0.85) s.label = "Climax";
+        else if (relEnergy > 0.6) s.label = "Chorus";
+        else if (relEnergy < 0.3 && totalMeasures >= 4) s.label = "Verse";
         else if (isVamp) s.label = "Vamp";
-        else if (idx === 0) s.label = "Intro";
-        else if (idx === consolidated.length - 1) s.label = "Outro";
-        else s.label = "Section";
+        else if (totalMeasures >= 16) s.label = "Main Theme";
+        else s.label = "Section " + (idx + 1);
     });
 
     return consolidated;

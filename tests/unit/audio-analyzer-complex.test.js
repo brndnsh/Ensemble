@@ -91,7 +91,6 @@ describe('Complex Synthetic Audio Analysis', () => {
     });
 
     it('should identify song sections based on energy', async () => {
-        const bpm = 120;
         const beatLen = 0.5;
         const measureLen = beatLen * 4;
         const buffer = new MockAudioBuffer({ length: 64 * beatLen * sampleRate, sampleRate });

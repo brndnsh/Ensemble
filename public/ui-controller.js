@@ -901,20 +901,10 @@ export function setupAnalyzerHandlers() {
                 }
             });
 
-            const { results: detectedRaw, bpm, beatsPerMeasure } = analysis;
+            const { results: beatData, bpm, beatsPerMeasure } = analysis;
 
-            // Flatten beat results into a full timeline
-            const maxBeat = detectedRaw.length > 0 ? detectedRaw[detectedRaw.length - 1].beat : 0;
-            const timeline = new Array(maxBeat + 1).fill("");
-            detectedRaw.forEach(c => { timeline[c.beat] = c.chord; });
-            let current = timeline[0] || "C";
-            for (let i = 0; i < timeline.length; i++) {
-                if (timeline[i]) current = timeline[i];
-                else timeline[i] = current;
-            }
-
-            // Extract structural sections using detected meter
-            detectedChords = extractForm(timeline, beatsPerMeasure);
+            // Extract structural sections using detected meter and energy
+            detectedChords = extractForm(beatData, beatsPerMeasure);
             
             ui.analyzerProgressBar.style.width = '100%';
             ui.analyzerProcessing.style.display = 'none';
@@ -949,6 +939,104 @@ export function setupAnalyzerHandlers() {
             ui.analyzerProcessing.style.display = 'none';
         }
     };
+
+    // --- Live Listen Logic ---
+    let liveAudioCtx = null;
+    let liveStream = null;
+
+    const startLiveListen = async () => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast("Live Listen requires a Secure Context (HTTPS or localhost).");
+            console.error("[LiveListen] navigator.mediaDevices is undefined. Check HTTPS/localhost.");
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: true
+            }});
+
+            liveStream = stream;
+            liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = liveAudioCtx.createMediaStreamSource(stream);
+            
+            const { ChordAnalyzerLite } = await import('./audio-analyzer-lite.js');
+            const analyzer = new ChordAnalyzerLite();
+
+            ui.analyzerDropZone.style.display = 'none';
+            ui.liveListenBtn.parentElement.style.display = 'none';
+            ui.liveListenView.style.display = 'block';
+            
+            const history = [];
+            const historyEl = ui.liveHistoryDisplay;
+            const chordEl = ui.liveChordDisplay;
+
+            // Process audio in 4096 sample chunks
+            const processor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
+            source.connect(processor);
+            processor.connect(liveAudioCtx.destination);
+
+            let buffer = new Float32Array(0);
+            const targetSamples = Math.floor(liveAudioCtx.sampleRate * 1.0); // 1.0s window
+
+            processor.onaudioprocess = (e) => {
+                const input = e.inputBuffer.getChannelData(0);
+                const newBuffer = new Float32Array(buffer.length + input.length);
+                newBuffer.set(buffer);
+                newBuffer.set(input, buffer.length);
+                buffer = newBuffer;
+
+                if (buffer.length >= targetSamples) {
+                    const analysisBuffer = buffer.slice(-targetSamples);
+                    // Shift buffer (keep last 50% for overlap)
+                    buffer = buffer.slice(-Math.floor(targetSamples / 2));
+
+                    const chroma = analyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
+                        step: 8, // Faster for real-time
+                        minMidi: 32,
+                        maxMidi: 80
+                    });
+                    
+                    const chord = analyzer.identifyChord(chroma);
+                    if (chord !== 'Rest') {
+                        chordEl.textContent = formatUnicodeSymbols(chord);
+                        
+                        if (history.length === 0 || history[history.length - 1] !== chord) {
+                            history.push(chord);
+                            if (history.length > 8) history.shift();
+                            
+                            historyEl.innerHTML = history.map((c, i) => 
+                                `<span class="${i === history.length - 1 ? 'current' : ''}">${formatUnicodeSymbols(c)}</span>`
+                            ).join('');
+                        }
+                    }
+                }
+            };
+
+        } catch (err) {
+            console.error("[LiveListen] Error:", err);
+            showToast("Microphone access denied or error: " + err.message);
+        }
+    };
+
+    const stopLiveListen = () => {
+        if (liveStream) {
+            liveStream.getTracks().forEach(t => t.stop());
+            liveStream = null;
+        }
+        if (liveAudioCtx) {
+            liveAudioCtx.close();
+            liveAudioCtx = null;
+        }
+        ui.analyzerDropZone.style.display = 'block';
+        ui.liveListenBtn.parentElement.style.display = 'flex';
+        ui.liveListenView.style.display = 'none';
+    };
+
+    ui.liveListenBtn.addEventListener('click', startLiveListen);
+    ui.stopLiveListenBtn.addEventListener('click', stopLiveListen);
 
     ui.analyzerStartInput.addEventListener('input', updateSelectionUI);
     ui.analyzerEndInput.addEventListener('input', updateSelectionUI);

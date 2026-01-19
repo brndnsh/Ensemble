@@ -2,13 +2,16 @@
  * Ensemble Lightweight Audio Analyzer
  * Pure JavaScript implementation of Chromagram-based Chord Recognition.
  * Complexity: O(N) where N is audio samples.
- * Estimated Size: ~10 KB
  */
-
 export class ChordAnalyzerLite {
     constructor() {
+        /** @type {string[]} */
         this.notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-        // Pre-calculate frequencies for notes from MIDI 24 (C1) to 96 (C7)
+        
+        /** 
+         * Pre-calculate frequencies for notes from MIDI 24 (C1) to 96 (C7)
+         * @type {Array<{midi: number, freq: number, bin: number}>} 
+         */
         this.pitchFrequencies = [];
         for (let m = 24; m <= 96; m++) {
             this.pitchFrequencies.push({
@@ -18,7 +21,10 @@ export class ChordAnalyzerLite {
             });
         }
 
-        // Krumhansl-Schmuckler Key Profiles (Major and Minor)
+        /** 
+         * Krumhansl-Schmuckler Key Profiles (Major and Minor)
+         * Weights used for global key identification.
+         */
         this.keyProfiles = {
             major: [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88],
             minor: [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17]
@@ -117,7 +123,10 @@ export class ChordAnalyzerLite {
                 bassNote: bassNoteIdx > -1 ? this.notes[bassNoteIdx] : null
             });
             
-            results.push({ beat: b, chord });
+            // Calculate relative energy for this beat
+            const energy = Math.sqrt(window.reduce((sum, x) => sum + x * x, 0) / window.length);
+            
+            results.push({ beat: b, chord, energy });
 
             if (options.onProgress) {
                 // Scale progress from 15% to 100%
@@ -136,11 +145,20 @@ export class ChordAnalyzerLite {
             const counts = {};
             window.forEach(r => counts[r.chord] = (counts[r.chord] || 0) + 1);
             
+            // Average energy in the same window
+            const avgEnergy = window.reduce((a, b) => a + b.energy, 0) / window.length;
+            
             // Pick the winner
             const consensus = Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
 
             if (consensus !== lastConsensus) {
-                smoothed.push({ beat: i, time: i * secondsPerBeat, chord: consensus, bpm });
+                smoothed.push({ 
+                    beat: i, 
+                    time: i * secondsPerBeat, 
+                    chord: consensus, 
+                    bpm,
+                    energy: avgEnergy 
+                });
                 lastConsensus = consensus;
             }
         }
@@ -155,31 +173,50 @@ export class ChordAnalyzerLite {
 
     /**
      * Identifies the "Pulse" (BPM, Meter, and Downbeat) of the audio using 
-     * autocorrelation and phase folding.
+     * Spectral Flux for robust onset detection and autocorrelation.
      */
     identifyPulse(audioBuffer, options = {}) {
         const signal = audioBuffer.getChannelData(0);
         const sampleRate = audioBuffer.sampleRate;
         
-        // 1. Calculate Energy Envelope (10ms windows for better transient resolution)
-        const winSize = Math.floor(sampleRate * 0.01);
-        const envelope = [];
-        for (let i = 0; i < Math.min(signal.length, sampleRate * 30); i += winSize) { // Analyze first 30s
+        // 1. Calculate Spectral Flux (Change in frequency content)
+        // We use 20ms windows (50Hz resolution) to capture transients
+        const winSize = Math.floor(sampleRate * 0.02);
+        const hopSize = Math.floor(sampleRate * 0.01); // 10ms hop
+        const numWindows = Math.floor(Math.min(signal.length, sampleRate * 30) / hopSize) - 2;
+        
+        const flux = new Float32Array(numWindows);
+        let lastSpectrum = new Float32Array(12); // Use 12-bin chroma spectrum for flux
+
+        for (let w = 0; w < numWindows; w++) {
+            const start = w * hopSize;
+            const window = signal.subarray(start, start + winSize);
+            
+            // Simplified Spectral Power for this window
+            const currentSpectrum = this.calculateChromagram(window, sampleRate, { 
+                step: 8, 
+                skipSharpening: true,
+                minMidi: 36, // Focus on rhythmic range
+                maxMidi: 84 
+            });
+
+            // Flux = Sum of positive changes across bins
             let sum = 0;
-            const end = Math.min(i + winSize, signal.length);
-            for (let j = i; j < end; j++) sum += signal[j] * signal[j];
-            envelope.push(Math.sqrt(sum / (end - i)));
+            for (let i = 0; i < 12; i++) {
+                const diff = currentSpectrum[i] - lastSpectrum[i];
+                if (diff > 0) sum += diff;
+            }
+            flux[w] = sum;
+            lastSpectrum = currentSpectrum;
         }
-        if (options.onProgress) options.onProgress(2);
 
-        // 2. Extract Onsets (Flux)
-        const onsets = new Float32Array(envelope.length);
-        for (let i = 1; i < envelope.length; i++) {
-            onsets[i] = Math.max(0, envelope[i] - envelope[i - 1]);
-        }
-        if (options.onProgress) options.onProgress(3);
+        // Half-wave rectification and normalization of flux
+        const maxFlux = Math.max(...flux);
+        const onsets = flux.map(v => v / (maxFlux || 1));
 
-        // 3. Find BPM via autocorrelation
+        if (options.onProgress) options.onProgress(5);
+
+        // 3. Find BPM via autocorrelation (Search range: 50 - 200 BPM)
         // Search range: 50 - 200 BPM (120 - 30 steps at 10ms)
         const minLag = 30; 
         const maxLag = 120;
@@ -280,12 +317,13 @@ export class ChordAnalyzerLite {
 
     /**
      * Calculates energy in 12 semitone bins using a bank of targeted 
-     * single-frequency filters with Hann windowing.
+     * single-frequency filters with Hann windowing and Harmonic Suppression.
      */
     calculateChromagram(signal, sampleRate, options = {}) {
         const chroma = new Float32Array(12).fill(0);
+        const pitchEnergy = new Float32Array(128).fill(0); // High-res pitch map
         const len = signal.length;
-        const step = options.step || 4; // Downsample for performance
+        const step = options.step || 4; 
         const minMidi = options.minMidi || 0;
         const maxMidi = options.maxMidi || 127;
 
@@ -297,7 +335,6 @@ export class ChordAnalyzerLite {
             const angleStep = (2 * Math.PI * p.freq) / sampleRate;
 
             for (let i = 0; i < len; i += step) {
-                // Hann Window: 0.5 * (1 - cos(2*PI*i / N))
                 const window = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (len - 1)));
                 const angle = i * angleStep;
                 const sample = signal[i] * window;
@@ -305,18 +342,37 @@ export class ChordAnalyzerLite {
                 imag += sample * Math.sin(angle);
             }
 
-            const mag = (real * real + imag * imag);
-            
-            // Apply Frequency Weighting:
-            // High weight for Bass (C1-C3), Medium for Mids (C4-C5), Low for Highs (C6+)
-            let weight = 1.0;
-            if (p.midi < 36) weight = 6.0;      // Very low bass (emphasize root)
-            else if (p.midi < 48) weight = 3.5; // Bass depth
-            else if (p.midi < 60) weight = 2.0; // Low mids
-            else if (p.midi > 80) weight = 0.05; // Ignore high melody/noise
-            
-            chroma[p.bin] += mag * weight;
+            pitchEnergy[p.midi] = (real * real + imag * imag);
         });
+
+        // Harmonic Suppression: Remove overtones of low fundamentals
+        for (let m = 24; m <= 72; m++) {
+            const energy = pitchEnergy[m];
+            if (energy <= 0) continue;
+
+            // Suppress 2nd harmonic (Octave)
+            if (m + 12 < 128) pitchEnergy[m + 12] = Math.max(0, pitchEnergy[m + 12] - energy * 0.5);
+            // Suppress 3rd harmonic (Perfect 5th + Octave)
+            if (m + 19 < 128) pitchEnergy[m + 19] = Math.max(0, pitchEnergy[m + 19] - energy * 0.3);
+            // Suppress 4th harmonic (Two Octaves)
+            if (m + 24 < 128) pitchEnergy[m + 24] = Math.max(0, pitchEnergy[m + 24] - energy * 0.2);
+            // Suppress 5th harmonic (Major 3rd + Two Octaves)
+            if (m + 28 < 128) pitchEnergy[m + 28] = Math.max(0, pitchEnergy[m + 28] - energy * 0.15);
+        }
+
+        // Map suppressed pitch energy to 12-bin Chroma
+        for (let m = 24; m <= 96; m++) {
+            const mag = pitchEnergy[m];
+            let weight = 1.0;
+            if (m < 36) weight = 6.0;      
+            else if (m < 48) weight = 3.5; 
+            else if (m < 60) weight = 2.0; 
+            else if (m > 80) weight = 0.05; 
+            
+            chroma[m % 12] += mag * weight;
+        }
+
+        if (options.skipSharpening) return chroma;
 
         // Apply "Harmonic Sharpening"
         // If two adjacent bins (e.g. C and Db) are both high, pick the winner and 

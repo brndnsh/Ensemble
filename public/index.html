@@ -853,6 +853,20 @@
             </div>
         </div>
 
+        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <button id="liveListenBtn" class="primary-btn" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--green); color: white; border: none;">
+                <span>🎤</span> Live Listen
+            </button>
+        </div>
+
+        <div id="liveListenView" class="live-listen-view" style="display: none; text-align: center; padding: 2rem 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; border: 2px solid var(--green);">
+            <div class="pulse-icon">🎤</div>
+            <h2 id="liveChordDisplay" style="font-size: 4rem; margin: 1rem 0; color: var(--green); text-shadow: 0 0 20px rgba(133, 153, 0, 0.4);">---</h2>
+            <p id="liveStatusLabel" style="color: var(--text-muted); margin-bottom: 1.5rem;">Listening for chords...</p>
+            <div class="live-history" id="liveHistoryDisplay" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; min-height: 2em;"></div>
+            <button id="stopLiveListenBtn" class="primary-btn" style="background: var(--error-color); color: white; border: none; width: 100%;">Stop Listening</button>
+        </div>
+
         <div id="analyzerTrimView" class="analyzer-trim-view" style="display: none;">
             <div class="waveform-container">
                 <canvas id="analyzerWaveformCanvas"></canvas>
