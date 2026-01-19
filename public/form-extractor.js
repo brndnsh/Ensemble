@@ -1,42 +1,41 @@
 /**
  * Analyzes a raw sequence of chords to find repeating structures and suggest sections.
- * Optimized to 'think like a drummer' by favoring measure boundaries and standard block lengths.
+ * Optimized to 'think like a lead sheet' by favoring strong beats (1 and 3).
  */
 export function extractForm(chordSequence, beatsPerMeasure = 4) {
     if (!chordSequence || chordSequence.length < 4) return [];
 
-    // 1. MEASURE SMOOTHING (Noise Reduction)
-    // If a measure has 3 beats of 'C' and 1 beat of 'G', it's likely just 'C' with harmonic noise
-    // unless the change is on a strong beat (1 or 3).
-    const smoothedMeasures = [];
+    // 1. LEAD SHEET PARSING (Beat Anchoring)
+    // Real charts usually don't have chords changing on beats 2 or 4 unless it's very complex.
+    // We snap changes to the nearest strong beat (1 or 3).
+    const leadSheetMeasures = [];
     for (let i = 0; i < chordSequence.length; i += beatsPerMeasure) {
         const slice = chordSequence.slice(i, i + beatsPerMeasure);
         if (slice.length < beatsPerMeasure) break;
 
-        // Calculate counts
-        const counts = {};
-        slice.forEach(c => counts[c] = (counts[c] || 0) + 1);
-        
-        // Find majority chord
-        const majority = Object.entries(counts).reduce((a, b) => a[1] > b[1] ? a : b)[0];
-        
-        // If one chord dominates > 75%, consolidate the whole measure
-        if (counts[majority] >= beatsPerMeasure * 0.75) {
-            smoothedMeasures.push(new Array(beatsPerMeasure).fill(majority));
+        // Extract the most stable chord for the first half (Beats 1 & 2) 
+        // and second half (Beats 3 & 4)
+        const half1 = slice.slice(0, 2);
+        const half2 = slice.slice(2, 4);
+
+        const getConsensus = (beats) => {
+            const counts = {};
+            beats.forEach(b => counts[b] = (counts[b] || 0) + 1);
+            return Object.entries(counts).reduce((a, b) => a[1] >= b[1] ? a : b)[0];
+        };
+
+        const chord1 = getConsensus(half1);
+        const chord2 = getConsensus(half2);
+
+        // Standard lead sheet measure format: 
+        // If chord is the same for the whole bar: "C"
+        // If it changes on the 3: "C G"
+        if (chord1 === chord2) {
+            leadSheetMeasures.push(chord1);
         } else {
-            // Otherwise keep the internal changes but clean up single-beat 'glitches'
-            const cleaned = [...slice];
-            for (let b = 1; b < cleaned.length - 1; b++) {
-                if (cleaned[b] !== cleaned[b-1] && cleaned[b] !== cleaned[b+1]) {
-                    cleaned[b] = cleaned[b-1]; // Snap to previous
-                }
-            }
-            smoothedMeasures.push(cleaned);
+            leadSheetMeasures.push(`${chord1} ${chord2}`);
         }
     }
-
-    // Convert measures to strings for pattern matching
-    const measureStrings = smoothedMeasures.map(m => m.join(' '));
 
     // 2. STRUCTURAL GROUPING
     // We look for patterns of 8, 4, or 2 measures (Standard song blocks)
@@ -44,19 +43,19 @@ export function extractForm(chordSequence, beatsPerMeasure = 4) {
     let i = 0;
     let sectionCount = 1;
 
-    const getPattern = (start, len) => measureStrings.slice(start, start + len).join('|');
+    const getPattern = (start, len) => leadSheetMeasures.slice(start, start + len).join('|');
 
-    while (i < measureStrings.length) {
+    while (i < leadSheetMeasures.length) {
         let foundPattern = false;
         
         // Look for the largest repeating blocks first (8 -> 4 -> 2)
         for (let len of [8, 4, 2]) {
-            if (i + len * 2 <= measureStrings.length) {
+            if (i + len * 2 <= leadSheetMeasures.length) {
                 const p1 = getPattern(i, len);
                 const p2 = getPattern(i + len, len);
                 
                 if (p1 === p2) {
-                    const value = measureStrings.slice(i, i + len).join(' | ');
+                    const value = leadSheetMeasures.slice(i, i + len).join(' | ');
                     
                     // Check if we can merge with previous identical section
                     const last = suggestedSections[suggestedSections.length - 1];
@@ -72,7 +71,7 @@ export function extractForm(chordSequence, beatsPerMeasure = 4) {
                     
                     i += len * 2;
                     // Check for further repeats
-                    while (i + len <= measureStrings.length && getPattern(i, len) === p1) {
+                    while (i + len <= leadSheetMeasures.length && getPattern(i, len) === p1) {
                         suggestedSections[suggestedSections.length - 1].repeat++;
                         i += len;
                     }
@@ -84,14 +83,11 @@ export function extractForm(chordSequence, beatsPerMeasure = 4) {
 
         if (!foundPattern) {
             // No repeat found, capture a standard 4-bar or 8-bar unique block
-            // but stop if we hit the start of a repeat further down the line
-            const remaining = measureStrings.length - i;
+            const remaining = leadSheetMeasures.length - i;
             let len = Math.min(4, remaining);
-            
-            // Heuristic: If we only have a tiny bit left, grab it all
             if (remaining <= 6) len = remaining;
 
-            const value = measureStrings.slice(i, i + len).join(' | ');
+            const value = leadSheetMeasures.slice(i, i + len).join(' | ');
             const last = suggestedSections[suggestedSections.length - 1];
             
             if (last && last.value === value) {
