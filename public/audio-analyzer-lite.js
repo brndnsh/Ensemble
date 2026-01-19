@@ -52,7 +52,7 @@ export class ChordAnalyzerLite {
      */
     async analyze(audioBuffer, options = {}) {
         // 1. Identify Pulse (BPM, Meter, Downbeat)
-        const pulse = this.identifyPulse(audioBuffer);
+        const pulse = this.identifyPulse(audioBuffer, options);
         const bpm = options.bpm || pulse.bpm || 120;
         const beatsPerMeasure = pulse.beatsPerMeasure || 4;
         
@@ -84,6 +84,8 @@ export class ChordAnalyzerLite {
         }
         const globalChroma = this.calculateChromagram(sparseSignal, sampleRate, { minMidi: 36, maxMidi: 72, step: 8 });
         const globalKey = this.identifyGlobalKey(globalChroma);
+        
+        if (options.onProgress) options.onProgress(15);
         console.log(`[Analyzer-Lite] Global Key Detected: ${this.notes[globalKey.root]} ${globalKey.type}`);
 
         const results = [];
@@ -118,7 +120,8 @@ export class ChordAnalyzerLite {
             results.push({ beat: b, chord });
 
             if (options.onProgress) {
-                options.onProgress((b / beats) * 100);
+                // Scale progress from 15% to 100%
+                options.onProgress(15 + (b / beats) * 85);
             }
         }
 
@@ -154,7 +157,7 @@ export class ChordAnalyzerLite {
      * Identifies the "Pulse" (BPM, Meter, and Downbeat) of the audio using 
      * autocorrelation and phase folding.
      */
-    identifyPulse(audioBuffer) {
+    identifyPulse(audioBuffer, options = {}) {
         const signal = audioBuffer.getChannelData(0);
         const sampleRate = audioBuffer.sampleRate;
         
@@ -167,12 +170,14 @@ export class ChordAnalyzerLite {
             for (let j = i; j < end; j++) sum += signal[j] * signal[j];
             envelope.push(Math.sqrt(sum / (end - i)));
         }
+        if (options.onProgress) options.onProgress(2);
 
         // 2. Extract Onsets (Flux)
         const onsets = new Float32Array(envelope.length);
         for (let i = 1; i < envelope.length; i++) {
             onsets[i] = Math.max(0, envelope[i] - envelope[i - 1]);
         }
+        if (options.onProgress) options.onProgress(3);
 
         // 3. Find BPM via autocorrelation
         // Search range: 60 - 180 BPM (150 - 50 steps at 20ms)
@@ -191,16 +196,12 @@ export class ChordAnalyzerLite {
             }
             correlations[lag] = corr;
             
-            // Weighting: prefer 90-130 BPM range slightly to break ties
-            // 20ms steps: 100 BPM = 600ms = 30 steps.
-            // 120 BPM = 25 steps. 60 BPM = 50 steps.
-            // Gaussian centered at lag 27 (approx 110 BPM)
-            // But let's keep it subtle so we don't force it.
             if (corr > maxCorr) {
                 maxCorr = corr;
                 bestLag = lag;
             }
         }
+        if (options.onProgress) options.onProgress(5);
         
         console.log(`[Pulse Debug] Initial Best Lag: ${bestLag}`);
         
