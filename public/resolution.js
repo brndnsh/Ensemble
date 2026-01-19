@@ -14,8 +14,17 @@ import { getMidi } from './utils.js';
 export function generateResolutionNotes(step, arranger, enabled) {
     const notes = [];
     
+    // Determine resolution key from the last chord of the arrangement
+    let resolutionKey = arranger.key;
+    if (arranger.stepMap && arranger.stepMap.length > 0) {
+        const lastEntry = arranger.stepMap[arranger.stepMap.length - 1];
+        if (lastEntry && lastEntry.chord && lastEntry.chord.key) {
+            resolutionKey = lastEntry.chord.key;
+        }
+    }
+
     // 1. Identify Tonic Chord with Sophisticated Voicing
-    const keyPC = KEY_ORDER.indexOf(arranger.key);
+    const keyPC = KEY_ORDER.indexOf(resolutionKey);
     const rootMidi = keyPC + 60;
     
     // Sophisticated Resolution Voicings
