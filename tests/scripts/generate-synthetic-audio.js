@@ -48,14 +48,13 @@ const tri = (t, freq) => Math.abs(saw(t, freq) * 2) - 1;
 
 // Notes to Freq
 const NOTES = {
-    'C2': 65.41, 'E2': 82.41, 'G2': 98.00, 'A2': 110.00, 'Bb2': 116.54, 'B2': 123.47,
-    'F2': 87.31, 'A2': 110.00, 'C3': 130.81, 'D3': 146.83, 'Eb3': 155.56,
-    'G2': 98.00, 'B2': 123.47, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61,
+    // Bass range
+    'C2': 65.41, 'E2': 82.41, 'F2': 87.31, 'G2': 98.00, 'A2': 110.00, 'Bb2': 116.54, 'B2': 123.47,
+    'C3': 130.81, 'D3': 146.83, 'Eb3': 155.56, 'E3': 164.81, 'F3': 174.61,
     
     // Chords (Higher)
-    'C4': 261.63, 'E4': 329.63, 'G4': 392.00, 'Bb4': 466.16,
-    'F4': 349.23, 'A4': 440.00, 'C5': 523.25, 'Eb5': 622.25,
-    'G4': 392.00, 'B4': 493.88, 'D5': 587.33, 'F5': 698.46
+    'C4': 261.63, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'Bb4': 466.16, 'B4': 493.88,
+    'C5': 523.25, 'D5': 587.33, 'Eb5': 622.25, 'F5': 698.46
 };
 
 // 12 Bar Blues Structure (C7, F7, G7)
@@ -82,7 +81,7 @@ const output = new Float32Array(totalSamples);
 console.log(`Generating ${PROGRESSION.length} bars of synthetic blues at ${BPM} BPM...`);
 
 let sampleIdx = 0;
-PROGRESSION.forEach((bar, barIdx) => {
+PROGRESSION.forEach((bar) => {
     const startSample = sampleIdx;
     const samplesPerBar = MEASURE_DUR * SAMPLE_RATE;
     const samplesPerBeat = BEAT_DUR * SAMPLE_RATE;
