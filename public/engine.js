@@ -79,26 +79,38 @@ export function initAudio() {
                 const hp = ctx.audio.createBiquadFilter();
                 hp.type = 'highpass';
                 hp.frequency.setValueAtTime(180, ctx.audio.currentTime); 
+                
+                const lowShelf = ctx.audio.createBiquadFilter();
+                lowShelf.type = 'lowshelf';
+                lowShelf.frequency.setValueAtTime(350, ctx.audio.currentTime);
+                lowShelf.gain.setValueAtTime(-6, ctx.audio.currentTime); // Reduce mud
+
                 const notch = ctx.audio.createBiquadFilter();
                 notch.type = 'peaking';
                 notch.frequency.setValueAtTime(2500, ctx.audio.currentTime);
                 notch.Q.setValueAtTime(0.7, ctx.audio.currentTime);
                 notch.gain.setValueAtTime(-4, ctx.audio.currentTime); 
-                gainNode.connect(hp); hp.connect(notch); notch.connect(ctx.masterGain);
+                
+                gainNode.connect(hp); 
+                hp.connect(lowShelf); 
+                lowShelf.connect(notch); 
+                notch.connect(ctx.masterGain);
                 ctx.chordsEQ = hp;
             } else if (m.name === 'bass') {
                 const weight = ctx.audio.createBiquadFilter();
                 weight.type = 'lowshelf';
                 weight.frequency.setValueAtTime(100, ctx.audio.currentTime);
                 weight.gain.setValueAtTime(2, ctx.audio.currentTime);
+                
                 const scoop = ctx.audio.createBiquadFilter();
                 scoop.type = 'peaking';
-                scoop.frequency.setValueAtTime(500, ctx.audio.currentTime);
-                scoop.Q.setValueAtTime(0.8, ctx.audio.currentTime);
-                scoop.gain.setValueAtTime(-10, ctx.audio.currentTime);
+                scoop.frequency.setValueAtTime(450, ctx.audio.currentTime); // Slightly lower scoop
+                scoop.Q.setValueAtTime(1.2, ctx.audio.currentTime);
+                scoop.gain.setValueAtTime(-12, ctx.audio.currentTime); // Clear room for low-mids
+
                 const definition = ctx.audio.createBiquadFilter();
                 definition.type = 'peaking';
-                definition.frequency.setValueAtTime(2500, ctx.audio.currentTime);
+                definition.frequency.setValueAtTime(2000, ctx.audio.currentTime);
                 definition.Q.setValueAtTime(1.2, ctx.audio.currentTime);
                 definition.gain.setValueAtTime(3, ctx.audio.currentTime);
 
@@ -115,6 +127,48 @@ export function initAudio() {
                 definition.connect(comp);
                 comp.connect(ctx.masterGain);
                 ctx.bassEQ = weight; 
+            } else if (m.name === 'soloist') {
+                const presence = ctx.audio.createBiquadFilter();
+                presence.type = 'peaking';
+                presence.frequency.setValueAtTime(3500, ctx.audio.currentTime);
+                presence.gain.setValueAtTime(4, ctx.audio.currentTime); // Cut through the mix
+                presence.Q.setValueAtTime(1.0, ctx.audio.currentTime);
+
+                const air = ctx.audio.createBiquadFilter();
+                air.type = 'highshelf';
+                air.frequency.setValueAtTime(8000, ctx.audio.currentTime);
+                air.gain.setValueAtTime(3, ctx.audio.currentTime);
+
+                gainNode.connect(presence);
+                presence.connect(air);
+                air.connect(ctx.masterGain);
+                ctx.soloistEQ = presence;
+            } else if (m.name === 'harmonies') {
+                const hp = ctx.audio.createBiquadFilter();
+                hp.type = 'highpass';
+                hp.frequency.setValueAtTime(300, ctx.audio.currentTime); // Keep it above bass/piano fundamentals
+
+                const warmth = ctx.audio.createBiquadFilter();
+                warmth.type = 'peaking';
+                warmth.frequency.setValueAtTime(1200, ctx.audio.currentTime);
+                warmth.gain.setValueAtTime(2, ctx.audio.currentTime);
+
+                gainNode.connect(hp);
+                hp.connect(warmth);
+                warmth.connect(ctx.masterGain);
+                ctx.harmoniesEQ = hp;
+            } else if (m.name === 'drums') {
+                // Parallel-style Drum Compression (Internal Routing)
+                const drumComp = ctx.audio.createDynamicsCompressor();
+                drumComp.threshold.setValueAtTime(-20, ctx.audio.currentTime);
+                drumComp.ratio.setValueAtTime(8, ctx.audio.currentTime);
+                drumComp.attack.setValueAtTime(0.001, ctx.audio.currentTime);
+                drumComp.release.setValueAtTime(0.1, ctx.audio.currentTime);
+
+                gainNode.connect(drumComp);
+                drumComp.connect(ctx.masterGain);
+                // Also connect dry for punch
+                gainNode.connect(ctx.masterGain);
             } else {
                 gainNode.connect(ctx.masterGain);
             }
