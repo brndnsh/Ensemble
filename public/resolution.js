@@ -61,8 +61,11 @@ export function generateResolutionNotes(step, arranger, enabled) {
             ccEvents: [{ controller: 64, value: 127, timingOffset: 0 }]
         });
 
+        // Apply Anti-Clutter Scaling
+        const polyphonyComp = 1 / Math.sqrt(tonicFreqs.length || 1);
+
         tonicFreqs.forEach((f, i) => {
-            const vel = 0.65;
+            const vel = 0.7 * polyphonyComp;
             const midiVel = Math.max(1, Math.min(127, Math.round(vel * 127)));
             notes.push({
                 midi: getMidi(f),
@@ -100,9 +103,11 @@ export function generateResolutionNotes(step, arranger, enabled) {
     if (enabled.hb) {
         // Simple Root-3rd-5th voicing in higher octave
         const hbIntervals = arranger.isMinor ? [0, 3, 7] : [0, 4, 7];
+        const hbPolyComp = 1 / Math.sqrt(hbIntervals.length || 1);
+
         hbIntervals.forEach(i => {
             const midi = (keyPC % 12) + 72 + i;
-            const vel = 0.6;
+            const vel = 0.6 * hbPolyComp;
             const midiVel = Math.round(vel * 127);
             notes.push({
                 midi: midi,

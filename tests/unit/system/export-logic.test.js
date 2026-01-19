@@ -20,7 +20,7 @@ vi.mock('../../../public/state.js', () => ({
     cb: { enabled: true },
     bb: { enabled: true, lastFreq: 110, pocketOffset: 0 },
     hb: { enabled: true, volume: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
-    ctx: { bandIntensity: 0.5, bpm: 120, intent: {} },
+    ctx: { bandIntensity: 0.5, bpm: 120, intent: {}, audio: { currentTime: 0 } },
     arranger: { 
         key: 'C', 
         isMinor: false, 
@@ -29,7 +29,7 @@ vi.mock('../../../public/state.js', () => ({
         stepMap: [],
         timeSignature: '4/4'
     },
-    gb: { genreFeel: 'Rock', enabled: true, instruments: [] }
+    gb: { genreFeel: 'Rock', enabled: true, instruments: [], audioBuffers: { noise: {} } }
 }));
 
 vi.mock('../../../public/config.js', () => ({
@@ -37,10 +37,11 @@ vi.mock('../../../public/config.js', () => ({
     TIME_SIGNATURES: {
         '4/4': { beats: 4, stepsPerBeat: 4, subdivision: '16th' }
     },
-    REGGAE_RIDDIMS: {}
+    REGGAE_RIDDIMS: {},
+    MIXER_GAIN_MULTIPLIERS: { chords: 0.22, bass: 0.35, soloist: 0.32, harmonies: 0.28, drums: 0.45, master: 0.85 }
 }));
 
-import { arranger } from '../../../public/state.js';
+import { arranger, hb } from '../../../public/state.js';
 import { handleResolution, handleExport } from '../../../public/logic-worker.js';
 
 describe('Export and Resolution Logic Validation', () => {
@@ -49,6 +50,7 @@ describe('Export and Resolution Logic Validation', () => {
         capturedMessages.length = 0;
         arranger.key = 'C';
         arranger.isMinor = false;
+        hb.enabled = true;
         const mockChord = { 
             root: 'C', 
             beats: 4, 
@@ -122,18 +124,38 @@ describe('Export and Resolution Logic Validation', () => {
     });
 
     it('should handle muted property by reducing velocity in resolution', () => {
-        // We'll manually call handleResolution but mock a muted condition if possible
-        // Actually handleResolution doesn't take muted as param, it decides internally.
-        // But we can verify handleExport logic via simulation if we had it exported.
-        // For now, let's verify that handleResolution's bass is within bounds.
         handleResolution(0);
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
         const bass = noteMsg.notes.find(n => n.module === 'bb');
         expect(bass.midiVelocity).toBeLessThanOrEqual(127);
     });
 
-    it('should complete MIDI export including resolution', () => {
-        handleExport({ includedTracks: ['chords', 'bass', 'soloist', 'drums'], targetDuration: 0.1 }); // Short duration
+    it('should include Harmony module in resolution', () => {
+        handleResolution(0);
+        
+        const noteMsg = capturedMessages.find(m => m.type === 'notes');
+        const harmonyNotes = noteMsg.notes.filter(n => n.module === 'hb');
+        // Harmony resolution usually plays a 1st or 5th interval
+        expect(harmonyNotes.length).toBeGreaterThan(0);
+    });
+
+    it('should apply density-based velocity normalization in resolution', () => {
+        // Resolution Chord (cb) plays 5 notes.
+        // Formula: v = base_v * (1 / sqrt(num_voices))
+        // base_v for chord resolution is 0.7.
+        // comp = 1 / sqrt(5) = ~0.447
+        // target_v = 0.7 * 0.447 = ~0.31
+        // midi_v = target_v * 127 = ~39
+        handleResolution(0);
+        const noteMsg = capturedMessages.find(m => m.type === 'notes');
+        const chordNotes = noteMsg.notes.filter(n => n.module === 'cb' && n.midi > 0);
+        
+        expect(chordNotes[0].midiVelocity).toBeLessThan(50); // Normalized down from ~89
+    });
+
+    it('should complete MIDI export including harmonies', () => {
+        arranger.progression = [{ chord: {}, start: 0, end: 16 }];
+        handleExport({ includedTracks: ['chords', 'bass', 'soloist', 'harmonies', 'drums'], targetDuration: 0.1, loopMode: 'once' }); 
         
         const exportMsg = capturedMessages.find(m => m.type === 'exportComplete');
         expect(exportMsg).toBeDefined();

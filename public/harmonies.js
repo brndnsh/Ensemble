@@ -108,6 +108,10 @@ let lastPlayedStep = -1;
 export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInChord, soloistResult = null) {
     if (!chord) return [];
 
+    // AUTO-DUCK: If intensity is very low, we treat the module as disabled
+    // to provide a "Delayed Bloom" where horns/strings only join when the jam builds up.
+    if (ctx.bandIntensity < 0.22) return [];
+
     // Stab Termination: If we are at the start of a chord, ensure any hanging stabs are cleared
     // This provides the "Anchor" feel by ensuring chord changes are clean
     const isChordStart = stepInChord === 0;
@@ -250,11 +254,23 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         lastPlayedStep = step;
     }
 
+    // --- 6. Velocity Normalization (Anti-Clutter Scaling) ---
+    // If playing multiple notes (Double Stops/Chords), we must reduce per-voice velocity
+    // to keep the total acoustic energy constant and prevent volume spikes.
+    // Formula: v = base_v * (1 / sqrt(num_voices))
+    const polyphonyComp = 1 / Math.sqrt(currentMidis.length || 1);
+    
     currentMidis.forEach((midi, i) => {
         const finalMidi = midi + liftShift;
+        
+        // Soft Latch: Reinforcement should be felt, not heard as a solo instrument.
+        // We reduce the accent multiplier from 1.2 to 1.1 and apply the polyphony compensation.
+        const baseVol = config.velocity * (0.8 + Math.random() * 0.2);
+        const latchMult = isLatched ? 1.05 : 1.0; 
+        
         notes.push({
             midi: finalMidi,
-            velocity: config.velocity * (0.8 + Math.random() * 0.2) * (isLatched ? 1.2 : 1.0), // Accented hits when latched
+            velocity: baseVol * latchMult * polyphonyComp,
             durationSteps: durationSteps,
             timingOffset: (i * 0.005) + (Math.random() * config.timingJitter), // Tightened inter-voice timing
             style: rhythmicStyle,

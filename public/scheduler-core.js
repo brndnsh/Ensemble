@@ -1,7 +1,7 @@
 import { ACTIONS } from './types.js';
 import { ctx, gb, cb, bb, sb, hb, arranger, vizState, dispatch } from './state.js';
 import { ui, updateGenreUI, triggerFlash, clearActiveVisuals } from './ui.js';
-import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playHarmonyNote, updateSustain, restoreGains, killAllNotes } from './engine.js';
+import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playHarmonyNote, killHarmonyNote, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
 import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker, requestResolution } from './worker-client.js';
@@ -447,6 +447,9 @@ export function scheduleChords(chordData, step, time) {
     
     if (notes && notes.length > 0) {
         const spb = 60.0 / ctx.bpm;
+        // Count how many non-muted notes are in this step for volume normalization
+        const numVoices = notes.filter(n => !n.muted && n.freq).length;
+
         notes.forEach(n => {
             const { freq, velocity, timingOffset, durationSteps, muted, instrument, dry, ccEvents } = n;
             const playTime = time + (timingOffset || 0);
@@ -468,7 +471,8 @@ export function scheduleChords(chordData, step, time) {
                    vol: velocity, 
                    index: 0, 
                    instrument: instrument || 'Piano',
-                   dry: dry
+                   dry: dry,
+                   numVoices: numVoices
                });
                sendMIDINote(midiState.chordsChannel, getMidi(freq) + (midiState.chordsOctave * 12), normalizeMidiVelocity(velocity), playTime, duration);
             }

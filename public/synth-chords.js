@@ -77,10 +77,21 @@ export function killAllPianoNotes() {
  * @param {number} time - AudioContext start time.
  * @param {number} duration - Note duration in seconds.
  * @param {Object} options - Synthesis options.
+ * @param {number} [options.vol=0.1] - Velocity/Volume.
+ * @param {number} [options.index=0] - Note index in chord for strumming.
+ * @param {string} [options.instrument='Piano'] - Preset name.
+ * @param {boolean} [options.muted=false] - Whether this is a muted strum.
+ * @param {number} [options.numVoices=1] - Total voices in the chord for normalization.
  */
-export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrument = 'Piano', muted = false } = {}) {
+export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrument = 'Piano', muted = false, numVoices = 1 } = {}) {
     if (!Number.isFinite(freq)) return;
     
+    // Normalize volume based on chord density (Anti-Clutter Scaling)
+    // Formula: v = base_v * (1 / sqrt(num_voices))
+    // This ensures a 5-note chord has the same perceived energy as a 1-note melody.
+    const polyphonyComp = 1 / Math.sqrt(Math.max(1, numVoices));
+    const finalVol = vol * polyphonyComp;
+
     // Ensure heldNotes exists on ctx
     if (!ctx.heldNotes) ctx.heldNotes = new Set();
     
@@ -104,7 +115,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         const intensity = ctx.bandIntensity;
         const intensityShift = (intensity - 0.5) * 1200; // Increased from 400
         const intensityDepthMult = 0.5 + (intensity * 1.5); // 0.5x to 2.0x depth
-        const velocityCutoff = Math.max(150, (preset.filterBase + intensityShift) + (vol * preset.filterDepth * intensityDepthMult));
+        const velocityCutoff = Math.max(150, (preset.filterBase + intensityShift) + (finalVol * preset.filterDepth * intensityDepthMult));
         
         // --- Component A: The Hammer Strike ---
         if (isPiano && !muted) {
@@ -114,11 +125,11 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
             const strikeGain = ctx.audio.createGain();
             
             strikeFilter.type = 'bandpass';
-            strikeFilter.frequency.setValueAtTime(1200 + (vol * 800), startTime);
+            strikeFilter.frequency.setValueAtTime(1200 + (finalVol * 800), startTime);
             strikeFilter.Q.setValueAtTime(1.5, startTime);
             
             strikeGain.gain.setValueAtTime(0, startTime);
-            strikeGain.gain.setTargetAtTime(vol * 0.25, startTime, 0.001); // Reduced from 0.4
+            strikeGain.gain.setTargetAtTime(finalVol * 0.25, startTime, 0.001); // Reduced from 0.4
             strikeGain.gain.setTargetAtTime(0, startTime + 0.01, 0.01);
             
             strike.connect(strikeFilter);
@@ -149,7 +160,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         filter.Q.setValueAtTime(preset.resonance, startTime);
 
         mainGain.gain.setValueAtTime(0, startTime);
-        mainGain.gain.setTargetAtTime(vol * (preset.gainMult || 1.0), startTime, preset.attack);
+        mainGain.gain.setTargetAtTime(finalVol * (preset.gainMult || 1.0), startTime, preset.attack);
 
         const stopNote = (t, isPanic = false) => {
             mainGain.gain.cancelScheduledValues(t);

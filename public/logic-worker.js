@@ -340,6 +340,16 @@ export function handleExport(options) {
                 else target = 0.4; 
                 ctx.bandIntensity = ctx.bandIntensity + (target - ctx.bandIntensity) * 0.5;
             }
+
+            // --- Intelligent Harmony Export Scaling ---
+            // Mirror the conductor's logic: scale complexity with intensity
+            hb.complexity = Math.max(0, (ctx.bandIntensity - 0.2) * 1.25);
+            
+            // "Final Build" for MIDI: If we are in the last loop of the export, push for a climax
+            const isLastLoop = (exportConductor.loopCount >= loopCount - 1);
+            if (isLastLoop && loopCount > 1) {
+                hb.complexity = Math.max(hb.complexity, 0.85);
+            }
         };
 
         for (let globalStep = 0; globalStep < totalStepsWithoutEnding; globalStep++) {

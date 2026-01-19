@@ -156,6 +156,9 @@ export function setupPresets(refs = {}) {
         validateAndAnalyze();
         flushBuffers();
         document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
+        // Find the chip we just clicked and add active class
+        const targetChip = ui.chordPresets.querySelector(`.chord-preset-chip[data-id="${item.name}"]`);
+        if (targetChip) targetChip.classList.add('active');
         saveCurrentState();
     });
 }

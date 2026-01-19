@@ -37,6 +37,16 @@ export function applyConductor() {
     const isSoloistBusy = sb.enabled && sb.busySteps > 0;
     const targetIntentDensity = isSoloistBusy ? (0.3 * (1 - complexity)) : (0.5 + intensity * 0.4);
 
+    // --- 4. Harmony Evolution ---
+    // Harmonies follow the intensity but with a "Delayed Bloom"
+    // They are soft-muted at low energy and peak during climax.
+    let targetHbComplexity = Math.max(0, (intensity - 0.2) * 1.25); // 0 at 0.2 intensity, 1.0 at 1.0 intensity
+    
+    // If session timer is active and we are in the last 30 seconds, push for a "Final Build"
+    if (ctx.sessionTimer > 0 && ctx.isEndingPending) {
+        targetHbComplexity = Math.max(targetHbComplexity, 0.85);
+    }
+
     dispatch(ACTIONS.UPDATE_CONDUCTOR_DECISION, {
         density: targetDensity,
         velocity: targetVelocity,
@@ -44,7 +54,11 @@ export function applyConductor() {
         intent: { density: targetIntentDensity }
     });
 
-    // --- 4. Micro-Timing (Pocket) ---
+    dispatch(ACTIONS.UPDATE_HB, {
+        complexity: targetHbComplexity
+    });
+
+    // --- 5. Micro-Timing (Pocket) ---
     let targetBassPocket = 0;
     const genre = gb.genreFeel;
     if (genre === 'Neo-Soul') targetBassPocket = 0.025; // 25ms "Dilla" lag

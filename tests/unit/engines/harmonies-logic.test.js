@@ -153,8 +153,9 @@ describe('Harmony Engine Logic', () => {
             expect(notes[0].isLatched).toBe(true);
             // Build-up logic: at 128 steps, density should be boosted
             expect(notes.length).toBeGreaterThanOrEqual(2);
-            // Should have a velocity boost
-            expect(notes[0].velocity).toBeGreaterThan(0.6);
+            // Normalized velocity: base * latchMult * polyphonyComp
+            // With density >= 2, velocity will be lower than raw boost.
+            expect(notes[0].velocity).toBeGreaterThan(0.35);
         });
     });
 });

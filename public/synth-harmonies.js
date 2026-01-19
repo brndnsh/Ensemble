@@ -54,6 +54,12 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         }
     }
 
+    // Module-Level Polyphony Scaling
+    // As more notes play simultaneously, we duck the internal gain of the module
+    // to ensure the total mix position remains consistent.
+    const polyphonyDucking = hb.activeVoices.length > 1 ? 0.85 : 1.0;
+    const finalVol = vol * polyphonyDucking;
+
     const gain = ctx.audio.createGain();
     gain.gain.value = 0;
     hb.activeVoices.push({ gain, time: playTime, duration, midi });
@@ -120,15 +126,15 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     // Amplitude Envelope
     // Velocity-to-Attack mapping: higher velocity = sharper attack (stabs)
     const baseAttack = style === 'stabs' ? 0.01 : 0.2;
-    const attack = Math.max(0.005, baseAttack - (vol * 0.15));
+    const attack = Math.max(0.005, baseAttack - (finalVol * 0.15));
     const release = style === 'stabs' ? 0.1 : 0.5;
     
     // Ensemble Widening: Increase detune for higher velocities
-    const detuneMult = 1.0 + (vol * 0.5);
+    const detuneMult = 1.0 + (finalVol * 0.5);
     osc2.detune.setValueAtTime((style === 'stabs' ? 12 : 8) * detuneMult, playTime);
 
     gain.gain.setValueAtTime(0, playTime);
-    gain.gain.linearRampToValueAtTime(vol, playTime + attack);
+    gain.gain.linearRampToValueAtTime(finalVol, playTime + attack);
     gain.gain.setTargetAtTime(0, playTime + duration - release, release);
 
     // Routing

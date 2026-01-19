@@ -27,8 +27,8 @@ export function validateAndAnalyze() {
 }
 
 export function clearChordPresetHighlight() {
-    arranger.lastChordPreset = null;
-    document.querySelectorAll('.chord-preset-chip').forEach(c => c.classList.remove('active'));
+    // Only remove the UI class, don't clear the state tracking
+    document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
 }
 
 export function refreshArrangerUI() {
