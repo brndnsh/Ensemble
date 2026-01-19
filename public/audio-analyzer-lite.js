@@ -123,19 +123,48 @@ export class ChordAnalyzerLite {
         const maxLag = 150;
         let bestLag = 75;
         let maxCorr = -1;
+        
+        // Compute correlation for all lags
+        const correlations = new Float32Array(maxLag + 1);
 
         for (let lag = minLag; lag <= maxLag; lag++) {
             let corr = 0;
-            // Weighted autocorrelation: favor multiples of 5 for stability
-            const weight = (lag % 5 === 0) ? 1.05 : 1.0;
             for (let i = 0; i < onsets.length - lag; i++) {
                 corr += onsets[i] * onsets[i + lag];
             }
-            if (corr * weight > maxCorr) {
-                maxCorr = corr * weight;
+            correlations[lag] = corr;
+            
+            // Weighting: prefer 90-130 BPM range slightly to break ties
+            // 20ms steps: 100 BPM = 600ms = 30 steps.
+            // 120 BPM = 25 steps. 60 BPM = 50 steps.
+            // Gaussian centered at lag 27 (approx 110 BPM)
+            // But let's keep it subtle so we don't force it.
+            if (corr > maxCorr) {
+                maxCorr = corr;
                 bestLag = lag;
             }
         }
+        
+        // Harmonic Check: Detect if we picked a "measure" pulse (slow) instead of a "beat" pulse (fast)
+        // Check 2x and 4x tempo (1/2 and 1/4 lag)
+        const checkHarmonic = (targetLag) => {
+            const halfLag = Math.round(targetLag / 2);
+            if (halfLag >= minLag) {
+                const scoreHalf = correlations[halfLag];
+                
+                // Dynamic Threshold:
+                // If the detected lag corresponds to < 50 BPM (lag > 60), be very aggressive about doubling it.
+                // Standard threshold 0.5, but for slow tempos lower it to 0.25
+                const threshold = (targetLag > 60) ? 0.25 : 0.5;
+
+                if (scoreHalf > correlations[targetLag] * threshold) {
+                    return checkHarmonic(halfLag); // Recursive check for even faster (4x)
+                }
+            }
+            return targetLag;
+        };
+        
+        bestLag = checkHarmonic(bestLag);
 
         const guessedBPM = Math.round((60 / (bestLag * 0.02)) / 5) * 5;
 
