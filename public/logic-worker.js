@@ -665,13 +665,20 @@ if (typeof self !== 'undefined') {
                 case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
                 case 'syncState':
                     if (data.arranger) { Object.assign(arranger, data.arranger); arranger.totalSteps = data.arranger.totalSteps; arranger.stepMap = data.arranger.stepMap; }
-                    if (data.cb) Object.assign(cb, data.cb);
+                    if (data.cb) {
+                        Object.assign(cb, data.cb);
+                        if (data.cb.rhythmicMask !== undefined) cb.rhythmicMask = data.cb.rhythmicMask;
+                    }
                     if (data.bb) Object.assign(bb, data.bb);
                     if (data.sb) Object.assign(sb, data.sb);
-                    if (data.hb) Object.assign(hb, data.hb);
+                    if (data.hb) {
+                        Object.assign(hb, data.hb);
+                        if (data.hb.rhythmicMask !== undefined) hb.rhythmicMask = data.hb.rhythmicMask;
+                    }
                     if (data.gb) {
                         Object.assign(gb, data.gb);
                         if (data.gb.instruments) { data.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
+                        if (data.gb.snareMask !== undefined) gb.snareMask = data.gb.snareMask;
                     }
                     if (data.ctx) Object.assign(ctx, data.ctx);
                     break;
@@ -685,13 +692,20 @@ if (typeof self !== 'undefined') {
                     if (data.syncData) {
                         const syncData = data.syncData;
                         if (syncData.arranger) { Object.assign(arranger, syncData.arranger); arranger.totalSteps = syncData.arranger.totalSteps; arranger.stepMap = syncData.arranger.stepMap; }
-                        if (syncData.cb) Object.assign(cb, syncData.cb);
+                        if (syncData.cb) {
+                            Object.assign(cb, syncData.cb);
+                            if (syncData.cb.rhythmicMask !== undefined) cb.rhythmicMask = syncData.cb.rhythmicMask;
+                        }
                         if (syncData.bb) Object.assign(bb, syncData.bb);
                         if (syncData.sb) Object.assign(sb, syncData.sb);
-                        if (syncData.hb) Object.assign(hb, syncData.hb);
+                        if (syncData.hb) {
+                            Object.assign(hb, syncData.hb);
+                            if (syncData.hb.rhythmicMask !== undefined) hb.rhythmicMask = syncData.hb.rhythmicMask;
+                        }
                         if (syncData.gb) {
                             Object.assign(gb, syncData.gb);
                             if (syncData.gb.instruments) { syncData.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
+                            if (syncData.gb.snareMask !== undefined) gb.snareMask = syncData.gb.snareMask;
                         }
                         if (syncData.ctx) Object.assign(ctx, syncData.ctx);
                     }

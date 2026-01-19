@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../../public/state.js', () => ({
     hb: { 
         enabled: true, volume: 0.4, complexity: 0.5, octave: 60, style: 'smart',
-        motifBuffer: []
+        motifBuffer: [], rhythmicMask: 0
     },
-    cb: { enabled: true, octave: 60, density: 'standard' },
+    cb: { enabled: true, octave: 60, density: 'standard', rhythmicMask: 0 },
     bb: { enabled: true, octave: 36 },
     sb: { enabled: true, isResting: false, notesInPhrase: 0, sessionSteps: 0, isReplayingMotif: false },
     ctx: { bandIntensity: 0.5, bpm: 120 },
@@ -19,7 +19,7 @@ vi.mock('../../../public/state.js', () => ({
         stepMap: [],
         timeSignature: '4/4'
     },
-    gb: { genreFeel: 'Rock' }
+    gb: { genreFeel: 'Rock', snareMask: 0 }
 }));
 
 vi.mock('../../../public/config.js', () => ({

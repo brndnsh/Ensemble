@@ -153,6 +153,7 @@ export const arranger = {
  * @property {boolean} practiceMode - Whether to use rootless voicings even if bass is off.
  * @property {number|null} lastActiveChordIndex - Index of the currently playing chord.
  * @property {Map<number, Object>} buffer - Scheduled notes buffer.
+ * @property {number} rhythmicMask - 16-bit mask of the current comping pattern.
  * @property {string} activeTab - Currently active UI tab ('classic' or 'smart').
  */
 export const cb = {
@@ -165,6 +166,7 @@ export const cb = {
     practiceMode: true,
     lastActiveChordIndex: null,
     buffer: new Map(),
+    rhythmicMask: 0,
     activeTab: 'smart'
 };
 
@@ -200,6 +202,7 @@ export const cb = {
  * @property {number|null} lastHatGain - Last velocity for the hi-hat (for dynamics).
  * @property {number} fillStartStep - Step index where the current fill began.
  * @property {number} fillLength - Length of the current fill in steps.
+ * @property {number} snareMask - 16-bit mask of the current snare pattern.
  * @property {boolean} pendingCrash - Whether a crash cymbal is queued for the next downbeat.
  */
 export const gb = {
@@ -241,6 +244,7 @@ export const gb = {
     lastHatGain: null,
     fillStartStep: 0,
     fillLength: 0,
+    snareMask: 0,
     pendingCrash: false
 };
 
@@ -348,6 +352,7 @@ export const sb = {
  * @property {string} style - Playing style ID (e.g., 'horns', 'strings').
  * @property {number} complexity - Local complexity override (0.0 - 1.0).
  * @property {Array<Object>} motifBuffer - Short-term memory for current section hooks.
+ * @property {number} rhythmicMask - 16-bit mask of the current rhythmic motif (16th notes).
  * @property {string} activeTab - Currently active UI tab.
  */
 export const hb = {
@@ -359,6 +364,7 @@ export const hb = {
     style: 'smart',
     complexity: 0.5,
     motifBuffer: [],
+    rhythmicMask: 0,
     activeTab: 'smart'
 };
 

@@ -1,5 +1,5 @@
 import { getFrequency, getMidi } from './utils.js';
-import { ctx, gb, sb, arranger } from './state.js';
+import { ctx, gb, sb, hb, arranger } from './state.js';
 import { TIME_SIGNATURES, KEY_ORDER } from './config.js';
 
 const CANDIDATE_WEIGHTS = new Float32Array(128);
@@ -323,6 +323,19 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const phraseBars = sb.currentPhraseSteps / stepsPerMeasure;
     let restProb = (config.restBase * (2.0 - effectiveIntensity * 1.5)) + (phraseBars * config.restGrowth);
     
+    // --- NEW: Phrase Interlocking ---
+    // Professional ensemble phrasing: soloist breathes when backgrounds are active.
+    if (hb.enabled && hb.rhythmicMask > 0) {
+        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+        const measureStep = step % (ts.beats * ts.stepsPerBeat);
+        const hasHarmonyHit = (hb.rhythmicMask >> measureStep) & 1;
+        
+        if (hasHarmonyHit && !sb.isResting) {
+            // Background is busy, nudge soloist to rest
+            restProb += (0.2 * hb.complexity);
+        }
+    }
+
     // Maturity reduces rest probability slightly (more talkative)
     restProb = Math.max(0.05, restProb - (maturityFactor * 0.15));
     
@@ -334,13 +347,26 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             sb.isResting = false; sb.currentPhraseSteps = 0; sb.notesInPhrase = 0;
             sb.qaState = sb.qaState === 'Question' ? 'Answer' : 'Question';
             
-            // Motif Replay Decision
-            if (sb.motifBuffer && sb.motifBuffer.length > 0 && Math.random() < config.motifProb) {
+            // Motif Replay Decision:
+            // Flush motif if the chord has changed significantly since it was recorded
+            const currentRoot = currentChord.rootMidi % 12;
+            const motifRoot = sb.motifRoot !== undefined ? sb.motifRoot : currentRoot;
+            const rootDiff = Math.abs(currentRoot - motifRoot);
+            
+            // If the chord has moved significantly (more than a 4th), 
+            // or if we've replayed it too many times, flush it.
+            const isSignificantShift = rootDiff > 0 && rootDiff !== 5 && rootDiff !== 7;
+            const isStale = (sb.motifReplayCount || 0) > 3;
+
+            if (sb.motifBuffer && sb.motifBuffer.length > 0 && Math.random() < config.motifProb && !isSignificantShift && !isStale) {
                 sb.isReplayingMotif = true;
                 sb.motifReplayIndex = 0;
+                sb.motifReplayCount = (sb.motifReplayCount || 0) + 1;
             } else {
                 sb.isReplayingMotif = false;
                 sb.motifBuffer = []; 
+                sb.motifRoot = currentRoot;
+                sb.motifReplayCount = 0;
             }
         } else return null;
     }
@@ -355,13 +381,42 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         if (sb.motifReplayIndex >= sb.motifBuffer.length) sb.isReplayingMotif = false;
         
         if (motifNote) {
-            // Filter motifs for double stops if disabled
+            // Smart Transposition: If the chord has changed since recording,
+            // shift the motif notes to fit the new root while preserving intervals.
+            const currentRoot = currentChord.rootMidi % 12;
+            const motifRoot = sb.motifRoot !== undefined ? sb.motifRoot : currentRoot;
+            const shift = (currentRoot - motifRoot + 12) % 12;
+            const octaveShift = shift > 6 ? -12 : (shift < -6 ? 12 : 0);
+            
             let res = motifNote;
-            if (Array.isArray(motifNote) && !sb.doubleStops) {
-                res = motifNote.find(n => !n.isDoubleStop) || motifNote[0];
+            if (Array.isArray(motifNote)) {
+                res = motifNote.map(n => ({
+                    ...n,
+                    midi: n.midi + shift + octaveShift
+                }));
+                if (!sb.doubleStops) res = res.find(n => !n.isDoubleStop) || res[0];
+            } else {
+                res = { ...motifNote, midi: motifNote.midi + shift + octaveShift };
             }
             
             const primary = Array.isArray(res) ? res[0] : res;
+            
+            // Final validation: ensure transposed note is actually in the current scale
+            // If not, nudge it to the nearest scale tone.
+            const scaleIntervals = getScaleForChord(currentChord, null, style);
+            const resPC = (primary.midi % 12 + 12) % 12;
+            const relPC = (resPC - currentRoot + 12) % 12;
+            
+            if (!scaleIntervals.includes(relPC)) {
+                const nearest = scaleIntervals.reduce((prev, curr) => Math.abs(curr - relPC) < Math.abs(prev - relPC) ? curr : prev);
+                const nudge = nearest - relPC;
+                if (Array.isArray(res)) {
+                    res = res.map(n => ({ ...n, midi: n.midi + nudge }));
+                } else {
+                    res.midi += nudge;
+                }
+            }
+
             sb.busySteps = (primary.durationSteps || 1) - 1;
             sb.notesInPhrase++;
             return res;
@@ -371,6 +426,34 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     // --- 4. Rhythmic Density ---
     if (stepInBeat === 0) {
         let pool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
+        
+        // --- NEW: Ensemble Rhythmic Interaction ---
+        // If the harmony module is enabled, the soloist "listens" to its motifs.
+        if (hb.enabled && hb.rhythmicMask > 0 && Math.random() < (0.2 + hb.complexity * 0.4)) {
+            const measureStep = step % 16;
+            const beatMask = (hb.rhythmicMask >> measureStep) & 0xF;
+            
+            // Choose interaction mode: Imitate (play on same steps) or Interlock (fill gaps)
+            const isImitating = Math.random() < 0.6;
+            
+            pool = pool.map(cell => {
+                let score = 0;
+                for (let i = 0; i < 4; i++) {
+                    const hbHit = (beatMask >> i) & 1;
+                    const sbHit = cell[i];
+                    if (isImitating) {
+                        if (hbHit && sbHit) score += 2;
+                    } else {
+                        if (!hbHit && sbHit) score += 1;
+                        if (hbHit && sbHit) score -= 2;
+                    }
+                }
+                return { cell, score };
+            }).sort((a, b) => b.score - a.score)
+              .slice(0, Math.max(1, Math.floor(pool.length * 0.4)))
+              .map(item => item.cell);
+        }
+
         sb.currentCell = pool[Math.floor(Math.random() * pool.length)];
     }
     if (sb.currentCell && sb.currentCell[stepInBeat] === 1) {
@@ -420,21 +503,36 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         
         // Sweet Note Targeting (3rds and 7ths)
         const isGuideTone = [3, 4, 10, 11].includes(interval);
+        const isRoot = interval === 0;
+
         if (isGuideTone) {
-            weight += (activeStyle === 'minimal' ? 40 : 15);
+            weight += (activeStyle === 'minimal' ? 60 : 15);
+        }
+
+        if (isRoot && activeStyle === 'minimal') {
+            // Gilmour-esque: Roots are for resolution, not constant targeting.
+            // Penalize roots slightly if they aren't part of a half-step resolution
+            if (dist !== 1) weight -= 20;
         }
 
         if (stepInBeat === 0) {
             if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) {
                 weight += 15; 
-                if (isGuideTone) weight += 20; 
+                if (isGuideTone) weight += 30; // Boost guide tones on downbeats
+                if (isRoot && activeStyle === 'minimal') weight -= 10; // Favor 3rds/7ths over Root on strong beats
             } else weight -= 15; // Penalize non-chord tones on downbeats more
+        }
+
+        if (style === 'neo' && dist === 5) weight += 100; 
+        if (sb.qaState === 'Answer') { 
+            if (interval === 0) weight += (activeStyle === 'minimal' ? 20 : 60); // Less aggressive root targeting for minimal
+            if (isGuideTone) weight += (activeStyle === 'minimal' ? 50 : 30); // Higher guide tone priority
         }
 
         // Half-step resolutions between chords
         const isChordChanging = stepInChord === 0;
         if (isChordChanging && dist === 1 && chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) {
-            weight += (activeStyle === 'minimal' ? 2000 : 500); 
+            weight += (activeStyle === 'minimal' ? 3000 : 500); 
         }
 
         if (dist === 0) weight -= 50; 
@@ -514,28 +612,42 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         notes.push({ midi: selectedMidi + dsInt, velocity: 0.8, isDoubleStop: true });
     }
 
+    // recorded for motif memory
     sb.lastFreq = getFrequency(selectedMidi);
 
     // --- 7. Dynamic Duration & Bending ---
     let durationSteps = 1;
     let bendStartInterval = 0;
 
-    // Sustained Notes: Longer durations on downbeats or when intensity is high
+    // A. Soulful Scoops: Standard articulation based on maturity
     const isImportantStep = stepInBeat === 0 || (stepInBeat === 2 && Math.random() < 0.3);
-    if (isImportantStep && (style === 'neo' || style === 'blues' || style === 'minimal' || style === 'bossa')) {
+    if (isImportantStep && (activeStyle === 'neo' || activeStyle === 'blues' || activeStyle === 'minimal' || activeStyle === 'bossa')) {
         durationSteps = Math.random() < (0.4 + maturityFactor * 0.2) ? 8 : 4;
-    } else if (style === 'scalar' && stepInBeat === 0 && Math.random() < (0.15 + maturityFactor * 0.1)) {
+    } else if (activeStyle === 'scalar' && stepInBeat === 0 && Math.random() < (0.15 + maturityFactor * 0.1)) {
         durationSteps = 4; 
-    } else if (style === 'neo' && Math.random() < 0.2) {
+    } else if (activeStyle === 'neo' && Math.random() < 0.2) {
         durationSteps = 2; 
     }
 
-    // Soulful Scoops: Maturity increases scoop complexity
-    if (durationSteps >= 4 && Math.random() < (0.3 + maturityFactor * 0.2)) {
+    // B. Melodic Bend Resolution (New satisfying resolution trick)
+    // If we just resolved a dissonance (e.g. by a semitone) to a chord tone, 
+    // especially the root, perform an upward bend into the note.
+    const pc = selectedMidi % 12;
+    const isRoot = pc === (targetChord.rootMidi % 12);
+    const isGuideTone = [3, 4, 10, 11].includes((pc - (targetChord.rootMidi % 12) + 12) % 12);
+    const isSatisfyingTarget = isRoot || (isGuideTone && activeStyle === 'minimal');
+
+    if (isSatisfyingTarget && Math.abs(lastMidi - selectedMidi) === 1 && Math.random() < (0.4 + intensity * 0.3)) {
+        // Bend UP into the target (start 1 or 2 semitones below)
+        bendStartInterval = -1; // 1 semitone below
+        if (Math.random() < 0.3) bendStartInterval = -2; // 2 semitone deep scoop
+    } 
+    else if (durationSteps >= 4 && Math.random() < (0.3 + maturityFactor * 0.2)) {
+        // Standard decorative scoop
         bendStartInterval = Math.random() < 0.7 ? 1 : 2;
     }
 
-    const result = { midi: selectedMidi, velocity: 0.8, durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style, isDoubleStop: false };
+    const result = { midi: selectedMidi, velocity: 0.8, durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style: activeStyle, isDoubleStop: false };
     
     if (durationSteps > 1) {
         sb.busySteps = durationSteps - 1;
@@ -544,8 +656,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const finalResult = (notes.length > 0 && sb.doubleStops) ? [...notes.map(n => ({...result, ...n})), result] : result;
     
     // Record for motif memory
-    sb.motifBuffer.push(finalResult);
-    if (sb.motifBuffer.length > 16) sb.motifBuffer.shift();
+    if (!sb.isReplayingMotif) {
+        sb.motifBuffer.push(finalResult);
+        if (sb.motifBuffer.length > 16) sb.motifBuffer.shift();
+        // Anchor the motif to the root it was recorded over
+        sb.motifRoot = targetChord.rootMidi % 12;
+    }
 
     return finalResult;
 }

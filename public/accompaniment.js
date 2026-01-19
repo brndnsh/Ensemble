@@ -232,6 +232,13 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
     }
     compingState.currentCell = newCell;
 
+    // Update global mask for module interaction
+    let mask = 0;
+    for (let i = 0; i < 16; i++) {
+        if (newCell[i] === 1) mask |= (1 << i);
+    }
+    cb.rhythmicMask = mask;
+
     ctx.intent.anticipation = (intensity * 0.2);
     if (genre === 'Jazz' || genre === 'Bossa') ctx.intent.anticipation += 0.15;
     

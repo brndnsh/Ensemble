@@ -69,7 +69,10 @@ vi.mock('../../../public/ui.js', () => ({
 }));
 
 vi.mock('../../../public/worker-client.js', () => ({
-    requestBuffer: vi.fn()
+    requestBuffer: vi.fn(),
+    syncWorker: vi.fn(),
+    startWorker: vi.fn(),
+    stopWorker: vi.fn()
 }));
 
 vi.mock('../../../public/conductor.js', () => ({

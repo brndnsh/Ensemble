@@ -1,6 +1,6 @@
 import { getScaleForChord } from './soloist.js';
 import { getBestInversion } from './chords.js';
-import { ctx, gb, hb, sb, arranger } from './state.js';
+import { ctx, gb, cb, hb, sb, arranger } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
 
 /**
@@ -109,6 +109,12 @@ export function clearHarmonyMemory() {
     motifCache.clear();
     lastMidis = [];
     lastPlayedStep = -1;
+    
+    // Also reset soloist motif memory to ensure harmonic alignment
+    sb.motifBuffer = [];
+    sb.motifRoot = undefined;
+    sb.motifReplayCount = 0;
+    sb.isReplayingMotif = false;
 }
 
 /**
@@ -160,20 +166,69 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             hash |= 0; 
         }
         const seed = Math.abs(hash);
+        const patternIdx = seed % genrePatterns.length;
+        let pattern = [...(genrePatterns[patternIdx] || genrePatterns[0])];
+        
+        // --- NEW: Rhythm Section Interaction (Groove-Locking) ---
+        // If the genre is rhythmic (Funk, Reggae, Disco), nudge the pattern 
+        // to better align with the rhythm section.
+        const isRhythmic = ['Funk', 'Reggae', 'Disco', 'Jazz'].includes(gb.genreFeel);
+        if (isRhythmic) {
+            for (let i = 0; i < 16; i++) {
+                const snareHit = (gb.snareMask >> i) & 1;
+                const chordHit = (cb.rhythmicMask >> i) & 1;
+                
+                // Groove Locking: High probability of reinforcing snare hits if intensity is high
+                if (snareHit && ctx.bandIntensity > 0.6 && Math.random() < 0.4) {
+                    pattern[i] = 1;
+                }
+                
+                // Frequency Clutter Prevention: If the main piano is already hitting this step,
+                // the harmony section should consider taking a back seat to keep the mix clear.
+                if (chordHit && pattern[i] === 1 && Math.random() < 0.7) {
+                    pattern[i] = 0;
+                }
+            }
+        }
+
+        // Calculate the rhythmic mask (16-bit)
+        let rhythmicMask = 0;
+        for (let i = 0; i < 16; i++) {
+            if (pattern[i] === 1) rhythmicMask |= (1 << i);
+        }
 
         motifCache.set(sectionId, {
-            patternIdx: seed % genrePatterns.length,
+            patternIdx: patternIdx,
             intervals: [0, 4, 7],
             responseMask: (seed >> 8) & 0xFFFF,
-            motionMask: (seed >> 16) & 0xFFFF
+            motionMask: (seed >> 16) & 0xFFFF,
+            rhythmicMask: rhythmicMask,
+            pattern: pattern
         });
     }
     const motif = motifCache.get(sectionId);
+    
+    // Sync the mask to the global state so the soloist can "hear" it
+    if (hb.rhythmicMask !== motif.rhythmicMask) {
+        hb.rhythmicMask = motif.rhythmicMask;
+    }
 
     let shouldPlay = false;
     let durationSteps = 1;
     let isLatched = false;
     let isMovement = false;
+
+    // --- NEW: Fill Reinforcement ---
+    // If a drum fill is active, the harmony section plays long "power-pads" 
+    // to build tension into the resolution.
+    if (gb.enabled && gb.fillActive && step % 4 === 0) {
+        const fillStep = step - gb.fillStartStep;
+        if (fillStep < gb.fillLength) {
+            shouldPlay = true;
+            durationSteps = 4;
+            isMovement = true; // Use movement voicings for tension
+        }
+    }
 
     // 1. LATCH LOGIC: Reinforce Soloist Hooks
     // If the soloist is replaying a hook and intensity is high, "Latch on" to their rhythm
@@ -248,8 +303,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             }
         }
         else {
-            const genrePatterns = RHYTHMIC_PATTERNS[gb.genreFeel] || RHYTHMIC_PATTERNS['Pop'];
-            const pattern = genrePatterns[motif.patternIdx % genrePatterns.length];
+            const pattern = motif.pattern;
             if (pattern && pattern[measureStep] === 1) {
                 shouldPlay = true;
                 durationSteps = 2;

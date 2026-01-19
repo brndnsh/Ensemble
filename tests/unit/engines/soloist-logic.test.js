@@ -11,6 +11,8 @@ vi.mock('../../../public/state.js', () => ({
         sessionSteps: 1000, deviceBuffer: []
     },
     cb: { enabled: true },
+    bb: { enabled: true },
+    hb: { enabled: true, rhythmicMask: 0, complexity: 0.5 },
     ctx: { bandIntensity: 0.5, bpm: 120, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
     arranger: { 
         key: 'C', 
@@ -40,6 +42,7 @@ vi.mock('../../../public/config.js', () => {
 });
 
 import { getSoloistNote, getScaleForChord } from '../../../public/soloist.js';
+import { clearHarmonyMemory } from '../../../public/harmonies.js';
 import { sb, gb, ctx, arranger } from '../../../public/state.js';
 
 describe('Soloist Engine Logic', () => {
@@ -47,6 +50,7 @@ describe('Soloist Engine Logic', () => {
     const chordF = { rootMidi: 65, intervals: [0, 4, 7], quality: 'major', beats: 4 };
 
     beforeEach(() => {
+        clearHarmonyMemory();
         sb.isResting = false;
         sb.currentPhraseSteps = 1;
         sb.notesInPhrase = 0;
@@ -186,8 +190,11 @@ describe('Soloist Engine Logic', () => {
             let startNotes = 0, endNotes = 0;
             const iterations = 1000;
             for (let i = 0; i < iterations; i++) {
+                clearHarmonyMemory();
                 sb.sessionSteps = 0; sb.busySteps = 0;
                 if (getSoloistNote(chordC, null, 16, 440, 72, 'scalar', 4)) startNotes++;
+                
+                clearHarmonyMemory();
                 sb.sessionSteps = 1000; sb.busySteps = 0;
                 if (getSoloistNote(chordC, null, 16, 440, 72, 'scalar', 4)) endNotes++;
             }
@@ -274,8 +281,11 @@ describe('Soloist Engine Logic', () => {
             // Start of session: should be conservative
             sb.sessionSteps = 1;
             sb.busySteps = 0;
+            sb.motifBuffer = [];
+            sb.isReplayingMotif = false;
             let noteCountStart = 0;
             for (let i = 0; i < 200; i++) {
+                clearHarmonyMemory();
                 sb.busySteps = 0;
                 if (getSoloistNote(chord, null, i * 4, 440, 72, 'scalar', 0)) noteCountStart++;
             }
@@ -283,8 +293,11 @@ describe('Soloist Engine Logic', () => {
             // Deep into session (simulated maturity)
             sb.sessionSteps = 2048; 
             sb.busySteps = 0;
+            sb.motifBuffer = [];
+            sb.isReplayingMotif = false;
             let noteCountLate = 0;
             for (let i = 0; i < 200; i++) {
+                clearHarmonyMemory();
                 sb.busySteps = 0;
                 if (getSoloistNote(chord, null, i * 4, 440, 72, 'scalar', 0)) noteCountLate++;
             }

@@ -521,8 +521,24 @@ export function scheduleGlobalEvent(step, swungTime) {
     
     updateAutoConductor();
     
-    // Using global arranger.totalSteps for looping, which is correct
+    // --- NEW: Rhythm Section Mask Calculation ---
+    // Extract the snare pattern for the current measure to share with the ensemble
     const spm = getStepsPerMeasure(stepInfo.tsName);
+    if (step % spm === 0) {
+        let snareMask = 0;
+        const snare = gb.instruments.find(i => i.name === 'Snare');
+        if (snare) {
+            for (let i = 0; i < 16; i++) {
+                if (snare.steps[i] > 0) snareMask |= (1 << i);
+            }
+        }
+        if (gb.snareMask !== snareMask) {
+            gb.snareMask = snareMask;
+            // Immediate sync to worker so harmony module can "hear" the new drum pattern
+            syncWorker(ACTIONS.SET_PARAM, { module: 'gb', param: 'snareMask', value: snareMask });
+        }
+    }
+
     checkSectionTransition(step, spm);
     
     // MIDI Automation
