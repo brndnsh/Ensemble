@@ -645,7 +645,10 @@ export class ChordAnalyzerLite {
                 for (let i = 0; i < 12; i++) {
                     const chromaIdx = (root + i) % 12;
                     const val = chroma[chromaIdx];
-                    if (profile[i]) score += val * profile[i];
+                    if (profile[i]) {
+                        score += val * profile[i];
+                        if (val < 0.1) score -= 1.0; // Penalty for missing a required note
+                    }
                     else score -= val * 0.5;
                 }
 
