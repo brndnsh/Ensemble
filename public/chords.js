@@ -1,8 +1,7 @@
 import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN, TIME_SIGNATURES } from './config.js';
 import { normalizeKey, getFrequency } from './utils.js';
 import * as stateModule from './state.js';
-const { cb, arranger, gb, bb } = stateModule;
-const ctx = stateModule.ctx || { bandIntensity: 0.5 };
+const { cb, arranger, gb, bb, ctx } = stateModule;
 import { syncWorker } from './worker-client.js';
 
 const ROMAN_REGEX = /^([#b])?(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v)/;
@@ -359,6 +358,7 @@ function getRootlessVoicing(quality, is7th, isRich) {
     const isMajor7 = ['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11'].includes(quality);
 
     if (isMajor7) {
+        if (quality === 'augmaj7') return isRich ? [4, 8, 11, 14, 18] : [4, 8, 11]; // 3, #5, 7, (9, #11)
         if (quality === 'maj13') return isRich ? [4, 11, 14, 18, 21] : [4, 11, 14, 21]; // 3, 7, 9, (#11), 13
         if (quality === 'maj7#11') return isRich ? [4, 11, 14, 18] : [4, 11, 18];  // 3, 7, (9), #11
         if (quality === 'maj9') return isRich ? [4, 11, 14, 21] : [4, 11, 14];
@@ -382,6 +382,9 @@ function getRootlessVoicing(quality, is7th, isRich) {
     }
 
     if (isDominant) {
+        // Augmented Dominants
+        if (quality === 'aug') return isRich ? [4, 8, 10, 14] : [4, 8, 10]; // 3, #5, b7, (9)
+
         // Alt Dominants
         if (quality === '7alt') return isRich ? [4, 10, 13, 15, 18, 20] : [4, 10, 15, 20]; // 3, b7, #9, b13
         if (quality === '7b9') return isRich ? [4, 10, 13, 16, 20] : [4, 10, 13, 16];      // 3, b7, b9, (5 or b13)
@@ -410,7 +413,7 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     const shouldBeRootless = bassEnabled || isPractice;
     const isRich = density === 'rich';
     const intensity = ctx.bandIntensity;
-    
+
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
     if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
         const rootless = getRootlessVoicing(quality, is7th, isRich || intensity > 0.6);
@@ -432,7 +435,7 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
         if (quality === 'halfdim') intervals = [0, 3, 6, 10]; 
         else if (isMinorQuality) intervals = [0, 3, 7];
         else if (quality === 'dim') intervals = [0, 3, 6];
-        else if (quality === 'aug') intervals = [0, 4, 8];
+        else if (quality === 'aug') intervals = is7th ? [0, 4, 8, 10] : [0, 4, 8];
         else if (quality === 'augmaj7') intervals = [0, 4, 8, 11];
         else if (quality === 'sus4') intervals = [0, 5, 7];
         else if (quality === 'sus2') intervals = [0, 2, 7];
@@ -458,8 +461,6 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
         else if (quality === '5') intervals = [0, 7];
         else intervals = [0, 4, 7]; // Default Major Triad
     }
-
-    if (isAug) console.log(`[Interval Debug] ${quality} start intervals:`, intervals);
 
     // 3. INTENSITY-BASED EXTENSIONS
     // 0.6 - 0.7: Add 7ths/9ths (Targeting Pop/Rock/Acoustic)
@@ -534,8 +535,6 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     if (isAltered5 || isAug) {
         intervals = intervals.filter(i => i % 12 !== 7);
     }
-
-    if (isAug) console.log(`[Interval Debug] ${quality} final intervals:`, intervals);
 
     return intervals;
 }

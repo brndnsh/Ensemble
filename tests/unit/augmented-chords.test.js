@@ -44,6 +44,12 @@ describe('Augmented Chords Support', () => {
             const details = getChordDetails('Cmaj7+');
             expect(details.quality).toBe('augmaj7');
         });
+
+        it('should handle "7+" (dominant augmented)', () => {
+            const details = getChordDetails('C7+');
+            expect(details.quality).toBe('aug');
+            expect(details.is7th).toBe(true);
+        });
     });
 
     describe('getIntervals', () => {
