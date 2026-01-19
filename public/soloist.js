@@ -290,8 +290,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const centerMidi = 72; // Standard soloist register anchor
     
     if (!isPriming) sb.sessionSteps = (sb.sessionSteps || 0) + 1;
+    
+    // --- Session Maturity Logic ---
+    // The soloist becomes more "confident" and expressive as the jam progresses (0-5 mins)
+    // 16 steps = 1 measure. 1024 steps = 64 measures (~2-3 mins).
+    const maturityFactor = Math.min(1.0, (sb.sessionSteps || 0) / 1024);
     const warmupFactor = isPriming ? 1.0 : Math.min(1.0, sb.sessionSteps / (stepsPerMeasure * 2));
     
+    // Effective intensity grows slightly with maturity
+    const effectiveIntensity = Math.min(1.0, intensity + (maturityFactor * 0.25));
+
     // --- 1. Busy/Device Handling ---
     if (sb.deviceBuffer && sb.deviceBuffer.length > 0) {
         const devNote = sb.deviceBuffer.shift();
@@ -313,7 +321,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     }
     
     const phraseBars = sb.currentPhraseSteps / stepsPerMeasure;
-    let restProb = (config.restBase * (2.0 - intensity * 1.5)) + (phraseBars * config.restGrowth);
+    let restProb = (config.restBase * (2.0 - effectiveIntensity * 1.5)) + (phraseBars * config.restGrowth);
+    
+    // Maturity reduces rest probability slightly (more talkative)
+    restProb = Math.max(0.05, restProb - (maturityFactor * 0.15));
+    
     restProb += (1.0 - warmupFactor) * 0.4;
     if (sb.notesInPhrase >= config.maxNotesPerPhrase) restProb += 0.4;
     
@@ -485,7 +497,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     }
 
     let notes = [];
-    if (sb.doubleStops && Math.random() < (config.doubleStopProb * (stepInBeat === 2 ? 1.2 : 0.6) * warmupFactor)) {
+    const doubleStopChance = (config.doubleStopProb + (maturityFactor * 0.2)) * (stepInBeat === 2 ? 1.2 : 0.6) * warmupFactor;
+    if (sb.doubleStops && Math.random() < doubleStopChance) {
         let dsInt = [5, 7, 9, 12][Math.floor(Math.random() * 4)];
         notes.push({ midi: selectedMidi + dsInt, velocity: 0.8, isDoubleStop: true });
     }
@@ -499,15 +512,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     // Sustained Notes: Longer durations on downbeats or when intensity is high
     const isImportantStep = stepInBeat === 0 || (stepInBeat === 2 && Math.random() < 0.3);
     if (isImportantStep && (style === 'neo' || style === 'blues' || style === 'minimal' || style === 'bossa')) {
-        durationSteps = Math.random() < 0.4 ? 8 : 4;
-    } else if (style === 'scalar' && stepInBeat === 0 && Math.random() < 0.15) {
+        durationSteps = Math.random() < (0.4 + maturityFactor * 0.2) ? 8 : 4;
+    } else if (style === 'scalar' && stepInBeat === 0 && Math.random() < (0.15 + maturityFactor * 0.1)) {
         durationSteps = 4; 
     } else if (style === 'neo' && Math.random() < 0.2) {
         durationSteps = 2; 
     }
 
-    // Soulful Scoops: Bend into the note
-    if (durationSteps >= 4 && Math.random() < 0.3) {
+    // Soulful Scoops: Maturity increases scoop complexity
+    if (durationSteps >= 4 && Math.random() < (0.3 + maturityFactor * 0.2)) {
         bendStartInterval = Math.random() < 0.7 ? 1 : 2;
     }
 

@@ -266,4 +266,31 @@ describe('Soloist Engine Logic', () => {
             expect(scoops / sustained).toBeGreaterThan(0.1);
         });
     });
+
+    describe('Session Maturity', () => {
+        it('should become more active as session maturity increases', () => {
+            const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
+            
+            // Start of session: should be conservative
+            sb.sessionSteps = 1;
+            sb.busySteps = 0;
+            let noteCountStart = 0;
+            for (let i = 0; i < 200; i++) {
+                sb.busySteps = 0;
+                if (getSoloistNote(chord, null, i * 4, 440, 72, 'scalar', 0)) noteCountStart++;
+            }
+
+            // Deep into session (simulated maturity)
+            sb.sessionSteps = 2048; 
+            sb.busySteps = 0;
+            let noteCountLate = 0;
+            for (let i = 0; i < 200; i++) {
+                sb.busySteps = 0;
+                if (getSoloistNote(chord, null, i * 4, 440, 72, 'scalar', 0)) noteCountLate++;
+            }
+
+            // maturityFactor should reduce rest probability and increase activity
+            expect(noteCountLate).toBeGreaterThan(noteCountStart);
+        });
+    });
 });
