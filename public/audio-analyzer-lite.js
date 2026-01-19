@@ -138,6 +138,7 @@ export class ChordAnalyzerLite {
             minMidi: 36, 
             maxMidi: 84, 
             skipSharpening: true,
+            suppressHarmonics: false,
             step: Math.max(4, Math.floor(signal.length / 1000000)) 
         });
         const globalKey = this.identifyGlobalKey(globalChroma);
@@ -160,13 +161,22 @@ export class ChordAnalyzerLite {
             const energy = Math.sqrt(window.reduce((sum, x) => sum + x * x, 0) / window.length);
 
             // 1. Full Chromagram (for quality)
-            // Restore minMidi to 24 to allow synthetic tests with low notes to pass.
-            // Tuning offset will already have been handled by the high-res global pass.
-            let chroma = this.calculateChromagram(window, sampleRate, { minMidi: 24, maxMidi: 88 });
+            // We raise minMidi to 48 (C3) to ignore the walking bass range for chord quality detection.
+            // This prevents bass notes (E, G, A) from being interpreted as the Root of the chord.
+            // We DISABLE harmonic suppression because it removes the Chord Root/5th when the Bass plays the Root!
+            let chroma = this.calculateChromagram(window, sampleRate, { 
+                minMidi: 48, 
+                maxMidi: 88,
+                suppressHarmonics: false 
+            });
             if (tuningOffset !== 0) chroma = this.rotateChroma(chroma, tuningOffset);
             
             // 2. Bass Chromagram (for inversions)
-            let bassChroma = this.calculateChromagram(window, sampleRate, { minMidi: 24, maxMidi: 42 });
+            let bassChroma = this.calculateChromagram(window, sampleRate, { 
+                minMidi: 24, 
+                maxMidi: 42,
+                suppressHarmonics: false 
+            });
             if (tuningOffset !== 0) bassChroma = this.rotateChroma(bassChroma, tuningOffset);
 
             // Identify Chord with Key Bias
@@ -271,7 +281,8 @@ export class ChordAnalyzerLite {
                 step: 8, 
                 skipSharpening: true,
                 minMidi: 48, // Focus on rhythmic range (C3 and up, ignoring walking bass)
-                maxMidi: 96 
+                maxMidi: 96,
+                suppressHarmonics: false
             });
 
             // Flux = Sum of positive changes across bins
@@ -480,9 +491,11 @@ export class ChordAnalyzerLite {
         const minMidi = options.minMidi || 0;
         const maxMidi = options.maxMidi || 127;
 
+        // Always calculate full range (24-96) for harmonic suppression context
         this.pitchFrequencies.forEach(p => {
-            if (p.midi < minMidi || p.midi > maxMidi) return;
-
+            // Optimization: We could skip very high notes if maxMidi is low, but for suppression we need fundamentals.
+            // Let's just calculate all configured frequencies (24-96) to be safe.
+            
             let real = 0;
             let imag = 0;
             const angleStep = (2 * Math.PI * p.freq) / sampleRate;
@@ -499,22 +512,26 @@ export class ChordAnalyzerLite {
         });
 
         // Harmonic Suppression: Remove overtones of low fundamentals
-        for (let m = 24; m <= 72; m++) {
-            const energy = pitchEnergy[m];
-            if (energy <= 0) continue;
+        if (options.suppressHarmonics) {
+            for (let m = 24; m <= 72; m++) {
+                const energy = pitchEnergy[m];
+                if (energy <= 0) continue;
 
-            // Suppress 2nd harmonic (Octave)
-            if (m + 12 < 128) pitchEnergy[m + 12] = Math.max(0, pitchEnergy[m + 12] - energy * 0.5);
-            // Suppress 3rd harmonic (Perfect 5th + Octave)
-            if (m + 19 < 128) pitchEnergy[m + 19] = Math.max(0, pitchEnergy[m + 19] - energy * 0.3);
-            // Suppress 4th harmonic (Two Octaves)
-            if (m + 24 < 128) pitchEnergy[m + 24] = Math.max(0, pitchEnergy[m + 24] - energy * 0.2);
-            // Suppress 5th harmonic (Major 3rd + Two Octaves)
-            if (m + 28 < 128) pitchEnergy[m + 28] = Math.max(0, pitchEnergy[m + 28] - energy * 0.15);
+                // Suppress 2nd harmonic (Octave) - REDUCED WEIGHTS
+                if (m + 12 < 128) pitchEnergy[m + 12] = Math.max(0, pitchEnergy[m + 12] - energy * 0.2);
+                // Suppress 3rd harmonic (Perfect 5th + Octave)
+                if (m + 19 < 128) pitchEnergy[m + 19] = Math.max(0, pitchEnergy[m + 19] - energy * 0.1);
+                // Suppress 4th harmonic (Two Octaves)
+                if (m + 24 < 128) pitchEnergy[m + 24] = Math.max(0, pitchEnergy[m + 24] - energy * 0.1);
+                // Suppress 5th harmonic (Major 3rd + Two Octaves)
+                if (m + 28 < 128) pitchEnergy[m + 28] = Math.max(0, pitchEnergy[m + 28] - energy * 0.05);
+            }
         }
 
-        // Map suppressed pitch energy to 12-bin Chroma
+        // Map suppressed pitch energy to 12-bin Chroma, RESPECTING minMidi/maxMidi
         for (let m = 24; m <= 96; m++) {
+            if (m < minMidi || m > maxMidi) continue;
+
             const mag = pitchEnergy[m];
             let weight = 1.0;
             // De-emphasize very low notes for chord detection to avoid walking bass interference

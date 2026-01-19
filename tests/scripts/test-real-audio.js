@@ -3,7 +3,7 @@ import { spawn } from 'child_process';
 import { ChordAnalyzerLite } from '../../public/audio-analyzer-lite.js';
 import { extractForm } from '../../public/form-extractor.js';
 
-const filePath = 'tests/resources/12 Bar Blues with bass.m4a';
+const filePath = process.argv[2] || 'tests/resources/12 Bar Blues with bass.m4a';
 
 async function decodeAudio(path) {
     return new Promise((resolve, reject) => {
