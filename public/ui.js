@@ -43,6 +43,7 @@ export function initUI() {
         'vizPowerBtn', 'sectionList', 'addSectionBtn', 'templatesBtn', 'templatesOverlay', 'templateChips', 'closeTemplatesBtn',
         'activeSectionLabel', 'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
         'analyzeAudioBtn', 'analyzerOverlay', 'closeAnalyzerBtn', 'analyzerDropZone', 'analyzerFileInput',
+        'liveListenContainer', 'bpmChips', 'bpmCandidateContainer',
         'liveListenBtn', 'liveListenView', 'stopLiveListenBtn', 'liveChordDisplay', 'liveStatusLabel', 'liveHistoryDisplay',
         'analyzerTrimView', 'analyzerWaveformCanvas', 'analyzerSelectionOverlay', 'startAnalysisBtn',
         'analyzerProcessing', 'analyzerProgressBar', 'analyzerResults', 'analyzerSummary', 'applyAnalysisBtn',

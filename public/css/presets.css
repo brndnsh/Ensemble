@@ -27,6 +27,8 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     border-color: transparent !important;
     z-index: 1;
+    background: var(--accent-color);
+    color: white;
 }
 
 /* Genre Color Assignments - Slightly adjusted for Solarized palette harmony */
