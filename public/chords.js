@@ -410,7 +410,7 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     const shouldBeRootless = bassEnabled || isPractice;
     const isRich = density === 'rich';
     const intensity = ctx.bandIntensity;
-
+    
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
     if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
         const rootless = getRootlessVoicing(quality, is7th, isRich || intensity > 0.6);
@@ -458,6 +458,8 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
         else if (quality === '5') intervals = [0, 7];
         else intervals = [0, 4, 7]; // Default Major Triad
     }
+
+    if (isAug) console.log(`[Interval Debug] ${quality} start intervals:`, intervals);
 
     // 3. INTENSITY-BASED EXTENSIONS
     // 0.6 - 0.7: Add 7ths/9ths (Targeting Pop/Rock/Acoustic)
@@ -523,10 +525,17 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     }
 
     // 5. ENSURE 7th if requested but not present
-    if (is7th && !['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11', 'augmaj7', 'halfdim', '7b9', '7#9', '7alt', '9', 'dim'].includes(quality)) {
+    if (is7th && !['maj7', 'maj9', 'maj11', 'maj13', 'maj7#11', 'aug', 'augmaj7', 'halfdim', '7b9', '7#9', '7alt', '9', 'dim'].includes(quality)) {
         if (!intervals.includes(10)) intervals.push(10);
     }
     if (quality === 'dim' && is7th && !intervals.includes(9)) intervals.push(9);
+
+    // FINAL SAFETY: if augmented or altered 5th, ensure natural 5th is NOT present
+    if (isAltered5 || isAug) {
+        intervals = intervals.filter(i => i % 12 !== 7);
+    }
+
+    if (isAug) console.log(`[Interval Debug] ${quality} final intervals:`, intervals);
 
     return intervals;
 }
