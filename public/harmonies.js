@@ -175,10 +175,24 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
 
     if (feel === 'Jazz' || feel === 'Blues') {
         // Shell Voicings: 3rd and 7th are the priority
-        const third = scale.find(i => i === 3 || i === 4) || 4;
-        const seventh = scale.find(i => i === 10 || i === 11) || 10;
-        intervals = [third, seventh];
-        if (density > 2) intervals.push(scale.find(i => i === 2 || i === 9) || 7); // Add color (9 or 13)
+        // We MUST find the 3rd and 7th explicitly in the provided scale to avoid clashing with the chords' voicing
+        const third = scale.find(i => i === 3 || i === 4);
+        const seventh = scale.find(i => i === 10 || i === 11);
+        
+        if (third !== undefined && seventh !== undefined) {
+            intervals = [third, seventh];
+        } else {
+            // Fallback to chord-type sensitive defaults if scale is missing them (unlikely but safe)
+            const isMinor = chord.type?.includes('m') || chord.symbol?.includes('m');
+            intervals = [isMinor ? 3 : 4, 10];
+        }
+
+        if (density > 2) {
+            // Add 9th or 13th for richness
+            const extension = scale.find(i => i === 2 || i === 9);
+            if (extension !== undefined) intervals.push(extension);
+            else if (scale.includes(7)) intervals.push(7); // Fallback to 5th
+        }
     } 
     else if (feel === 'Rock' || feel === 'Metal') {
         // Power chords: 1 and 5
