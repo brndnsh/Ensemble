@@ -145,6 +145,47 @@ function fillBuffers(currentStep, timestamp = null) {
         const chordData = getChordAtStep(step);
         
         // --- Bass ---
+        if (bb.enabled && step >= bbBufferHead) {
+            if (chordData) {
+                const { chord, stepInChord } = chordData;
+                const nextChordData = getChordAtStep(step + 4);
+                if (isBassActive(bb.style, step, stepInChord)) {
+                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord);
+                    if (bassResult && (bassResult.freq || bassResult.midi)) {
+                        if (!bassResult.midi) bassResult.midi = getMidi(bassResult.freq);
+                        if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
+                        bb.lastFreq = bassResult.freq;
+                        notesToMain.push({ ...bassResult, step, module: 'bb' });
+                    }
+                }
+            }
+            bbBufferHead++;
+        }
+
+        // --- Soloist ---
+        if (sb.enabled && step >= sbBufferHead) {
+            if (chordData) {
+                const { chord, stepInChord } = chordData;
+                const nextChordData = getChordAtStep(step + 4);
+                const soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord);
+                
+                if (soloResult) {
+                    const results = Array.isArray(soloResult) ? soloResult : [soloResult];
+                    results.forEach(res => {
+                        if (res.freq || res.midi) {
+                            if (!res.midi) res.midi = getMidi(res.freq);
+                            if (!res.freq) res.freq = 440 * Math.pow(2, (res.midi - 69) / 12);
+                            // We only update lastFreq for the primary note (usually the first one)
+                            if (!res.isDoubleStop) sb.lastFreq = res.freq;
+                            notesToMain.push({ ...res, step, module: 'sb' });
+                        }
+                    });
+                }
+            }
+            sbBufferHead++;
+        }
+
+        // --- Chords ---
         if (cb.enabled && step >= cbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
