@@ -28,7 +28,8 @@ export class ChordAnalyzerLite {
         this.keyProfiles = {
             major: [6.5, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 5.0, 2.0, 3.5, 2.0, 3.0],
             minor: [6.5, 2.5, 3.5, 5.0, 2.5, 3.5, 2.5, 4.5, 4.0, 2.5, 3.5, 3.0],
-            dominant: [7.5, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 5.0, 2.0, 3.5, 4.5, 2.0] // Stronger Root and b7
+            dominant: [7.5, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 5.0, 2.0, 3.5, 4.5, 2.0], // Stronger Root and b7
+            blues: [7.5, 1.5, 2.5, 5.0, 5.0, 4.0, 2.0, 3.5, 1.5, 2.5, 5.0, 0.5] // Reduced 5th (idx 7) and Maj7 (idx 11) to distinguish I vs V
         };
     }
 
@@ -45,7 +46,7 @@ export class ChordAnalyzerLite {
             const rotatedChroma = this.rotateChroma(totalChroma, offset * 0.1);
             
             for (let root = 0; root < 12; root++) {
-                ['major', 'minor', 'dominant'].forEach(type => {
+                ['major', 'minor', 'dominant', 'blues'].forEach(type => {
                     let score = 0;
                     for (let i = 0; i < 12; i++) {
                         score += rotatedChroma[(root + i) % 12] * this.keyProfiles[type][i];
@@ -53,8 +54,8 @@ export class ChordAnalyzerLite {
 
                     // Bias towards zero tuning offset (favors standard 440Hz)
                     const offsetBias = 1.0 - (Math.abs(offset) * 0.02);
-                    // Strong bias towards dominant for bluesy signals
-                    const typeBias = (type === 'dominant') ? 1.3 : (type === 'major' ? 1.1 : 1.0);
+                    // Strong bias towards dominant/blues for groovier signals
+                    const typeBias = (type === 'blues') ? 1.2 : (type === 'dominant') ? 1.15 : 1.0;
                     
                     score *= (offsetBias * typeBias);
 
@@ -132,9 +133,9 @@ export class ChordAnalyzerLite {
         
         // --- PASS 1: Global Key Inference ---
         // Analyze the entire signal with a large step to find the consensus key.
-        // We use MIDI 54-84 (Gb3-C6) to strictly avoid bass interference.
+        // We lower minMidi to 36 (C2) to capture the bass roots, which are crucial for Blues/Jazz.
         const globalChroma = this.calculateChromagram(signal, sampleRate, { 
-            minMidi: 54, 
+            minMidi: 36, 
             maxMidi: 84, 
             skipSharpening: true,
             step: Math.max(4, Math.floor(signal.length / 1000000)) 
@@ -307,11 +308,15 @@ export class ChordAnalyzerLite {
                                     corr += onsets[i] * onsets[i + lag];
                                 }
                                 
-                                // Musical Range Bias: Favor 70-130 BPM (Lag 85 to 46)
+                                // Musical Range Bias: Favor 60-160 BPM
                                 // We keep this mild to avoid forcing double-time on slow tracks
                                 let bias = 1.0;
-                                if (lag >= 46 && lag <= 85) bias = 1.15;
-                                else if (lag >= 30 && lag <= 150) bias = 1.05;
+                                // Sweet spot (80-140)
+                                if (lag >= 42 && lag <= 75) bias = 1.25;
+                                // Acceptable range (60-160)
+                                else if (lag >= 37 && lag <= 100) bias = 1.10;
+                                // Penalize very slow (< 50 BPM) to avoid half-time errors
+                                else if (lag > 120) bias = 0.8;
                 
                                 correlations[lag] = corr;
                                 
@@ -328,26 +333,57 @@ export class ChordAnalyzerLite {
                         // Harmonic Check: Detect if we picked a "sub-beat" pulse (too fast) instead of a "beat" pulse.
                         const checkHarmonic = (targetLag) => {
                             let currentLag = targetLag;
+                            
+                            // 1. Check for slower tempos (downward)
                             let changed = true;
-                
                             while (changed) {
                                 changed = false;
-                                                // Check for 2x, 3x, 4x lags (1/2, 1/3, 1/4 tempo)
-                                                for (const m of [2, 3, 4]) {
-                                                    const slowerLag = Math.round(currentLag * m);
-                                                    if (slowerLag > maxLag) continue;
-                                
-                                                    const scoreSlower = correlations[slowerLag];
-                                                    const targetScore = correlations[currentLag];
-                                                    
-                                                    // If a slower pulse is at least 75% as strong as the current one, 
-                                                    // it's very likely the true beat for slow music.
-                                                    if (scoreSlower > targetScore * 0.75) {
-                                                        currentLag = slowerLag;
-                                                        changed = true;
-                                                        break; 
-                                                    }
-                                                }                            }
+                                // Check for 2x, 3x, 4x lags (1/2, 1/3, 1/4 tempo)
+                                for (const m of [2, 3, 4]) {
+                                    const slowerLag = Math.round(currentLag * m);
+                                    if (slowerLag > maxLag) continue;
+                
+                                    const scoreSlower = correlations[slowerLag];
+                                    const targetScore = correlations[currentLag];
+                                    
+                                    // Default threshold for switching to a slower tempo
+                                    let threshold = 0.75;
+
+                                    // If current BPM is already "healthy" (70-130 BPM, Lag 46-85), 
+                                    // be reluctant to halve it unless the slower pulse is stronger.
+                                    if (currentLag >= 46 && currentLag <= 85) {
+                                        threshold = 1.25;
+                                    }
+                                    
+                                    // If slower lag corresponds to < 50 BPM (Lag > 120), require massive evidence
+                                    if (slowerLag > 120) threshold = 2.5;
+
+                                    if (scoreSlower > targetScore * threshold) {
+                                        currentLag = slowerLag;
+                                        changed = true;
+                                        break; 
+                                    }
+                                }                            
+                            }
+
+                            // 2. Check for faster tempos (upward) if we are stuck in the mud (< 55 BPM)
+                            // Often autocorrelation favors the half-note or whole-note in swing/groove.
+                            // We prefer the quarter note (approx 70-140 BPM).
+                            if (currentLag > 109) { // > 109 means < 55 BPM
+                                const fasterLag = Math.round(currentLag / 2);
+                                if (fasterLag >= minLag) {
+                                    const scoreFaster = correlations[fasterLag];
+                                    const scoreCurrent = correlations[currentLag];
+                                    
+                                    // If the faster pulse is at least 40% of the slow one, take it.
+                                    // It's better to tap twice as fast than fall asleep.
+                                    if (scoreFaster > scoreCurrent * 0.4) {
+                                        console.log(`[Pulse Debug] Upgrading from ${Math.round(60/(currentLag*0.01))} BPM to ${Math.round(60/(fasterLag*0.01))} BPM (Double Time)`);
+                                        currentLag = fasterLag;
+                                    }
+                                }
+                            }
+
                             return currentLag;
                         };
         bestLag = checkHarmonic(bestLag);
@@ -368,6 +404,12 @@ export class ChordAnalyzerLite {
         });
 
         const candidates = Array.from(candidatesMap.entries()).map(([bpm, score]) => ({ bpm, score }));
+
+        // Boost the primary BPM (selected by checkHarmonic) to ensure it wins
+        const primaryCandidate = candidates.find(c => c.bpm === primaryBPM);
+        if (primaryCandidate) {
+            primaryCandidate.score *= 3.0; 
+        }
 
         // Sort by score descending
         candidates.sort((a, b) => b.score - a.score);
@@ -549,6 +591,14 @@ export class ChordAnalyzerLite {
                         isDiatonic = [0, 2, 4, 5, 7, 9, 10].includes(relativeRoot);
                         if (isDiatonic && type === '7' && [0, 5, 7, 10].includes(relativeRoot)) score *= 1.20; // Extra boost for 7th chords in blues
                     }
+                    else if (options.keyBias.type === 'blues') {
+                         // Blues Scale-ish: I7, IV7, V7 are kings. bIII, bVI, bVII are common.
+                         // Major: I, IV, V.  Minor: i, iv, v.
+                         // Roots: 0, 3, 5, 7, 10
+                         if ([0, 5, 7].includes(relativeRoot) && type === '7') score *= 1.35; // Primary Blues Chords
+                         else if ([3, 10].includes(relativeRoot)) score *= 1.15; // Secondary Blues Chords
+                         isDiatonic = [0, 3, 5, 7, 10].includes(relativeRoot);
+                    }
                     
                     if (isDiatonic) score *= 1.30; // 30% boost for diatonic chords
                 }
@@ -588,6 +638,7 @@ export class ChordAnalyzerLite {
                 const root = bestChordData.root;
                 const interval = (bassIdx - root + 12) % 12;
                 // Only consider 3rd or 5th as stable inversions for this demo
+                // IGNORE 7th in bass as it's often a passing tone or just muddy
                 const isStableInversion = [3, 4, 7].includes(interval);
                 
                 if (isStableInversion) {

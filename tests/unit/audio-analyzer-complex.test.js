@@ -138,4 +138,66 @@ describe('Complex Synthetic Audio Analysis', () => {
         const { results } = await analyzer.analyze(buffer, { bpm: 120 });
         expect(results[0].chord).toMatch(/^C/);
     });
+
+    it('should robustly identify C7 blues even with chromatic walking bass', async () => {
+        const bpm = 120;
+        const beatLen = 60 / bpm;
+        const measureLen = beatLen * 4;
+        
+        // 4 Measures of C7
+        const buffer = new MockAudioBuffer({ length: measureLen * 4 * sampleRate, sampleRate });
+        const data = buffer.getChannelData(0);
+
+        // Sustained C7 Chord (Piano)
+        // Voicing: C3, E4, G4, Bb4
+        for (let m = 0; m < 4; m++) {
+            addTone(data, getFreq('C3'), m * measureLen, (m + 1) * measureLen, 0.3);
+            addTone(data, getFreq('E4'), m * measureLen, (m + 1) * measureLen, 0.3);
+            addTone(data, getFreq('G4'), m * measureLen, (m + 1) * measureLen, 0.3);
+            addTone(data, getFreq('Bb4'), m * measureLen, (m + 1) * measureLen, 0.3);
+        }
+
+        // Walking Bass (Loud)
+        // Pattern: Root, 3rd, 5th, 6th (Major Blues)
+        // Measure 1: C2, E2, G2, A2
+        addTone(data, getFreq('C2'), 0 * beatLen, 1 * beatLen, 0.6);
+        addTone(data, getFreq('E2'), 1 * beatLen, 2 * beatLen, 0.6);
+        addTone(data, getFreq('G2'), 2 * beatLen, 3 * beatLen, 0.6);
+        addTone(data, getFreq('A2'), 3 * beatLen, 4 * beatLen, 0.6);
+
+        // Measure 2: Chromatic Approach to F
+        // C2, D2, Eb2, E2 (Targeting F)
+        addTone(data, getFreq('C2'), 4 * beatLen, 5 * beatLen, 0.6);
+        addTone(data, getFreq('D2'), 5 * beatLen, 6 * beatLen, 0.6);
+        addTone(data, getFreq('Eb2'), 6 * beatLen, 7 * beatLen, 0.6);
+        addTone(data, getFreq('E2'), 7 * beatLen, 8 * beatLen, 0.6);
+
+        // Measure 3: Arpeggio
+        // C2, G2, Bb2, C3
+        addTone(data, getFreq('C2'), 8 * beatLen, 9 * beatLen, 0.6);
+        addTone(data, getFreq('G2'), 9 * beatLen, 10 * beatLen, 0.6);
+        addTone(data, getFreq('Bb2'), 10 * beatLen, 11 * beatLen, 0.6);
+        addTone(data, getFreq('C3'), 11 * beatLen, 12 * beatLen, 0.6);
+
+        // Analyze
+        const analysis = await analyzer.analyze(buffer, { bpm: 120 });
+        const globalKey = analyzer.identifyGlobalKey(analyzer.calculateChromagram(data, sampleRate, { minMidi: 36, maxMidi: 84 }));
+        
+        console.log('Detected Key:', analyzer.notes[globalKey.root], globalKey.type);
+        
+        // Expect Global Key to be C (or close enough)
+        // Note: The A2 in bass might pull towards F, but C should win.
+        expect(analyzer.notes[globalKey.root]).toBe('C');
+
+        // Check Chords
+        const detectedChords = analysis.results.map(r => r.chord);
+        console.log('Detected Chords:', detectedChords);
+
+        // We want C7 predominantly.
+        // The analyzer collapses identical consecutive chords, so we might only get 1-3 entries.
+        // We verified they are C-based.
+        const nonC = detectedChords.filter(c => !c.startsWith('C'));
+        expect(nonC.length).toBe(0); 
+        expect(detectedChords.length).toBeGreaterThan(0);
+    });
 });
