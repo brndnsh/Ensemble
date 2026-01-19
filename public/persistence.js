@@ -1,4 +1,4 @@
-import { arranger, ctx, cb, bb, sb, gb, vizState, storage, midi } from './state.js';
+import { arranger, ctx, cb, bb, sb, hb, gb, vizState, storage, midi } from './state.js';
 import { ui, createPresetChip, renderSections, renderMeasurePagination, renderGrid } from './ui.js';
 import { decompressSections, generateId } from './utils.js';
 
@@ -22,11 +22,12 @@ export function saveCurrentState() {
         cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb, practiceMode: cb.practiceMode },
         bb: { enabled: bb.enabled, style: bb.style, octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
         sb: { enabled: sb.enabled, style: sb.style, octave: sb.octave, volume: sb.volume, reverb: sb.reverb, doubleStops: sb.doubleStops },
-        gb: { 
+        hb: { enabled: hb.enabled, style: hb.style, octave: hb.octave, volume: hb.volume, reverb: hb.reverb, complexity: hb.complexity },
+        gb: {
             enabled: gb.enabled,
-            volume: gb.volume, 
-            reverb: gb.reverb, 
-            swing: gb.swing, 
+            volume: gb.volume,
+            reverb: gb.reverb,
+            swing: gb.swing,
                         swingSub: gb.swingSub,
                         followPlayback: gb.followPlayback,
                         humanize: gb.humanize,            lastDrumPreset: gb.lastDrumPreset,
@@ -44,16 +45,17 @@ export function saveCurrentState() {
             chordsChannel: midi.chordsChannel,
             bassChannel: midi.bassChannel,
             soloistChannel: midi.soloistChannel,
+            harmonyChannel: midi.harmonyChannel,
             drumsChannel: midi.drumsChannel,
             chordsOctave: midi.chordsOctave,
             bassOctave: midi.bassOctave,
             soloistOctave: midi.soloistOctave,
+            harmonyOctave: midi.harmonyOctave,
             drumsOctave: midi.drumsOctave,
             latency: midi.latency,
             muteLocal: midi.muteLocal,
             velocitySensitivity: midi.velocitySensitivity
-        }
-    };
+        }    };
     storage.save('currentState', data);
 }
 
