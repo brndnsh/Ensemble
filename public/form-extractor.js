@@ -106,13 +106,25 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
         if (bestLen > 0) {
             const value = getConsensusValue(i, bestLen, bestRepeat);
             const avgEnergy = measureEnergy.slice(i, i + bestLen * bestRepeat).reduce((a, b) => a + b, 0) / (bestLen * bestRepeat);
-            sections.push({ value, repeat: bestRepeat, energy: avgEnergy });
+            sections.push({ 
+                value, 
+                repeat: bestRepeat, 
+                energy: avgEnergy,
+                startMeasureIndex: i,
+                lengthInMeasures: bestLen
+            });
             i += bestLen * bestRepeat;
         } else {
             const len = Math.min(4, measures.length - i);
             const value = originalMeasures.slice(i, i + len).join(' | ');
             const avgEnergy = measureEnergy.slice(i, i + len).reduce((a, b) => a + b, 0) / len;
-            sections.push({ value, repeat: 1, energy: avgEnergy });
+            sections.push({ 
+                value, 
+                repeat: 1, 
+                energy: avgEnergy,
+                startMeasureIndex: i,
+                lengthInMeasures: len
+            });
             i += len;
         }
     }
@@ -185,6 +197,51 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
         if (isVamp && !s.label.includes("Intro") && !s.label.includes("Outro")) {
             s.label = "Vamp (" + s.label + ")";
         }
+    });
+
+    // 6. LOOP ANALYSIS
+    consolidated.forEach(s => {
+        const parts = s.value.split(' | ');
+        const first = parts[0].trim();
+        const last = parts[parts.length - 1].trim();
+        const totalMeasures = parts.length * s.repeat; // Total length of this block
+        const singleLen = parts.length;
+
+        // Timestamps (Beat Index)
+        // Note: startMeasureIndex is from the FIRST iteration.
+        s.startBeat = s.startMeasureIndex * beatsPerMeasure;
+        
+        // Use the length of ONE iteration for the loop selection window?
+        // Usually user wants to grab the loop "source", i.e. one cycle.
+        // But if it repeats 4 times, they might want the whole thing?
+        // Let's provide the bounds of the FIRST iteration for looping.
+        s.loopLengthBeats = singleLen * beatsPerMeasure;
+        s.endBeat = s.startBeat + s.loopLengthBeats; 
+        
+        // Full block bounds (for visual highlighting)
+        s.blockEndBeat = s.startBeat + (totalMeasures * beatsPerMeasure);
+
+        // Scoring
+        let score = 50;
+        if (s.repeat > 1) score += 20;
+        if ([4, 8, 12, 16, 24, 32].includes(singleLen)) score += 20;
+        if (s.startMeasureIndex === 0) score += 10; // Intro loops are easy to grab
+
+        // Harmonic Resolution Check (Simple)
+        const getRoot = (c) => c.replace(/m|maj|dim|aug|sus|6|7|9|11|13/g, '').trim();
+        const r1 = getRoot(first);
+        const r2 = getRoot(last);
+        
+        // V -> I (G -> C)
+        // IV -> I (F -> C)
+        // Same (C -> C)
+        // We don't know Key here easily without passing it down.
+        // But we can check interval? 
+        // Let's just reward movement.
+        if (r1 !== r2) score += 10; 
+        
+        s.loopScore = Math.min(100, score);
+        s.isLoop = score >= 70;
     });
 
     return consolidated;

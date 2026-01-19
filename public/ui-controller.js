@@ -930,16 +930,45 @@ export function setupAnalyzerHandlers() {
             const container = ui.suggestedSectionsContainer;
             container.innerHTML = '<h4>Suggested Structure</h4>';
             
+            // Sort by loop score to show best loops first? Or keep chronological?
+            // User likely wants chronological structure, but maybe highlight loops.
+            // Let's keep chronological but mark loops clearly.
+            
             detectedChords.forEach(s => {
                 const item = document.createElement('div');
                 item.className = 'suggested-section-item';
+                if (s.isLoop) item.classList.add('is-loop');
+                
+                const loopBadge = s.isLoop ? '<span class="loop-badge" title="Good Loop Candidate">∞</span>' : '';
+                
                 item.innerHTML = `
                     <div class="ss-header">
                         <strong>${s.label}</strong>
                         <span class="ss-repeat">x${s.repeat}</span>
+                        ${loopBadge}
                     </div>
                     <div class="ss-value">${formatUnicodeSymbols(s.value)}</div>
                 `;
+                
+                item.onclick = () => {
+                    // Snap to this section
+                    const secondsPerBeat = 60 / bpm;
+                    const startT = s.startBeat * secondsPerBeat;
+                    const endT = s.endBeat * secondsPerBeat; // One iteration length
+                    
+                    ui.analyzerStartInput.value = startT.toFixed(3);
+                    ui.analyzerEndInput.value = endT.toFixed(3);
+                    
+                    // Trigger update
+                    const event = new Event('input');
+                    ui.analyzerStartInput.dispatchEvent(event);
+                    ui.analyzerEndInput.dispatchEvent(event);
+                    
+                    // Highlight selected item
+                    document.querySelectorAll('.suggested-section-item').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+                };
+                
                 container.appendChild(item);
             });
 
