@@ -145,24 +145,32 @@ export class ChordAnalyzerLite {
             }
         }
         
+        console.log(`[Pulse Debug] Initial Best Lag: ${bestLag}`);
+        
         // Harmonic Check: Detect if we picked a "measure" pulse (slow) instead of a "beat" pulse (fast)
-        // Check 2x and 4x tempo (1/2 and 1/4 lag)
         const checkHarmonic = (targetLag) => {
             const halfLag = Math.round(targetLag / 2);
+            
+            // Check for 2x/4x tempo (1/2 lag)
             if (halfLag >= minLag) {
                 const scoreHalf = correlations[halfLag];
                 
                 // Dynamic Threshold:
-                // If the detected lag corresponds to < 50 BPM (lag > 60), be very aggressive about doubling it.
-                // Standard threshold 0.5, but for slow tempos lower it to 0.25
-                const threshold = (targetLag > 60) ? 0.25 : 0.5;
+                // - If < 50 BPM (lag > 60), be stricter (0.75) to avoid double-timing slow vamps.
+                // - If > 130 BPM (halfLag < 23), be very strict (0.95) to avoid accidental double-time.
+                // - Otherwise, be conservative (0.8) to avoid double-timing acoustic songs.
+                let threshold = 0.8;
+                if (targetLag > 60) threshold = 0.75;
+                else if (halfLag < 23) threshold = 0.95;
 
                 if (scoreHalf > correlations[targetLag] * threshold) {
-                    return checkHarmonic(halfLag); // Recursive check for even faster (4x)
+                    return checkHarmonic(halfLag);
                 }
             }
             return targetLag;
         };
+
+        bestLag = checkHarmonic(bestLag);
         
         bestLag = checkHarmonic(bestLag);
 
