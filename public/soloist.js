@@ -265,14 +265,19 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
         const tsConfig = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         const stepsPerBeat = tsConfig.stepsPerBeat;
         let targetChord = currentChord;
-        if (nextChord && stepInChord >= (currentChord.beats * stepsPerBeat) - 2) targetChord = nextChord;
+        if (nextChord && stepInChord >= (currentChord.beats * stepsPerBeat) - 2) {
+            targetChord = nextChord;
+        }
 
         const scaleIntervals = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
         const rootMidi = targetChord.rootMidi;
         const scaleTones = scaleIntervals.map(i => rootMidi + i);
+        
+        // console.log('Audit Scale Check:', { targetRoot: targetChord.rootMidi, scaleIntervals, scaleTones });
+
         const maturityFactor = Math.min(1.0, (sb.sessionSteps || 0) / 1024);
         sb.smoothedTension = (sb.smoothedTension || 0) * 0.8 + (sb.tension || 0) * 0.2;
-        const registerBuildOffset = -24 * (1.0 - maturityFactor);
+        const registerBuildOffset = -4 * (1.0 - maturityFactor);
         const dynamicCenter = centerMidi + registerBuildOffset + Math.floor(sb.smoothedTension * config.registerSoar * maturityFactor * (0.5 + intensity));
         const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
         const lastInterval = sb.lastInterval || 0;
@@ -285,7 +290,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
         for (let m = 0; m <= 127; m++) {
             const pc = (m % 12 + 12) % 12;
             const interval = (pc - (rootMidi % 12) + 12) % 12;
-            if (!scaleTones.some(st => (st % 12 + 12) % 12 === pc)) continue; 
+            
+            const inScale = scaleTones.some(st => (st % 12 + 12) % 12 === pc);
+
+            if (!inScale) continue; 
             let weight = 100;
             const dist = Math.abs(m - lastMidi);
             if (Math.abs(lastInterval) > 4) {
@@ -304,6 +312,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
             if (m - dynamicCenter > 0) weight -= ((m - dynamicCenter) * 3);
             if (Math.abs(m - dynamicCenter) > 7) weight -= (Math.abs(m - dynamicCenter) - 7) * 2;
             CANDIDATE_WEIGHTS[m] = Math.max(0.1, weight);
+            
+            // if (m === 65 || m === 84) console.log(`Audit MIDI ${m}:`, { weight: CANDIDATE_WEIGHTS[m], pc, interval, dynamicCenter, dist });
         }
         return CANDIDATE_WEIGHTS;
     }
@@ -404,13 +414,14 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
     let targetChord = currentChord;
     if (nextChord && stepInChord >= (currentChord.beats * stepsPerBeat) - 2 && Math.random() < (config.anticipationProb || 0)) targetChord = nextChord;
 
-    const scaleIntervals = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
-    const rootMidi = targetChord.rootMidi;
-    const scaleTones = scaleIntervals.map(i => rootMidi + i);
-    const chordTones = currentChord.intervals.map(i => rootMidi + i);
+                    const scaleIntervals = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
+
+                    const rootMidi = targetChord.rootMidi;
+
+                    const scaleTones = scaleIntervals.map(i => rootMidi + i);    const chordTones = currentChord.intervals.map(i => rootMidi + i);
     
     sb.smoothedTension = (sb.smoothedTension || 0) * 0.8 + (sb.tension || 0) * 0.2;
-    const registerBuildOffset = -24 * (1.0 - maturityFactor);
+    const registerBuildOffset = -4 * (1.0 - maturityFactor);
     const dynamicCenter = centerMidi + registerBuildOffset + Math.floor(sb.smoothedTension * config.registerSoar * maturityFactor * (0.5 + intensity));
     const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
     const minMidi = Math.max(0, Math.min(dynamicCenter - 12, lastMidi - 14)); 

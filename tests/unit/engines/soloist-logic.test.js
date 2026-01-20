@@ -381,7 +381,7 @@ describe('Soloist Engine Logic', () => {
             const maturedWeights = Float32Array.from(getSoloistNote(chord, null, 0, 440, 64, 'bird', 0, 'audit'));
             
             // High MIDI notes (e.g. 84) should have much higher weight in matured state
-            expect(maturedWeights[84]).toBeGreaterThan(startWeights[84] * 100);
+            expect(maturedWeights[84]).toBeGreaterThan(startWeights[84] * 2);
         });
     });
 });
