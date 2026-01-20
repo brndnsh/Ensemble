@@ -1,4 +1,4 @@
-import { ctx, cb, bb, sb, hb, arranger, subscribe, storage } from './state.js';
+import { ctx, cb, bb, sb, hb, gb, arranger, subscribe } from './state.js';
 import { initUI, renderChordVisualizer, renderGrid, renderSections, initTabs, renderMeasurePagination, setupPanelMenus } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';
@@ -42,7 +42,8 @@ function init() {
         renderGrid(); 
         renderMeasurePagination(switchMeasure);
         
-        if (!storage.get('currentState').sections) loadDrumPreset('Basic Rock');
+        const hasDrumPattern = gb.instruments.some(inst => inst.steps.some(s => s > 0));
+        if (!hasDrumPattern) loadDrumPreset(gb.lastDrumPreset || 'Basic Rock');
         
         setupPresets({ togglePlay: () => togglePlay(viz) }); 
         setupUIHandlers({ 

@@ -42,49 +42,64 @@ export function hydrateState() {
             cb.instrument = 'Piano'; 
             cb.octave = savedState.cb.octave; 
             cb.density = savedState.cb.density; 
-            cb.volume = savedState.cb.volume; 
-            cb.reverb = savedState.cb.reverb; 
+            cb.volume = savedState.cb.volume !== undefined ? savedState.cb.volume : 0.5; 
+            cb.reverb = savedState.cb.reverb !== undefined ? savedState.cb.reverb : 0.3; 
             cb.practiceMode = savedState.cb.practiceMode || false;
         }
         if (savedState.bb) { 
             bb.enabled = savedState.bb.enabled !== undefined ? savedState.bb.enabled : false; 
             bb.style = savedState.bb.style || 'smart'; 
             bb.octave = savedState.bb.octave; 
-            bb.volume = savedState.bb.volume; 
-            bb.reverb = savedState.bb.reverb; 
+            bb.volume = savedState.bb.volume !== undefined ? savedState.bb.volume : 0.45; 
+            bb.reverb = savedState.bb.reverb !== undefined ? savedState.bb.reverb : 0.05; 
         }
         if (savedState.sb) { 
             sb.enabled = savedState.sb.enabled !== undefined ? savedState.sb.enabled : false; 
             sb.style = savedState.sb.style || 'smart'; 
             sb.octave = (savedState.sb.octave === 77 || savedState.sb.octave === 67 || savedState.sb.octave === undefined) ? 72 : savedState.sb.octave; 
-            sb.volume = savedState.sb.volume; 
-            sb.reverb = savedState.sb.reverb; 
+            sb.volume = savedState.sb.volume !== undefined ? savedState.sb.volume : 0.5; 
+            sb.reverb = savedState.sb.reverb !== undefined ? savedState.sb.reverb : 0.6; 
             sb.doubleStops = savedState.sb.doubleStops !== undefined ? savedState.sb.doubleStops : false;
         }
         if (savedState.hb) {
             hb.enabled = savedState.hb.enabled !== undefined ? savedState.hb.enabled : false;
             hb.style = savedState.hb.style || 'smart';
             hb.octave = savedState.hb.octave || 60;
-            hb.volume = savedState.hb.volume;
-            hb.reverb = savedState.hb.reverb;
+            hb.volume = savedState.hb.volume !== undefined ? savedState.hb.volume : 0.4;
+            hb.reverb = savedState.hb.reverb !== undefined ? savedState.hb.reverb : 0.4;
             hb.complexity = savedState.hb.complexity !== undefined ? savedState.hb.complexity : 0.5;
         }
         if (savedState.gb) { 
             gb.enabled = savedState.gb.enabled !== undefined ? savedState.gb.enabled : true; 
-            gb.volume = savedState.gb.volume; 
-            gb.reverb = savedState.gb.reverb; 
+            gb.volume = savedState.gb.volume !== undefined ? savedState.gb.volume : 0.5; 
+            gb.reverb = savedState.gb.reverb !== undefined ? savedState.gb.reverb : 0.2; 
             gb.swing = savedState.gb.swing; 
             gb.swingSub = savedState.gb.swingSub; 
             gb.measures = savedState.gb.measures || 1; 
             gb.humanize = savedState.gb.humanize !== undefined ? savedState.gb.humanize : 20; 
             gb.followPlayback = savedState.gb.followPlayback !== undefined ? savedState.gb.followPlayback : (savedState.gb.autoFollow !== undefined ? savedState.gb.autoFollow : true); 
             gb.lastDrumPreset = savedState.gb.lastDrumPreset || 'Standard'; 
-            if (savedState.gb.pattern) { 
+            if (savedState.gb.pattern && savedState.gb.pattern.length > 0) { 
                 savedState.gb.pattern.forEach(savedInst => { 
                     const inst = gb.instruments.find(i => i.name === savedInst.name); 
                     if (inst) { inst.steps.fill(0); savedInst.steps.forEach((v, i) => { if (i < 128) inst.steps[i] = v; }); } 
                 }); 
-            } 
+            } else {
+                // Fallback: Load the last preset if no custom pattern is saved
+                // We need to import loadDrumPreset to do this, but circular dependencies might be an issue.
+                // Instead, we can defer this or handle it in main.js.
+                // Actually, let's just use the loadDrumPreset logic if we can import it.
+                // But loadDrumPreset is in instrument-controller.js which imports state.js -> cycle.
+                // We can't import loadDrumPreset here easily.
+                
+                // ALTERNATIVE: Set a flag so main.js can handle it?
+                // Or duplicate the logic (risky).
+                
+                // Better: Let's assume main.js handles the default case. 
+                // But main.js only checks storage.get('currentState').sections.
+                
+                // Let's modify main.js instead!
+            }
             gb.genreFeel = savedState.gb.genreFeel || 'Rock'; 
             gb.larsMode = savedState.gb.larsMode || false;
             gb.larsIntensity = savedState.gb.larsIntensity !== undefined ? savedState.gb.larsIntensity : 0.5;
