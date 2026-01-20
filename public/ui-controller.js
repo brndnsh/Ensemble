@@ -784,15 +784,21 @@ export function setupAnalyzerHandlers() {
             if (input.checked) {
                 l.style.background = 'var(--accent-color)';
                 l.style.color = 'white';
+                l.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
             } else {
                 l.style.background = 'transparent';
-                l.style.color = 'var(--text-muted)';
+                l.style.color = 'var(--text-secondary)';
+                l.style.boxShadow = 'none';
             }
         });
         
         const mode = document.querySelector('input[name="analyzerMode"]:checked').value;
         const liveTitle = document.querySelector('#liveListenView h4');
         if (liveTitle) liveTitle.textContent = mode === 'melody' ? 'Listening for Melody...' : 'Listening for Chords...';
+        
+        // Update Title
+        const modalTitle = document.querySelector('.analyzer-body h3');
+        if (modalTitle) modalTitle.textContent = mode === 'melody' ? 'Melody Harmonizer' : 'Audio Chord Analyzer';
     };
     
     document.querySelectorAll('input[name="analyzerMode"]').forEach(radio => {

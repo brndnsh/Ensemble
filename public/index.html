@@ -909,24 +909,25 @@
 
 <!-- Analyzer Overlay -->
     <div id="analyzerOverlay" class="modal-overlay">
-        <div class="modal-content analyzer-modal">
-            <div class="modal-header">
-                <h3>Audio Workbench</h3>
-                <button class="close-modal-btn" id="closeAnalyzerBtn">✕</button>
-            </div>
+        <div class="modal-content analyzer-modal settings-content">
+            <button class="close-modal-btn" id="closeAnalyzerBtn">✕</button>
             
-            <div class="analyzer-mode-switch" style="display: flex; gap: 10px; margin-bottom: 15px; background: var(--base02); pading: 4px; border-radius: 8px;">
-                <label class="mode-option" style="flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 6px; background: var(--accent-color); color: white; font-weight: bold;">
-                    <input type="radio" name="analyzerMode" value="chords" checked style="display:none">
-                    <span>🎼 Detect Chords</span>
-                </label>
-                <label class="mode-option" style="flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 6px; color: var(--text-muted);">
-                    <input type="radio" name="analyzerMode" value="melody" style="display:none">
-                    <span>🎤 Harmonize Melody</span>
-                </label>
-            </div>
-
             <div class="analyzer-body">
+                <h3>Audio Workbench</h3>
+                
+                <div class="analyzer-mode-switch" style="display: flex; gap: 8px; margin: 1rem 0; background: var(--input-bg); padding: 4px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <label class="mode-option" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <input type="radio" name="analyzerMode" value="chords" checked style="display:none">
+                        <span style="font-size: 1.1rem;">🎼</span>
+                        <span style="font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">Chords</span>
+                    </label>
+                    <label class="mode-option" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <input type="radio" name="analyzerMode" value="melody" style="display:none">
+                        <span style="font-size: 1.1rem;">🎤</span>
+                        <span style="font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">Melody</span>
+                    </label>
+                </div>
+
                 <div class="drop-zone" id="analyzerDropZone">
             <div class="drop-zone-content">
                 <span class="drop-icon">🎵</span>
