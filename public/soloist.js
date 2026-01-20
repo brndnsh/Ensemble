@@ -371,7 +371,14 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
             sb.qaState = sb.qaState === 'Question' ? 'Answer' : 'Question';
             const currentRoot = currentChord.rootMidi % 12;
             const motifRoot = sb.motifRoot !== undefined ? sb.motifRoot : currentRoot;
-            if (sb.motifBuffer && sb.motifBuffer.length > 0 && Math.random() < config.motifProb && !((Math.abs(currentRoot - motifRoot) % 12) !== 0 && (Math.abs(currentRoot - motifRoot) % 12) !== 5 && (Math.abs(currentRoot - motifRoot) % 12) !== 7) && (sb.motifReplayCount || 0) <= 3) {
+            
+            let distinctPitchesCount = 0;
+            if (sb.motifBuffer && sb.motifBuffer.length > 0) {
+                const distinctPitches = new Set(sb.motifBuffer.map(n => Array.isArray(n) ? n[0].midi : n.midi));
+                distinctPitchesCount = distinctPitches.size;
+            }
+
+            if (sb.motifBuffer && sb.motifBuffer.length > 0 && distinctPitchesCount > 1 && Math.random() < config.motifProb && !((Math.abs(currentRoot - motifRoot) % 12) !== 0 && (Math.abs(currentRoot - motifRoot) % 12) !== 5 && (Math.abs(currentRoot - motifRoot) % 12) !== 7) && (sb.motifReplayCount || 0) <= 3) {
                 sb.isReplayingMotif = true; sb.motifReplayIndex = 0; sb.motifReplayCount = (sb.motifReplayCount || 0) + 1;
             } else {
                 sb.isReplayingMotif = false; sb.motifBuffer = []; sb.motifRoot = currentRoot; sb.motifReplayCount = 0;
@@ -460,7 +467,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
             if (isRoot) weight += (activeStyle === 'minimal' ? 1000 : 5000); 
             if (isGuideTone) weight += (activeStyle === 'minimal' ? 500 : 2500); 
         }
-        if (dist === 0) weight -= 50; 
+        if (dist === 0) {
+            weight -= 200;
+            if (lastInterval === 0) weight -= 500;
+        }
         if (dist > 0 && dist <= 2) weight += (50 + (ctx.bpm / 100) * 20); 
         else if (dist > 7) weight -= 500; 
 
