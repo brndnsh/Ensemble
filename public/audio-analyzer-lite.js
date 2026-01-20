@@ -300,6 +300,85 @@ export class ChordAnalyzerLite {
     }
 
     /**
+     * Extracts the single strongest note per beat from the audio.
+     * Used for the "Harmonize Melody" feature.
+     * @returns {Promise<Array<{beat: number, midi: number, energy: number}>>}
+     */
+    async extractMelody(audioBuffer, pulseData) {
+        const signal = audioBuffer.getChannelData(0);
+        const sampleRate = audioBuffer.sampleRate;
+        const bpm = pulseData.bpm;
+        const secondsPerBeat = 60 / bpm;
+        const samplesPerBeat = Math.floor(secondsPerBeat * sampleRate);
+        const startSample = Math.floor((pulseData.downbeatOffset || 0) * sampleRate);
+        
+        // Safety check
+        if (startSample >= signal.length) return [];
+        
+        const workingSignal = signal.slice(startSample);
+        const beats = Math.floor(workingSignal.length / samplesPerBeat);
+        const melodyLine = [];
+
+        // We focus on the vocal range: C3 (48) to C6 (84)
+        const minMidi = 48;
+        const maxMidi = 84;
+
+        for (let b = 0; b < beats; b++) {
+            if (b % 20 === 0) await yieldToMain();
+
+            const start = b * samplesPerBeat;
+            const end = start + samplesPerBeat;
+            const window = workingSignal.subarray(start, end);
+            
+            // Calculate energy for this beat to ignore silence
+            const rms = Math.sqrt(window.reduce((sum, x) => sum + x * x, 0) / window.length);
+            if (rms < 0.01) {
+                melodyLine.push({ beat: b, midi: null, energy: 0 });
+                continue;
+            }
+
+            // Find strongest frequency in vocal range
+            let maxEnergy = 0;
+            let bestMidi = -1;
+
+            // Use the pre-calculated pitch frequencies
+            this.pitchFrequencies.forEach(p => {
+                if (p.midi < minMidi || p.midi > maxMidi) return;
+
+                let real = 0;
+                let imag = 0;
+                const angleStep = (2 * Math.PI * p.freq) / sampleRate;
+
+                // Simple Goertzel-like accumulation for specific frequency
+                // We decimate by 4 for speed, as we just need coarse pitch detection
+                for (let i = 0; i < window.length; i += 4) {
+                    const angle = i * angleStep;
+                    const val = window[i];
+                    real += val * Math.cos(angle);
+                    imag += val * Math.sin(angle);
+                }
+
+                const energy = (real * real + imag * imag);
+                if (energy > maxEnergy) {
+                    maxEnergy = energy;
+                    bestMidi = p.midi;
+                }
+            });
+
+            // Normalize energy score
+            const normalizedEnergy = Math.min(1.0, maxEnergy / 100); // Arbitrary scaling based on testing
+            
+            melodyLine.push({ 
+                beat: b, 
+                midi: bestMidi, 
+                energy: normalizedEnergy 
+            });
+        }
+
+        return melodyLine;
+    }
+
+    /**
      * Identifies the "Pulse" (BPM, Meter, and Downbeat) of the audio using 
      * Spectral Flux for robust onset detection and autocorrelation.
      */
