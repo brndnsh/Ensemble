@@ -174,7 +174,11 @@ export function getScaleForChord(chord, nextChord, style) {
 
     if (style === 'blues' || style === 'disco' || style === 'funk') {
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
-             return [0, 2, 4, 5, 7, 9, 11]; 
+             let base = [0, 2, 4, 5, 7, 9, 11];
+             // Scale Cleansing for Disco: Remove natural 4th (5) from major scales
+             // This is the #1 source of dissonance in Pop/Disco styles.
+             if (style === 'disco') base = base.filter(i => i !== 5);
+             return base;
         }
         const isMinorQualityLocal = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality) || (chord.quality.startsWith('m') && !chord.quality.startsWith('maj'));
         
@@ -200,8 +204,6 @@ export function getScaleForChord(chord, nextChord, style) {
         const keyRootIdx = KEY_ORDER.indexOf(arranger.key || 'C');
         const relativeRoot = (chord.rootMidi - keyRootIdx + 120) % 12;
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
-            if (relativeRoot === 0 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; 
-            if (relativeRoot === 5 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; // Ionian for Bb
             return [0, 2, 4, 5, 7, 9, 11]; 
         }
         if (chord.quality === 'minor' || ['m9', 'm11', 'm13', 'm6'].includes(chord.quality)) {
@@ -216,6 +218,8 @@ export function getScaleForChord(chord, nextChord, style) {
 
     // 3. Chord Quality Switch
     switch (chord.quality) {
+        case 'maj7': case 'maj9': case 'maj13': return [0, 2, 4, 5, 7, 9, 11];
+        case 'maj7#11': return [0, 2, 4, 6, 7, 9, 11];
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
         case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
         case 'aug': return [0, 2, 4, 6, 8, 10];
