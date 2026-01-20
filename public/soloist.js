@@ -309,6 +309,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
                 if (interval === 0) weight += 5000;
                 if ([3, 4, 10, 11].includes(interval)) weight += 2500;
             }
+            if (dist === 0) {
+                weight -= 500;
+                if (lastInterval === 0) weight -= 1000;
+            }
+            if (dist > 0 && dist <= 2) weight += 100;
             if (m - dynamicCenter > 0) weight -= ((m - dynamicCenter) * 3);
             if (Math.abs(m - dynamicCenter) > 7) weight -= (Math.abs(m - dynamicCenter) - 7) * 2;
             CANDIDATE_WEIGHTS[m] = Math.max(0.1, weight);
@@ -372,6 +377,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
             const currentRoot = currentChord.rootMidi % 12;
             const motifRoot = sb.motifRoot !== undefined ? sb.motifRoot : currentRoot;
             
+            // Probabilistic memory flush on chord change to prevent harmonic latching
+            if (currentRoot !== sb.motifRoot && Math.random() < 0.3) {
+                sb.motifBuffer = [];
+                sb.motifReplayCount = 0;
+            }
+
             let distinctPitchesCount = 0;
             if (sb.motifBuffer && sb.motifBuffer.length > 0) {
                 const distinctPitches = new Set(sb.motifBuffer.map(n => Array.isArray(n) ? n[0].midi : n.midi));
@@ -456,22 +467,35 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
 
         if (isRoot) weight += 50;
         if (isGuideTone) weight += (activeStyle === 'minimal' ? 500 : 800);
+        
+        // --- RESTORED: Satisfying Resolution Logic ---
+        // Half-step resolutions between chords are high-value melodic movement
+        const isChordChanging = stepInChord === 0;
+        if (isChordChanging && dist === 1 && chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) {
+            weight += (activeStyle === 'minimal' ? 2000 : 500); 
+        }
+
         if (isSectionEnding && stepsUntilSectionEnd <= 4) {
             if (isRoot) weight += 3000;
             if (isGuideTone) weight += 1500;
         }
         if (stepInBeat === 0) {
-            if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) { weight += 15; if (isGuideTone) weight += 30; } else weight -= 15;
+            if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) { 
+                weight += 15; 
+                if (isGuideTone) weight += 30; 
+                // Boost movement away from the previous note on a new downbeat
+                if (dist > 0) weight += 100;
+            } else weight -= 15;
         }
         if (sb.qaState === 'Answer') { 
             if (isRoot) weight += (activeStyle === 'minimal' ? 1000 : 5000); 
             if (isGuideTone) weight += (activeStyle === 'minimal' ? 500 : 2500); 
         }
         if (dist === 0) {
-            weight -= 200;
-            if (lastInterval === 0) weight -= 500;
+            weight -= 500;
+            if (lastInterval === 0) weight -= 1000;
         }
-        if (dist > 0 && dist <= 2) weight += (50 + (ctx.bpm / 100) * 20); 
+        if (dist > 0 && dist <= 2) weight += (100 + (ctx.bpm / 100) * 20); 
         else if (dist > 7) weight -= 500; 
 
         if (m - dynamicCenter > 0) weight -= ((m - dynamicCenter) * 3); 
