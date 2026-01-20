@@ -459,7 +459,7 @@ describe('Soloist Engine Logic', () => {
             let startMidis = [];
             for (let i = 0; i < 1000; i++) {
                 sb.busySteps = 0;
-                const note = getSoloistNote(chord, null, i * 4, sb.lastFreq, 64, 'scalar', 0);
+                const note = getSoloistNote(chord, null, i * 4, sb.lastFreq, 64, 'bird', 0);
                 if (note && !Array.isArray(note)) {
                     startMidis.push(note.midi);
                     sb.lastFreq = 440 * Math.pow(2, (note.midi - 69) / 12);
@@ -476,13 +476,13 @@ describe('Soloist Engine Logic', () => {
             // Prime to stabilize register at matured level
             for(let p=0; p<100; p++) {
                 sb.busySteps = 0;
-                getSoloistNote(chord, null, p*4, sb.lastFreq, 64, 'scalar', 0);
+                getSoloistNote(chord, null, p*4, sb.lastFreq, 64, 'bird', 0);
             }
 
             let maturedMidis = [];
             for (let i = 0; i < 1000; i++) {
                 sb.busySteps = 0;
-                const note = getSoloistNote(chord, null, i * 4, sb.lastFreq, 64, 'scalar', 0);
+                const note = getSoloistNote(chord, null, i * 4, sb.lastFreq, 64, 'bird', 0);
                 if (note && !Array.isArray(note)) {
                     maturedMidis.push(note.midi);
                     sb.lastFreq = 440 * Math.pow(2, (note.midi - 69) / 12);

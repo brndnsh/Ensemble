@@ -690,7 +690,7 @@ if (typeof self !== 'undefined') {
                 case 'start': if (!timerID) { timerID = setInterval(() => { fillBuffers(Math.max(bbBufferHead, sbBufferHead, cbBufferHead)); postMessage({ type: 'tick' }); }, interval); } break;
                 case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
                 case 'syncState':
-                    if (data.arranger) { Object.assign(arranger, data.arranger); arranger.totalSteps = data.arranger.totalSteps; arranger.stepMap = data.arranger.stepMap; }
+                    if (data.arranger) { Object.assign(arranger, data.arranger); arranger.totalSteps = data.arranger.totalSteps; arranger.stepMap = data.arranger.stepMap; arranger.sectionMap = data.arranger.sectionMap; }
                     if (data.cb) {
                         Object.assign(cb, data.cb);
                         if (data.cb.rhythmicMask !== undefined) cb.rhythmicMask = data.cb.rhythmicMask;
@@ -717,7 +717,7 @@ if (typeof self !== 'undefined') {
                     // Sync first if data is provided to ensure correct style/genre
                     if (data.syncData) {
                         const syncData = data.syncData;
-                        if (syncData.arranger) { Object.assign(arranger, syncData.arranger); arranger.totalSteps = syncData.arranger.totalSteps; arranger.stepMap = syncData.arranger.stepMap; }
+                        if (syncData.arranger) { Object.assign(arranger, syncData.arranger); arranger.totalSteps = syncData.arranger.totalSteps; arranger.stepMap = syncData.arranger.stepMap; arranger.sectionMap = syncData.arranger.sectionMap; }
                         if (syncData.cb) {
                             Object.assign(cb, syncData.cb);
                             if (syncData.cb.rhythmicMask !== undefined) cb.rhythmicMask = syncData.cb.rhythmicMask;

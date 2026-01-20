@@ -218,7 +218,6 @@ export function getScaleForChord(chord, nextChord, style) {
 
     // 3. Chord Quality Switch
     switch (chord.quality) {
-        case 'maj7': case 'maj9': case 'maj13': return [0, 2, 4, 5, 7, 9, 11];
         case 'maj7#11': return [0, 2, 4, 6, 7, 9, 11];
         case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
         case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];

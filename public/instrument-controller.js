@@ -115,6 +115,7 @@ export function flushBuffers(primeSteps = 0) {
         arranger: { 
             progression: arranger.progression, 
             stepMap: arranger.stepMap, 
+            sectionMap: arranger.sectionMap,
             totalSteps: arranger.totalSteps,
             key: arranger.key,
             isMinor: arranger.isMinor,

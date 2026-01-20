@@ -79,6 +79,7 @@ export function syncWorker(action, payload) {
             arranger: { 
                 progression: arranger.progression, 
                 stepMap: arranger.stepMap, 
+                sectionMap: arranger.sectionMap,
                 totalSteps: arranger.totalSteps,
                 key: arranger.key,
                 isMinor: arranger.isMinor,
@@ -145,6 +146,7 @@ export function syncWorker(action, payload) {
                 data.arranger = {
                     progression: arranger.progression,
                     stepMap: arranger.stepMap,
+                    sectionMap: arranger.sectionMap,
                     totalSteps: arranger.totalSteps,
                     key: arranger.key,
                     isMinor: arranger.isMinor,
