@@ -878,11 +878,8 @@
                 <button id="addSectionBtn" class="primary-btn footer-main-btn" title="Add Section">
                     <span>➕ Add Section</span>
                 </button>
-                <button id="saveBtn" class="primary-btn footer-main-btn" title="Save Arrangement">
-                    <span>💾 Save Arrangement</span>
-                </button>
-                <button id="arrangerActionTrigger" class="action-trigger-btn" style="justify-content: center;">
-                    <span>🪄 Actions</span>
+                <button id="arrangerActionTrigger" class="action-trigger-btn" title="Arranger Actions" style="justify-content: center; padding: 0.75rem 1rem;">
+                    <span style="font-size: 1.2rem;">⋮</span>
                 </button>
             </div>
             
@@ -890,15 +887,9 @@
                 <div id="arrangerActionMenu" class="action-menu-content">
                     <button id="templatesBtn" title="Song Templates">📋 <span>Templates</span></button>
                     <button id="analyzeAudioBtn" title="Analyze Audio Demo">👂 <span>Analyze Audio</span></button>
-                    <label class="action-menu-btn" style="cursor: pointer; margin: 0; display: flex; align-items: center; gap: 8px;">
-                        <input type="file" id="harmonizeInput" accept="audio/*" style="display:none">
-                        🎤 <span>Harmonize Melody</span>
-                    </label>
+                    <button id="harmonizeBtn" title="Harmonize Melody">🎤 <span>Harmonize Melody</span></button>
+                    <input type="file" id="harmonizeInput" accept="audio/*" style="display:none">
                     <button id="randomizeBtn" title="Randomize Progression" aria-label="Randomize Progression">🎲 <span>Random</span></button>
-                    <button id="mutateBtn" title="Mutate Progression" aria-label="Mutate Progression">✨ <span>Mutate</span></button>
-                    <button id="undoBtn" title="Undo Last Change" aria-label="Undo Last Change">↩️ <span>Undo</span></button>
-                    <button id="clearProgBtn" title="Clear Progression" aria-label="Clear Progression">🗑️ <span>Clear</span></button>
-                    <button id="shareBtn" title="Share Progression" aria-label="Share Progression">🔗 <span>Share</span></button>
                 </div>
             </div>
         </div>

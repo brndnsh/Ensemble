@@ -335,6 +335,9 @@ export function setupUIHandlers(refs) {
             // console.log("[Analyzer] analyzeAudioBtn triggered");
             document.getElementById('analyzerOverlay').classList.add('active');
         }],
+        [ui.harmonizeBtn, 'click', () => {
+            ui.harmonizeInput.click();
+        }],
         [ui.harmonizeInput, 'change', (e) => {
             if (e.target.files.length > 0) {
                 handleAudioHarmonization(e.target.files[0]);
