@@ -454,6 +454,7 @@ describe('Soloist Engine Logic', () => {
             // Start of session
             sb.sessionSteps = 1;
             sb.busySteps = 0;
+            sb.tension = 0; // Prevent soaring bias
             sb.lastFreq = null; // Prevent bias from mock
             let startMidis = [];
             for (let i = 0; i < 1000; i++) {
@@ -469,6 +470,7 @@ describe('Soloist Engine Logic', () => {
             // Matured session
             sb.sessionSteps = 10000;
             sb.busySteps = 0;
+            sb.tension = 0; 
             sb.lastFreq = null; // Reset for matured run too
             
             // Prime to stabilize register at matured level

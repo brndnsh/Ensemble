@@ -146,8 +146,8 @@ export function getScaleForChord(chord, nextChord, style) {
     const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
     const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && !quality.startsWith('maj') && (chord.is7th || ['9', '11', '13', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(quality) || quality.startsWith('7'));
     
-    // 1. Tension High? Altered
-    if (sb.tension > 0.7 && isDominant) {
+    // 1. Tension High? Altered (Restrict to appropriate genres for backgrounds/cohesion)
+    if (sb.tension > 0.7 && isDominant && (gb.genreFeel === 'Jazz' || gb.genreFeel === 'Blues' || style === 'bird')) {
         return [0, 1, 3, 4, 6, 8, 10]; // Altered
     }
 
@@ -184,9 +184,15 @@ export function getScaleForChord(chord, nextChord, style) {
             return [0, 2, 3, 5, 7, 9, 10]; // Dorian
         }
 
+        // 7#9 (Hendrix Chord) handling: must have 3 (#9)
+        if (chord.quality === '7#9') {
+            return [0, 1, 3, 4, 5, 7, 8, 10];
+        }
+
         // Refined Mixolydian-Blues for dominant chords
-        let base = [0, 2, 3, 4, 5, 7, 9, 10];
-        if (sb.tension > 0.7) base.push(11);
+        // We remove the minor 3rd (3) for Disco/Funk backgrounds to avoid grit
+        let base = (gb.genreFeel === 'Jazz' || style === 'blues') ? [0, 2, 3, 4, 5, 7, 9, 10] : [0, 2, 4, 5, 7, 9, 10];
+        if (sb.tension > 0.7 && style !== 'disco') base.push(11);
         return base.sort((a,b)=>a-b);
     }
     
