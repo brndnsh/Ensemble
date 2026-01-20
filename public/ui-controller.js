@@ -10,7 +10,7 @@ import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
 import { generateRandomProgression, mutateProgression } from './chords.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, handleTap, resetToDefaults, togglePower } from './instrument-controller.js';
-import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey, handleAudioHarmonization } from './arranger-controller.js';
+import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey } from './arranger-controller.js';
 import { pushHistory, undo } from './history.js';
 import { shareProgression } from './sharing.js';
 import { triggerInstall } from './pwa.js';
@@ -334,19 +334,6 @@ export function setupUIHandlers(refs) {
         [document.getElementById('analyzeAudioBtn'), 'click', () => {
             // console.log("[Analyzer] analyzeAudioBtn triggered");
             document.getElementById('analyzerOverlay').classList.add('active');
-        }],
-        [ui.harmonizeBtn, 'click', () => {
-            ui.harmonizeInput.click();
-        }],
-        [ui.harmonizeInput, 'change', (e) => {
-            if (e.target.files.length > 0) {
-                handleAudioHarmonization(e.target.files[0]);
-                // Close menu after selection
-                ui.arrangerActionMenu.classList.remove('open');
-                ui.arrangerActionTrigger.classList.remove('active');
-                // Clear input so same file can be selected again
-                e.target.value = '';
-            }
         }],
         [ui.randomizeBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
@@ -790,9 +777,35 @@ export function setupAnalyzerHandlers() {
         return;
     }
 
+    // --- Mode Toggle Logic ---
+    const updateModeUI = () => {
+        document.querySelectorAll('.mode-option').forEach(l => {
+            const input = l.querySelector('input');
+            if (input.checked) {
+                l.style.background = 'var(--accent-color)';
+                l.style.color = 'white';
+            } else {
+                l.style.background = 'transparent';
+                l.style.color = 'var(--text-muted)';
+            }
+        });
+        
+        const mode = document.querySelector('input[name="analyzerMode"]:checked').value;
+        const liveTitle = document.querySelector('#liveListenView h4');
+        if (liveTitle) liveTitle.textContent = mode === 'melody' ? 'Listening for Melody...' : 'Listening for Chords...';
+    };
+    
+    document.querySelectorAll('input[name="analyzerMode"]').forEach(radio => {
+        radio.addEventListener('change', updateModeUI);
+    });
+    // Init state
+    updateModeUI();
+
+
     ui.closeAnalyzerBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         ui.analyzerOverlay.classList.remove('active');
+        stopLiveListen();
     });
 
     ui.analyzerDropZone.addEventListener('click', () => ui.analyzerFileInput.click());
@@ -918,7 +931,7 @@ export function setupAnalyzerHandlers() {
     const performAnalysis = async (customBpm = 0) => {
         if (!currentAudioBuffer) return;
         
-        // Ensure customBpm is a number (it might be a PointerEvent if called directly from an event listener)
+        const mode = document.querySelector('input[name="analyzerMode"]:checked').value;
         const targetBpm = typeof customBpm === 'number' ? customBpm : 0;
 
         ui.analyzerTrimView.style.display = 'none';
@@ -933,29 +946,56 @@ export function setupAnalyzerHandlers() {
 
             const startTime = parseFloat(ui.analyzerStartInput.value) || 0;
             const endTime = parseFloat(ui.analyzerEndInput.value) || currentAudioBuffer.duration;
-
-            const analysis = await analyzer.analyze(currentAudioBuffer, { 
-                bpm: targetBpm, // Use custom BPM if provided
-                startTime,
-                endTime,
-                onProgress: (pct) => {
-                    ui.analyzerProgressBar.style.width = `${pct}%`;
-                }
+            
+            // Common Pulse Analysis
+            const pulse = await analyzer.identifyPulse(currentAudioBuffer, {
+                startTime, endTime, bpm: targetBpm, 
+                onProgress: (pct) => ui.analyzerProgressBar.style.width = `${pct * 0.5}%` 
             });
 
-            const { results: beatData, bpm, candidates, beatsPerMeasure } = analysis;
+            const bpm = pulse.bpm;
+            
+            if (mode === 'melody') {
+                const { Harmonizer } = await import('./melody-harmonizer.js');
+                const harmonizer = new Harmonizer();
+                
+                const melodyLine = await analyzer.extractMelody(currentAudioBuffer, pulse);
+                ui.analyzerProgressBar.style.width = '80%';
+                
+                const key = arranger.key || 'C';
+                const progression = harmonizer.generateProgression(melodyLine, key, 0.6);
+                
+                // Wrap in structure
+                detectedChords = [{
+                     label: 'Harmonized Melody',
+                     value: progression,
+                     repeat: 1,
+                     startBeat: 0,
+                     endBeat: melodyLine.length,
+                     isLoop: false
+                }];
 
-            // Extract structural sections using detected meter and energy
-            detectedChords = extractForm(beatData, beatsPerMeasure);
+            } else {
+                // Chord Mode
+                const analysis = await analyzer.analyze(currentAudioBuffer, { 
+                    bpm: bpm, 
+                    startTime,
+                    endTime,
+                    onProgress: (pct) => {
+                        ui.analyzerProgressBar.style.width = `${pct}%`;
+                    }
+                });
+                detectedChords = extractForm(analysis.results, analysis.beatsPerMeasure);
+            }
             
             ui.analyzerProgressBar.style.width = '100%';
             ui.analyzerProcessing.style.display = 'none';
             ui.analyzerResults.style.display = 'block';
             
-            // Render BPM Candidates
-            if (ui.bpmChips && candidates) {
+            // Render BPM Candidates (Only useful for Detection, but harmless for Melody)
+            if (ui.bpmChips && pulse.candidates) {
                 ui.bpmChips.innerHTML = '';
-                candidates.forEach(c => {
+                pulse.candidates.forEach(c => {
                     const chip = document.createElement('div');
                     chip.className = `preset-chip ${c.bpm === bpm ? 'active' : ''}`;
                     chip.textContent = `${c.bpm} BPM`;
@@ -966,10 +1006,6 @@ export function setupAnalyzerHandlers() {
 
             const container = ui.suggestedSectionsContainer;
             container.innerHTML = '<h4>Suggested Structure</h4>';
-            
-            // Sort by loop score to show best loops first? Or keep chronological?
-            // User likely wants chronological structure, but maybe highlight loops.
-            // Let's keep chronological but mark loops clearly.
             
             detectedChords.forEach(s => {
                 const item = document.createElement('div');
@@ -988,20 +1024,17 @@ export function setupAnalyzerHandlers() {
                 `;
                 
                 item.onclick = () => {
-                    // Snap to this section
                     const secondsPerBeat = 60 / bpm;
-                    const startT = s.startBeat * secondsPerBeat;
-                    const endT = s.endBeat * secondsPerBeat; // One iteration length
+                    const startT = (s.startBeat || 0) * secondsPerBeat;
+                    const endT = (s.endBeat || (currentAudioBuffer.duration / secondsPerBeat)) * secondsPerBeat; 
                     
                     ui.analyzerStartInput.value = startT.toFixed(3);
                     ui.analyzerEndInput.value = endT.toFixed(3);
                     
-                    // Trigger update
                     const event = new Event('input');
                     ui.analyzerStartInput.dispatchEvent(event);
                     ui.analyzerEndInput.dispatchEvent(event);
                     
-                    // Highlight selected item
                     document.querySelectorAll('.suggested-section-item').forEach(el => el.classList.remove('selected'));
                     item.classList.add('selected');
                 };
@@ -1009,11 +1042,12 @@ export function setupAnalyzerHandlers() {
                 container.appendChild(item);
             });
 
-            ui.analyzerSummary.textContent = `Successfully analyzed "${currentFileName}" at ${bpm} BPM (${beatsPerMeasure}/4). Detected ${detectedChords.length} song sections.`;
+            ui.analyzerSummary.textContent = mode === 'melody' 
+                ? `Harmonized melody in ${arranger.key} at ${bpm} BPM.`
+                : `Analyzed "${currentFileName}" at ${bpm} BPM. Detected ${detectedChords.length} sections.`;
             
-            // Show BPM sync info
             ui.detectedBpmLabel.textContent = bpm;
-            ui.analyzerSyncBpmCheck.checked = true; // Default to sync if we found a pulse
+            ui.analyzerSyncBpmCheck.checked = true; 
             
         } catch (err) {
             console.error("[Analyzer] Analysis Error:", err);
@@ -1033,6 +1067,8 @@ export function setupAnalyzerHandlers() {
             console.error("[LiveListen] navigator.mediaDevices is undefined. Check HTTPS/localhost.");
             return;
         }
+        
+        const mode = document.querySelector('input[name="analyzerMode"]:checked').value;
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: {
@@ -1047,6 +1083,13 @@ export function setupAnalyzerHandlers() {
             
             const { ChordAnalyzerLite } = await import('./audio-analyzer-lite.js');
             const analyzer = new ChordAnalyzerLite();
+            
+            // Only import Harmonizer if in melody mode
+            let harmonizer = null;
+            if (mode === 'melody') {
+                const { Harmonizer } = await import('./melody-harmonizer.js');
+                harmonizer = new Harmonizer();
+            }
 
             ui.analyzerDropZone.style.display = 'none';
             ui.liveListenBtn.parentElement.style.display = 'none';
@@ -1076,23 +1119,60 @@ export function setupAnalyzerHandlers() {
                     // Shift buffer (keep last 50% for overlap)
                     buffer = buffer.slice(-Math.floor(targetSamples / 2));
 
-                    const chroma = analyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
-                        step: 8, // Faster for real-time
-                        minMidi: 32,
-                        maxMidi: 80
-                    });
-                    
-                    const chord = analyzer.identifyChord(chroma);
-                    if (chord !== 'Rest') {
-                        chordEl.textContent = formatUnicodeSymbols(chord);
+                    if (mode === 'melody') {
+                        // Melody Live Mode
+                        // We use the same extractMelody logic but on a tiny window
+                        // Just hacking extracting a "beat" which is the whole window
+                        // Use calculateChromagram or just check pitch
+                        // For simplicity, let's look for strongest pitch in buffer
                         
-                        if (history.length === 0 || history[history.length - 1] !== chord) {
-                            history.push(chord);
-                            if (history.length > 8) history.shift();
+                        // We need a dummy pulse for extractMelody, or just call internal pitch logic
+                        // Let's use analyzer.pitchFrequencies manual check to be fast
+                        
+                        const rms = Math.sqrt(analysisBuffer.reduce((s, x) => s + x * x, 0) / analysisBuffer.length);
+                        if (rms > 0.02) {
+                             // Simplified pitch detection
+                             let maxE = 0; let bestMidi = -1;
+                             analyzer.pitchFrequencies.forEach(p => {
+                                 if (p.midi < 48 || p.midi > 84) return;
+                                 let real=0, imag=0;
+                                 const angleStep = (2 * Math.PI * p.freq) / liveAudioCtx.sampleRate;
+                                 for(let i=0; i<analysisBuffer.length; i+=8) { // heavier decimation
+                                     const v = analysisBuffer[i];
+                                     real += v * Math.cos(i*angleStep);
+                                     imag += v * Math.sin(i*angleStep);
+                                 }
+                                 const e = real*real + imag*imag;
+                                 if (e > maxE) { maxE=e; bestMidi=p.midi; }
+                             });
+                             
+                             if (bestMidi > 0) {
+                                 // Single note harmonization
+                                 const melodyBit = [{beat: 0, midi: bestMidi, energy: 1.0}];
+                                 const prog = harmonizer.generateProgression(melodyBit, arranger.key || 'C', 0.5);
+                                 chordEl.textContent = formatUnicodeSymbols(prog);
+                             }
+                        }
+                    } else {
+                        // Chord Live Mode (Existing)
+                        const chroma = analyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
+                            step: 8, // Faster for real-time
+                            minMidi: 32,
+                            maxMidi: 80
+                        });
+                        
+                        const chord = analyzer.identifyChord(chroma);
+                        if (chord !== 'Rest') {
+                            chordEl.textContent = formatUnicodeSymbols(chord);
                             
-                            historyEl.innerHTML = history.map((c, i) => 
-                                `<span class="${i === history.length - 1 ? 'current' : ''}">${formatUnicodeSymbols(c)}</span>`
-                            ).join('');
+                            if (history.length === 0 || history[history.length - 1] !== chord) {
+                                history.push(chord);
+                                if (history.length > 8) history.shift();
+                                
+                                historyEl.innerHTML = history.map((c, i) => 
+                                    `<span class="${i === history.length - 1 ? 'current' : ''}">${formatUnicodeSymbols(c)}</span>`
+                                ).join('');
+                            }
                         }
                     }
                 }

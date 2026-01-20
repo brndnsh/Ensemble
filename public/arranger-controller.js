@@ -1,4 +1,4 @@
-import { arranger, ctx } from './state.js';
+import { arranger } from './state.js';
 import { ui, renderSections, renderChordVisualizer, showToast, updateKeySelectLabels } from './ui.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
@@ -111,59 +111,6 @@ export function addSection() {
     arranger.isDirty = true;
     clearChordPresetHighlight();
     refreshArrangerUI();
-}
-
-/**
- * Analyzes an audio file for melody and generates a chord progression.
- * @param {File} audioFile 
- */
-export async function handleAudioHarmonization(audioFile) {
-    if (!audioFile) return;
-
-    try {
-        showToast("Processing melody... please wait.");
-        
-        // Dynamically import dependencies to keep initial bundle small
-        const { ChordAnalyzerLite } = await import('./audio-analyzer-lite.js');
-        const { Harmonizer } = await import('./melody-harmonizer.js');
-        
-        const analyzer = new ChordAnalyzerLite();
-        const harmonizer = new Harmonizer();
-
-        // 1. Decode Audio
-        const arrayBuffer = await audioFile.arrayBuffer();
-        if (!ctx.audio) {
-            const { initAudio } = await import('./engine.js');
-            initAudio();
-        }
-        const audioBuffer = await ctx.audio.decodeAudioData(arrayBuffer);
-
-        // 2. Analyze Pulse & Melody
-        const pulseData = await analyzer.identifyPulse(audioBuffer);
-        const melodyLine = await analyzer.extractMelody(audioBuffer, pulseData);
-
-        // 3. Generate Progression
-        const key = arranger.key || 'C';
-        const progressionStr = harmonizer.generateProgression(melodyLine, key, 0.6);
-
-        // 4. Update State
-        pushHistory();
-        arranger.sections.push({
-            id: generateId(),
-            label: `Harmonized (${audioFile.name.split('.')[0]})`,
-            value: progressionStr,
-            repeat: 1,
-            key: key
-        });
-
-        arranger.isDirty = true;
-        refreshArrangerUI();
-        showToast("Progression generated from melody!");
-        
-    } catch (err) {
-        console.error("[Harmonizer] Error:", err);
-        showToast("Harmonization failed: " + err.message);
-    }
 }
 
 export function transposeKey(delta, updateRelKeyButton) {
