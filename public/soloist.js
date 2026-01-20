@@ -153,18 +153,22 @@ export function getScaleForChord(chord, nextChord, style) {
 
     // 2. Style Specifics
     if (style === 'country') {
+        const isMinorQualityLocal = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality) || (chord.quality.startsWith('m') && !chord.quality.startsWith('maj'));
+        
+        if (isMinorQualityLocal) {
+            if (chord.quality === 'dim' || chord.quality === 'halfdim') return [0, 1, 3, 5, 6, 8, 10];
+            return [0, 2, 3, 5, 7, 9, 10]; // Country-Rock Minor (Dorian)
+        }
+
         // Country: Major Pentatonic + b3 (Blue note) passing tone, and 4
-        // Base Major Pent: 0, 2, 4, 7, 9
-        // Add 3 (b3) for bluesy slides -> actually, scale logic usually takes Semitones from root
-        // 0, 2, 3, 4, 7, 9
-        // Also Mixolydian is common (10)
+        // 0, 2, 3, 4, 7, 9, 10 (Mixolydian-Blues)
         return [0, 2, 3, 4, 7, 9, 10].sort((a,b)=>a-b);
     }
     if (style === 'metal') {
         // Metal: Natural Minor / Aeolian (0, 2, 3, 5, 7, 8, 10)
-        // Or Harmonic Minor (0, 2, 3, 5, 7, 8, 11)
-        // Let's stick to Aeolian for now as safe default, maybe Harmonic if dominant
-        if (isDominant || chord.quality === 'major') return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant-ish for major
+        // For Major/Dominant chords, use Phrygian Dominant EXCEPT for Maj7 which needs Lydian/Ionian
+        if (chord.quality.startsWith('maj')) return [0, 2, 4, 6, 7, 9, 11]; // Lydian for Metal Power-Maj
+        if (isDominant || chord.quality === 'major') return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant
         return [0, 2, 3, 5, 7, 8, 10]; // Minor
     }
 
@@ -176,7 +180,7 @@ export function getScaleForChord(chord, nextChord, style) {
         
         if (isMinorQualityLocal) {
             // Disco/Funk/Blues: Minor chords should generally stay Dorian
-            if (chord.quality === 'halfdim') return [0, 1, 3, 5, 6, 8, 10]; // Locrian for ii-V-I in minor
+            if (chord.quality === 'halfdim' || chord.quality === 'dim') return [0, 1, 3, 5, 6, 8, 10]; // Locrian-ish
             return [0, 2, 3, 5, 7, 9, 10]; // Dorian
         }
 
