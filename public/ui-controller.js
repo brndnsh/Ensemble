@@ -10,7 +10,7 @@ import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
 import { generateRandomProgression, mutateProgression } from './chords.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, handleTap, resetToDefaults, togglePower } from './instrument-controller.js';
-import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey } from './arranger-controller.js';
+import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey, handleAudioHarmonization } from './arranger-controller.js';
 import { pushHistory, undo } from './history.js';
 import { shareProgression } from './sharing.js';
 import { triggerInstall } from './pwa.js';
@@ -334,6 +334,16 @@ export function setupUIHandlers(refs) {
         [document.getElementById('analyzeAudioBtn'), 'click', () => {
             // console.log("[Analyzer] analyzeAudioBtn triggered");
             document.getElementById('analyzerOverlay').classList.add('active');
+        }],
+        [ui.harmonizeInput, 'change', (e) => {
+            if (e.target.files.length > 0) {
+                handleAudioHarmonization(e.target.files[0]);
+                // Close menu after selection
+                ui.arrangerActionMenu.classList.remove('open');
+                ui.arrangerActionTrigger.classList.remove('active');
+                // Clear input so same file can be selected again
+                e.target.value = '';
+            }
         }],
         [ui.randomizeBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
