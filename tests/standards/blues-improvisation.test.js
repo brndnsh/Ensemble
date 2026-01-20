@@ -155,11 +155,12 @@ describe('Genre Specific Test: 12-Bar Blues in F', () => {
         
         let rootCount = 0;
         let notesCount = 0;
+        const iterations = 1000;
         
         // Boost intensity to ensure we actually generate notes despite the high "BB King" rest probability
         ctx.bandIntensity = 1.0; 
         
-        for (let i = 0; i < 200; i++) {
+        for (let i = 0; i < iterations; i++) {
             // Force state continuously so internal logic doesn't reset it
             sb.qaState = 'Answer';
             sb.currentPhraseSteps = 0; // Start of phrase to minimize rest probability
@@ -185,7 +186,7 @@ describe('Genre Specific Test: 12-Bar Blues in F', () => {
         expect(notesCount).toBeGreaterThan(0);
         
         let guideToneCount = 0;
-        for (let i = 0; i < 200; i++) {
+        for (let i = 0; i < iterations; i++) {
             const result = getSoloistNote(arranger.progression[0], null, 1, 349.23, 72, 'blues', 1);
             if (result) {
                 const note = Array.isArray(result) ? result[0] : result;
