@@ -92,6 +92,23 @@ describe('Worker Synchronization Integrity', () => {
         expect(onTick).toHaveBeenCalled();
     });
 
+    it('should handle delayed messages without crashing (Latency Simulation)', async () => {
+        const onNotes = vi.fn();
+        initWorker(null, onNotes);
+        
+        const mockNotes = [{ midi: 60, step: 0, module: 'bb' }];
+        
+        // Simulate a 100ms delay in the worker response
+        await new Promise(resolve => {
+            setTimeout(() => {
+                getTimerWorker().onmessage({ data: { type: 'notes', notes: mockNotes } });
+                resolve();
+            }, 100);
+        });
+
+        expect(onNotes).toHaveBeenCalledWith(mockNotes, undefined);
+    });
+
     it('should not throw if called before worker is initialized', () => {
         lastWorkerInstance = null;
         // Reset the local timerWorker in the module is hard without re-importing 
