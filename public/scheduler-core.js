@@ -387,6 +387,10 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
         // Enforce monophony at the scheduler level if double stops are disabled.
         // This acts as a safety net if the worker sends overlapping notes.
         const notesToPlay = sb.doubleStops ? notes : [notes[0]];
+        
+        // Power-compensation for double stops: Scale volume by 1/sqrt(N)
+        const numVoices = notesToPlay.filter(n => n.freq).length;
+        const polyphonyComp = 1 / Math.sqrt(Math.max(1, numVoices));
 
         notesToPlay.forEach(noteEntry => {
             if (noteEntry && noteEntry.freq) {
@@ -402,7 +406,8 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
                 const { name, octave } = midiToNote(midi);
                 const spb = 60.0 / ctx.bpm;
                 const duration = (durationSteps || 4) * 0.25 * spb;
-                const vel = (velocity || 1.0) * (ctx.conductorVelocity || 1.0);
+                const baseVel = (velocity || 1.0) * (ctx.conductorVelocity || 1.0);
+                const vel = baseVel * polyphonyComp;
                 const playTime = unswungTime + offsetS;
                 
                 playSoloNote(freq, playTime, duration, vel, bendStartInterval || 0, style);

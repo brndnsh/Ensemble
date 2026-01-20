@@ -27,10 +27,10 @@ vi.mock('../../../public/state.js', () => ({
 
 vi.mock('../../../public/config.js', () => {
     const STYLE_CONFIG = {
-        neo: { deviceProb: 1.0, cells: [0], allowedDevices: ['enclosure'], registerSoar: 5, restBase: 0.1, restGrowth: 0 },
-        shred: { deviceProb: 1.0, cells: [0], allowedDevices: ['run'], registerSoar: 5, restBase: 0.1, restGrowth: 0 },
-        blues: { deviceProb: 1.0, cells: [0], allowedDevices: ['slide'], registerSoar: 5, restBase: 0.1, restGrowth: 0 },
-        scalar: { deviceProb: 1.0, cells: [0], allowedDevices: ['run'], registerSoar: 5, restBase: 0.1, restGrowth: 0 }
+        neo: { deviceProb: 1.0, cells: [0], allowedDevices: ['enclosure'], registerSoar: 5, restBase: 0.1, restGrowth: 0, doubleStopProb: 0.1 },
+        shred: { deviceProb: 1.0, cells: [0], allowedDevices: ['run'], registerSoar: 5, restBase: 0.1, restGrowth: 0, doubleStopProb: 0.05 },
+        blues: { deviceProb: 1.0, cells: [0], allowedDevices: ['slide'], registerSoar: 5, restBase: 0.1, restGrowth: 0, doubleStopProb: 0.35 },
+        scalar: { deviceProb: 1.0, cells: [0], allowedDevices: ['run'], registerSoar: 5, restBase: 0.1, restGrowth: 0, doubleStopProb: 0.1 }
     };
     return {
         STYLE_CONFIG,
@@ -402,6 +402,30 @@ describe('Soloist Engine Logic', () => {
             expect(replayed.midi).toBe(58); // Nudged from 59 to 58
             // Original interval was 1. Nudge was -1. 1 + (-1) = 0.
             expect(replayed.bendStartInterval).toBe(0); 
+        });
+    });
+
+    describe('Double Stop Generation', () => {
+        it('should return an array of notes when double stops are triggered', () => {
+            sb.doubleStops = true;
+            const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
+            
+            let arrayFound = false;
+            // STYLE_CONFIG for scalar has doubleStopProb: 0.1
+            // Let's use bird style which has high anticipationProb but low doubleStopProb (0.05)
+            // Wait, STYLE_CONFIG blues has 0.35 doubleStopProb.
+            
+            for (let i = 0; i < 1000; i++) {
+                sb.busySteps = 0;
+                sb.isResting = false;
+                const res = getSoloistNote(chord, null, 16, 440, 72, 'blues', 0);
+                if (Array.isArray(res)) {
+                    arrayFound = true;
+                    expect(res.length).toBeGreaterThan(1);
+                    break;
+                }
+            }
+            expect(arrayFound).toBe(true);
         });
     });
 });
