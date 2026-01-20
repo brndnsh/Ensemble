@@ -297,17 +297,17 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
             let weight = 100;
             const dist = Math.abs(m - lastMidi);
             if (Math.abs(lastInterval) > 4) {
-                if (((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 0 && dist <= 2) weight += 50000;
+                if (((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 0 && dist <= 2) weight += 2000;
             }
-            if ([3, 4, 10, 11].includes(interval)) weight += (activeStyle === 'minimal' ? 1000 : 25000);
-            if (interval === 0) weight += 20;
+            if ([3, 4, 10, 11].includes(interval)) weight += (activeStyle === 'minimal' ? 500 : 800);
+            if (interval === 0) weight += 100;
             if (isSectionEnding && stepsUntilSectionEnd <= 4) {
-                if (interval === 0) weight += 50000;
-                if ([3, 4, 10, 11].includes(interval)) weight += 25000;
+                if (interval === 0) weight += 3000;
+                if ([3, 4, 10, 11].includes(interval)) weight += 1500;
             }
             if (sb.qaState === 'Answer') {
-                if (interval === 0) weight += 1000000;
-                if ([3, 4, 10, 11].includes(interval)) weight += 500000;
+                if (interval === 0) weight += 5000;
+                if ([3, 4, 10, 11].includes(interval)) weight += 2500;
             }
             if (m - dynamicCenter > 0) weight -= ((m - dynamicCenter) * 3);
             if (Math.abs(m - dynamicCenter) > 7) weight -= (Math.abs(m - dynamicCenter) - 7) * 2;
@@ -440,25 +440,25 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
         let weight = 100;
         const dist = Math.abs(m - lastMidi);
         if (isResolvingSkip) {
-            if (((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 0 && dist <= 2) weight += 50000; 
+            if (((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 0 && dist <= 2) weight += 2000; 
             else if (!((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 2) weight -= 10000; 
         }
 
         const isGuideTone = [3, 4, 10, 11].includes(interval);
         const isRoot = interval === 0;
 
-        if (isRoot) weight += 10;
-        if (isGuideTone) weight += (activeStyle === 'minimal' ? 1000 : 25000);
+        if (isRoot) weight += 50;
+        if (isGuideTone) weight += (activeStyle === 'minimal' ? 500 : 800);
         if (isSectionEnding && stepsUntilSectionEnd <= 4) {
-            if (isRoot) weight += 50000;
-            if (isGuideTone) weight += 25000;
+            if (isRoot) weight += 3000;
+            if (isGuideTone) weight += 1500;
         }
         if (stepInBeat === 0) {
             if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) { weight += 15; if (isGuideTone) weight += 30; } else weight -= 15;
         }
         if (sb.qaState === 'Answer') { 
-            if (isRoot) weight += (activeStyle === 'minimal' ? 500 : 1000000); 
-            if (isGuideTone) weight += (activeStyle === 'minimal' ? 1000 : 500000); 
+            if (isRoot) weight += (activeStyle === 'minimal' ? 1000 : 5000); 
+            if (isGuideTone) weight += (activeStyle === 'minimal' ? 500 : 2500); 
         }
         if (dist === 0) weight -= 50; 
         if (dist > 0 && dist <= 2) weight += (50 + (ctx.bpm / 100) * 20); 
