@@ -498,6 +498,10 @@ export function scheduleHarmonies(chordData, step, time) {
             killHarmonyNote();
         }
 
+        // Power-compensation for multiple voices: Scale volume by 1/sqrt(N)
+        const numVoices = notes.filter(n => n.freq || n.midi).length;
+        const polyphonyComp = 1 / Math.sqrt(Math.max(1, numVoices));
+
         notes.forEach(n => {
             const { freq, velocity, timingOffset, durationSteps, midi, style, slideInterval, slideDuration, vibrato } = n;
             const playTime = time + (timingOffset || 0);
@@ -505,7 +509,8 @@ export function scheduleHarmonies(chordData, step, time) {
 
             if (freq || m) {
                 const duration = (durationSteps || 1) * 0.25 * spb;
-                const finalVel = velocity * (ctx.conductorVelocity || 1.0);
+                const baseVel = velocity * (ctx.conductorVelocity || 1.0);
+                const finalVel = baseVel * polyphonyComp;
                 
                 playHarmonyNote(freq || 440, playTime, duration, finalVel, style, m, slideInterval, slideDuration, vibrato);
                 sendMIDINote(midiState.harmonyChannel, m + (midiState.harmonyOctave * 12), normalizeMidiVelocity(finalVel), playTime, duration);

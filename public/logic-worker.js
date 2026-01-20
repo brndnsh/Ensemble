@@ -393,6 +393,9 @@ export function handleExport(options) {
 
                 if (includedTracks.includes('chords')) {
                     const notes = getAccompanimentNotes(chord, globalStep, stepInChord, measureStep, stepInfo);
+                    const numVoices = notes.filter(n => n.midi > 0).length;
+                    const polyphonyComp = 1 / Math.sqrt(Math.max(1, numVoices));
+
                     notes.forEach(n => {
                         const noteTimeS = stepTimeS + (n.timingOffset || 0);
                         const notePulse = Math.max(0, toPulses(noteTimeS));
@@ -400,8 +403,8 @@ export function handleExport(options) {
                         if (n.midi > 0) {
                             n.ccEvents.forEach(cc => chordTrack.cc(notePulse, 0, cc.controller, cc.value));
                             
-                            // Safe MIDI Velocity for Chords
-                            let finalVel = n.velocity;
+                            // Safe MIDI Velocity for Chords with power compensation
+                            let finalVel = n.velocity * polyphonyComp;
                             if (n.muted) finalVel *= 0.3; // Scale ghost "chucks"
                             const midiVel = Math.max(1, Math.min(127, Math.round(finalVel * 127)));
                             
@@ -458,13 +461,15 @@ export function handleExport(options) {
                     const soloResult = getSoloistNote(chord, nextChordData?.chord, globalStep, sb.lastFreq, sb.octave, sb.style, stepInChord, false, { sectionStart, sectionEnd });
                     if (soloResult) {
                         const results = Array.isArray(soloResult) ? soloResult : [soloResult];
+                        const polyphonyComp = 1 / Math.sqrt(Math.max(1, results.length));
+
                         results.forEach(res => {
                             if (res.midi) {
                                 const noteTimeS = stepTimeS + (res.timingOffset || 0);
                                 const notePulse = Math.max(0, toPulses(noteTimeS));
                                 
-                                // Safe MIDI Velocity for Soloist
-                                const midiVel = Math.max(1, Math.min(127, Math.round(res.velocity * 127)));
+                                // Safe MIDI Velocity for Soloist with power compensation
+                                const midiVel = Math.max(1, Math.min(127, Math.round(res.velocity * polyphonyComp * 127)));
 
                                 if (res.bendStartInterval) {
                                     soloistTrack.pitchBend(notePulse, 2, Math.round(-(res.bendStartInterval / 2) * 8192));
@@ -495,10 +500,12 @@ export function handleExport(options) {
 
                 if (includedTracks.includes('harmonies')) {
                     const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, globalStep, hb.octave, hb.style, stepInChord);
+                    const polyphonyComp = 1 / Math.sqrt(Math.max(1, harmonyNotes.length));
+
                     harmonyNotes.forEach(n => {
                         const noteTimeS = stepTimeS + (n.timingOffset || 0);
                         const notePulse = Math.max(0, toPulses(noteTimeS));
-                        const midiVel = Math.max(1, Math.min(127, Math.round(n.velocity * 127)));
+                        const midiVel = Math.max(1, Math.min(127, Math.round(n.velocity * polyphonyComp * 127)));
 
                         harmonyTrack.noteOn(notePulse, 3, n.midi, midiVel);
 
