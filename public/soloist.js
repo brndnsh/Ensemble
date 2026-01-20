@@ -297,23 +297,22 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
             let weight = 100;
             const dist = Math.abs(m - lastMidi);
             if (Math.abs(lastInterval) > 4) {
-                if (((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 0 && dist <= 2) weight += 2000;
+                if (((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 0 && dist <= 2) weight += 50000;
             }
-            if ([3, 4, 10, 11].includes(interval)) weight += (activeStyle === 'minimal' ? 500 : 800);
-            if (interval === 0) weight += 100;
+            if ([3, 4, 10, 11].includes(interval)) weight += (activeStyle === 'minimal' ? 1000 : 25000);
+            if (interval === 0) weight += 20;
             if (isSectionEnding && stepsUntilSectionEnd <= 4) {
-                if (interval === 0) weight += 3000;
-                if ([3, 4, 10, 11].includes(interval)) weight += 1500;
+                if (interval === 0) weight += 50000;
+                if ([3, 4, 10, 11].includes(interval)) weight += 25000;
             }
             if (sb.qaState === 'Answer') {
-                if (interval === 0) weight += 200;
-                if ([3, 4, 10, 11].includes(interval)) weight += 100;
+                if (interval === 0) weight += 500;
+                if ([3, 4, 10, 11].includes(interval)) weight += 250;
             }
             if (dist === 0) {
-                weight -= 800;
-                if (lastInterval === 0) weight -= 1000;
+                weight -= 200;
+                if (lastInterval === 0) weight -= 500;
             }
-            if (dist > 0 && dist <= 2) weight += 100;
             if (m - dynamicCenter > 0) weight -= ((m - dynamicCenter) * 3);
             if (Math.abs(m - dynamicCenter) > 7) weight -= (Math.abs(m - dynamicCenter) - 7) * 2;
             CANDIDATE_WEIGHTS[m] = Math.max(0.1, weight);
@@ -376,20 +375,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
             sb.qaState = sb.qaState === 'Question' ? 'Answer' : 'Question';
             const currentRoot = currentChord.rootMidi % 12;
             const motifRoot = sb.motifRoot !== undefined ? sb.motifRoot : currentRoot;
-            
-            // Probabilistic memory flush on chord change to prevent harmonic latching
-            if (currentRoot !== sb.motifRoot && Math.random() < 0.3) {
-                sb.motifBuffer = [];
-                sb.motifReplayCount = 0;
-            }
-
-            let distinctPitchesCount = 0;
-            if (sb.motifBuffer && sb.motifBuffer.length > 0) {
-                const distinctPitches = new Set(sb.motifBuffer.map(n => Array.isArray(n) ? n[0].midi : n.midi));
-                distinctPitchesCount = distinctPitches.size;
-            }
-
-            if (sb.motifBuffer && sb.motifBuffer.length > 0 && distinctPitchesCount > 1 && Math.random() < config.motifProb && !((Math.abs(currentRoot - motifRoot) % 12) !== 0 && (Math.abs(currentRoot - motifRoot) % 12) !== 5 && (Math.abs(currentRoot - motifRoot) % 12) !== 7) && (sb.motifReplayCount || 0) <= 3) {
+            if (sb.motifBuffer && sb.motifBuffer.length > 0 && Math.random() < config.motifProb && !((Math.abs(currentRoot - motifRoot) % 12) !== 0 && (Math.abs(currentRoot - motifRoot) % 12) !== 5 && (Math.abs(currentRoot - motifRoot) % 12) !== 7) && (sb.motifReplayCount || 0) <= 3) {
                 sb.isReplayingMotif = true; sb.motifReplayIndex = 0; sb.motifReplayCount = (sb.motifReplayCount || 0) + 1;
             } else {
                 sb.isReplayingMotif = false; sb.motifBuffer = []; sb.motifRoot = currentRoot; sb.motifReplayCount = 0;
@@ -458,44 +444,31 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
         let weight = 100;
         const dist = Math.abs(m - lastMidi);
         if (isResolvingSkip) {
-            if (((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 0 && dist <= 2) weight += 2000; 
+            if (((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 0 && dist <= 2) weight += 50000; 
             else if (!((lastInterval > 0 && m - lastMidi < 0) || (lastInterval < 0 && m - lastMidi > 0)) && dist > 2) weight -= 10000; 
         }
 
         const isGuideTone = [3, 4, 10, 11].includes(interval);
         const isRoot = interval === 0;
 
-        if (isRoot) weight += 50;
-        if (isGuideTone) weight += (activeStyle === 'minimal' ? 500 : 800);
-        
-        // --- RESTORED: Satisfying Resolution Logic ---
-        // Half-step resolutions between chords are high-value melodic movement
-        const isChordChanging = stepInChord === 0;
-        if (isChordChanging && dist === 1 && chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) {
-            weight += (activeStyle === 'minimal' ? 2000 : 500); 
-        }
-
+        if (isRoot) weight += 10;
+        if (isGuideTone) weight += (activeStyle === 'minimal' ? 1000 : 25000);
         if (isSectionEnding && stepsUntilSectionEnd <= 4) {
-            if (isRoot) weight += 3000;
-            if (isGuideTone) weight += 1500;
+            if (isRoot) weight += 50000;
+            if (isGuideTone) weight += 25000;
         }
         if (stepInBeat === 0) {
-            if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) { 
-                weight += 15; 
-                if (isGuideTone) weight += 30; 
-                // Boost movement away from the previous note on a new downbeat
-                if (dist > 0) weight += 100;
-            } else weight -= 15;
+            if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) { weight += 15; if (isGuideTone) weight += 30; } else weight -= 15;
         }
         if (sb.qaState === 'Answer') { 
-            if (isRoot) weight += (activeStyle === 'minimal' ? 200 : 200); 
-            if (isGuideTone) weight += (activeStyle === 'minimal' ? 100 : 100); 
+            if (isRoot) weight += (activeStyle === 'minimal' ? 200 : 500); 
+            if (isGuideTone) weight += (activeStyle === 'minimal' ? 100 : 250); 
         }
         if (dist === 0) {
-            weight -= 800;
-            if (lastInterval === 0) weight -= 1000;
+            weight -= 200; 
+            if (lastInterval === 0) weight -= 500;
         }
-        if (dist > 0 && dist <= 2) weight += (100 + (ctx.bpm / 100) * 20); 
+        if (dist > 0 && dist <= 2) weight += (50 + (ctx.bpm / 100) * 20); 
         else if (dist > 7) weight -= 500; 
 
         if (m - dynamicCenter > 0) weight -= ((m - dynamicCenter) * 3); 
@@ -514,27 +487,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
         let randomVal = Math.random() * totalWeight;
         for (let m = minMidi; m <= maxMidi; m++) { const w = CANDIDATE_WEIGHTS[m]; if (w > 0) { randomVal -= w; if (randomVal <= 0) { selectedMidi = m; break; } } }
     }
-
-    // --- Safety Nudge: Anti-Latching ---
-    // If we selected the same note again (despite penalties), force a move 80% of the time.
-    if (selectedMidi === lastMidi && !sb.isReplayingMotif && Math.random() < 0.8) {
-        const getValidNeighbor = (dir) => {
-            for (let i = 1; i <= 4; i++) {
-                const candidate = selectedMidi + (i * dir);
-                const pc = (candidate % 12 + 12) % 12;
-                if (scaleIntervals.includes((pc - (rootMidi % 12) + 12) % 12)) return candidate;
-            }
-            return null;
-        };
-        
-        const upper = getValidNeighbor(1);
-        const lower = getValidNeighbor(-1);
-        
-        if (upper && lower) selectedMidi = Math.random() < 0.5 ? upper : lower;
-        else if (upper) selectedMidi = upper;
-        else if (lower) selectedMidi = lower;
-    }
-
     sb.lastInterval = selectedMidi - lastMidi;
 
     if (stepInBeat === 0 && Math.random() < (config.deviceProb * 0.7 * (0.2 + maturityFactor * 0.8))) {

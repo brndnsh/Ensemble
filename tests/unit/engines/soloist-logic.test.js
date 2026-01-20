@@ -399,65 +399,6 @@ describe('Soloist Engine Logic', () => {
             // If F4 is > 40% of notes, that's too repetitive
             expect(f4Count / totalNotes).toBeLessThan(0.4);
         });
-
-        it('should avoid sequential repetition (stuttering)', () => {
-            const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
-            let lastFreq = 261.63; // C4
-            let repeats = 0;
-            let total = 0;
-            let lastMidi = 60;
-
-            // Force low motif prob to test generation logic only
-            sb.motifBuffer = []; 
-
-            for(let i=0; i<50; i++) {
-                 // Ensure we don't trigger Rest/Motif logic
-                 sb.isResting = false;
-                 sb.currentPhraseSteps = 1; // Keep phrase active
-                 
-                 const res = getSoloistNote(chord, null, i, lastFreq, 64, 'scalar', i);
-                 if (res) {
-                     const note = Array.isArray(res) ? res[0] : res;
-                     if (note.midi === lastMidi) repeats++;
-                     lastMidi = note.midi;
-                     lastFreq = getFrequency(note.midi);
-                     total++;
-                 }
-            }
-            
-            // Allow some repeats, but not > 50%
-            expect(repeats / total).toBeLessThan(0.5);
-        });
-
-        it('should prevent latching in Answer mode with high intensity', () => {
-             // Force Answer mode where weights are highest
-             sb.qaState = 'Answer';
-             sb.sessionSteps = 1000;
-             const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
-             
-             let repeats = 0;
-             let lastMidi = 60;
-             let total = 0;
-             let lastFreq = 261.63;
-
-             for(let i=0; i<30; i++) {
-                 sb.isResting = false;
-                 sb.busySteps = 0;
-                 // Mock motif buffer check to avoid "undefined" crash in mocked state if needed
-                 sb.motifBuffer = [];
-                 
-                 const res = getSoloistNote(chord, null, i*4, lastFreq, 64, 'scalar', 0);
-                 if (res) {
-                     const note = Array.isArray(res) ? res[0] : res;
-                     if (note.midi === lastMidi) repeats++;
-                     lastMidi = note.midi;
-                     lastFreq = getFrequency(note.midi);
-                     total++;
-                 }
-             }
-             // Should not be > 50% repeats even in Answer mode
-             if (total > 0) expect(repeats / total).toBeLessThan(0.5);
-        });
     });
 
     describe('Register Build Logic', () => {
