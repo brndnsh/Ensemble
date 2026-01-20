@@ -421,8 +421,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             // Normalize shift to be within -6 to +6 range for smoothest transition
             if (shift > 6) shift -= 12;
             
-            const octaveShift = 0; // The shift itself now handles the nearest root.
-            
             let res = motifNote;
             if (Array.isArray(motifNote)) {
                 res = motifNote.map(n => {
