@@ -428,4 +428,49 @@ describe('Soloist Engine Logic', () => {
             expect(arrayFound).toBe(true);
         });
     });
+
+    describe('Register Build Logic', () => {
+        it('should bias towards a lower register at the start of a session', () => {
+            const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
+            
+            // Start of session
+            sb.sessionSteps = 1;
+            sb.busySteps = 0;
+            sb.lastFreq = null; // Prevent bias from mock
+            let startMidis = [];
+            for (let i = 0; i < 1000; i++) {
+                sb.busySteps = 0;
+                const note = getSoloistNote(chord, null, i * 4, sb.lastFreq, 64, 'scalar', 0);
+                if (note && !Array.isArray(note)) {
+                    startMidis.push(note.midi);
+                    sb.lastFreq = 440 * Math.pow(2, (note.midi - 69) / 12);
+                }
+            }
+            const avgStart = startMidis.reduce((a, b) => a + b, 0) / startMidis.length;
+
+            // Matured session
+            sb.sessionSteps = 10000;
+            sb.busySteps = 0;
+            sb.lastFreq = null; // Reset for matured run too
+            
+            // Prime to stabilize register at matured level
+            for(let p=0; p<100; p++) {
+                sb.busySteps = 0;
+                getSoloistNote(chord, null, p*4, sb.lastFreq, 64, 'scalar', 0);
+            }
+
+            let maturedMidis = [];
+            for (let i = 0; i < 1000; i++) {
+                sb.busySteps = 0;
+                const note = getSoloistNote(chord, null, i * 4, sb.lastFreq, 64, 'scalar', 0);
+                if (note && !Array.isArray(note)) {
+                    maturedMidis.push(note.midi);
+                    sb.lastFreq = 440 * Math.pow(2, (note.midi - 69) / 12);
+                }
+            }
+            const avgMatured = maturedMidis.reduce((a, b) => a + b, 0) / maturedMidis.length;
+
+            expect(avgMatured).toBeGreaterThan(avgStart);
+        });
+    });
 });

@@ -828,6 +828,9 @@ function handlePrime(steps) {
 
             // 2. Prime Soloist
             const { sectionStart, sectionEnd } = chordData;
+            // Manually increment sessionSteps for priming logic
+            sb.sessionSteps = (sb.sessionSteps || 0) + 1;
+            
             const soloResult = getSoloistNote(
                 chord, 
                 nextChordData?.chord, 

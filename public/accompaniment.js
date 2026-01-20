@@ -1,4 +1,4 @@
-import { ctx, arranger, cb, bb, sb, gb } from './state.js';
+import { ctx, arranger, cb, bb, sb, gb, hb } from './state.js';
 import { getMidi, getFrequency } from './utils.js';
 import { TIME_SIGNATURES } from './config.js';
 
@@ -559,6 +559,16 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
     // If soloist is busy, suppress hits to avoid clutter (Call & Response)
     if (sb.enabled && sb.busySteps > 0 && cb.style === 'smart') {
          if (Math.random() < 0.7) isHit = false; 
+    }
+
+    // --- NEW: Harmony Interlocking ---
+    // If backgrounds are busy, the main accompanist should find gaps.
+    if (isHit && hb.enabled && hb.rhythmicMask > 0 && cb.style === 'smart') {
+        const hasHarmonyHit = (hb.rhythmicMask >> (measureStep % 16)) & 1;
+        if (hasHarmonyHit && Math.random() < (0.4 + ctx.bandIntensity * 0.3)) {
+            // Background stab present, suppress piano hit to let it pop
+            isHit = false;
+        }
     }
 
     // Force hit on "One" if empty

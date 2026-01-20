@@ -320,7 +320,7 @@ export const sb = {
     lastPlayedFreq: null,
     buffer: new Map(),
     lastNoteEnd: 0,
-    octave: 72, // C5
+    octave: 64, // E4
     style: 'smart',
     direction: 1,
     melodicTrend: 'Static',

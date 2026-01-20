@@ -288,7 +288,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const measureStep = step % stepsPerMeasure;
     const stepInBeat = measureStep % stepsPerBeat;
     const intensity = ctx.bandIntensity || 0.5;
-    const centerMidi = 72; // Standard soloist register anchor
+    const centerMidi = 64; // Adjusted to E4 for more guitar-like range
     
     if (!isPriming) sb.sessionSteps = (sb.sessionSteps || 0) + 1;
     
@@ -296,7 +296,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     // The soloist becomes more "confident" and expressive as the jam progresses (0-5 mins)
     // 16 steps = 1 measure. 1024 steps = 64 measures (~2-3 mins).
     const maturityFactor = Math.min(1.0, (sb.sessionSteps || 0) / 1024);
-    const warmupFactor = isPriming ? 1.0 : Math.min(1.0, sb.sessionSteps / (stepsPerMeasure * 2));
+    const warmupFactor = Math.min(1.0, sb.sessionSteps / (stepsPerMeasure * 2));
     
     // Effective intensity grows slightly with maturity
     const effectiveIntensity = Math.min(1.0, intensity + (maturityFactor * 0.25));
@@ -524,7 +524,14 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const chordTones = currentChord.intervals.map(i => rootMidi + i);
     
     sb.smoothedTension = (sb.smoothedTension || 0) * 0.8 + (sb.tension || 0) * 0.2;
-    const dynamicCenter = centerMidi + Math.floor(sb.smoothedTension * config.registerSoar * (0.5 + intensity));
+    
+    // --- Register Build Logic ---
+    // Start conservative (lower) and build up to dynamic soaring.
+    // We bias the center down during warmup and limit the 'soar' potential.
+    const soarLimit = config.registerSoar * warmupFactor;
+    const registerBuildOffset = -12 * (1.0 - warmupFactor);
+    const dynamicCenter = centerMidi + registerBuildOffset + Math.floor(sb.smoothedTension * soarLimit * (0.5 + intensity));
+    
     const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
     const minMidi = Math.max(0, Math.min(dynamicCenter - 12, lastMidi - 14)); 
     const maxMidi = Math.min(127, Math.max(dynamicCenter + 12, lastMidi + 14));

@@ -2,6 +2,7 @@ import { getScaleForChord } from './soloist.js';
 import { getBestInversion } from './chords.js';
 import { ctx, gb, cb, hb, sb, arranger } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
+import { getMidi } from './utils.js';
 
 /**
  * HARMONIES.JS
@@ -434,6 +435,19 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     }
 
     const currentMidis = getBestInversion(rootMidi, intervals, lastMidis, stepInChord === 0);
+    
+    // --- NEW: Dynamic Frequency Slotting (Soloist Pocket) ---
+    // If the soloist is active and in our register, nudge the harmonies down 
+    // to keep the "lane" clear.
+    const soloistMidi = sb.enabled ? getMidi(sb.lastFreq) : 0;
+    let finalOctaveShift = 0;
+    if (soloistMidi > 0 && currentMidis.some(m => Math.abs(m - soloistMidi) < 7)) {
+        // Collision detected! Nudge down if we have room
+        if (currentMidis[0] > 48) {
+            finalOctaveShift = -12;
+        }
+    }
+
     lastMidis = currentMidis;
     
     if (currentMidis.length > 0) {
@@ -447,7 +461,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const polyphonyComp = 1 / Math.sqrt(currentMidis.length || 1);
     
     currentMidis.forEach((midi, i) => {
-        const finalMidi = midi + liftShift;
+        const finalMidi = midi + liftShift + finalOctaveShift;
         
         // --- 6. Articulation Logic (The "New Tricks") ---
         // These are gated by intensity to ensure they sound "earned".
