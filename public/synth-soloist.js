@@ -5,9 +5,18 @@ export function killSoloistNote() {
     if (sb.activeVoices && sb.activeVoices.length > 0) {
         sb.activeVoices.forEach(voice => {
             try {
-                const g = voice.gain.gain;
-                g.cancelScheduledValues(ctx.audio.currentTime);
-        } catch { /* ignore error */ }
+                // Cancel gain AND frequency ramps to prevent pitch artifacts
+                voice.gain.gain.cancelScheduledValues(ctx.audio.currentTime);
+                voice.gain.gain.setTargetAtTime(0, ctx.audio.currentTime, 0.01);
+                
+                if (voice.oscs) {
+                    voice.oscs.forEach(osc => {
+                        try {
+                            osc.frequency.cancelScheduledValues(ctx.audio.currentTime);
+                        } catch { /* ignore */ }
+                    });
+                }
+            } catch { /* ignore error */ }
         });
         sb.activeVoices = [];
     }
@@ -54,12 +63,17 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
                 try {
                     oldest.gain.gain.cancelScheduledValues(playTime);
                     oldest.gain.gain.setTargetAtTime(0, playTime, 0.01);
-                            } catch { /* ignore error */ }
+                    if (oldest.oscs) {
+                        oldest.oscs.forEach(osc => {
+                            try {
+                                osc.frequency.cancelScheduledValues(playTime);
+                            } catch { /* ignore */ }
+                        });
+                    }
+                } catch { /* ignore error */ }
             }
         }
     }
-
-    sb.activeVoices.push({ gain, time: playTime, duration });
 
     const pan = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
     if (ctx.audio.createStereoPanner) pan.pan.setValueAtTime((Math.random() * 2 - 1) * 0.3, playTime);
@@ -71,6 +85,8 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     const osc2 = ctx.audio.createOscillator();
     osc2.type = 'triangle';
     osc2.detune.setValueAtTime(style === 'shred' ? 12 : 6, playTime);
+
+    sb.activeVoices.push({ gain, time: playTime, duration, oscs: [osc1, osc2] });
 
     // Pitch Envelope
     if (bendStartInterval !== 0) {

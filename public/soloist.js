@@ -416,18 +416,31 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             // shift the motif notes to fit the new root while preserving intervals.
             const currentRoot = currentChord.rootMidi % 12;
             const motifRoot = sb.motifRoot !== undefined ? sb.motifRoot : currentRoot;
-            const shift = (currentRoot - motifRoot + 12) % 12;
-            const octaveShift = shift > 6 ? -12 : (shift < -6 ? 12 : 0);
+            let shift = (currentRoot - motifRoot + 12) % 12;
+            
+            // Normalize shift to be within -6 to +6 range for smoothest transition
+            if (shift > 6) shift -= 12;
+            
+            const octaveShift = 0; // The shift itself now handles the nearest root.
             
             let res = motifNote;
             if (Array.isArray(motifNote)) {
-                res = motifNote.map(n => ({
-                    ...n,
-                    midi: n.midi + shift + octaveShift
-                }));
+                res = motifNote.map(n => {
+                    const newMidi = n.midi + shift;
+                    return {
+                        ...n,
+                        midi: newMidi,
+                        bendStartInterval: n.bendStartInterval || 0
+                    };
+                });
                 if (!sb.doubleStops) res = res.find(n => !n.isDoubleStop) || res[0];
             } else {
-                res = { ...motifNote, midi: motifNote.midi + shift + octaveShift };
+                const newMidi = motifNote.midi + shift;
+                res = { 
+                    ...motifNote, 
+                    midi: newMidi,
+                    bendStartInterval: motifNote.bendStartInterval || 0 
+                };
             }
             
             const primary = Array.isArray(res) ? res[0] : res;
@@ -438,16 +451,24 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             const resPC = (primary.midi % 12 + 12) % 12;
             const relPC = (resPC - currentRoot + 12) % 12;
             
-            if (!scaleIntervals.includes(relPC)) {
-                const nearest = scaleIntervals.reduce((prev, curr) => Math.abs(curr - relPC) < Math.abs(prev - relPC) ? curr : prev);
-                const nudge = nearest - relPC;
-                if (Array.isArray(res)) {
-                    res = res.map(n => ({ ...n, midi: n.midi + nudge }));
-                } else {
-                    res.midi += nudge;
-                }
-            }
-
+                        if (!scaleIntervals.includes(relPC)) {
+                            const nearest = scaleIntervals.reduce((prev, curr) => Math.abs(curr - relPC) < Math.abs(prev - relPC) ? curr : prev);
+                            const nudge = nearest - relPC;
+                            if (Array.isArray(res)) {
+                                res = res.map(n => ({
+                                    ...n,
+                                    midi: n.midi + nudge,
+                                    // If we nudge the target midi, we must also nudge the bend start
+                                    // to keep the physical "start frequency" consistent.
+                                    // Example: Target was A (69), Scoop from G (67) -> interval 2.
+                                    // Nudged A to Bb (70). To keep starting at G (67), interval must be 3.
+                                    bendStartInterval: (n.bendStartInterval || 0) + nudge
+                                }));
+                            } else {
+                                res.midi += nudge;
+                                res.bendStartInterval = (res.bendStartInterval || 0) + nudge;
+                            }
+                        }
             sb.busySteps = (primary.durationSteps || 1) - 1;
             sb.notesInPhrase++;
             return res;
@@ -676,8 +697,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
 
     if (isSatisfyingTarget && Math.abs(lastMidi - selectedMidi) === 1 && Math.random() < (0.4 + intensity * 0.3)) {
         // Bend UP into the target (start 1 or 2 semitones below)
-        bendStartInterval = -1; // 1 semitone below
-        if (Math.random() < 0.3) bendStartInterval = -2; // 2 semitone deep scoop
+        bendStartInterval = 1; // 1 semitone below (scoop)
+        if (Math.random() < 0.3) bendStartInterval = 2; // 2 semitone deep scoop
     } 
     else if (durationSteps >= 4 && Math.random() < (0.3 + maturityFactor * 0.2)) {
         // Standard decorative scoop

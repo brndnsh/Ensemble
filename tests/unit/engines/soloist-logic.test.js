@@ -366,4 +366,42 @@ describe('Soloist Engine Logic', () => {
              expect(midNoteCount).toBeGreaterThan(endNoteCount);
         });
     });
+
+    describe('Motif & Bend Integrity', () => {
+        it('should generate positive bendStartInterval for scoops (starting below target)', () => {
+            const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
+            let scoops = 0;
+            for (let i = 0; i < 500; i++) {
+                sb.isResting = false; sb.busySteps = 0; sb.notesInPhrase = 0;
+                sb.currentCell = [1, 1, 1, 1];
+                const res = getSoloistNote(chord, null, 16, 440, 72, 'neo', 0);
+                if (res && res.bendStartInterval > 0) scoops++;
+            }
+            expect(scoops).toBeGreaterThan(0);
+        });
+
+        it('should adjust bendStartInterval when nudging motif notes for scale compliance', () => {
+            // 1. Record a motif over C Major (Root 60)
+            const chordC = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
+            // Simulate a note at MIDI 64 (E) with a 1-semitone scoop (starts at 63/Eb)
+            const recordedNote = { midi: 64, bendStartInterval: 1, durationSteps: 4 };
+            sb.motifBuffer = [recordedNote];
+            sb.motifRoot = 0;
+            sb.isReplayingMotif = true;
+            sb.motifReplayIndex = 0;
+
+            // replay over G Minor (Root 67)
+            // Transposition shift is -5. Target would be 64 - 5 = 59 (B natural).
+            // But G Minor scale [0, 2, 3, 5, 7, 8, 10] doesn't have B natural.
+            // Nearest is 58 (Bb). Nudge = -1.
+            const chordGm = { rootMidi: 67, quality: 'minor', intervals: [0, 3, 7], beats: 4 };
+            
+            // Force scalar style for predictable scale
+            const replayed = getSoloistNote(chordGm, null, 16, 440, 72, 'scalar', 0);
+            
+            expect(replayed.midi).toBe(58); // Nudged from 59 to 58
+            // Original interval was 1. Nudge was -1. 1 + (-1) = 0.
+            expect(replayed.bendStartInterval).toBe(0); 
+        });
+    });
 });
