@@ -26,6 +26,33 @@ window.enableWorkerLogging = (enabled) => {
 
 function init() {
     try {
+        // --- WORKER INIT ---
+        initWorker(() => scheduler(), (notes) => { 
+            const sbUpdatedSteps = new Set();
+            notes.forEach(n => { 
+                if (n.module === 'bb') bb.buffer.set(n.step, n); 
+                else if (n.module === 'sb') {
+                    // ENFORCE MONOPHONIC: If double stops are disabled, skip additional notes for the same step
+                    if (!sb.doubleStops && sb.buffer.has(n.step)) return;
+
+                    if (!sbUpdatedSteps.has(n.step)) {
+                        sb.buffer.set(n.step, []);
+                        sbUpdatedSteps.add(n.step);
+                    }
+                    sb.buffer.get(n.step).push(n);
+                }
+                else if (n.module === 'hb') {
+                    if (!hb.buffer.has(n.step)) hb.buffer.set(n.step, []);
+                    hb.buffer.get(n.step).push(n);
+                }
+                else if (n.module === 'cb') {
+                    if (!cb.buffer.has(n.step)) cb.buffer.set(n.step, []);
+                    cb.buffer.get(n.step).push(n);
+                }
+            }); 
+            if (ctx.isPlaying) scheduler(); 
+        });
+
         initUI();
         viz = new UnifiedVisualizer('unifiedVizContainer'); 
         ctx.viz = viz;
@@ -69,33 +96,6 @@ function init() {
         });
 
         validateProgression(() => { renderChordVisualizer(); analyzeFormUI(); });
-        
-        // --- WORKER INIT ---
-        initWorker(() => scheduler(), (notes) => { 
-            const sbUpdatedSteps = new Set();
-            notes.forEach(n => { 
-                if (n.module === 'bb') bb.buffer.set(n.step, n); 
-                else if (n.module === 'sb') {
-                    // ENFORCE MONOPHONIC: If double stops are disabled, skip additional notes for the same step
-                    if (!sb.doubleStops && sb.buffer.has(n.step)) return;
-
-                    if (!sbUpdatedSteps.has(n.step)) {
-                        sb.buffer.set(n.step, []);
-                        sbUpdatedSteps.add(n.step);
-                    }
-                    sb.buffer.get(n.step).push(n);
-                }
-                else if (n.module === 'hb') {
-                    if (!hb.buffer.has(n.step)) hb.buffer.set(n.step, []);
-                    hb.buffer.get(n.step).push(n);
-                }
-                else if (n.module === 'cb') {
-                    if (!cb.buffer.has(n.step)) cb.buffer.set(n.step, []);
-                    cb.buffer.get(n.step).push(n);
-                }
-            }); 
-            if (ctx.isPlaying) scheduler(); 
-        });
         
         subscribe((action, payload) => syncWorker(action, payload));
         syncWorker(); 

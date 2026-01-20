@@ -49,8 +49,6 @@ export function togglePlay(viz) {
         killAllNotes();
         panic(true); // Full MIDI reset
         sendMIDITransport('stop', ctx.audio.currentTime);
-        hb.buffer.clear();
-        flushBuffers();
         flushBuffers();
         ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
         if (ctx.audio) {
@@ -67,6 +65,7 @@ export function togglePlay(viz) {
             ctx.audio.resume();
         }
 
+        ctx.isPlaying = true;
         ctx.step = 0;
         isResolutionTriggered = false;
         dispatch(ACTIONS.RESET_SESSION); // Reset warm-up counters
@@ -82,7 +81,6 @@ export function togglePlay(viz) {
         } else {
             silentAudio.play().catch(() => { /* ignore play error */ });
         }
-        ctx.isPlaying = true;
         restoreGains();
         ui.playBtn.textContent = 'STOP';
         ui.playBtn.classList.add('playing');

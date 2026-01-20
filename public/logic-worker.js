@@ -687,7 +687,7 @@ if (typeof self !== 'undefined') {
             const { type, data } = e.data;
             const timestamp = data?.timestamp || null;
             switch (type) {
-                case 'start': if (!timerID) { timerID = setInterval(() => { fillBuffers(Math.max(bbBufferHead, sbBufferHead, cbBufferHead)); postMessage({ type: 'tick' }); }, interval); } break;
+                case 'start': if (!timerID) { timerID = setInterval(() => { postMessage({ type: 'tick' }); }, interval); } break;
                 case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
                 case 'syncState':
                     if (data.arranger) { Object.assign(arranger, data.arranger); arranger.totalSteps = data.arranger.totalSteps; arranger.stepMap = data.arranger.stepMap; arranger.sectionMap = data.arranger.sectionMap; }
