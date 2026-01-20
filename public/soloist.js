@@ -180,11 +180,12 @@ export function getScaleForChord(chord, nextChord, style) {
         
         if (isMinorQualityLocal) {
             // Disco/Funk/Blues: Minor chords should generally stay Dorian
-            if (chord.quality === 'halfdim' || chord.quality === 'dim') return [0, 1, 3, 5, 6, 8, 10]; // Locrian-ish
+            if (chord.quality === 'halfdim' || chord.quality === 'dim') return [0, 1, 3, 5, 6, 8, 10]; // Locrian
             return [0, 2, 3, 5, 7, 9, 10]; // Dorian
         }
 
-        let base = [0, 2, 3, 4, 5, 6, 7, 9, 10];
+        // Refined Mixolydian-Blues for dominant chords
+        let base = [0, 2, 3, 4, 5, 7, 9, 10];
         if (sb.tension > 0.7) base.push(11);
         return base.sort((a,b)=>a-b);
     }
@@ -539,7 +540,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     // Start conservative (lower) and build up to dynamic soaring.
     // We bias the center down during warmup and limit the 'soar' potential.
     const soarLimit = config.registerSoar * warmupFactor;
-    const registerBuildOffset = -12 * (1.0 - warmupFactor);
+    // Stronger Register Build: Start 2 octaves lower and build up to centerMidi
+    const registerBuildOffset = -24 * (1.0 - warmupFactor);
     const dynamicCenter = centerMidi + registerBuildOffset + Math.floor(sb.smoothedTension * soarLimit * (0.5 + intensity));
     
     const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;

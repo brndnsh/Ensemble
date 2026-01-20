@@ -315,10 +315,19 @@ describe('Soloist Engine Logic', () => {
             // At the end of a section (step 60-63 in a 64-step section)
             let noteCount = 0;
             let rootCount = 0;
+            sb.sessionSteps = 10000;
+            sb.busySteps = 0;
+            sb.lastFreq = null;
+            // Prime at step 60
+            for(let p=0; p<100; p++) {
+                sb.busySteps = 0;
+                getSoloistNote(chord, null, 60, sb.lastFreq, 64, 'scalar', 12, false, sectionInfo);
+            }
+
             for (let i = 0; i < 1000; i++) {
                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 16;
                 sb.currentCell = [1, 1, 1, 1];
-                const note = getSoloistNote(chord, null, 60, 440, 72, 'scalar', 12, false, sectionInfo);
+                const note = getSoloistNote(chord, null, 60, sb.lastFreq, 64, 'scalar', 12, false, sectionInfo);
                 if (note) {
                     noteCount++;
                     const primary = Array.isArray(note) ? note[0] : note;
@@ -329,10 +338,19 @@ describe('Soloist Engine Logic', () => {
             // Compare to mid-section
             let midNoteCount = 0;
             let midRootCount = 0;
+            sb.sessionSteps = 10000;
+            sb.busySteps = 0;
+            sb.lastFreq = null;
+            // Prime at step 16
+            for(let p=0; p<100; p++) {
+                sb.busySteps = 0;
+                getSoloistNote(chord, null, 16, sb.lastFreq, 64, 'scalar', 0, false, { sectionStart: 0, sectionEnd: 64 });
+            }
+
             for (let i = 0; i < 1000; i++) {
                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 16;
                 sb.currentCell = [1, 1, 1, 1];
-                const note = getSoloistNote(chord, null, 16, 440, 72, 'scalar', 0, false, { sectionStart: 0, sectionEnd: 64 });
+                const note = getSoloistNote(chord, null, 16, sb.lastFreq, 64, 'scalar', 0, false, { sectionStart: 0, sectionEnd: 64 });
                 if (note) {
                     midNoteCount++;
                     const primary = Array.isArray(note) ? note[0] : note;

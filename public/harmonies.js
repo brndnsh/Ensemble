@@ -401,12 +401,17 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         // Fundamental tones first, then color tones, but avoid semitone clashes with chord tones
         const chordTones = chord.intervals || [0, 4, 7];
         const hasMajor3rd = chordTones.includes(4);
+        const hasMinor3rd = chordTones.includes(3);
 
-        const colorTones = [0, 4, 7, 10, 11, 2, 9, 5].filter(i => {
+        const colorTones = [0, 4, 7, 3, 10, 11, 2, 9, 5].filter(i => {
             if (!scale.includes(i)) return false;
             
             // Special Avoid Note Rule: natural 4th (5) against Major 3rd (4)
             if (i === 5 && hasMajor3rd) return false;
+            
+            // Ensure we don't pick Major 3rd if chord is Minor, and vice versa
+            if (i === 4 && hasMinor3rd) return false;
+            if (i === 3 && hasMajor3rd) return false;
 
             // Avoid semitone clash with ANY fundamental chord tone
             const hasClash = chordTones.some(ct => {
@@ -415,11 +420,20 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             });
             // Exception: Maj7 (11) against Root (0) is fine if it's in scale
             if (hasClash && i === 11 && chordTones.includes(0)) return true;
-            // Exception: b9 (1) or #9 (3) against Root/2nd is okay in some contexts, 
-            // but for simple styles we avoid it.
+            
             return !hasClash;
         });
-        intervals = colorTones.slice(0, density);
+        
+        // Prioritize chord tones if possible
+        const prioritized = colorTones.sort((a, b) => {
+            const aIsTone = chordTones.includes(a);
+            const bIsTone = chordTones.includes(b);
+            if (aIsTone && !bIsTone) return -1;
+            if (!aIsTone && bIsTone) return 1;
+            return 0;
+        });
+
+        intervals = prioritized.slice(0, density);
         if (intervals.length === 0) intervals = [0, 7].filter(i => scale.includes(i));
     }
 
