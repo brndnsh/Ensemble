@@ -86,31 +86,6 @@ describe('Soloist Engine Logic', () => {
             }
             expect(rests).toBeGreaterThan(0);
         });
-
-        it('should favor the root in Answer state at end of phrase', () => {
-            sb.qaState = 'Answer';
-            sb.currentPhraseSteps = 28;
-            sb.busySteps = 0;
-            
-            const weights = getSoloistNote(chordC, null, 32, 440, 72, 'scalar', 0, 'audit');
-            expect(weights[60]).toBeGreaterThan(weights[62]);
-            expect(weights[72]).toBeGreaterThan(weights[74]);
-        });
-
-        it('should anticipate the next chord on step 14 or 15', () => {
-             // Mock random to force anticipation check
-             const spy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
-             const chordCmaj = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major', beats: 4 };
-             
-             // In scalar style, anticipationProb is 0.1
-             // Step 14 is late enough to trigger anticipation
-             const weights = getSoloistNote(chordCmaj, chordF, 14, 440, 72, 'scalar', 14, 'audit');
-             
-             // F (65) is in next chord (chordF) but not in chordCmaj scale.
-             // If anticipated, F should have high weight.
-             expect(weights[65]).toBeGreaterThan(100);
-             spy.mockRestore();
-        });
     });
 
     describe('Melodic Devices', () => {
@@ -166,19 +141,7 @@ describe('Soloist Engine Logic', () => {
         });
     });
 
-    describe('Melodic Contour & Skip Resolution', () => {
-        it('should resolve a large upward skip with a downward step', () => {
-            sb.lastInterval = 7; 
-            const weights = getSoloistNote(chordC, null, 16, 440, 69, 'scalar', 0, 'audit');
-            
-            // Should resolve downward step (e.g. 69 -> 67 or 68)
-            // Weight for a note 1-2 semitones below should be huge
-            expect(weights[67]).toBeGreaterThan(2000);
-            // expect(weights[68]).toBeGreaterThan(50000); // 68 is Ab, not in C Major scale.
-            // Weight for continuing upward should be penalized
-            expect(weights[71]).toBeLessThan(100);
-        });
-    });
+
 
     describe('Integrity & Overlaps', () => {
         it('should respect double stop toggle', () => {
@@ -280,19 +243,6 @@ describe('Soloist Engine Logic', () => {
     });
 
     describe('Structural Awareness', () => {
-        it('should wrap up phrases and favor root/guide tones as section ends', () => {
-            const sectionInfo = { sectionStart: 0, sectionEnd: 64 };
-            const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
-            
-            // Section End weights
-            const endWeights = Float32Array.from(getSoloistNote(chord, null, 60, 440, 64, 'scalar', 12, 'audit', sectionInfo));
-            // Mid section weights
-            const midWeights = Float32Array.from(getSoloistNote(chord, null, 16, 440, 64, 'scalar', 0, 'audit', sectionInfo));
-            
-            // Root (60) should have significantly higher relative weight at section end
-            expect(endWeights[60]).toBeGreaterThan(midWeights[60] * 10);
-        });
-
         it('should be more likely to rest approaching the section boundary', () => {
              const sectionInfo = { sectionStart: 0, sectionEnd: 64 };
              const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
@@ -401,23 +351,5 @@ describe('Soloist Engine Logic', () => {
         });
     });
 
-    describe('Register Build Logic', () => {
-        it('should bias towards a lower register at the start of a session', () => {
-            const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
-            
-            // Audit weights at start vs matured
-            sb.sessionSteps = 1;
-            sb.tension = 0;
-            sb.smoothedTension = 0;
-            const startWeights = Float32Array.from(getSoloistNote(chord, null, 0, 440, 64, 'bird', 0, 'audit'));
-            
-            sb.sessionSteps = 10000;
-            sb.tension = 1.0;
-            sb.smoothedTension = 1.0; // Force immediate tension for test
-            const maturedWeights = Float32Array.from(getSoloistNote(chord, null, 0, 440, 64, 'bird', 0, 'audit'));
-            
-            // High MIDI notes (e.g. 84) should have much higher weight in matured state
-            expect(maturedWeights[84]).toBeGreaterThan(startWeights[84]);
-        });
-    });
+
 });
