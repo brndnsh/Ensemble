@@ -172,9 +172,15 @@ export function getScaleForChord(chord, nextChord, style) {
         if (chord.quality.startsWith('maj') || chord.quality === 'major') {
              return [0, 2, 4, 5, 7, 9, 11]; 
         }
-        const isMinorQualityLocal = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality);
-        let base = (chord.quality === 'halfdim') ? [0, 1, 3, 5, 6, 8, 10] : (isMinorQualityLocal ? [0, 2, 3, 5, 6, 7, 10] : [0, 2, 3, 4, 5, 6, 7, 9, 10]);
-        if ((style === 'blues' || style === 'funk') && !isMinorQualityLocal) { if (!base.includes(4)) base.push(4); if (!base.includes(9)) base.push(9); }
+        const isMinorQualityLocal = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality) || (chord.quality.startsWith('m') && !chord.quality.startsWith('maj'));
+        
+        if (isMinorQualityLocal) {
+            // Disco/Funk/Blues: Minor chords should generally stay Dorian
+            if (chord.quality === 'halfdim') return [0, 1, 3, 5, 6, 8, 10]; // Locrian for ii-V-I in minor
+            return [0, 2, 3, 5, 7, 9, 10]; // Dorian
+        }
+
+        let base = [0, 2, 3, 4, 5, 6, 7, 9, 10];
         if (sb.tension > 0.7) base.push(11);
         return base.sort((a,b)=>a-b);
     }
@@ -225,7 +231,7 @@ export function getScaleForChord(chord, nextChord, style) {
     if (chord.quality === 'minor' || chord.quality.startsWith('m')) {
         const isActuallyMinor = chord.quality.startsWith('m') && !chord.quality.startsWith('maj');
         if (isActuallyMinor) {
-            if (style === 'bird' || gb.genreFeel === 'Jazz' || style === 'neo' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk' || style === 'bossa' || gb.genreFeel === 'Bossa Nova') {
+            if (style === 'bird' || gb.genreFeel === 'Jazz' || style === 'neo' || gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Funk' || style === 'bossa' || gb.genreFeel === 'Bossa Nova' || style === 'disco' || gb.genreFeel === 'Afrobeat') {
                 return [0, 2, 3, 5, 7, 9, 10]; 
             }
         }

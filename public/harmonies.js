@@ -454,14 +454,24 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         lastPlayedStep = step;
     }
 
-    // --- 6. Velocity Normalization (Anti-Clutter Scaling) ---
-    // If playing multiple notes (Double Stops/Chords), we must reduce per-voice velocity
-    // to keep the total acoustic energy constant and prevent volume spikes.
-    // Formula: v = base_v * (1 / sqrt(num_voices))
     const polyphonyComp = 1 / Math.sqrt(currentMidis.length || 1);
     
     currentMidis.forEach((midi, i) => {
-        const finalMidi = midi + liftShift + finalOctaveShift;
+        let finalMidi = midi + liftShift + finalOctaveShift;
+        
+        // Scale Integrity Check for soaring Disco trends
+        if (liftShift > 0) {
+            const pc = (finalMidi % 12 + 12) % 12;
+            const targetChordLocal = isAnticipating ? nextChord : chord;
+            const currentScale = getScaleForChord(targetChordLocal, null, 'smart');
+            const relPC = (pc - (targetChordLocal.rootMidi % 12) + 12) % 12;
+            
+            if (!currentScale.includes(relPC)) {
+                // Nudge to nearest scale tone
+                const nearestRel = currentScale.reduce((prev, curr) => Math.abs(curr - relPC) < Math.abs(prev - relPC) ? curr : prev);
+                finalMidi += (nearestRel - relPC);
+            }
+        }
         
         // --- 6. Articulation Logic (The "New Tricks") ---
         // These are gated by intensity to ensure they sound "earned".
