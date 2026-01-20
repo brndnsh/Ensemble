@@ -114,10 +114,28 @@ class MidiTrack {
 function getChordAtStep(step) {
     if (arranger.totalSteps === 0) return null;
     const targetStep = step % arranger.totalSteps;
+    
+    let sectionData = null;
+    if (arranger.sectionMap) {
+        for (let i = 0; i < arranger.sectionMap.length; i++) {
+            const s = arranger.sectionMap[i];
+            if (targetStep >= s.start && targetStep < s.end) {
+                sectionData = s;
+                break;
+            }
+        }
+    }
+
     for (let i = 0; i < arranger.stepMap.length; i++) {
         const entry = arranger.stepMap[i];
         if (targetStep >= entry.start && targetStep < entry.end) {
-            return { chord: entry.chord, stepInChord: targetStep - entry.start, chordIndex: i };
+            return { 
+                chord: entry.chord, 
+                stepInChord: targetStep - entry.start, 
+                chordIndex: i,
+                sectionStart: sectionData?.start || 0,
+                sectionEnd: sectionData?.end || arranger.totalSteps
+            };
         }
     }
     return null;
@@ -166,9 +184,9 @@ function fillBuffers(currentStep, timestamp = null) {
         let soloResult = null;
         if (sb.enabled && step >= sbBufferHead) {
             if (chordData) {
-                const { chord, stepInChord } = chordData;
+                const { chord, stepInChord, sectionStart, sectionEnd } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
-                soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord);
+                soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord, false, { sectionStart, sectionEnd });
                 
                 if (soloResult) {
                     const results = Array.isArray(soloResult) ? soloResult : [soloResult];
@@ -436,7 +454,8 @@ export function handleExport(options) {
                 }
 
                 if (includedTracks.includes('soloist')) {
-                    const soloResult = getSoloistNote(chord, nextChordData?.chord, globalStep, sb.lastFreq, sb.octave, sb.style, stepInChord, bb.lastFreq);
+                    const { sectionStart, sectionEnd } = chordData;
+                    const soloResult = getSoloistNote(chord, nextChordData?.chord, globalStep, sb.lastFreq, sb.octave, sb.style, stepInChord, false, { sectionStart, sectionEnd });
                     if (soloResult) {
                         const results = Array.isArray(soloResult) ? soloResult : [soloResult];
                         results.forEach(res => {
@@ -801,6 +820,7 @@ function handlePrime(steps) {
             }
 
             // 2. Prime Soloist
+            const { sectionStart, sectionEnd } = chordData;
             const soloResult = getSoloistNote(
                 chord, 
                 nextChordData?.chord, 
@@ -808,7 +828,9 @@ function handlePrime(steps) {
                 sb.lastFreq, 
                 sb.octave, 
                 sb.style, 
-                stepInChord
+                stepInChord,
+                true,
+                { sectionStart, sectionEnd }
             );
             
             if (soloResult) {

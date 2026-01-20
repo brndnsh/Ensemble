@@ -123,6 +123,6 @@ Reports an internal worker error.
 
 ## Synchronization Rules
 
-1.  **Step Mapping**: Both threads must use the same `arranger.stepMap` and `totalSteps` to ensure harmonic alignment.
+1.  **Step Mapping**: Both threads must use the same `arranger.stepMap`, `arranger.sectionMap`, and `totalSteps` to ensure harmonic and structural alignment.
 2.  **Lookahead**: The worker targets a `LOOKAHEAD` of 64 steps (typically 4 measures in 4/4) to prevent buffer underruns during CPU spikes.
 3.  **Priming**: During a `flush` operation, the worker can "prime" the engine by simulating multiple measures of playback to establish musical context (e.g., updating `bb.lastFreq`).

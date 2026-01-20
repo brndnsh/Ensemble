@@ -270,9 +270,10 @@ export function getScaleForChord(chord, nextChord, style) {
  * @param {string} style - The soloing style ID.
  * @param {number} stepInChord - The relative step index within the current chord.
  * @param {boolean} [isPriming=false] - Whether the engine is in a context-building priming phase.
+ * @param {Object} [sectionInfo] - Structural context including sectionStart and sectionEnd.
  * @returns {Object|Object[]|null} A note object, an array of note objects (for double stops), or null if resting.
  */
-export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, style, stepInChord, isPriming) {
+export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, style, stepInChord, isPriming, sectionInfo) {
     if (!currentChord) return null;
     
     let activeStyle = style;
@@ -316,6 +317,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     sb.tension = Math.max(0, Math.min(1, (measureIndex / 4) * (0.5 + intensity * 0.5)));
 
     // --- 2. Phrasing & Rest Logic ---
+    const totalSteps = arranger.totalSteps || 1;
+    const loopStep = step % totalSteps;
+    const stepsUntilSectionEnd = (sectionInfo) ? (sectionInfo.sectionEnd - loopStep) : 1000;
+    const isSectionEnding = stepsUntilSectionEnd > 0 && stepsUntilSectionEnd <= stepsPerMeasure;
+
     if (typeof sb.currentPhraseSteps === 'undefined' || (step === 0 && !sb.isResting)) {
         sb.currentPhraseSteps = 0; sb.notesInPhrase = 0; sb.qaState = 'Question'; sb.isResting = true; return null; 
     }
@@ -323,6 +329,31 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const phraseBars = sb.currentPhraseSteps / stepsPerMeasure;
     let restProb = (config.restBase * (2.0 - effectiveIntensity * 1.5)) + (phraseBars * config.restGrowth);
     
+    // --- NEW: Structural Awareness (Section Ends) ---
+    // If a section is ending, we want to either wrap up a phrase or prepare to rest.
+    if (isSectionEnding) {
+        const progress = 1.0 - (stepsUntilSectionEnd / stepsPerMeasure); // 0.0 at start of last measure, 1.0 at end
+        
+        if (!sb.isResting) {
+            // If we are currently playing, increase rest probability as we approach the end
+            // so we don't play right across the boundary awkwardly (unless high intensity)
+            if (progress > 0.5 && effectiveIntensity < 0.8) {
+                restProb += (progress * 0.5);
+            }
+            
+            // If we are VERY close to the end, forced rest or resolution
+            if (stepsUntilSectionEnd <= 2 && effectiveIntensity < 0.9) {
+                restProb = 1.0;
+            }
+        } else {
+            // If we are resting, maybe wait for the new section to start 
+            // unless we want to "lead in" (anticipate)
+            if (stepsUntilSectionEnd > 2) {
+                restProb += 0.2; // Stay resting a bit longer
+            }
+        }
+    }
+
     // --- NEW: Phrase Interlocking ---
     // Professional ensemble phrasing: soloist breathes when backgrounds are active.
     if (hb.enabled && hb.rhythmicMask > 0) {
@@ -507,6 +538,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
 
         if (isGuideTone) {
             weight += (activeStyle === 'minimal' ? 60 : 15);
+        }
+
+        // Structural Resolution: Favor landing on root/guide tones at section boundaries
+        if (isSectionEnding && stepsUntilSectionEnd <= 4) {
+            if (isRoot) weight += 200;
+            if (isGuideTone) weight += 100;
         }
 
         if (isRoot && activeStyle === 'minimal') {

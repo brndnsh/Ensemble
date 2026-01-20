@@ -117,6 +117,7 @@ export const ctx = {
  * @property {number} totalSteps - Total number of 16th note steps in the song.
  * @property {Array<{start: number, end: number, chord: Object}>} stepMap - Map of steps to chord objects.
  * @property {Array<{start: number, end: number, ts: string}>} measureMap - Map of measures to time signatures.
+ * @property {Array<{id: string, start: number, end: number, label: string}>} sectionMap - Map of sections to step ranges.
  * @property {Array<string>} history - Undo history stack (JSON strings).
  * @property {string} lastInteractedSectionId - ID of the last edited section.
  * @property {string} lastChordPreset - Name of the last loaded chord preset.
@@ -135,6 +136,7 @@ export const arranger = {
     totalSteps: 0,
     stepMap: [],
     measureMap: [],
+    sectionMap: [],
     // History for Undo
     history: [],
     lastInteractedSectionId: 's1',

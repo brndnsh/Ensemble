@@ -306,4 +306,64 @@ describe('Soloist Engine Logic', () => {
             expect(noteCountLate).toBeGreaterThan(noteCountStart);
         });
     });
+
+    describe('Structural Awareness', () => {
+        it('should wrap up phrases and favor root/guide tones as section ends', () => {
+            const sectionInfo = { sectionStart: 0, sectionEnd: 64 };
+            const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
+            
+            // At the end of a section (step 60-63 in a 64-step section)
+            let noteCount = 0;
+            let rootCount = 0;
+            for (let i = 0; i < 1000; i++) {
+                sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 16;
+                sb.currentCell = [1, 1, 1, 1];
+                const note = getSoloistNote(chord, null, 60, 440, 72, 'scalar', 12, false, sectionInfo);
+                if (note) {
+                    noteCount++;
+                    const primary = Array.isArray(note) ? note[0] : note;
+                    if (primary.midi % 12 === 0) rootCount++;
+                }
+            }
+            
+            // Compare to mid-section
+            let midNoteCount = 0;
+            let midRootCount = 0;
+            for (let i = 0; i < 1000; i++) {
+                sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 16;
+                sb.currentCell = [1, 1, 1, 1];
+                const note = getSoloistNote(chord, null, 16, 440, 72, 'scalar', 0, false, { sectionStart: 0, sectionEnd: 64 });
+                if (note) {
+                    midNoteCount++;
+                    const primary = Array.isArray(note) ? note[0] : note;
+                    if (primary.midi % 12 === 0) midRootCount++;
+                }
+            }
+            
+            // At section end, it should be MORE likely to favor the root if it plays
+            const rootRatioEnd = rootCount / noteCount;
+            const rootRatioMid = midRootCount / midNoteCount;
+            expect(rootRatioEnd).toBeGreaterThan(rootRatioMid);
+        });
+
+        it('should be more likely to rest approaching the section boundary', () => {
+             const sectionInfo = { sectionStart: 0, sectionEnd: 64 };
+             const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
+
+             let midNoteCount = 0;
+             for (let i = 0; i < 1000; i++) {
+                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 16;
+                 if (getSoloistNote(chord, null, 16, 440, 72, 'scalar', 0, false, sectionInfo)) midNoteCount++;
+             }
+
+             let endNoteCount = 0;
+             for (let i = 0; i < 1000; i++) {
+                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 16;
+                 // Step 62 is very close to end (64)
+                 if (getSoloistNote(chord, null, 62, 440, 72, 'scalar', 14, false, sectionInfo)) endNoteCount++;
+             }
+
+             expect(midNoteCount).toBeGreaterThan(endNoteCount);
+        });
+    });
 });

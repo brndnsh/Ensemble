@@ -784,6 +784,28 @@ export function updateProgressionCache() {
     });
     arranger.totalSteps = current;
 
+    // Build Section Map for soloist/conductor awareness
+    arranger.sectionMap = [];
+    let sectionAcc = 0;
+    arranger.sections.forEach(section => {
+        const repeats = section.repeat || 1;
+        const tsName = section.timeSignature || arranger.timeSignature;
+        const ts = TIME_SIGNATURES[tsName] || TIME_SIGNATURES['4/4'];
+        const { chords: singleIterationChords } = parseProgressionPart(section.value, section.key || arranger.key, tsName, []);
+        let iterationSteps = 0;
+        singleIterationChords.forEach(c => {
+            iterationSteps += Math.round(c.beats * ts.stepsPerBeat);
+        });
+        const totalSectionSteps = iterationSteps * repeats;
+        arranger.sectionMap.push({
+            id: section.id,
+            start: sectionAcc,
+            end: sectionAcc + totalSectionSteps,
+            label: section.label
+        });
+        sectionAcc += totalSectionSteps;
+    });
+
     // Build Measure Map for absolute step tracking with variable time signatures
     arranger.measureMap = [];
     
