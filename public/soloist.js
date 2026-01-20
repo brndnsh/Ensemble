@@ -271,7 +271,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
         const rootMidi = targetChord.rootMidi;
         const scaleTones = scaleIntervals.map(i => rootMidi + i);
         const maturityFactor = Math.min(1.0, (sb.sessionSteps || 0) / 1024);
-        const effectiveIntensity = Math.min(1.0, intensity + (maturityFactor * 0.2));
         sb.smoothedTension = (sb.smoothedTension || 0) * 0.8 + (sb.tension || 0) * 0.2;
         const registerBuildOffset = -24 * (1.0 - maturityFactor);
         const dynamicCenter = centerMidi + registerBuildOffset + Math.floor(sb.smoothedTension * config.registerSoar * maturityFactor * (0.5 + intensity));
