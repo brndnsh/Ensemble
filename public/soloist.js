@@ -306,11 +306,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
                 if ([3, 4, 10, 11].includes(interval)) weight += 1500;
             }
             if (sb.qaState === 'Answer') {
-                if (interval === 0) weight += 5000;
-                if ([3, 4, 10, 11].includes(interval)) weight += 2500;
+                if (interval === 0) weight += 200;
+                if ([3, 4, 10, 11].includes(interval)) weight += 100;
             }
             if (dist === 0) {
-                weight -= 500;
+                weight -= 800;
                 if (lastInterval === 0) weight -= 1000;
             }
             if (dist > 0 && dist <= 2) weight += 100;
@@ -488,11 +488,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
             } else weight -= 15;
         }
         if (sb.qaState === 'Answer') { 
-            if (isRoot) weight += (activeStyle === 'minimal' ? 1000 : 5000); 
-            if (isGuideTone) weight += (activeStyle === 'minimal' ? 500 : 2500); 
+            if (isRoot) weight += (activeStyle === 'minimal' ? 200 : 200); 
+            if (isGuideTone) weight += (activeStyle === 'minimal' ? 100 : 100); 
         }
         if (dist === 0) {
-            weight -= 500;
+            weight -= 800;
             if (lastInterval === 0) weight -= 1000;
         }
         if (dist > 0 && dist <= 2) weight += (100 + (ctx.bpm / 100) * 20); 

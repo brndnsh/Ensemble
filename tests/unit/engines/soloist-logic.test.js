@@ -428,6 +428,36 @@ describe('Soloist Engine Logic', () => {
             // Allow some repeats, but not > 50%
             expect(repeats / total).toBeLessThan(0.5);
         });
+
+        it('should prevent latching in Answer mode with high intensity', () => {
+             // Force Answer mode where weights are highest
+             sb.qaState = 'Answer';
+             sb.sessionSteps = 1000;
+             const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
+             
+             let repeats = 0;
+             let lastMidi = 60;
+             let total = 0;
+             let lastFreq = 261.63;
+
+             for(let i=0; i<30; i++) {
+                 sb.isResting = false;
+                 sb.busySteps = 0;
+                 // Mock motif buffer check to avoid "undefined" crash in mocked state if needed
+                 sb.motifBuffer = [];
+                 
+                 const res = getSoloistNote(chord, null, i*4, lastFreq, 64, 'scalar', 0);
+                 if (res) {
+                     const note = Array.isArray(res) ? res[0] : res;
+                     if (note.midi === lastMidi) repeats++;
+                     lastMidi = note.midi;
+                     lastFreq = getFrequency(note.midi);
+                     total++;
+                 }
+             }
+             // Should not be > 50% repeats even in Answer mode
+             if (total > 0) expect(repeats / total).toBeLessThan(0.5);
+        });
     });
 
     describe('Register Build Logic', () => {
