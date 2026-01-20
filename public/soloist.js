@@ -288,7 +288,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const measureStep = step % stepsPerMeasure;
     const stepInBeat = measureStep % stepsPerBeat;
     const intensity = ctx.bandIntensity || 0.5;
-    const centerMidi = 72; // Standard soloist register anchor
+    const centerMidi = 64; // Adjusted to E4 to start lower
+    const MAX_GUITAR_MIDI = 86; // D6 Ceiling
     
     if (!isPriming) sb.sessionSteps = (sb.sessionSteps || 0) + 1;
     
@@ -519,7 +520,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const dynamicCenter = centerMidi + Math.floor(sb.smoothedTension * config.registerSoar * (0.5 + intensity));
     const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
     const minMidi = Math.max(0, Math.min(dynamicCenter - 12, lastMidi - 14)); 
-    const maxMidi = Math.min(127, Math.max(dynamicCenter + 12, lastMidi + 14));
+    const maxMidi = Math.min(MAX_GUITAR_MIDI, Math.max(dynamicCenter + 12, lastMidi + 14));
 
     let totalWeight = 0;
     const lastInterval = sb.lastInterval || 0; 
