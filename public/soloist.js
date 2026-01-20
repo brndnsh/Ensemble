@@ -514,6 +514,27 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, baseOcta
         let randomVal = Math.random() * totalWeight;
         for (let m = minMidi; m <= maxMidi; m++) { const w = CANDIDATE_WEIGHTS[m]; if (w > 0) { randomVal -= w; if (randomVal <= 0) { selectedMidi = m; break; } } }
     }
+
+    // --- Safety Nudge: Anti-Latching ---
+    // If we selected the same note again (despite penalties), force a move 80% of the time.
+    if (selectedMidi === lastMidi && !sb.isReplayingMotif && Math.random() < 0.8) {
+        const getValidNeighbor = (dir) => {
+            for (let i = 1; i <= 4; i++) {
+                const candidate = selectedMidi + (i * dir);
+                const pc = (candidate % 12 + 12) % 12;
+                if (scaleIntervals.includes((pc - (rootMidi % 12) + 12) % 12)) return candidate;
+            }
+            return null;
+        };
+        
+        const upper = getValidNeighbor(1);
+        const lower = getValidNeighbor(-1);
+        
+        if (upper && lower) selectedMidi = Math.random() < 0.5 ? upper : lower;
+        else if (upper) selectedMidi = upper;
+        else if (lower) selectedMidi = lower;
+    }
+
     sb.lastInterval = selectedMidi - lastMidi;
 
     if (stepInBeat === 0 && Math.random() < (config.deviceProb * 0.7 * (0.2 + maturityFactor * 0.8))) {
