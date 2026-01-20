@@ -312,14 +312,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     
     if (!isPriming) sb.sessionSteps = (sb.sessionSteps || 0) + 1;
     
-    // --- Session Maturity Logic ---
-    // The soloist becomes more "confident" and expressive as the jam progresses (0-5 mins)
+    // Effective intensity grows slightly with session steps (0-5 mins)
     // 16 steps = 1 measure. 1024 steps = 64 measures (~2-3 mins).
     const maturityFactor = Math.min(1.0, (sb.sessionSteps || 0) / 1024);
-    const warmupFactor = Math.min(1.0, sb.sessionSteps / (stepsPerMeasure * 2));
-    
-    // Effective intensity grows slightly with maturity
-    const effectiveIntensity = Math.min(1.0, intensity + (maturityFactor * 0.25));
+    const effectiveIntensity = Math.min(1.0, intensity + (maturityFactor * 0.2));
 
     // --- 1. Busy/Device Handling ---
     if (sb.deviceBuffer && sb.deviceBuffer.length > 0) {
@@ -390,7 +386,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     // Maturity reduces rest probability slightly (more talkative)
     restProb = Math.max(0.05, restProb - (maturityFactor * 0.15));
     
-    restProb += (1.0 - warmupFactor) * 0.4;
     if (sb.notesInPhrase >= config.maxNotesPerPhrase) restProb += 0.4;
     
     if (sb.isResting) {
@@ -546,11 +541,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     sb.smoothedTension = (sb.smoothedTension || 0) * 0.8 + (sb.tension || 0) * 0.2;
     
     // --- Register Build Logic ---
-    // Start conservative (lower) and build up to dynamic soaring.
-    // We bias the center down during warmup and limit the 'soar' potential.
-    const soarLimit = config.registerSoar * warmupFactor;
-    // Stronger Register Build: Start 2 octaves lower and build up to centerMidi
-    const registerBuildOffset = -24 * (1.0 - warmupFactor);
+    // Start conservative (lower) and build up over the session (0-5 mins).
+    const soarLimit = config.registerSoar * maturityFactor;
+    const registerBuildOffset = -12 * (1.0 - maturityFactor);
     const dynamicCenter = centerMidi + registerBuildOffset + Math.floor(sb.smoothedTension * soarLimit * (0.5 + intensity));
     
     const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
@@ -626,6 +619,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         else if (dist === 12) weight += 10; 
         else if (dist > 7) weight -= 500; 
 
+        // Register Build: Penalize notes that are significantly higher than the build offset
+        const relToCenter = m - dynamicCenter;
+        if (relToCenter > 0) weight -= (relToCenter * 10);
+
         if (distFromCenter(m, dynamicCenter) > 7) weight -= (distFromCenter(m, dynamicCenter) - 7) * 5; 
         
         weight = Math.max(0.1, weight);
@@ -642,7 +639,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     sb.lastInterval = selectedMidi - lastMidi;
 
     // --- 6. Melodic Devices ---
-    if (stepInBeat === 0 && Math.random() < (config.deviceProb * 0.7 * warmupFactor)) {
+    if (stepInBeat === 0 && Math.random() < (config.deviceProb * 0.7 * (0.5 + maturityFactor * 0.5))) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         if (deviceType === 'birdFlurry') {
             let flurry = []; let curr = selectedMidi + 3; 
@@ -690,7 +687,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     }
 
     let notes = [];
-    const doubleStopChance = (config.doubleStopProb + (maturityFactor * 0.2)) * (stepInBeat === 2 ? 1.2 : 0.6) * warmupFactor;
+    const doubleStopChance = (config.doubleStopProb + (maturityFactor * 0.2)) * (stepInBeat === 2 ? 1.2 : 0.6) * (0.5 + maturityFactor * 0.5);
     if (sb.doubleStops && Math.random() < doubleStopChance) {
         let dsInt = [5, 7, 9, 12][Math.floor(Math.random() * 4)];
         notes.push({ midi: selectedMidi + dsInt, velocity: 0.8, isDoubleStop: true });
