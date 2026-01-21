@@ -2,8 +2,8 @@
 .performance-ending-section {
     margin-bottom: 1.5rem;
     padding: 1rem;
-    background: rgba(38, 139, 210, 0.05); /* Solarized Blue tint */
-    border: 1px solid rgba(38, 139, 210, 0.1);
+    background: color-mix(in srgb, var(--accent-color), transparent 95%);
+    border: 1px solid color-mix(in srgb, var(--accent-color), transparent 90%);
     border-radius: 8px;
 }
 
@@ -413,8 +413,8 @@ select, input[type="range"] {
 }
 .section-card.active {
     border-color: var(--accent-color);
-    box-shadow: 0 0 10px rgba(38, 139, 210, 0.2);
-    background: rgba(38, 139, 210, 0.05);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--accent-color), transparent 80%);
+    background: color-mix(in srgb, var(--accent-color), transparent 95%);
 }
 
 .section-card.menu-active {

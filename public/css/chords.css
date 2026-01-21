@@ -1,5 +1,4 @@
-
-/* --- Chord Visualizer --- */
+/* --- Chord Visualizer Base --- */
 .display-area {
     background: var(--input-bg);
     border-radius: 8px;
@@ -7,13 +6,13 @@
     margin-bottom: 0.5rem;
     position: relative;
     overflow-x: hidden;
-    overflow-y: auto; /* Allow scrolling for long forms */
-    min-height: 450px;
+    overflow-y: auto;
+    min-height: 200px;
     height: 60vh;
     max-height: 750px;
     border: 1px solid var(--border-color);
     box-sizing: border-box;
-    display: block; /* Allows natural scroll behavior */
+    display: block;
     scroll-behavior: smooth;
     overscroll-behavior: contain;
 }
@@ -34,18 +33,6 @@
     min-height: 0;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Active Section Highlighting */
-.section-block.active-section {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 20px rgba(38, 139, 210, 0.15);
-    background: var(--step-bg-hover);
-}
-
-.section-block:hover {
-    border-color: var(--accent-color);
-    background: var(--step-bg-hover);
 }
 
 .section-block-header {
@@ -69,70 +56,15 @@
     opacity: 0.2;
 }
 
-/* Seamless Section Merging */
-.section-block:has(+ .section-block.seamless) {
-    margin-bottom: 0;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-    border-bottom: none;
-    padding-bottom: 0.2rem; /* Keep a little padding for content */
-}
-
-.section-block.seamless {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-}
-
-.section-block.seamless .section-block-header {
-    display: none;
-}
-
-.chord-maximized .section-block:has(+ .section-block.seamless) {
-    margin-bottom: 0 !important;
-}
-
-.chord-maximized .section-block.seamless {
-    margin-top: 0 !important;
-}
-.key-label {
-    position: absolute;
-    top: 0;
-    left: 0;
-    font-size: 0.55rem;
-    color: var(--accent-color);
-    background: var(--panel-color); /* Opaque to read over chord if tight */
-    padding: 1px 4px 2px 2px;
-    border-bottom-right-radius: 4px;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    z-index: 5;
-    font-weight: bold;
-    pointer-events: none;
-    line-height: 1;
-    opacity: 0.9;
-}
-
-.measure-box.has-key-label {
-    border-left: 2px solid var(--accent-color) !important;
-}
-
-.chord-maximized .key-label {
-    font-size: 0.7rem; /* Larger in max view */
-    padding: 2px 6px;
-}
-
 .section-block-content {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
 }
 
 @media (min-width: 600px) {
     .section-block-content {
-        grid-template-columns: repeat(4, 1fr); /* 4 columns on tablets/desktop */
+        grid-template-columns: repeat(4, 1fr);
         gap: 0.4rem;
     }
 }
@@ -141,19 +73,14 @@
     display: flex;
     flex-direction: row;
     gap: 0;
-    background: var(--panel-color); /* Match maximized view */
+    background: var(--panel-color);
     border-radius: 4px;
     padding: 0;
-    border: 1px solid var(--border-color); /* Match maximized view */
+    border: 1px solid var(--border-color);
     min-width: 0; 
     overflow: hidden;
     position: relative;
-    width: 100%; /* Fill the grid cell */
-}
-
-/* Vertical line between chords in a measure */
-.measure-box .chord-card:not(:last-child) {
-    border-right: 1px solid rgba(255, 255, 255, 0.05); /* Match maximized view */
+    width: 100%;
 }
 
 .chord-card {
@@ -162,112 +89,211 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    background: transparent; /* Match maximized view */
+    background: transparent;
     padding: 0.2rem;
-    border-radius: 0; /* Squared for measure block look */
+    border-radius: 0;
     border: none;
     transition: background-color 0.2s, color 0.2s, transform 0.1s;
     cursor: pointer;
     min-width: 0; 
-    min-height: 40px; /* Reduced from 70px to allow long songs to shrink */
+    min-height: 40px;
     max-height: 120px; 
     text-align: center;
     color: var(--text-color);
     font-weight: 600;
     text-transform: none;
     line-height: 1;
+    --base-size: clamp(1rem, 2.5vw, 1.4rem);
+    font-size: calc(var(--base-size) * var(--font-scale, 1));
 }
 
-.chord-card.minor {
-    color: var(--soloist-color);
-}
-
-.chord-card.aug {
-    color: #a78bfa; /* Violet / Light Purple */
-}
-
-.suffix {
-    font-size: 0.6em;
-    vertical-align: super;
-    margin-left: 1px;
-    opacity: 0.8;
-}
-
-.root {
-    display: inline-block;
-}
-
-.bass-note {
-    font-size: 0.7em;
-    opacity: 0.7;
-    margin-left: 1px;
-    font-weight: 400;
-}
-
-/* Dynamic sizing for short progressions */
-#chordVisualizer[data-total-measures="1"] .chord-card,
-#chordVisualizer[data-total-measures="2"] .chord-card,
-#chordVisualizer[data-total-measures="3"] .chord-card,
-#chordVisualizer[data-total-measures="4"] .chord-card {
-    min-height: 120px;
-    font-size: 2rem;
-}
-
-#chordVisualizer[data-total-measures="5"] .chord-card,
-#chordVisualizer[data-total-measures="6"] .chord-card,
-#chordVisualizer[data-total-measures="7"] .chord-card,
-#chordVisualizer[data-total-measures="8"] .chord-card {
-    min-height: 100px;
-    font-size: 1.8rem;
-}
-
-#chordVisualizer[data-total-measures="9"] .chord-card,
-#chordVisualizer[data-total-measures="10"] .chord-card,
-#chordVisualizer[data-total-measures="11"] .chord-card,
-#chordVisualizer[data-total-measures="12"] .chord-card {
-    min-height: 80px;
-    font-size: 1.5rem;
-}
-
-#chordVisualizer[data-total-measures="13"] .chord-card,
-#chordVisualizer[data-total-measures="14"] .chord-card,
-#chordVisualizer[data-total-measures="15"] .chord-card,
-#chordVisualizer[data-total-measures="16"] .chord-card {
-    min-height: 60px;
-    font-size: 1.3rem;
-}
-
-
-@media (min-width: 900px) {
-    .chord-card {
-        font-size: clamp(0.9rem, 2.2vh, 1.2rem);
-    }
-}
+.chord-card.minor { color: var(--soloist-color); }
+.chord-card.aug { color: #a78bfa; }
 
 .chord-card.active {
     background: var(--accent-color);
-    color: white;
+    color: white !important;
     z-index: 10;
     box-shadow: 0 0 15px var(--accent-color);
-    animation: activePulse 2s infinite ease-in-out;
 }
 
 @keyframes activePulse {
-    0% { filter: brightness(1); }
-    50% { filter: brightness(1.2); }
-    100% { filter: brightness(1); }
+    0% { opacity: 1; }
+    50% { opacity: 0.8; }
+    100% { opacity: 1; }
 }
 
-.chord-maximized header {
-    display: flex !important;
-    z-index: 10001;
+.root { display: inline-block; }
+.suffix { font-size: 0.6em; vertical-align: super; margin-left: 1px; opacity: 0.8; }
+.bass-note { font-size: 0.7em; opacity: 0.7; margin-left: 1px; font-weight: 400; }
+
+/* --- Maximized View (iReal Pro Style) --- */
+.chord-maximized .display-area {
     position: fixed;
-    top: 0;
+    top: 80px;
     left: 0;
     width: 100%;
+    height: calc(100vh - 80px);
+    max-height: none !important;
+    z-index: 9999;
+    background: var(--bg-color);
+    padding: 1.5vh 1.5rem;
+    border-radius: 0;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
 }
 
-.chord-maximized .sidebar-column,
+.chord-maximized .section-block {
+    max-width: 1200px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-bottom: 1.5vh;
+    cursor: default;
+    flex: 0 1 auto;
+}
+
+.chord-maximized .section-block-header {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.chord-maximized .section-block-content {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1vh;
+}
+
+.chord-maximized .measure-box {
+    border: 1.5px solid var(--border-color);
+    border-radius: 6px;
+    min-height: 0;
+    flex-grow: 1;
+}
+
+.chord-maximized .chord-card {
+    --base-size: clamp(1.5rem, 8vh, 4rem);
+    padding: 0.5vh;
+}
+
+.chord-maximized .chord-card.active {
+    animation: activePulse 2s infinite ease-in-out;
+}
+
+/* --- Mobile / Small Screen Polish --- */
+@media (max-width: 600px) {
+    /* Standard View: Increase font slightly */
+    .chord-card {
+        --base-size: clamp(1.15rem, 4.5vw, 1.4rem);
+    }
+
+    /* Maximized View: Tone down the scale */
+    .chord-maximized .display-area { 
+        top: 64px; 
+        height: calc(100vh - 64px); 
+        padding: 1vh 0.5rem;
+    }
+    
+    .chord-maximized .chord-card {
+        --base-size: clamp(1.25rem, 6vh, 2.5rem);
+        padding: 0.25vh;
+    }
+
+    .chord-maximized .section-block-content { 
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.5vh; 
+    }
+
+    .chord-maximized .measure-box { 
+        border-width: 1px;
+    }
+}
+
+/* Height-based refinements for landscape mobile */
+@media (max-height: 500px) {
+    .chord-maximized .display-area { padding: 0.5vh 0.5rem; }
+    .chord-maximized .section-block-content { gap: 0.5vh; }
+    .chord-maximized .chord-card { --base-size: clamp(1rem, 12vh, 2rem); }
+}
+
+/* --- Controls & Labels --- */
+.key-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 0.55rem;
+    color: var(--orange);
+    background: var(--panel-color);
+    padding: 1px 4px 2px 2px;
+    border-bottom-right-radius: 4px;
+    z-index: 20;
+    font-weight: bold;
+    opacity: 1;
+    border-right: 1px solid rgba(203, 75, 22, 0.3);
+    border-bottom: 1px solid rgba(203, 75, 22, 0.3);
+}
+
+.chord-maximized .key-label { 
+    font-size: 0.65rem; 
+    padding: 0;
+    background: none;
+    color: #ff7b00;
+    top: 2px;
+    left: 4px;
+    border: none;
+    box-shadow: none;
+    opacity: 0.6; /* Subtle enough to not block text */
+    z-index: 1; /* Below chord text if they overlap */
+    pointer-events: none;
+}
+
+.measure-box.has-key-label {
+    border-left: 2px solid #ff7b00 !important;
+}
+
+/* Ensure minor/aug colors are high-priority in maximized view */
+.chord-maximized .chord-card.minor { color: var(--soloist-color) !important; }
+.chord-maximized .chord-card.aug { color: #a78bfa !important; }
+
+/* Ensure visibility when the underlying chord is active */
+.measure-box:has(.chord-card.active) .key-label {
+    color: white; /* Contrast against blue background */
+    opacity: 0.8;
+}
+
+
+#maximizeChordBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.chord-maximized #maximizeChordBtn {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.5rem;
+    width: 44px;
+    height: 44px;
+    background: var(--accent-color);
+    color: white;
+    border-radius: 50%;
+    z-index: 10005;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.chord-maximized header { display: flex !important; position: fixed; top: 0; width: 100%; z-index: 10001; }
+.chord-maximized .sidebar-column, 
 .chord-maximized .mobile-tabs-nav,
 .chord-maximized #panel-visualizer,
 .chord-maximized #activeSectionLabel,
@@ -276,282 +302,4 @@
 .chord-maximized #userPresetsContainer,
 .chord-maximized #editArrangementBtn {
     display: none !important;
-}
-
-.chord-maximized .app-main-layout {
-    padding: 0;
-    margin: 0;
-    max-width: none;
-    height: 100vh;
-}
-
-.chord-maximized .main-column {
-    width: 100%;
-    height: 100vh;
-}
-
-.chord-maximized #panel-arranger {
-    position: fixed;
-    top: 80px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 10002;
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    margin: 0;
-}
-
-@media (max-width: 600px) {
-    .chord-maximized #panel-arranger {
-        top: 64px;
-    }
-}
-
-.chord-maximized #panel-arranger .panel-header {
-    display: block;
-    position: static;
-}
-
-.chord-maximized #panel-arranger .panel-header > *:not(.panel-header-controls) {
-    display: none;
-}
-
-.chord-maximized #panel-arranger .panel-header-controls > *:not(.key-controls),
-.chord-maximized #panel-arranger .key-controls > *:not(#maximizeChordBtn) {
-    display: none;
-}
-
-/* Maximized "Chart" View */
-.chord-maximized .display-area {
-    position: fixed;
-    top: 80px;
-    left: 0;
-    width: 100%;
-    height: calc(100vh - 80px);
-    max-height: none !important; /* CRITICAL: Override standard view max-height */
-    z-index: 9999;
-    background: var(--bg-color);
-    color: var(--text-color);
-    padding: 0.5rem 1rem;
-    border-radius: 0;
-    overflow-y: auto; /* Enable scrolling */
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center horizontally */
-    overscroll-behavior: contain;
-}
-
-/* Smart centering: Pushes content to center if space allows, but respects top/bottom flow if scrolling needed */
-.chord-maximized .display-area::before,
-.chord-maximized .display-area::after {
-    content: '';
-    flex: 1;
-    min-height: 1rem; /* Minimum padding */
-}
-
-@media (max-width: 600px) {
-    .chord-maximized .display-area {
-        top: 64px;
-        height: calc(100vh - 64px);
-    }
-}
-
-.chord-maximized .section-block {
-    max-width: 900px; /* Slightly wider for better space usage */
-    width: 100%;
-    background: transparent;
-    border: none;
-    padding: 0;
-    margin-bottom: 0.5rem;
-    cursor: default;
-    flex: 0 1 auto; /* Only take space needed, but shrink to fit */
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-.chord-maximized .section-block-content {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* Back to 4 columns */
-    grid-auto-rows: auto; /* Rows only as tall as their content */
-    gap: 4px; /* Increased gap for better distinction between measures */
-    min-height: 0;
-}
-
-.chord-maximized .measure-box {
-    background: var(--panel-color);
-    border: 1px solid var(--border-color); /* Individual borders for 'island' look */
-    border-radius: 4px; /* Rounded corners for each measure */
-    padding: 0 4px; /* Internal padding to create the 'island' chord effect */
-    position: relative;
-    height: 100%;
-    display: flex; /* Ensure chords fill bar height */
-}
-
-.chord-maximized .measure-box .chord-card:not(:last-child) {
-    border-right: 1px solid rgba(255, 255, 255, 0.05); /* Very subtle internal divider */
-}
-
-.chord-maximized #chordVisualizer .chord-card {
-    color: var(--text-color);
-    height: 100%;
-    flex: 1;
-    min-height: 5vh; /* Reduced from 10vh to support 32+ bar charts */
-    max-height: 40vh; /* Increased from 20vh to fill more vertical space */
-    font-size: clamp(1rem, 5vh, 3rem); /* Larger font for larger space */
-    font-family: inherit;
-    letter-spacing: -0.02em;
-    border: none;
-    box-shadow: none;
-    display: flex;
-    align-items: center; /* Center vertically (was baseline) */
-    justify-content: center;
-    line-height: 1; /* Tighten line height to ensure precise centering */
-}
-
-.chord-maximized #chordVisualizer .chord-card.minor {
-    color: var(--soloist-color);
-}
-
-.chord-maximized .chord-card.active {
-    background: var(--accent-color);
-    color: white;
-    animation: none;
-    box-shadow: none;
-}
-
-#maximizeChordBtn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    padding: 0;
-    font-size: 0.85rem;
-    z-index: 50;
-    transition: all 0.2s;
-}
-
-.chord-maximized #maximizeChordBtn {
-    position: fixed;
-    top: 6rem; /* High up but below the main header */
-    right: 1.5rem;
-    width: 48px; /* Larger touch target for mobile */
-    height: 48px;
-    font-size: 1.4rem;
-    background: var(--accent-color);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    z-index: 10005;
-    display: flex !important; /* Force flex display */
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-@media (max-width: 600px) {
-    .chord-maximized #maximizeChordBtn {
-        top: 4.5rem; /* Tighter against the top on mobile */
-        right: 0.75rem;
-        width: 40px;
-        height: 40px;
-        font-size: 1.1rem;
-    }
-}
-
-#maximizeChordBtn:hover {
-    background: var(--card-bg-hover);
-    transform: scale(1.1);
-}
-
-.chord-maximized #maximizeChordBtn:hover {
-    background: var(--accent-color);
-    filter: brightness(1.2);
-    transform: scale(1.15);
-}
-
-
-.chord-maximized .active-section-label {
-    position: fixed;
-    bottom: 1rem;
-    left: 1.5rem;
-    background: var(--panel-color);
-    color: var(--accent-color);
-    border: 1px solid var(--accent-color);
-    padding: 0.3rem 1rem;
-    border-radius: 50px;
-    z-index: 10000;
-    font-size: 0.75rem;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    backdrop-filter: blur(8px);
-}
-
-
-
-
-
-@media (max-width: 800px) {
-    .chord-maximized .section-block-content {
-        grid-template-columns: repeat(4, 1fr); /* Force 4 measures even on small tablets for density */
-    }
-    .chord-maximized .chord-card {
-        min-height: 60px;
-        font-size: 1.2rem;
-    }
-}
-
-
-@media (max-width: 600px) {
-    .display-area {
-        max-height: 300px;
-    }
-    /* Ensure maximized view ignores the 300px limit and stays full screen */
-    .chord-maximized .display-area {
-        max-height: 100vh;
-        height: 100vh;
-        padding: 0.5rem; /* Tighten padding */
-    }
-    .chord-maximized .section-block-content {
-        grid-template-columns: repeat(4, 1fr); /* 4 columns even on mobile for maximized density */
-        gap: 2px; /* Slightly tighter gaps on mobile */
-    }
-    .chord-maximized .measure-box {
-        padding: 0 2px; /* Tighter internal padding for mobile */
-    }
-    .chord-maximized .chord-card {
-        min-height: 40px; /* Reduced from 50px */
-        font-size: clamp(0.9rem, 4vh, 1.5rem); /* Slightly smaller but scaled */
-    }
-    .chord-maximized .section-block {
-        margin-bottom: 0.4rem; /* Reduced from 1rem */
-    }
-}
-
-
-.measure-btn {
-    background: var(--panel-color);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 0.3rem 0.6rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    min-width: 32px;
-    transition: all 0.2s;
-}
-
-.measure-btn:hover {
-    background: var(--card-bg-hover);
-    color: var(--text-color);
-}
-
-.measure-btn.active {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: white;
-    font-weight: bold;
 }

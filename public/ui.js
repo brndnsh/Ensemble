@@ -549,7 +549,7 @@ export function updateKeySelectLabels() {
     const currentValue = ui.keySelect.value;
     Array.from(ui.keySelect.options).forEach(opt => {
         const root = opt.value;
-        opt.textContent = `Key: ${formatUnicodeSymbols(root)}${arranger.isMinor ? 'm' : ''}`;
+        opt.textContent = `${formatUnicodeSymbols(root)}${arranger.isMinor ? 'm' : ''}`;
     });
     // Force browser to update the displayed label of the select
     ui.keySelect.value = currentValue;

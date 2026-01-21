@@ -1,4 +1,46 @@
 
+/* --- Mobile Polish & Tiny Screens --- */
+@media (max-width: 380px) {
+    .genre-btn {
+        font-size: 0.75rem;
+        padding: 0.6rem 0.2rem;
+    }
+
+    .tab-item {
+        padding: 0.5rem 0.6rem;
+    }
+
+    .tab-btn {
+        font-size: 0.85rem;
+    }
+
+    h1 {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 340px) {
+    .key-controls {
+        grid-template-columns: 32px 1fr 1fr 34px 26px 26px;
+        gap: 0.15rem;
+    }
+    
+    .header-btn {
+        font-size: 0.75rem;
+    }
+}
+
+/* Ensure touch targets have adequate spacing on all mobile */
+@media (max-width: 900px) {
+    input[type="range"] {
+        height: 24px; /* Easier to grab on touch */
+    }
+    
+    .panel-header-controls {
+        gap: 0.25rem;
+    }
+}
+
 /* --- Desktop / Tablet Grid Layout --- */
 @media (min-width: 900px) {
     .app-main-layout {

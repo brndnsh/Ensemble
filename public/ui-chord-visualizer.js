@@ -34,6 +34,8 @@ export function renderChordVisualizer(ui) {
     const totalMeasures = sections.reduce((acc, s) => acc + s.measures.length, 0);
     ui.chordVisualizer.dataset.totalMeasures = totalMeasures;
 
+    const isMaximized = document.body.classList.contains('chord-maximized');
+
     // DOM RECYCLING STRATEGY
     const existingCards = Array.from(ui.chordVisualizer.querySelectorAll('.chord-card'));
     const progressionChanged = existingCards.length !== arranger.progression.length;
@@ -61,7 +63,12 @@ export function renderChordVisualizer(ui) {
                     const notation = arranger.notation || 'roman';
                     const disp = chord.display ? chord.display[notation] : null;
                     const html = `<span class="root">${formatUnicodeSymbols(disp.root)}</span><span class="suffix">${formatUnicodeSymbols(disp.suffix)}</span>${disp.bass ? `<span class="bass-note">/${formatUnicodeSymbols(disp.bass)}</span>` : ''}`;
-                    if (card.innerHTML !== html) card.innerHTML = html;
+                    
+                    if (card.innerHTML !== html) {
+                        card.innerHTML = html;
+                        const charCount = disp.root.length + disp.suffix.length + (disp.bass ? disp.bass.length + 1 : 0);
+                        applyDynamicFontSize(card, charCount, measure.chords.length, totalMeasures, isMaximized);
+                    }
                     
                     card.onclick = (e) => {
                         e.stopPropagation();
@@ -72,6 +79,8 @@ export function renderChordVisualizer(ui) {
                 });
             });
         });
+
+        if (!isMaximized) autoScrollToActive(ui.chordVisualizer);
         return;
     }
 
@@ -136,8 +145,11 @@ export function renderChordVisualizer(ui) {
                     if (disp.bass) {
                         card.innerHTML += `<span class="bass-note">/${formatUnicodeSymbols(disp.bass)}</span>`;
                     }
+                    const charCount = disp.root.length + disp.suffix.length + (disp.bass ? disp.bass.length + 1 : 0);
+                    applyDynamicFontSize(card, charCount, measure.chords.length, totalMeasures, isMaximized);
                 } else {
                     card.textContent = formatUnicodeSymbols(chord.absName) || '...';
+                    applyDynamicFontSize(card, card.textContent.length, measure.chords.length, totalMeasures, isMaximized);
                 }
 
                 card.onclick = (e) => {
@@ -150,4 +162,58 @@ export function renderChordVisualizer(ui) {
             content.appendChild(mBox);
         });
     });
+
+    if (!isMaximized) autoScrollToActive(ui.chordVisualizer);
+}
+
+/**
+ * Ensures the active chord card is visible, scrolling proactively
+ * so the musician can see the upcoming measures.
+ */
+function autoScrollToActive(container) {
+    const activeCard = container.querySelector('.chord-card.active');
+    if (!activeCard) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const cardRect = activeCard.getBoundingClientRect();
+
+    const scrollThreshold = containerRect.top + (containerRect.height * 0.7);
+    
+    if (cardRect.bottom > scrollThreshold || cardRect.top < containerRect.top) {
+        const targetScrollTop = container.scrollTop + (cardRect.top - containerRect.top) - (containerRect.height * 0.2);
+        container.scrollTo({
+            top: targetScrollTop,
+            behavior: 'smooth'
+        });
+    }
+}
+
+/**
+ * Adjusts font size based on the number of chords in a measure, length of name,
+ * and the total song density to ensure a single-page fit in maximized view.
+ */
+function applyDynamicFontSize(card, charCount, chordsInMeasure, totalMeasures, isMaximized) {
+    let scale = 1.0;
+    
+    // 1. Density Scale (Song Length)
+    if (isMaximized) {
+        // Less aggressive scaling for maximized view
+        if (totalMeasures > 24) scale *= 0.9;
+        if (totalMeasures > 32) scale *= 0.8;
+        if (totalMeasures > 48) scale *= 0.7;
+    }
+
+    // 2. Chord Name Scale
+    if (charCount > 7) scale *= 0.9;
+    if (charCount > 10) scale *= 0.8;
+    
+    // 3. Measure Density Scale
+    if (chordsInMeasure > 2) scale *= 0.9;
+    if (chordsInMeasure > 3) scale *= 0.8;
+
+    if (scale < 1.0) {
+        card.style.setProperty('--font-scale', scale.toFixed(2));
+    } else {
+        card.style.removeProperty('--font-scale');
+    }
 }

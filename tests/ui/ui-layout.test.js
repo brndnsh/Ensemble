@@ -23,7 +23,7 @@ describe('UI Layout Integrity', () => {
             <div id="playBtn"></div>
             <div id="bpmInput"></div>
             <div id="timeSigSelect"></div>
-            <div id="keySelect"></div>
+            <select id="keySelect"></select>
             <div id="chordVisualizer"></div>
             <div id="measurePagination"></div>
             <div id="drumBarsSelect"></div>
@@ -189,6 +189,23 @@ describe('UI Layout Integrity', () => {
             expect(labelRow).not.toBeNull();
             const labels = labelRow.querySelectorAll('.steps > div');
             expect(labels.length).toBe(16);
+        });
+    });
+
+    describe('Key Picker', () => {
+        it('should not have redundant "Key: " prefix in options', async () => {
+            // Import the function directly
+            const { updateKeySelectLabels } = await import('../../public/ui.js');
+            
+            const keySelect = document.getElementById('keySelect');
+            const opt = document.createElement('option');
+            opt.value = 'C';
+            opt.textContent = 'Key: C';
+            keySelect.appendChild(opt);
+            
+            updateKeySelectLabels();
+            expect(keySelect.options[0].textContent).not.toContain('Key:');
+            expect(keySelect.options[0].textContent).toBe('C');
         });
     });
 });

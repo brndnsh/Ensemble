@@ -116,23 +116,23 @@
     .key-controls {
         flex-grow: 1;
         display: grid;
-        grid-template-columns: 40px 1fr 1.2fr 0.8fr 0.8fr 0.8fr;
-        gap: 0.35rem;
-        align-items: start;
+        grid-template-columns: 38px 1fr 1fr 38px 30px 30px;
+        gap: 0.25rem;
+        align-items: center;
     }
 
     #keySelect {
         width: 100%;
         max-width: none;
+        padding-left: 0.4rem;
+        padding-right: 0.2rem;
     }
 
     .header-btn {
-        width: 40px; /* Fixed width for standalone header buttons like maximize */
+        width: 100%;
         min-width: 0;
-    }
-
-    .key-controls .header-btn {
-        width: 100%; /* Keep 100% for buttons inside the grid */
+        height: 32px;
+        padding: 0;
     }
 }
 
