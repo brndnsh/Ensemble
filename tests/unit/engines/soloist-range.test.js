@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getSoloistNote } from '../../../public/soloist.js';
-import { sb, gb, ctx, arranger } from '../../../public/state.js';
+import { sb } from '../../../public/state.js';
 
 // Mock state and global config
 vi.mock('../../../public/state.js', () => ({
