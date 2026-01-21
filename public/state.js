@@ -152,7 +152,7 @@ export const arranger = {
  * @property {number} reverb - Reverb send amount.
  * @property {number} octave - Base MIDI octave for voicing.
  * @property {string} density - Voicing density ('thin', 'standard', 'rich').
- * @property {boolean} practiceMode - Whether to use rootless voicings even if bass is off.
+ * @property {boolean} pianoRoots - Whether the piano should play roots even if bass is enabled.
  * @property {number|null} lastActiveChordIndex - Index of the currently playing chord.
  * @property {Map<number, Object>} buffer - Scheduled notes buffer.
  * @property {number} rhythmicMask - 16-bit mask of the current comping pattern.
@@ -165,7 +165,7 @@ export const cb = {
     reverb: 0.3,
     octave: 65,
     density: 'standard', 
-    practiceMode: true,
+    pianoRoots: false,
     lastActiveChordIndex: null,
     buffer: new Map(),
     rhythmicMask: 0,
@@ -547,8 +547,8 @@ export function dispatch(action, payload) {
         case ACTIONS.SET_PRESET_SETTINGS_MODE:
             ctx.applyPresetSettings = payload;
             break;
-        case ACTIONS.SET_PRACTICE_MODE:
-            cb.practiceMode = payload;
+        case ACTIONS.SET_PIANO_ROOTS:
+            cb.pianoRoots = payload;
             break;
         case ACTIONS.SET_NOTATION:
             arranger.notation = payload;

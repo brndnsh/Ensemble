@@ -42,9 +42,10 @@ export function hydrateState() {
             cb.instrument = 'Piano'; 
             cb.octave = savedState.cb.octave; 
             cb.density = savedState.cb.density; 
-            cb.volume = savedState.cb.volume !== undefined ? savedState.cb.volume : 0.5; 
-            cb.reverb = savedState.cb.reverb !== undefined ? savedState.cb.reverb : 0.3; 
-            cb.practiceMode = savedState.cb.practiceMode || false;
+        cb.volume = savedState.cb.volume !== undefined ? savedState.cb.volume : 0.5;
+        cb.reverb = savedState.cb.reverb !== undefined ? savedState.cb.reverb : 0.3;
+        cb.pianoRoots = savedState.cb.pianoRoots || false;
+        cb.activeTab = savedState.cb.activeTab || 'smart';
         }
         if (savedState.bb) { 
             bb.enabled = savedState.bb.enabled !== undefined ? savedState.bb.enabled : true; 
@@ -131,9 +132,9 @@ export function hydrateState() {
         });
         ui.notationSelect.value = arranger.notation; 
         ui.densitySelect.value = cb.density; 
-        if (ui.practiceModeCheck) ui.practiceModeCheck.checked = cb.practiceMode;
-        if (ui.chordVol) ui.chordVol.value = cb.volume;
-        if (ui.chordReverb) ui.chordReverb.value = cb.reverb;
+    if (ui.chordVol) ui.chordVol.value = cb.volume;
+    if (ui.pianoRootsCheck) ui.pianoRootsCheck.checked = cb.pianoRoots;
+    if (ui.chordReverb) ui.chordReverb.value = cb.reverb;
         if (ui.bassVol) ui.bassVol.value = bb.volume;
         if (ui.bassReverb) ui.bassReverb.value = bb.reverb;
         if (ui.soloistVol) ui.soloistVol.value = sb.volume;

@@ -20,7 +20,7 @@ export function saveCurrentState() {
         sessionTimer: ctx.sessionTimer,
         vizEnabled: vizState.enabled,
         autoIntensity: ctx.autoIntensity,
-        cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb, practiceMode: cb.practiceMode },
+        cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb, pianoRoots: cb.pianoRoots },
         bb: { enabled: bb.enabled, style: bb.style, octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
         sb: { enabled: sb.enabled, style: sb.style, octave: sb.octave, volume: sb.volume, reverb: sb.reverb, doubleStops: sb.doubleStops },
         hb: { enabled: hb.enabled, style: hb.style, octave: hb.octave, volume: hb.volume, reverb: hb.reverb, complexity: hb.complexity },
