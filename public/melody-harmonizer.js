@@ -88,9 +88,6 @@ export class Harmonizer {
         let bestRoot = 0;
         let bestQuality = isMinor ? 'minor' : 'major';
 
-        // Candidates: Mostly diatonic roots
-        const scaleIntervals = isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
-        
         for (let i = 0; i < 12; i++) {
             const candidateRoot = (keyRoot + i) % 12;
             let score = 0;
@@ -98,9 +95,10 @@ export class Harmonizer {
             // 1. Diatonic Check
             // Calculate interval from key root
             const distFromKey = (candidateRoot - keyRoot + 12) % 12;
-            const isDiatonic = scaleIntervals.includes(distFromKey);
+            const diatonicMap = isMinor ? this.diatonicWeights.minor : this.diatonicWeights.major;
+            const diatonicWeight = diatonicMap[distFromKey];
             
-            if (isDiatonic) score += 10;
+            if (diatonicWeight !== undefined) score += diatonicWeight;
             else score -= (1.0 - creativity) * 20; // Heavy penalty for chromatic unless creative
 
             // Determine likely quality (Simplification: Diatonic quality)

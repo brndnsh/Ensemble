@@ -159,10 +159,14 @@
 
 # Standards & Quality Assurance (v2.29)
 
-- [x] **Project-Wide Linting**: Implement ESLint configuration and resolve all formatting/logic warnings across the codebase.
-- [x] **Engine Regression Fixes**: Stabilize Bass and Soloist procedural logic to pass probabilistic "Harmonic Audit" suites at all intensity levels.
-- [x] **Worker Integrity**: Resolve undefined variable and scope issues in `logic-worker.js` during engine priming and generation.
-- [x] **Code Cleanup**: Remove unused imports, dead parameters, and redundant state properties to reduce bundle size.
+...
+
+# Audio Analysis & Intelligent Harmonization (v2.4)
+
+- [x] **Monophonic Pitch Extraction**: Implement high-speed melody detection in `audio-analyzer-lite.js` with vocal-range optimization.
+- [x] **"Loop-Back" Symbolic Training**: Create a system (`HarmonizerTrainer`) that extracts note-to-chord fit probabilities directly from the Soloist engine's scale logic.
+- [x] **Consolidated Audio Workbench**: Unified UI for polyphonic chord detection and monophonic melody harmonization with a modal mode-switch.
+- [x] **Real-Time Melody Harmonization**: Support live pitch detection and chord suggestion in the "Live Listen" interface.
 
 # Performance Optimization (v2.1)
 
