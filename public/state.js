@@ -266,7 +266,7 @@ export const gb = {
  * @property {number|null} lastBassGain - Last velocity/gain value for dynamic continuity.
  */
 export const bb = {
-    enabled: false,
+    enabled: true,
     volume: 0.45,
     reverb: 0.05,
     lastFreq: null,
