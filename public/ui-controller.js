@@ -531,11 +531,13 @@ export function setupUIHandlers(refs) {
         saveCurrentState();
     });
 
-    ui.practiceModeCheck.addEventListener('change', e => {
-        cb.practiceMode = e.target.checked;
-        validateAndAnalyze();
-        saveCurrentState();
-    });
+    if (ui.pianoRootsCheck) {
+        ui.pianoRootsCheck.addEventListener('change', e => {
+            dispatch(ACTIONS.SET_PIANO_ROOTS, e.target.checked);
+            validateAndAnalyze();
+            saveCurrentState();
+        });
+    }
 
     ui.themeSelect.addEventListener('change', e => {
         applyTheme(e.target.value);

@@ -257,6 +257,7 @@ export function resetToDefaults() {
     cb.instrument = 'Clean';
     cb.octave = 65;
     cb.density = 'standard';
+    cb.pianoRoots = false;
     cb.activeTab = 'smart';
     
     bb.volume = 0.45;

@@ -57,7 +57,7 @@ export function initUI() {
                 'chordReverb', 'bassReverb', 'soloistReverb', 'harmonyReverb', 'drumPresets', 'userDrumPresetsContainer',
                 'sequencerGrid', 'measurePagination', 'drumBarsSelect', 'cloneMeasureBtn', 'autoFollowCheck',
                 'humanizeSlider', 'saveDrumBtn', 'drumReverb', 'smartDrumPresets', 'settingsOverlay', 'settingsBtn',
-                'themeSelect', 'notationSelect', 'densitySelect', 'practiceModeCheck', 'swingSlider', 'exportMidiBtn',
+                'themeSelect', 'notationSelect', 'densitySelect', 'pianoRootsCheck', 'swingSlider', 'exportMidiBtn',
                 'settingsExportMidiBtn', 'exportOverlay', 'closeExportBtn', 'confirmExportBtn', 'exportChordsCheck',
                 'exportBassCheck', 'exportSoloistCheck', 'exportHarmoniesCheck', 'exportDrumsCheck', 'exportDurationInput', 'exportDurationContainer',
                 'exportDurationDec', 'exportDurationInc', 'exportDurationStepper',
@@ -587,6 +587,15 @@ export function updateGenreUI(stepsUntilNextMeasure = 0, stepsPerBeat = 4) {
         btn.classList.toggle('active', isActive);
         btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
+
+    // --- Lane Protection: Toggle Visibility ---
+    // If Virtual Bass is ON, Piano Roots should be hidden or disabled to prevent clutter.
+    if (ui.pianoRootsCheck && ui.pianoRootsCheck.parentElement) {
+        const isBassOn = bb.enabled;
+        const container = ui.pianoRootsCheck.parentElement;
+        container.style.display = isBassOn ? 'none' : 'flex';
+        ui.pianoRootsCheck.checked = cb.pianoRoots;
+    }
 }
 
 function getGenreNameFromFeel(feel) {
