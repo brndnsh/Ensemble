@@ -11,6 +11,14 @@ export class Harmonizer {
             major: { 0: 10, 2: 4, 4: 4, 5: 8, 7: 9, 9: 6, 11: 2 }, // I, ii, iii, IV, V, vi, vii
             minor: { 0: 10, 2: 3, 3: 9, 5: 6, 7: 8, 8: 7, 10: 5 }  // i, ii, III, iv, v, VI, VII
         };
+        this.knowledgeBase = null;
+    }
+
+    /**
+     * Injects learned weights from the Band modules.
+     */
+    setKnowledgeBase(kb) {
+        this.knowledgeBase = kb;
     }
 
     /**
@@ -114,6 +122,15 @@ export class Harmonizer {
                     if (note.pc === candidateRoot) score += 2; // Root match bonus
                 } else {
                     score -= note.weight * 2; // Clash penalty
+                }
+
+                // 2b. Band Logic Match (The "Trained" part)
+                if (this.knowledgeBase && this.knowledgeBase[quality]) {
+                    const relativeMelodyPC = (note.pc - candidateRoot + 12) % 12;
+                    const bandPreference = this.knowledgeBase[quality][relativeMelodyPC];
+                    if (bandPreference > 0) {
+                        score += (bandPreference * note.weight * 4); // Boost chords the band 'knows' how to play over
+                    }
                 }
             });
 

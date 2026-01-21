@@ -966,8 +966,15 @@ export function setupAnalyzerHandlers() {
             
             if (mode === 'melody') {
                 const { Harmonizer } = await import('./melody-harmonizer.js');
+                const { HarmonizerTrainer } = await import('./harmonizer-trainer.js');
+                
                 const harmonizer = new Harmonizer();
                 
+                // 1. Train the engine on current Band logic
+                const kb = await HarmonizerTrainer.train();
+                harmonizer.setKnowledgeBase(kb);
+                
+                // 2. Extract melody and generate
                 const melodyLine = await analyzer.extractMelody(currentAudioBuffer, pulse);
                 ui.analyzerProgressBar.style.width = '80%';
                 
