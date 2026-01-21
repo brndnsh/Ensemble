@@ -47,7 +47,7 @@ export function hydrateState() {
             cb.practiceMode = savedState.cb.practiceMode || false;
         }
         if (savedState.bb) { 
-            bb.enabled = savedState.bb.enabled !== undefined ? savedState.bb.enabled : false; 
+            bb.enabled = savedState.bb.enabled !== undefined ? savedState.bb.enabled : true; 
             bb.style = savedState.bb.style || 'smart'; 
             bb.octave = savedState.bb.octave; 
             bb.volume = savedState.bb.volume !== undefined ? savedState.bb.volume : 0.45; 
@@ -78,7 +78,7 @@ export function hydrateState() {
             gb.measures = savedState.gb.measures || 1; 
             gb.humanize = savedState.gb.humanize !== undefined ? savedState.gb.humanize : 20; 
             gb.followPlayback = savedState.gb.followPlayback !== undefined ? savedState.gb.followPlayback : (savedState.gb.autoFollow !== undefined ? savedState.gb.autoFollow : true); 
-            gb.lastDrumPreset = savedState.gb.lastDrumPreset || 'Standard'; 
+            gb.lastDrumPreset = savedState.gb.lastDrumPreset || 'Basic Rock'; 
             if (savedState.gb.pattern && savedState.gb.pattern.length > 0) { 
                 savedState.gb.pattern.forEach(savedInst => { 
                     const inst = gb.instruments.find(i => i.name === savedInst.name); 
