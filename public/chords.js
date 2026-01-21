@@ -60,13 +60,16 @@ export function getChordDetails(symbol) {
  * @param {number[]} intervals - Semitone intervals from the root.
  * @param {number[]} previousMidis - MIDI notes of the previous chord.
  * @param {boolean} isPivot - Whether this chord is a section/phrase pivot point.
+ * @param {number|null} anchor - Optional custom anchor MIDI note.
+ * @param {number} min - Minimum allowed MIDI note for the average.
+ * @param {number} max - Maximum allowed MIDI note for the average.
  * @returns {number[]} - Optimized MIDI notes for the chord.
  */
-export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false) {
-    const homeAnchor = cb.octave || 60;
+export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false, anchor = null, min = 43, max = 84) {
+    const homeAnchor = anchor || cb.octave || 60;
     const registerPullWeight = 0.6;
-    const RANGE_MIN = 43;
-    const RANGE_MAX = 84;
+    const RANGE_MIN = min;
+    const RANGE_MAX = max;
 
     let targetCenter = homeAnchor;
     if (previousMidis && previousMidis.length > 0) {
@@ -409,8 +412,8 @@ function getRootlessVoicing(quality, is7th, isRich) {
 export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnabled = false) {
     const isAltered5 = ['dim', 'halfdim', 'aug', 'augmaj7', '7alt', '7b13', '7#11', '7b5'].includes(quality) || quality.includes('b5') || quality.includes('#5') || quality.includes('alt');
     const isAug = quality === 'aug' || quality === 'augmaj7';
-    const isPractice = cb.practiceMode;
-    const shouldBeRootless = bassEnabled || isPractice;
+    const pianoRoots = cb.pianoRoots;
+    const shouldBeRootless = bassEnabled || !pianoRoots;
     const isRich = density === 'rich';
     const intensity = ctx.bandIntensity;
 
@@ -649,7 +652,7 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                     }
                 }
 
-                let intervals = getIntervals(quality, is7th, cb.density, gb.genreFeel, bb.enabled || cb.practiceMode);
+                let intervals = getIntervals(quality, is7th, cb.density, gb.genreFeel, bb.enabled || cb.pianoRoots);
 
                 let bassMidi = null;
                 let bassNameAbs = "", bassNameNNS = "", bassNameRom = "";
@@ -670,7 +673,7 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
 
                 let isPivot = (barInternalOffset === 0); // Start of a bar is a pivot
 
-                let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot);
+                let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot, cb.octave, 43, 84);
                 if (bassMidi !== null) {
                     const bassPC = bassMidi % 12;
                     const filtered = currentMidis.filter(m => m % 12 !== bassPC);
