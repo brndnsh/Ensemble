@@ -72,6 +72,10 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         panner.pan.setValueAtTime(panValue, playTime);
     }
 
+    // Synthesis: Multi-oscillator setup for "Ensemble" feel
+    const osc1 = ctx.audio.createOscillator();
+    const osc2 = ctx.audio.createOscillator();
+
     // --- Lane Protection: Sub-Oscillator ---
     // Only use the sub-oscillator if the main frequency is high enough 
     // to keep the sub-octave out of the primary bass territory.
