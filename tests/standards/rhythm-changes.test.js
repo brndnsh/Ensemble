@@ -10,7 +10,7 @@ vi.mock('../../public/state.js', () => ({
         lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
         sessionSteps: 1000
     },
-    cb: { enabled: true, octave: 60, density: 'standard', practiceMode: true },
+    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: false },
     ctx: { bandIntensity: 0.5, bpm: 180, audio: { currentTime: 0 } },
     arranger: { 
         key: 'Bb', 
@@ -122,7 +122,7 @@ describe('Jazz Standard Test: Rhythm Changes', () => {
     });
 
     it('should use rootless voicings for the jazz comping when enabled', () => {
-        // We need to ensure practiceMode is true or bb is enabled to trigger rootless in getIntervals
+        // We need to ensure pianoRoots is true or bb is enabled to trigger rootless in getIntervals
         const progression = arranger.progression;
         
         // vi7 (Gm7)

@@ -92,7 +92,7 @@ const setupMinimalDOM = () => {
             <div id="settingsOverlay"></div>
             <button id="settingsBtn"></button>
             <select id="themeSelect"></select>
-            <input id="practiceModeCheck" type="checkbox" />
+            <input id="pianoRootsCheck" type="checkbox" />
             <button id="exportMidiBtn"></button>
             <button id="settingsExportMidiBtn"></button>
             <div id="exportOverlay"></div>

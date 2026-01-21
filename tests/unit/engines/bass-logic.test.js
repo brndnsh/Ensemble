@@ -27,7 +27,7 @@ vi.mock('../../../public/state.js', () => ({
         ]
     },
     ctx: { bandIntensity: 0.5, bpm: 120 },
-    cb: { practiceMode: false },
+    cb: { pianoRoots: true },
     hb: { enabled: false, buffer: new Map() },
     arranger: { 
         key: 'C', 

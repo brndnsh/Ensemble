@@ -4,7 +4,7 @@ import { getChordDetails, getIntervals } from '../../public/chords.js';
 // Mock state
 vi.mock('../../public/state.js', () => ({
     ctx: { bandIntensity: 0.5 },
-    cb: { density: 'standard', octave: 60, practiceMode: false },
+    cb: { density: 'standard', octave: 60, pianoRoots: true },
     arranger: { timeSignature: '4/4', key: 'C', isMinor: false, notation: 'roman' },
     gb: { genreFeel: 'Rock' },
     bb: { enabled: true }

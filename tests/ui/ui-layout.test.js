@@ -40,7 +40,7 @@ describe('UI Layout Integrity', () => {
             'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'groupingToggle', 'groupingLabel',
             'chordReverb', 'bassReverb', 'soloistReverb', 'drumPresets', 'userDrumPresetsContainer',
             'cloneMeasureBtn', 'autoFollowCheck', 'humanizeSlider', 'saveDrumBtn', 'drumReverb', 'smartDrumPresets',
-            'settingsOverlay', 'settingsBtn', 'themeSelect', 'notationSelect', 'densitySelect', 'practiceModeCheck',
+            'settingsOverlay', 'settingsBtn', 'themeSelect', 'notationSelect', 'densitySelect', 'pianoRootsCheck',
             'swingSlider', 'exportMidiBtn', 'settingsExportMidiBtn', 'exportOverlay', 'closeExportBtn', 'confirmExportBtn',
             'exportChordsCheck', 'exportBassCheck', 'exportSoloistCheck', 'exportDrumsCheck', 'exportDurationInput',
             'exportDurationContainer', 'exportFilenameInput', 'installAppBtn', 'flashOverlay', 'resetSettingsBtn',

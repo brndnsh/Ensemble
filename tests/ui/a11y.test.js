@@ -39,7 +39,7 @@ describe('Accessibility (A11y) & Interactive Integrity', () => {
             'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'groupingToggle', 'groupingLabel',
             'chordReverb', 'bassReverb', 'soloistReverb', 'drumPresets', 'userDrumPresetsContainer',
             'cloneMeasureBtn', 'autoFollowCheck', 'humanizeSlider', 'saveDrumBtn', 'drumReverb', 'smartDrumPresets',
-            'settingsBtn', 'themeSelect', 'notationSelect', 'densitySelect', 'practiceModeCheck',
+            'settingsBtn', 'themeSelect', 'notationSelect', 'densitySelect', 'pianoRootsCheck',
             'swingSlider', 'exportMidiBtn', 'settingsExportMidiBtn', 'exportOverlay', 'closeExportBtn', 'confirmExportBtn',
             'exportChordsCheck', 'exportBassCheck', 'exportSoloistCheck', 'exportDrumsCheck', 'exportDurationInput',
             'exportDurationContainer', 'exportFilenameInput', 'installAppBtn', 'flashOverlay', 'resetSettingsBtn',

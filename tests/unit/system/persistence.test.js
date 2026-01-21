@@ -57,7 +57,7 @@ describe('Persistence Integrity', () => {
         expect(savedData.gb).toBeDefined();
         
         // Specific checks for persistence keys
-        expect(savedData.cb).toHaveProperty('practiceMode');
+        expect(savedData.cb).toHaveProperty('pianoRoots');
         expect(savedData.gb).toHaveProperty('followPlayback');
         expect(savedData.gb).toHaveProperty('humanize');
     });

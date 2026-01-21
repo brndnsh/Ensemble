@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock dependencies
 vi.mock('../../public/state.js', () => ({
     sb: { tension: 0.5 },
-    cb: { density: 'standard', octave: 60, practiceMode: false },
+    cb: { density: 'standard', octave: 60, pianoRoots: true },
     ctx: { bandIntensity: 0.5, bpm: 120 },
     arranger: { 
         key: 'C', 

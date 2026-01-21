@@ -33,7 +33,7 @@ vi.mock('../../public/state.js', () => ({
         sessionSteps: 1000,
         buffer: new Map()
     },
-    cb: { enabled: true, octave: 60, density: 'standard', practiceMode: false, buffer: new Map() },
+    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: true, buffer: new Map() },
     bb: { enabled: true, style: 'quarter', pocketOffset: 0, lastFreq: 110, volume: 0.5, buffer: new Map() },
     hb: { enabled: false, style: 'smart', octave: 60, volume: 0.4, reverb: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
     ctx: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 }, intent: {}, drawQueue: [] },

@@ -6,7 +6,7 @@ vi.mock('../../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn(
 vi.mock('../../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('../../../public/state.js', () => ({
     ctx: { bandIntensity: 0.5 },
-    cb: { density: 'standard', octave: 60, practiceMode: false },
+    cb: { density: 'standard', octave: 60, pianoRoots: true },
     arranger: { timeSignature: '4/4', key: 'C', isMinor: false, notation: 'roman' },
     gb: { genreFeel: 'Rock' },
     bb: { enabled: true },

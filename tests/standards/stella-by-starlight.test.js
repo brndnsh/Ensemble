@@ -10,7 +10,7 @@ vi.mock('../../public/state.js', () => ({
         lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
         sessionSteps: 1000
     },
-    cb: { enabled: true, octave: 60, density: 'standard', practiceMode: false },
+    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
     ctx: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 } },
     arranger: { 
         key: 'Bb', 
