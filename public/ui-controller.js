@@ -317,6 +317,8 @@ export function setupUIHandlers(refs) {
             ui.templatesOverlay.classList.remove('active');
         }],
         [ui.undoBtn, 'click', () => {
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
             undo(refreshArrangerUI);
             clearChordPresetHighlight();
         }],
@@ -332,7 +334,8 @@ export function setupUIHandlers(refs) {
             }
         }],
         [document.getElementById('analyzeAudioBtn'), 'click', () => {
-            // console.log("[Analyzer] analyzeAudioBtn triggered");
+            ui.arrangerActionMenu.classList.remove('open');
+            ui.arrangerActionTrigger.classList.remove('active');
             document.getElementById('analyzerOverlay').classList.add('active');
         }],
         [ui.randomizeBtn, 'click', () => {
