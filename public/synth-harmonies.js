@@ -72,12 +72,11 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         panner.pan.setValueAtTime(panValue, playTime);
     }
 
-    hb.activeVoices.push({ gain, time: playTime, duration, midi });
-
-    // Synthesis: Multi-oscillator setup for "Ensemble" feel
-    const osc1 = ctx.audio.createOscillator();
-    const osc2 = ctx.audio.createOscillator();
-    const sub = ctx.audio.createOscillator();
+    // --- Lane Protection: Sub-Oscillator ---
+    // Only use the sub-oscillator if the main frequency is high enough 
+    // to keep the sub-octave out of the primary bass territory.
+    const useSub = freq > 200; // Above G3
+    const sub = useSub ? ctx.audio.createOscillator() : null;
     
     // --- Articulation: Vibrato (LFO) ---
     let lfo = null;
@@ -91,7 +90,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         lfo.connect(lfoGain);
         lfoGain.connect(osc1.frequency);
         lfoGain.connect(osc2.frequency);
-        lfoGain.connect(sub.frequency);
+        if (sub) lfoGain.connect(sub.frequency);
         lfo.start(playTime);
     }
 
@@ -100,31 +99,39 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         osc1.type = 'sawtooth';
         osc2.type = 'sawtooth';
         osc2.detune.setValueAtTime(15, playTime); 
-        sub.type = 'sawtooth';
-        sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        if (sub) {
+            sub.type = 'sawtooth';
+            sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        }
     } 
     else if (feel === 'Neo-Soul' || feel === 'Acoustic') {
         // Warm/Soulful: Multi-Triangle for clarity
         osc1.type = 'triangle';
         osc2.type = 'triangle';
-        osc2.detune.setValueAtTime(2, playTime); // Reduced from 5
-        sub.type = 'triangle';
-        sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        osc2.detune.setValueAtTime(2, playTime); 
+        if (sub) {
+            sub.type = 'triangle';
+            sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        }
     }
     else if (style === 'stabs') {
         // Horn-like: Bright Sawtooth with body
         osc1.type = 'sawtooth';
         osc2.type = 'triangle';
         osc2.detune.setValueAtTime(12, playTime); 
-        sub.type = 'triangle';
-        sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        if (sub) {
+            sub.type = 'triangle';
+            sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        }
     } else {
         // Lush Strings: Mixed waveforms
         osc1.type = 'triangle';
         osc2.type = 'sawtooth';
         osc2.detune.setValueAtTime(8, playTime);
-        sub.type = 'sine';
-        sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        if (sub) {
+            sub.type = 'sine';
+            sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        }
     }
     
     // --- Articulation: Slides ---
@@ -132,15 +139,15 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         const startFreq = freq * Math.pow(2, slideInterval / 12);
         osc1.frequency.setValueAtTime(startFreq, playTime);
         osc2.frequency.setValueAtTime(startFreq, playTime);
-        sub.frequency.setValueAtTime(startFreq * 0.5, playTime);
+        if (sub) sub.frequency.setValueAtTime(startFreq * 0.5, playTime);
 
         osc1.frequency.exponentialRampToValueAtTime(freq, playTime + slideDuration);
         osc2.frequency.exponentialRampToValueAtTime(freq, playTime + slideDuration);
-        sub.frequency.exponentialRampToValueAtTime(freq * 0.5, playTime + slideDuration);
+        if (sub) sub.frequency.exponentialRampToValueAtTime(freq * 0.5, playTime + slideDuration);
     } else {
         osc1.frequency.setValueAtTime(freq, playTime);
         osc2.frequency.setValueAtTime(freq, playTime);
-        sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        if (sub) sub.frequency.setValueAtTime(freq * 0.5, playTime);
     }
 
     // Filter Envelope
@@ -182,7 +189,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     // Routing
     osc1.connect(filter);
     osc2.connect(filter);
-    sub.connect(filter);
+    if (sub) sub.connect(filter);
     filter.connect(gain);
     
     if (panner) {
@@ -194,12 +201,12 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
 
     osc1.start(playTime);
     osc2.start(playTime);
-    sub.start(playTime);
+    if (sub) sub.start(playTime);
     
     const stopTime = playTime + duration + 0.5;
     osc1.stop(stopTime);
     osc2.stop(stopTime);
-    sub.stop(stopTime);
+    if (sub) sub.stop(stopTime);
     if (lfo) lfo.stop(stopTime);
 
     osc1.onended = () => safeDisconnect([gain, filter, osc1, osc2, sub, lfo, lfoGain, panner]);

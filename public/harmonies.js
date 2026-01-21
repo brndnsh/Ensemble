@@ -451,7 +451,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         intervals = [intervals[0], intervals[0] + 12];
     }
 
-    const currentMidis = getBestInversion(rootMidi, intervals, lastMidis, stepInChord === 0);
+    const currentMidis = getBestInversion(rootMidi, intervals, lastMidis, stepInChord === 0, octave, 50, 84);
     
     // --- NEW: Dynamic Frequency Slotting (Soloist Pocket) ---
     // If the soloist is active and in our register, nudge the harmonies down 
