@@ -51,7 +51,7 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
 
                 INTENSITIES.forEach(intensity => {
                     ctx.bandIntensity = intensity;
-                    ctx.conductorVelocity = 0.8 + (intensity * 0.3);
+                    ctx.conductorVelocity = 0.7 + (intensity * 0.45);
 
                     // Test first 16 steps of the progression
                     for (let step = 0; step < Math.min(16, arranger.totalSteps); step++) {

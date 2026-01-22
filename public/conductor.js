@@ -27,7 +27,7 @@ export function applyConductor() {
         ui.densitySelect.value = targetDensity;
     }
 
-    const targetVelocity = 0.7 + (intensity * 0.5); // 0.7x to 1.2x (Expanded from 0.8-1.1x)
+    const targetVelocity = 0.7 + (intensity * 0.45); // 0.7x to 1.15x (Adjusted to avoid overloads)
 
     // --- 2. Complexity / Busyness ---
     const targetHookProb = 0.2 + (complexity * 0.6);

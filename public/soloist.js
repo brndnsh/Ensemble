@@ -708,7 +708,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         bendStartInterval = Math.random() < 0.7 ? 1 : 2;
     }
 
-    const result = { midi: selectedMidi, velocity: Math.min(1.35, stepVelocity), durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style: activeStyle, isDoubleStop: false };
+    const result = { midi: selectedMidi, velocity: Math.min(1.25, stepVelocity), durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style: activeStyle, isDoubleStop: false };
     
     if (durationSteps > 1) {
         sb.busySteps = durationSteps - 1;
