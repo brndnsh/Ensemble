@@ -89,7 +89,7 @@ export function syncWorker(action, payload) {
             cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled, volume: cb.volume },
             bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq, volume: bb.volume },
             sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume, doubleStops: sb.doubleStops, sessionSteps: sb.sessionSteps },
-            hb: { style: hb.style, octave: hb.octave, enabled: hb.enabled, volume: hb.volume, complexity: hb.complexity },
+            hb: { style: hb.style, octave: hb.octave, enabled: hb.enabled, volume: hb.volume, complexity: hb.complexity, pocketOffset: hb.pocketOffset },
             gb: { 
                 genreFeel: gb.genreFeel, 
                 lastDrumPreset: gb.lastDrumPreset, 

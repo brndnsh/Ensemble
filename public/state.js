@@ -368,6 +368,7 @@ export const hb = {
     motifBuffer: [],
     lastMidis: [], // Track voice leading across cycles
     rhythmicMask: 0,
+    pocketOffset: 0.0, // Micro-timing offset in seconds
     activeTab: 'smart'
 };
 

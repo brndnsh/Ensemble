@@ -700,6 +700,7 @@ if (typeof self !== 'undefined') {
                     if (data.hb) {
                         Object.assign(hb, data.hb);
                         if (data.hb.rhythmicMask !== undefined) hb.rhythmicMask = data.hb.rhythmicMask;
+                        if (data.hb.pocketOffset !== undefined) hb.pocketOffset = data.hb.pocketOffset;
                     }
                     if (data.gb) {
                         Object.assign(gb, data.gb);
@@ -727,6 +728,7 @@ if (typeof self !== 'undefined') {
                         if (syncData.hb) {
                             Object.assign(hb, syncData.hb);
                             if (syncData.hb.rhythmicMask !== undefined) hb.rhythmicMask = syncData.hb.rhythmicMask;
+                            if (syncData.hb.pocketOffset !== undefined) hb.pocketOffset = syncData.hb.pocketOffset;
                         }
                         if (syncData.gb) {
                             Object.assign(gb, syncData.gb);

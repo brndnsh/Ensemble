@@ -434,6 +434,12 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         else if (durationSteps >= 4) durationSteps = 4; // Snap to Quarter
     }
 
+    // --- NEW: Genre-Specific Pocketing ---
+    let pocketOffset = hb.pocketOffset || 0;
+    if (feel === 'Neo-Soul') pocketOffset += 0.030; // Soulful "Lay back"
+    else if (feel === 'Jazz') pocketOffset += 0.012; // Swing feel "Behind the beat"
+    else if (feel === 'Funk' || feel === 'Disco') pocketOffset -= 0.008; // Driving "On top" of the beat
+
     currentMidis.forEach((midi, i) => {
         let finalMidi = midi + liftShift + finalOctaveShift;
         
@@ -495,14 +501,23 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             }
         }
 
+        // Soft Latch: Reinforcement should be felt, not heard as a solo instrument.
         const baseVol = config.velocity * (0.8 + Math.random() * 0.2);
         const latchMult = isLatched ? 1.05 : 1.0; 
         
+        // --- NEW: Humanized Timing & Release ---
+        // 1. Voice Stagger: Voices in a section don't hit at the same microsecond.
+        const stagger = (i * 0.008); // 8ms cumulative stagger per voice
+        
+        // 2. Release Jitter: Chords don't release in perfect unison.
+        const releaseJitter = (Math.random() - 0.5) * 0.1;
+        const finalDuration = Math.max(0.1, durationSteps + releaseJitter);
+
         notes.push({
             midi: finalMidi,
             velocity: baseVol * latchMult * polyphonyComp,
-            durationSteps: durationSteps,
-            timingOffset: (i * 0.005) + (Math.random() * config.timingJitter), 
+            durationSteps: finalDuration,
+            timingOffset: pocketOffset + stagger + (Math.random() * config.timingJitter), 
             style: rhythmicStyle,
             isLatched: isLatched,
             isChordStart: isChordStart || isMovement || isAnticipating || isApproach,
