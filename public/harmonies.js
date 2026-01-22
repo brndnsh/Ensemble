@@ -1,4 +1,3 @@
-import { getScaleForChord } from './soloist.js';
 import { getBestInversion } from './chords.js';
 import * as State from './state.js';
 import { TIME_SIGNATURES } from './config.js';
@@ -210,6 +209,12 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
 
     const isDisco = feel === 'Disco';
     if (isDisco && ctx.bandIntensity > 0.7) density = Math.max(density, 2);
+    
+    // Apply density to intervals
+    if (intervals.length > density) {
+        intervals = intervals.slice(0, density);
+    }
+
     const cycleMeasure = Math.floor(step / stepsPerMeasure) % 4;
     const liftShift = isDisco ? (cycleMeasure * 2) : 0;
     if (isDisco && ctx.bandIntensity > 0.6 && rhythmicStyle === 'stabs' && !isLatched) intervals = [intervals[0], intervals[0] + 12];

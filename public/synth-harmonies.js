@@ -61,6 +61,9 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     const gain = ctx.audio.createGain();
     gain.gain.value = 0;
 
+    const filter = ctx.audio.createBiquadFilter();
+    filter.type = 'lowpass';
+
     // --- Articulation: Stereo Stage Bloom ---
     // Widens the ensemble as intensity builds. 
     // Low intensity = centered/focused. High intensity = wide/orchestral.
@@ -87,6 +90,12 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     let lfoGain = null;
     let tremoloLfo = null;
     let tremoloGain = null;
+    
+    // Organ-specific nodes (lifted for cleanup)
+    let fifthOsc = null;
+    let click = null;
+    let clickGain = null;
+    let saturator = null;
     
     // Organ Leslie Effect: Combined Pitch and Amplitude Modulation
     if (style === 'organ') {
@@ -159,7 +168,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         osc2.frequency.setValueAtTime(freq * 2, playTime);
         
         // 3rd Drawbar: 5 1/3' (Fifth above fundamental)
-        const fifthOsc = ctx.audio.createOscillator();
+        fifthOsc = ctx.audio.createOscillator();
         fifthOsc.type = 'sine';
         fifthOsc.frequency.setValueAtTime(freq * 1.5, playTime);
         
@@ -169,8 +178,8 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         }
 
         // Key Click (Percussion) - made slightly louder
-        const click = ctx.audio.createOscillator();
-        const clickGain = ctx.audio.createGain();
+        click = ctx.audio.createOscillator();
+        clickGain = ctx.audio.createGain();
         click.type = 'square';
         click.frequency.setValueAtTime(freq * 4, playTime); 
         clickGain.gain.setValueAtTime(finalVol * 0.6, playTime);
@@ -182,7 +191,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         click.stop(playTime + 0.1);
 
         // Saturation (Tube Grit)
-        const saturator = ctx.audio.createWaveShaper();
+        saturator = ctx.audio.createWaveShaper();
         saturator.curve = (function() {
             const n = 44100;
             const curve = new Float32Array(n);
@@ -257,10 +266,6 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         if (sub) sub.frequency.setValueAtTime(freq * 0.5, playTime);
     }
 
-    // Filter Envelope
-    const filter = ctx.audio.createBiquadFilter();
-    filter.type = 'lowpass';
-    
     // --- Articulation: Timbral Bloom ---
     // Brightness scales with intensity. 
     const intensity = ctx.bandIntensity;
@@ -341,8 +346,8 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         safeDisconnect([gain, filter, osc1, osc2, sub, lfo, lfoGain, panner]);
         // Clean up Organ/Tremolo specific nodes if they exist (they are closure-scoped)
         if (tremoloLfo) safeDisconnect([tremoloLfo, tremoloGain]); 
-        // Note: fifthOsc, click, saturator are local to the organ block and not easily accessible here 
-        // without lifting them to function scope.
-        // For now, they will be garbage collected as they are disconnected from the graph.
+        if (fifthOsc) safeDisconnect([fifthOsc]);
+        if (click) safeDisconnect([click, clickGain]);
+        if (saturator) safeDisconnect([saturator]);
     };
 }

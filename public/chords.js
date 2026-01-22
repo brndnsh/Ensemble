@@ -416,6 +416,9 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     const isRich = density === 'rich';
     const intensity = ctx.bandIntensity;
 
+    const isAltered5 = quality.includes('alt') || quality.includes('b5') || quality.includes('#5') || quality.includes('aug');
+    const isAug = quality.includes('aug') || quality.includes('+');
+
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
     const shouldBeRootless = bassEnabled && (gb.genreFeel === 'Swing' || genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk' || genre === 'Blues');
     if (shouldBeRootless) {
@@ -535,10 +538,6 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     }
     if (quality === 'dim' && is7th && !intervals.includes(9)) intervals.push(9);
 
-    const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
-    const isAltered5 = quality.includes('alt') || quality.includes('b5') || quality.includes('#5') || quality.includes('aug');
-    const isAug = quality.includes('aug') || quality.includes('+');
-
     // FINAL SAFETY: if augmented or altered 5th, ensure natural 5th is NOT present
     if (isAltered5 || isAug) {
         intervals = intervals.filter(i => i % 12 !== 7);
@@ -635,7 +634,7 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                 const part = token.trim();
                 const [chordPart, bassPart] = part.split('/');
                 
-                const { rootMidi, rootPart, romanMatch, rootRomanBase } = resolveChordRoot(chordPart, keyRootMidi, baseOctave);
+                const { rootMidi, rootPart, romanMatch } = resolveChordRoot(chordPart, keyRootMidi, baseOctave);
 
                 // Handle slash bass if present
                 let bassMidi = null;
@@ -735,7 +734,6 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
  */
 export function validateProgression(renderCallback) {
     const { arranger } = stateModule;
-    const allSections = arranger.sections || [];
     let allChords = [];
     let lastMidis = [];
 
