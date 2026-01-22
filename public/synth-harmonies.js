@@ -311,9 +311,9 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         osc1.connect(filter);
         osc2.connect(filter);
         if (sub) sub.connect(filter);
-        filter.connect(gain);
     }
-    // Organ handles its own routing (via saturator) to filter -> gain
+    // Organ handles its own routing (via saturator) to filter
+    filter.connect(gain);
     
     if (panner) {
         gain.connect(panner);
