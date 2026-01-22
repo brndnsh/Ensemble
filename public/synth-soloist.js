@@ -39,9 +39,9 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     sb.activeVoices = sb.activeVoices.filter(v => (v.time + v.duration + 0.5) > playTime);
 
     // Intensity-driven Volume Scaling:
-    // At high intensity, the soloist gets a small gain boost to stay on top of the busy mix.
+    // At high intensity, the soloist gets a significant gain boost to stay on top of the busy mix.
     const intensity = ctx.bandIntensity;
-    const intensityGain = 0.85 + (intensity * 0.3); // 0.85x to 1.15x scaling
+    const intensityGain = 0.5 + (intensity * 0.9); // 0.5x to 1.4x scaling (Expanded from 0.85-1.15)
 
     const randomizedVol = vol * intensityGain * (0.95 + Math.random() * 0.1);
     const gain = ctx.audio.createGain();
@@ -157,7 +157,11 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     // Resonant Filter
     const filter = ctx.audio.createBiquadFilter();
     filter.type = 'lowpass';
-    const cutoffBase = style === 'bird' ? freq * 3.5 : Math.min(freq * 4, 4000);
+    
+    // Timbre-Intensity Mapping: Brighter at high intensity/velocity
+    const brightnessBase = 1.0 + (intensity * 1.5) + (vol * 1.5); // 1x to 4x base
+    const cutoffBase = style === 'bird' ? freq * 3.5 * brightnessBase : Math.min(freq * 4 * brightnessBase, 12000);
+    
     filter.frequency.value = cutoffBase;
     filter.frequency.setValueAtTime(cutoffBase, playTime);
     filter.frequency.exponentialRampToValueAtTime(cutoffBase * (style === 'bird' ? 0.7 : 0.6), playTime + duration);

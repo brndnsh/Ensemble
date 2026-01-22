@@ -614,11 +614,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     // --- 6. Melodic Devices ---
     if (stepInBeat === 0 && Math.random() < (config.deviceProb * 0.7 * warmupFactor)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
+        const devBaseVel = 0.5 + (effectiveIntensity * 0.6);
+        
         if (deviceType === 'birdFlurry') {
             let flurry = []; let curr = selectedMidi + 3; 
             for (let i = 0; i < 4; i++) {
                 let n = curr - 1; while (!scaleIntervals.includes((n - rootMidi + 120) % 12) && n > curr - 5) n--;
-                flurry.push({ midi: n, velocity: 0.8, durationSteps: 1, style });
+                flurry.push({ midi: n, velocity: devBaseVel * 1.05, durationSteps: 1, style });
                 curr = n;
             }
             sb.deviceBuffer = flurry;
@@ -629,30 +631,30 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         }
         if (deviceType === 'run') {
             const sz = Math.random() < 0.5 ? 1 : 2;
-            sb.deviceBuffer = [ { midi: selectedMidi - sz, velocity: 0.8, durationSteps: 1, style }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style } ];
-            const res = { midi: selectedMidi - (sz * 2), velocity: 0.7, durationSteps: 1, style };
+            sb.deviceBuffer = [ { midi: selectedMidi - sz, velocity: devBaseVel * 1.1, durationSteps: 1, style }, { midi: selectedMidi, velocity: devBaseVel * 1.2, durationSteps: 1, style } ];
+            const res = { midi: selectedMidi - (sz * 2), velocity: devBaseVel * 0.9, durationSteps: 1, style };
             sb.busySteps = (res.durationSteps || 1) - 1;
             sb.motifBuffer.push(res);
             return res;
         }
         if (deviceType === 'enclosure') {
-            sb.deviceBuffer = [ { midi: selectedMidi - 1, velocity: 0.8, durationSteps: 1, style }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style } ];
+            sb.deviceBuffer = [ { midi: selectedMidi - 1, velocity: devBaseVel * 1.1, durationSteps: 1, style }, { midi: selectedMidi, velocity: devBaseVel * 1.2, durationSteps: 1, style } ];
             let above = selectedMidi + 1; for(let d=1; d<=2; d++) { if (scaleIntervals.includes((selectedMidi + d - rootMidi + 120) % 12)) { above = selectedMidi + d; break; } }
-            const res = { midi: above, velocity: 0.8, durationSteps: 1, style };
+            const res = { midi: above, velocity: devBaseVel * 1.05, durationSteps: 1, style };
             sb.busySteps = (res.durationSteps || 1) - 1;
             sb.motifBuffer.push(res);
             return res;
         }
         if (deviceType === 'slide') {
-            sb.deviceBuffer = [ { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style } ];
-            const res = { midi: selectedMidi - 1, velocity: 0.7, durationSteps: 1, style };
+            sb.deviceBuffer = [ { midi: selectedMidi, velocity: devBaseVel * 1.15, durationSteps: 1, style } ];
+            const res = { midi: selectedMidi - 1, velocity: devBaseVel * 0.95, durationSteps: 1, style };
             sb.busySteps = (res.durationSteps || 1) - 1;
             sb.motifBuffer.push(res);
             return res;
         }
         if ((deviceType === 'quartal' || deviceType === 'guitarDouble') && sb.doubleStops) {
             let dsInt = (style === 'blues' || style === 'scalar') ? 5 : 4;
-            const res = [{ midi: selectedMidi + dsInt, velocity: 0.8, durationSteps: 1, style, isDoubleStop: true }, { midi: selectedMidi, velocity: 0.9, durationSteps: 1, style, isDoubleStop: false }];
+            const res = [{ midi: selectedMidi + dsInt, velocity: devBaseVel * 1.05, durationSteps: 1, style, isDoubleStop: true }, { midi: selectedMidi, velocity: devBaseVel * 1.2, durationSteps: 1, style, isDoubleStop: false }];
             sb.busySteps = 0; // Device notes are 1 step
             sb.motifBuffer.push(res);
             return res;
@@ -663,7 +665,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const doubleStopChance = (config.doubleStopProb + (maturityFactor * 0.2)) * (stepInBeat === 2 ? 1.2 : 0.6) * warmupFactor;
     if (sb.doubleStops && Math.random() < doubleStopChance) {
         let dsInt = [5, 7, 9, 12][Math.floor(Math.random() * 4)];
-        notes.push({ midi: selectedMidi + dsInt, velocity: 0.8, isDoubleStop: true });
+        notes.push({ midi: selectedMidi + dsInt, velocity: (0.5 + effectiveIntensity * 0.6) * 0.95, isDoubleStop: true });
     }
 
     // recorded for motif memory
@@ -675,6 +677,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
 
     // A. Soulful Scoops: Standard articulation based on maturity
     const isImportantStep = stepInBeat === 0 || (stepInBeat === 2 && Math.random() < 0.3);
+    
+    // Dynamic Velocity: Scale from 0.5 to 1.2 based on effectiveIntensity
+    const baseVelocity = 0.5 + (effectiveIntensity * 0.7);
+    const stepVelocity = isImportantStep ? baseVelocity * 1.15 : baseVelocity;
+
     if (isImportantStep && (activeStyle === 'neo' || activeStyle === 'blues' || activeStyle === 'minimal' || activeStyle === 'bossa')) {
         durationSteps = Math.random() < (0.4 + maturityFactor * 0.2) ? 8 : 4;
     } else if (activeStyle === 'scalar' && stepInBeat === 0 && Math.random() < (0.15 + maturityFactor * 0.1)) {
@@ -701,7 +708,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         bendStartInterval = Math.random() < 0.7 ? 1 : 2;
     }
 
-    const result = { midi: selectedMidi, velocity: 0.8, durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style: activeStyle, isDoubleStop: false };
+    const result = { midi: selectedMidi, velocity: Math.min(1.35, stepVelocity), durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style: activeStyle, isDoubleStop: false };
     
     if (durationSteps > 1) {
         sb.busySteps = durationSteps - 1;
