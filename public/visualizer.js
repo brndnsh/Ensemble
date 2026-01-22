@@ -437,4 +437,17 @@ export class UnifiedVisualizer {
         this.chordEvents = [];
         this.ctx.clearRect(0, 0, this.width, this.height);
     }
+
+    destroy() {
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+            this.resizeObserver = null;
+        }
+        if (this.canvas && this.canvas.parentNode) {
+            this.canvas.parentNode.removeChild(this.canvas);
+        }
+        if (this.infoLayer && this.infoLayer.parentNode) {
+            this.infoLayer.parentNode.removeChild(this.infoLayer);
+        }
+    }
 }
