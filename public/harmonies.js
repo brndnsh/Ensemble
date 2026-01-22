@@ -422,8 +422,6 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         if (currentMidis[0] > 48) finalOctaveShift = -12;
     }
 
-    hb.lastMidis = currentMidis;
-    
     if (currentMidis.length > 0) lastPlayedStep = step;
 
     const polyphonyComp = 1 / Math.sqrt(currentMidis.length || 1);
@@ -474,7 +472,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         let vibrato = { rate: 0, depth: 0 };
 
         const isLongNote = durationSteps >= 4;
-        const lastMidi = hb.lastMidis[i] || hb.lastMidis[0];
+        const lastMidi = (hb.lastMidis || [])[i] || (hb.lastMidis || [])[0];
         const intensity = ctx.bandIntensity;
 
         if (feel === 'Neo-Soul') {
