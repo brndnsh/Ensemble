@@ -294,9 +294,10 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     }
 
     // Amplitude Envelope
-    const baseAttack = style === 'stabs' ? 0.01 : 0.2;
+    const isFastAttack = style === 'stabs' || style === 'plucks' || style === 'organ';
+    const baseAttack = isFastAttack ? 0.01 : 0.2;
     const attack = Math.max(0.005, baseAttack - (finalVol * 0.15));
-    const release = style === 'stabs' ? 0.1 : 0.5;
+    const release = (style === 'stabs' || style === 'plucks') ? 0.1 : 0.5;
     
     const detuneMult = 1.0 + (finalVol * 0.5);
     osc2.detune.setValueAtTime((style === 'stabs' ? 12 : 8) * detuneMult, playTime);
@@ -306,10 +307,13 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     gain.gain.setTargetAtTime(0, playTime + duration - release, release);
 
     // Routing
-    osc1.connect(filter);
-    osc2.connect(filter);
-    if (sub) sub.connect(filter);
-    filter.connect(gain);
+    if (style !== 'organ') {
+        osc1.connect(filter);
+        osc2.connect(filter);
+        if (sub) sub.connect(filter);
+        filter.connect(gain);
+    }
+    // Organ handles its own routing (via saturator) to filter -> gain
     
     if (panner) {
         gain.connect(panner);
@@ -319,7 +323,8 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     }
 
     // Register active voice
-    hb.activeVoices.push({ gain, time: playTime, duration, midi });
+    const voiceRefs = { gain, time: playTime, duration, midi };
+    hb.activeVoices.push(voiceRefs);
 
     osc1.start(playTime);
     osc2.start(playTime);
@@ -331,5 +336,13 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     if (sub) sub.stop(stopTime);
     if (lfo) lfo.stop(stopTime);
 
-    osc1.onended = () => safeDisconnect([gain, filter, osc1, osc2, sub, lfo, lfoGain, panner]);
+    // Enhanced Cleanup for complex styles
+    osc1.onended = () => {
+        safeDisconnect([gain, filter, osc1, osc2, sub, lfo, lfoGain, panner]);
+        // Clean up Organ/Tremolo specific nodes if they exist (they are closure-scoped)
+        if (tremoloLfo) safeDisconnect([tremoloLfo, tremoloGain]); 
+        // Note: fifthOsc, click, saturator are local to the organ block and not easily accessible here 
+        // without lifting them to function scope.
+        // For now, they will be garbage collected as they are disconnected from the graph.
+    };
 }
