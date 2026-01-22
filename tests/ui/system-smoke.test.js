@@ -188,7 +188,6 @@ vi.mock('../../public/persistence.js', () => ({
 import { arranger, ctx } from '../../public/state.js';
 import { addSection, onSectionUpdate } from '../../public/arranger-controller.js';
 import { togglePlay } from '../../public/scheduler-core.js';
-import { initUI } from '../../public/ui.js';
 import { validateProgression } from '../../public/chords.js';
 import { initAudio } from '../../public/engine.js';
 
@@ -223,8 +222,6 @@ describe('System Smoke Test (E2E Workflow)', () => {
     });
 
     it('should complete a full "Song Creation to Playback" cycle without crashing', () => {
-        initUI();
-
         addSection();
         expect(arranger.sections.length).toBeGreaterThanOrEqual(1);
         const sectionId = arranger.sections[0].id;

@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ui, initUI, renderSections, renderGrid, renderChordVisualizer } from '../../public/ui.js';
+import { ui, renderSections, renderGrid, renderChordVisualizer } from '../../public/ui.js';
 import { arranger, gb, cb } from '../../public/state.js';
 
 // Mock dependencies that we don't need for layout testing
@@ -58,8 +58,6 @@ describe('UI Layout Integrity', () => {
                 document.body.appendChild(el);
             }
         });
-
-        initUI();
     });
 
     describe('renderChordVisualizer', () => {

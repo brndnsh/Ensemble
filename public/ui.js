@@ -6,74 +6,62 @@ import { UIStore } from './ui-store.js';
 
 // Import Componentized Logic
 import { renderChordVisualizer as internalRenderChordVisualizer } from './ui-chord-visualizer.js';
-import { renderGrid as internalRenderGrid, renderGridState as internalRenderGridState } from './ui-sequencer-grid.js';
+import { renderGrid as internalRenderGrid, renderGridState as internalRenderGridState, initSequencerHandlers as internalInitSequencerHandlers } from './ui-sequencer-grid.js';
 
-export const ui = {};
+// ID Aliases (Mapping logical names to HTML IDs)
+const ID_ALIASES = {
+    vizPanel: 'panel-visualizer',
+    chordVol: 'chordVolume',
+    bassVol: 'bassVolume',
+    soloistVol: 'soloistVolume',
+    harmonyVol: 'harmonyVolume',
+    drumVol: 'drumVolume',
+    harmonyComplexity: 'harmonyComplexity',
+    harmonyComplexityValue: 'harmonyComplexityValue',
+    bpmLabel: 'bpm-label',
+    bpmControlGroup: 'bpmControlGroup',
+    larsIndicator: 'larsIndicator',
+    clearDrums: 'clearDrumsBtn',
+    masterVol: 'masterVolume',
+    countIn: 'countInCheck',
+    metronome: 'metronomeCheck',
+    visualFlash: 'visualFlashCheck',
+    haptic: 'hapticCheck',
+    sessionTimerCheck: 'sessionTimerCheck',
+    sessionTimerInput: 'sessionTimerInput',
+    sessionTimerDurationContainer: 'sessionTimerDurationContainer',
+    applyPresetSettings: 'applyPresetSettingsCheck',
+    swingBase: 'swingBaseSelect',
+    closeSettings: 'closeSettingsBtn',
+    sessionTimerDec: 'sessionTimerDec',
+    sessionTimerInc: 'sessionTimerInc',
+    sessionTimerStepper: 'sessionTimerStepper'
+};
 
-export function initUI() {
-    const uiMap = {
-        vizPanel: 'panel-visualizer',
-        chordVol: 'chordVolume',
-        bassVol: 'bassVolume',
-        soloistVol: 'soloistVolume',
-        harmonyVol: 'harmonyVolume',
-        drumVol: 'drumVolume',
-        harmonyComplexity: 'harmonyComplexity',
-        harmonyComplexityValue: 'harmonyComplexityValue',
-        bpmLabel: 'bpm-label',
-        bpmControlGroup: 'bpmControlGroup',
-        larsIndicator: 'larsIndicator',
-        clearDrums: 'clearDrumsBtn',
-        masterVol: 'masterVolume',
-        countIn: 'countInCheck',
-        metronome: 'metronomeCheck',
-        visualFlash: 'visualFlashCheck',
-        haptic: 'hapticCheck',
-        sessionTimerCheck: 'sessionTimerCheck',
-        sessionTimerInput: 'sessionTimerInput',
-        sessionTimerDurationContainer: 'sessionTimerDurationContainer',
+/**
+ * Proxy object that lazily fetches DOM elements by ID.
+ * Accessing ui.someId will return document.getElementById('someId').
+ * Use ID_ALIASES for special mappings.
+ */
+export const ui = new Proxy({}, {
+    get: (target, prop) => {
+        // If we have a cached element, verify it is still in the current document
+        if (prop in target && target[prop] && target[prop].isConnected) {
+            return target[prop];
+        }
+        
+        if (typeof prop !== 'string') return undefined;
 
-    // --- Export ---
-        applyPresetSettings: 'applyPresetSettingsCheck',
-        swingBase: 'swingBaseSelect',
-        closeSettings: 'closeSettingsBtn'
-    };
-
-    const uiIds = [
-                'playBtn', 'bpmInput', 'timeSigSelect', 'tapBtn', 'keySelect', 'relKeyBtn', 'transUpBtn', 'transDownBtn',
-                'maximizeChordBtn', 'chordPowerBtn', 'groovePowerBtn', 'bassPowerBtn', 'soloistPowerBtn', 'harmonyPowerBtn',
-                'chordPowerBtnDesktop', 'groovePowerBtnDesktop', 'bassPowerBtnDesktop', 'soloistPowerBtnDesktop', 'harmonyPowerBtnDesktop',
-                'vizPowerBtn', 'sectionList', 'addSectionBtn', 'templatesBtn', 'templatesOverlay', 'templateChips', 'closeTemplatesBtn',
-                'activeSectionLabel', 'arrangerActionTrigger', 'arrangerActionMenu', 'randomizeBtn', 'mutateBtn', 'undoBtn',
-                'analyzeAudioBtn', 'analyzerOverlay', 'closeAnalyzerBtn', 'analyzerDropZone', 'analyzerFileInput',
-                'liveListenContainer', 'bpmChips', 'bpmCandidateContainer',
-                'liveListenBtn', 'liveListenView', 'stopLiveListenBtn', 'liveChordDisplay', 'liveStatusLabel', 'liveHistoryDisplay',
-                'analyzerTrimView', 'analyzerWaveformCanvas', 'analyzerSelectionOverlay', 'startAnalysisBtn',
-                'analyzerProcessing', 'analyzerProgressBar', 'analyzerResults', 'analyzerSummary', 'applyAnalysisBtn',
-                'detectedBpmLabel', 'analyzerSyncBpmCheck',
-                'analyzerStartInput', 'analyzerEndInput', 'analyzerDurationLabel', 'suggestedSectionsContainer', 'analyzerReplaceCheck',
-                'clearProgBtn', 'saveBtn', 'shareBtn', 'chordVisualizer', 'chordPresets', 'userPresetsContainer',
-                'chordStylePresets', 'bassStylePresets', 'soloistStylePresets', 'harmonyStylePresets', 'groupingToggle', 'groupingLabel',
-                'chordReverb', 'bassReverb', 'soloistReverb', 'harmonyReverb', 'drumPresets', 'userDrumPresetsContainer',
-                'sequencerGrid', 'measurePagination', 'drumBarsSelect', 'cloneMeasureBtn', 'autoFollowCheck',
-                'humanizeSlider', 'saveDrumBtn', 'drumReverb', 'smartDrumPresets', 'settingsOverlay', 'settingsBtn',
-                'themeSelect', 'notationSelect', 'densitySelect', 'pianoRootsCheck', 'swingSlider', 'exportMidiBtn',
-                'settingsExportMidiBtn', 'exportOverlay', 'closeExportBtn', 'confirmExportBtn', 'exportChordsCheck',
-                'exportBassCheck', 'exportSoloistCheck', 'exportHarmoniesCheck', 'exportDrumsCheck', 'exportDurationInput', 'exportDurationContainer',
-                'exportDurationDec', 'exportDurationInc', 'exportDurationStepper',
-                'exportFilenameInput', 'installAppBtn', 'flashOverlay', 'resetSettingsBtn', 'refreshAppBtn', 'editorOverlay',
-                'editArrangementBtn', 'closeEditorBtn', 'intensitySlider', 'complexitySlider', 'intensityValue',
-                'autoIntensityCheck', 'complexityValue', 'soloistDoubleStops', 'harmonyComplexity', 'harmonyComplexityValue',
-                'sessionTimerDec', 'sessionTimerInc', 'sessionTimerStepper',
-                'midiEnableCheck', 'midiMuteLocalCheck', 'midiOutputSelect', 'midiChordsChannel', 'midiBassChannel',
-                'midiSoloistChannel', 'midiHarmonyChannel', 'midiDrumsChannel', 'midiLatencySlider', 'midiLatencyValue', 'midiControls',
-                'midiChordsOctave', 'midiBassOctave', 'midiSoloistOctave', 'midiHarmonyOctave', 'midiDrumsOctave',
-                'midiVelocitySlider', 'midiVelocityValue',
-                'larsModeCheck', 'larsIntensitySlider', 'larsIntensityValue', 'larsIntensityContainer'    ];
-
-    uiIds.forEach(id => ui[id] = document.getElementById(id));
-    Object.keys(uiMap).forEach(key => ui[key] = document.getElementById(uiMap[key]));
-}
+        const id = ID_ALIASES[prop] || prop;
+        const element = document.getElementById(id);
+        
+        // Cache found elements to avoid repeated DOM queries
+        if (element) {
+            target[prop] = element;
+        }
+        return element;
+    }
+});
 
 export function showToast(msg) {
     const toast = document.createElement('div');
@@ -313,18 +301,40 @@ export function renderGridState() {
     internalRenderGridState(ui);
 }
 
+export function initSequencerHandlers() {
+    internalInitSequencerHandlers(ui);
+}
+
 export function clearActiveVisuals(viz) {
-    document.querySelectorAll('.chord-card').forEach(c => c.classList.remove('active'));
+    UIStore.cachedCards.forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));
     if (viz) viz.clear();
 }
 
 export function recalculateScrollOffsets() {
-    const cards = document.querySelectorAll('.chord-card');
-    UIStore.cardOffsets = Array.from(cards).map(card => {
+    UIStore.cardOffsets = UIStore.cachedCards.map(card => {
         // Measure offset relative to the chordVisualizer container
         return card.offsetTop - (ui.chordVisualizer ? ui.chordVisualizer.offsetTop : 0);
     });
+}
+
+export function switchInstrumentTab(module, target) {
+    const panelId = { cb: 'chord', bb: 'bass', sb: 'soloist', hb: 'harmony', gb: 'groove' }[module];
+    if (!panelId) return;
+
+    // Update Buttons
+    document.querySelectorAll(`.instrument-tab-btn[data-module="${module}"]`).forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === target);
+    });
+    
+    // Update Content
+    document.querySelectorAll(`[id^="${panelId}-tab-"]`).forEach(c => {
+        c.classList.toggle('active', c.id === `${panelId}-tab-${target}`);
+    });
+    
+    // Update State
+    const stateMap = { cb, bb, sb, hb, gb };
+    if (stateMap[module]) stateMap[module].activeTab = target;
 }
 
 export function initTabs() {
@@ -345,27 +355,6 @@ export function initTabs() {
         gb.mobileTab = target;
     };
 
-    const activateInstrumentTab = (btn) => {
-        const module = btn.dataset.module;
-        const target = btn.dataset.tab;
-        
-        // Find panel context to scope button/content queries
-        const panelId = { cb: 'chord', bb: 'bass', sb: 'soloist', hb: 'harmony', gb: 'groove' }[module];
-        
-        // Update Buttons within the same panel
-        document.querySelectorAll(`.instrument-tab-btn[data-module="${module}"]`).forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        // Update Content within the same panel
-        document.querySelectorAll(`[id^="${panelId}-tab-"]`).forEach(c => c.classList.remove('active'));
-        const content = document.getElementById(`${panelId}-tab-${target}`);
-        if (content) content.classList.add('active');
-        
-        // Update State
-        const stateMap = { cb, bb, sb, hb, gb };
-        if (stateMap[module]) stateMap[module].activeTab = target;
-    };
-
     mobileTabItems.forEach(item => {
         item.onclick = () => {
             activateMobileTab(item);
@@ -380,14 +369,14 @@ export function initTabs() {
 
     instrumentTabBtns.forEach(btn => {
         btn.onclick = () => {
-            activateInstrumentTab(btn);
+            switchInstrumentTab(btn.dataset.module, btn.dataset.tab);
             saveCurrentState();
         };
         
         const module = btn.dataset.module;
         const stateMap = { cb, bb, sb, hb, gb };
         if (stateMap[module] && btn.dataset.tab === stateMap[module].activeTab) {
-            activateInstrumentTab(btn);
+            switchInstrumentTab(module, btn.dataset.tab);
         }
     });
 }
@@ -475,7 +464,7 @@ export function createPresetChip(name, onDelete, onSelect, extraClass = '') {
 
 export function updateActiveChordUI(index) {
     cb.lastActiveChordIndex = index;
-    const cards = document.querySelectorAll('.chord-card');
+    const cards = UIStore.cachedCards;
     cards.forEach((c, i) => c.classList.toggle('active', i === index));
     
     // --- 1. Arranger Scrolling ---

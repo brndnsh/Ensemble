@@ -1,5 +1,5 @@
 import { ctx, cb, bb, sb, hb, gb, arranger, subscribe } from './state.js';
-import { initUI, renderChordVisualizer, renderGrid, renderSections, initTabs, renderMeasurePagination, setupPanelMenus } from './ui.js';
+import { renderChordVisualizer, renderGrid, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, initSequencerHandlers } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';
 import { validateProgression } from './chords.js';
@@ -53,7 +53,6 @@ function init() {
             if (ctx.isPlaying) scheduler(); 
         });
 
-        initUI();
         viz = new UnifiedVisualizer('unifiedVizContainer'); 
         ctx.viz = viz;
         viz.addTrack('bass', 'var(--success-color)'); 
@@ -66,6 +65,7 @@ function init() {
         setInstrumentControllerRefs(() => scheduler(), viz);
         initTabs(); 
         setupPanelMenus(); 
+        initSequencerHandlers();
         renderGrid(); 
         renderMeasurePagination(switchMeasure);
         

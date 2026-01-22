@@ -19,7 +19,8 @@ vi.mock('../../../public/ui.js', () => ({
     },
     showToast: vi.fn(),
     updateKeySelectLabels: vi.fn(),
-    updateRelKeyButton: vi.fn()
+    updateRelKeyButton: vi.fn(),
+    switchInstrumentTab: vi.fn()
 }));
 
 import { ui as actualUi } from '../../../public/ui.js';

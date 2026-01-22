@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { initUI, ui } from '../../public/ui.js';
+import { ui } from '../../public/ui.js';
 
 describe('Accessibility (A11y) & Interactive Integrity', () => {
     beforeEach(() => {
@@ -55,8 +55,6 @@ describe('Accessibility (A11y) & Interactive Integrity', () => {
                 document.body.appendChild(el);
             }
         });
-
-        initUI();
     });
 
     it('should have critical interactive elements with accessible labels', () => {
