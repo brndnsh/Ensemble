@@ -61,12 +61,15 @@ export function getChordDetails(symbol) {
  * @param {number|null} anchor - Optional custom anchor MIDI note.
  * @param {number} min - Minimum allowed MIDI note for the average.
  * @param {number} max - Maximum allowed MIDI note for the average.
+ * @param {string} style - The style of the music, e.g., 'stabs', 'organ'.
  * @returns {number[]} - Optimized MIDI notes for the chord.
  */
-export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false, anchor = null, min = 40, max = 80) {
+export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false, anchor = null, min = 40, max = 80, style = 'stabs') {
     const { cb } = stateModule;
     const homeAnchor = anchor || cb.octave || 60;
-    const registerPullWeight = 0.6;
+    
+    // Organ needs more aggressive correction back to the anchor to avoid mud
+    const registerPullWeight = style === 'organ' ? 0.8 : 0.6;
     const RANGE_MIN = min;
     const RANGE_MAX = max;
 
@@ -74,7 +77,7 @@ export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = f
     if (previousMidis && previousMidis.length > 0) {
         const prevAvg = previousMidis.reduce((a, b) => a + b, 0) / previousMidis.length;
         const drift = prevAvg - homeAnchor;
-        const driftLimit = isPivot ? 3 : 5;   
+        const driftLimit = (style === 'organ' || isPivot) ? 3 : 5;   
         targetCenter = (Math.abs(drift) > driftLimit) ? prevAvg - (drift * registerPullWeight) : prevAvg;
     }
 

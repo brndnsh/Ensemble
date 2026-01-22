@@ -220,7 +220,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     }
 
     const rangeMin = activeStyle === 'organ' ? 54 : 50;
-    const currentMidis = getBestInversion(rootMidi, intervals, hb.lastMidis, stepInChord === 0, octave, rangeMin, 79);    
+    const currentMidis = getBestInversion(rootMidi, intervals, hb.lastMidis, stepInChord === 0, octave, rangeMin, 79, activeStyle);    
     const soloistMidi = sb.enabled ? getMidi(sb.lastFreq) : 0;
     let finalOctaveShift = 0;
     if ((isChordStart || measureStep === 0) && soloistMidi > 0 && currentMidis.some(m => Math.abs(m - soloistMidi) < 7)) {
