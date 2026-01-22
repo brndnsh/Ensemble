@@ -535,7 +535,9 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         const releaseJitter = (Math.random() - 0.5) * 0.1;
         const finalDuration = Math.max(0.1, durationSteps + releaseJitter);
         
-        const isFastKill = isApproach || isAnticipating || isMovement;
+        // Fast kill only for chromatic approaches to avoid dissonance overlap.
+        // Anticipations and Movement should crossfade smoothly.
+        const isFastKill = isApproach;
 
         notes.push({
             midi: finalMidi,
