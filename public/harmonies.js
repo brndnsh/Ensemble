@@ -495,6 +495,13 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const styleOffset = config.octaveOffset || 0;
 
     const finalMidisForMemory = [];
+    
+    // Pre-calculate scale for safety net (optimization)
+    let currentScale = [];
+    if (!isApproach) {
+        const targetChordLocal = isAnticipating ? nextChord : chord;
+        currentScale = getScaleForChord(targetChordLocal, null, 'smart');
+    }
 
     currentMidis.forEach((midi, i) => {
         let finalMidi = midi + liftShift + finalOctaveShift + styleOffset;
@@ -502,9 +509,8 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         // --- Scale Safety Net ---
         // Safety: Only apply to non-approach notes. 
         // Approach notes are INTENDED to be chromatic/off-scale.
-        if (!isApproach) {
-            const targetChordLocal = isAnticipating ? nextChord : chord;
-            const currentScale = getScaleForChord(targetChordLocal, null, 'smart');
+        if (!isApproach && currentScale.length > 0) {
+            const targetChordLocal = isAnticipating ? nextChord : chord; // Redundant but explicit for ref
             const pc = (finalMidi % 12 + 12) % 12;
             const relPC = (pc - (targetChordLocal.rootMidi % 12) + 12) % 12;
             
