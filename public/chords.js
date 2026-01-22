@@ -112,9 +112,14 @@ export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = f
     });
 
     let finalResult = result;
-    const avg = finalResult.reduce((a, b) => a + b, 0) / finalResult.length;
-    if (avg < RANGE_MIN) finalResult = finalResult.map(n => n + 12);
-    if (avg > RANGE_MAX) finalResult = finalResult.map(n => n - 12);
+    const minNote = Math.min(...finalResult);
+    if (minNote < RANGE_MIN) {
+        finalResult = finalResult.map(n => n + 12);
+    }
+    const maxNote = Math.max(...finalResult);
+    if (maxNote > RANGE_MAX) {
+        finalResult = finalResult.map(n => n - 12);
+    }
 
     return finalResult.sort((a, b) => a - b);
 }
