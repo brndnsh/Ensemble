@@ -266,8 +266,10 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         }
     }
 
+    // Chromatic Approach: A single voice leading into the next chord
     let isApproach = false;
-    if (!shouldPlay && nextChord && measureStep === stepsPerMeasure - 1) {
+    // Safety: Disable approach notes for pads to prevent "cutting off" lush textures
+    if (!shouldPlay && nextChord && measureStep === stepsPerMeasure - 1 && rhythmicStyle !== 'pads') {
         const approachProb = (isJazzy ? 0.5 : 0.15) * hb.complexity;
         if (Math.random() < approachProb) {
             shouldPlay = true;
