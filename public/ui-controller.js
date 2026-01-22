@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { ui, showToast, renderChordVisualizer, renderSections, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
+import { ui, showToast, renderChordVisualizer, renderSections, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels, switchInstrumentTab } from './ui.js';
 import { ctx, cb, bb, sb, hb, gb, arranger, dispatch } from './state.js';
 import { saveCurrentState } from './persistence.js';
 import { restoreGains, initAudio } from './engine.js';
@@ -32,16 +32,9 @@ export function updateStyle(type, styleId) {
     dispatch(ACTIONS.SET_STYLE, { module: c.module, style: styleId });
 
     // When a manual style is selected, we switch the tab to 'classic' automatically
-    // unless the style being set is 'smart' (though usually smart is set via tabs)
     if (styleId !== 'smart') {
         dispatch(ACTIONS.SET_ACTIVE_TAB, { module: c.module, tab: 'classic' });
-        // Update UI Tabs
-        document.querySelectorAll(`.instrument-tab-btn[data-module="${c.module}"]`).forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tab === 'classic');
-        });
-        document.querySelectorAll(`[id^="${c.panelId}-tab-"]`).forEach(panel => {
-            panel.classList.toggle('active', panel.id === `${c.panelId}-tab-classic`);
-        });
+        switchInstrumentTab(c.module, 'classic');
     }
 
     document.querySelectorAll(c.selector).forEach(chip => {
@@ -98,24 +91,19 @@ export function setupPresets(refs = {}) {
         ...DRUM_PRESETS[name]
     }));
     
-    renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item) => {
+    const onDrumPresetSelect = (item) => {
         loadDrumPreset(item.name);
         document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
         document.querySelectorAll(`.drum-preset-chip[data-id="${item.name}"]`).forEach(c => c.classList.add('active'));
         gb.lastDrumPreset = item.name;
         syncWorker();
         saveCurrentState();
-    });
+    };
+
+    renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, onDrumPresetSelect);
 
     if (ui.smartDrumPresets) {
-        renderCategorized(ui.smartDrumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, (item) => {
-            loadDrumPreset(item.name);
-            document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll(`.drum-preset-chip[data-id="${item.name}"]`).forEach(c => c.classList.add('active'));
-            gb.lastDrumPreset = item.name;
-            syncWorker();
-            saveCurrentState();
-        });
+        renderCategorized(ui.smartDrumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, onDrumPresetSelect);
     }
 
     renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', arranger.lastChordPreset, (item) => {
