@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { getScaleForChord } from '../../public/soloist.js';
 import { arranger, gb, sb } from '../../public/state.js';
-import { KEY_ORDER } from '../../public/config.js';
 
 describe('Dissonance Reproduction', () => {
     beforeEach(() => {
