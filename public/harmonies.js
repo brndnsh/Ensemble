@@ -272,7 +272,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             if (durationSteps >= 4 && intensity > 0.5) vibrato = { rate: 5.0, depth: 5 + (intensity * 10) };
         }
 
-        const baseVol = config.velocity * (0.8 + Math.random() * 0.2);
+        const baseVol = config.velocity * (0.5 + intensity * 0.9) * (0.8 + Math.random() * 0.2);
         const stagger = (i - (currentMidis.length - 1) / 2) * 0.005;
         let finalOffset = pocketOffset + stagger + (Math.random() * config.timingJitter);
         if ((isAnticipating || isApproach) && finalOffset > 0) finalOffset = -0.005 - (Math.random() * 0.010); 

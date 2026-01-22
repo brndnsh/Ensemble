@@ -113,9 +113,9 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         
         // Intensity-aware brightness mapping (Wide Range for Alternative Loop)
         const intensity = ctx.bandIntensity;
-        const intensityShift = (intensity - 0.5) * 1200; // Increased from 400
-        const intensityDepthMult = 0.5 + (intensity * 1.5); // 0.5x to 2.0x depth
-        const velocityCutoff = Math.max(150, (preset.filterBase + intensityShift) + (finalVol * preset.filterDepth * intensityDepthMult));
+        const intensityShift = (intensity - 0.5) * 2400; // Expanded from 1200
+        const intensityDepthMult = 0.5 + (intensity * 2.5); // 0.5x to 3.0x depth (Expanded from 0.5-2.0)
+        const velocityCutoff = Math.max(100, (preset.filterBase + intensityShift) + (finalVol * preset.filterDepth * intensityDepthMult));
         
         // --- Component A: The Hammer Strike ---
         if (isPiano && !muted) {

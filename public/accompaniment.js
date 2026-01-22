@@ -444,7 +444,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             voicing.forEach((m, i) => {
                 notes.push({
                     midi: m,
-                    velocity: (isGhost ? 0.2 : 0.55) * (0.7 + intensity * 0.4),
+                    velocity: (isGhost ? 0.2 : 0.55) * (0.5 + intensity * 0.9),
                     durationSteps: isGhost ? 0.5 : 2.5,
                     ccEvents: (i === 0) ? ccEvents : [],
                     timingOffset: (i * 0.012) + ctx.intent.layBack + drunk,
@@ -472,7 +472,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             voicing.forEach((f, i) => {
                 notes.push({
                     midi: getMidi(f),
-                    velocity: 0.5 + (Math.random() * 0.15), // Reduced from 0.6
+                    velocity: (0.4 + (intensity * 0.4)) * (0.9 + Math.random() * 0.2), 
                     durationSteps: 0.5, // Super staccato
                     ccEvents: (i === 0) ? ccEvents : [],
                     timingOffset: (i * 0.005) + 0.01,
@@ -488,7 +488,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             const bubbleMidi = getMidi(chord.freqs[0]);
             const bubbleMidi2 = chord.freqs[1] ? getMidi(chord.freqs[1]) : null;
             
-            const v = 0.4 + (Math.random() * 0.2);
+            const v = (0.3 + (intensity * 0.4)) * (0.9 + Math.random() * 0.2);
             notes.push({
                 midi: bubbleMidi,
                 velocity: v,
@@ -535,7 +535,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             voicing.forEach((m, i) => {
                 notes.push({
                     midi: m,
-                    velocity: (isGhost ? 0.25 : 0.65) * (0.8 + Math.random() * 0.4),
+                    velocity: (isGhost ? 0.2 : 0.6) * (0.5 + intensity * 0.9) * (0.9 + Math.random() * 0.2),
                     durationSteps: isGhost ? 0.1 : 0.4, // Super short ghost "chucks"
                     ccEvents: (i === 0) ? ccEvents : [],
                     timingOffset: (i * 0.004) + (isGhost ? (0.005 + Math.random() * 0.01) : 0),
@@ -601,7 +601,9 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         
         durationSteps = Math.max(1, Math.round(durationSteps));
 
-        const velocity = (isStructural ? 0.6 : (isDownbeat ? 0.5 : 0.35)) * (0.8 + intensity * 0.4);
+        // Expanded dynamic range: 0.5 + intensity * 0.9 (Range: 0.5 to 1.4)
+        const intensityFactor = 0.5 + (intensity * 0.9);
+        const velocity = (isStructural ? 0.6 : (isDownbeat ? 0.5 : 0.35)) * intensityFactor;
 
         let voicing = [...chord.freqs];
         
