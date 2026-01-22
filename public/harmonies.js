@@ -438,29 +438,37 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     let pocketOffset = hb.pocketOffset || 0;
     if (feel === 'Neo-Soul') pocketOffset += 0.020; // Tightened from 30ms to 20ms
     else if (feel === 'Jazz') pocketOffset += 0.008; // Tightened from 12ms to 8ms
-    else if (feel === 'Funk' || feel === 'Disco') pocketOffset -= 0.006; // Driving "On top"
+    else if (feel === 'Funk' || feel === 'Disco') pocketOffset -= 0.006; // Driving \"On top\"
+
+    const finalMidisForMemory = [];
 
     currentMidis.forEach((midi, i) => {
         let finalMidi = midi + liftShift + finalOctaveShift;
         
         // --- Scale Safety Net ---
-        const targetChordLocal = isAnticipating ? nextChord : chord;
-        const currentScale = getScaleForChord(targetChordLocal, null, 'smart');
-        const pc = (finalMidi % 12 + 12) % 12;
-        const relPC = (pc - (targetChordLocal.rootMidi % 12) + 12) % 12;
-        
-        if (!currentScale.includes(relPC)) {
-            // Nudge to nearest scale tone (prioritizing 3rd/7th/Root)
-            const targets = currentScale.sort((a, b) => {
-                const isCore = (n) => [0, 3, 4, 10, 11].includes(n);
-                if (isCore(a) && !isCore(b)) return -1;
-                if (!isCore(a) && isCore(b)) return 1;
-                return Math.abs(a - relPC) - Math.abs(b - relPC);
-            });
-            const nearestRel = targets[0];
-            finalMidi += (nearestRel - relPC);
+        // Safety: Only apply to non-approach notes. 
+        // Approach notes are INTENDED to be chromatic/off-scale.
+        if (!isApproach) {
+            const targetChordLocal = isAnticipating ? nextChord : chord;
+            const currentScale = getScaleForChord(targetChordLocal, null, 'smart');
+            const pc = (finalMidi % 12 + 12) % 12;
+            const relPC = (pc - (targetChordLocal.rootMidi % 12) + 12) % 12;
+            
+            if (!currentScale.includes(relPC)) {
+                // Nudge to nearest scale tone (prioritizing 3rd/7th/Root)
+                const targets = currentScale.sort((a, b) => {
+                    const isCore = (n) => [0, 3, 4, 10, 11].includes(n);
+                    if (isCore(a) && !isCore(b)) return -1;
+                    if (!isCore(a) && isCore(b)) return 1;
+                    return Math.abs(a - relPC) - Math.abs(b - relPC);
+                });
+                const nearestRel = targets[0];
+                finalMidi += (nearestRel - relPC);
+            }
         }
         
+        finalMidisForMemory.push(finalMidi);
+
         let slideInterval = 0;
         let slideDuration = 0;
         let vibrato = { rate: 0, depth: 0 };
@@ -505,18 +513,15 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         const latchMult = isLatched ? 1.05 : 1.0; 
         
         // --- NEW: Humanized Timing & Release ---
-        // 1. Centered Voice Stagger: Avoid cumulative lag by centering the ensemble around the pocket.
         const ensembleSize = currentMidis.length;
         const staggerAmount = 0.005; // 5ms per voice
         const stagger = (i - (ensembleSize - 1) / 2) * staggerAmount;
         
-        // 2. Lead-in Safety: Anticipations/Approaches MUST lead, never drag.
         let finalOffset = pocketOffset + stagger + (Math.random() * config.timingJitter);
         if ((isAnticipating || isApproach) && finalOffset > 0) {
-            finalOffset = -0.005 - (Math.random() * 0.010); // Force lead-in (5-15ms ahead)
+            finalOffset = -0.005 - (Math.random() * 0.010); 
         }
 
-        // 3. Release Jitter: Chords don't release in perfect unison.
         const releaseJitter = (Math.random() - 0.5) * 0.1;
         const finalDuration = Math.max(0.1, durationSteps + releaseJitter);
 
@@ -534,5 +539,6 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         });
     });
 
+    hb.lastMidis = finalMidisForMemory;
     return notes;
 }
