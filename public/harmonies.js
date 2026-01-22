@@ -1,6 +1,6 @@
 import { getScaleForChord } from './soloist.js';
 import { getBestInversion } from './chords.js';
-import { ctx, gb, cb, hb, sb, arranger } from './state.js';
+import * as State from './state.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getMidi } from './utils.js';
 
@@ -16,6 +16,7 @@ let lastPlayedStep = -1;
  * Clears the internal motif memory. Used for section changes or testing.
  */
 export function clearHarmonyMemory() {
+    const { hb, sb } = State;
     motifCache.clear();
     hb.lastMidis = [];
     lastPlayedStep = -1;
@@ -30,6 +31,9 @@ export function clearHarmonyMemory() {
  */
 export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInChord, soloistResult = null) {
     if (!chord) return [];
+    
+    // Destructure state here to avoid ReferenceError during evaluation
+    const { ctx, gb, cb, hb, sb, arranger } = State;
 
     // Internal Style Config (Inlined for TDZ safety)
     const STYLE_CONFIG = {

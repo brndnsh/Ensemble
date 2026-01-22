@@ -1,7 +1,6 @@
 import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN, TIME_SIGNATURES } from './config.js';
 import { normalizeKey, getFrequency } from './utils.js';
 import * as stateModule from './state.js';
-const { cb, arranger, gb, bb, ctx } = stateModule;
 
 const ROMAN_REGEX = /^([#b])?(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v)/;
 const NNS_REGEX = /^([#b])?([1-7])/;
@@ -64,7 +63,8 @@ export function getChordDetails(symbol) {
  * @param {number} max - Maximum allowed MIDI note for the average.
  * @returns {number[]} - Optimized MIDI notes for the chord.
  */
-export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false, anchor = null, min = 43, max = 84) {
+export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false, anchor = null, min = 40, max = 80) {
+    const { cb } = stateModule;
     const homeAnchor = anchor || cb.octave || 60;
     const registerPullWeight = 0.6;
     const RANGE_MIN = min;
@@ -355,6 +355,7 @@ export function resolveChordRoot(part, keyRootMidi, baseOctave) {
  * Omits root and often the 5th to focus on 3rd, 7th, and extensions.
  */
 function getRootlessVoicing(quality, is7th, isRich) {
+    const { gb } = stateModule;
     const genre = gb.genreFeel;
     // Basic types
     const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
@@ -410,16 +411,14 @@ function getRootlessVoicing(quality, is7th, isRich) {
     return null; // Fallback to standard triads
 }
 
-export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnabled = false) {
-    const isAltered5 = ['dim', 'halfdim', 'aug', 'augmaj7', '7alt', '7b13', '7#11', '7b5'].includes(quality) || quality.includes('b5') || quality.includes('#5') || quality.includes('alt');
-    const isAug = quality === 'aug' || quality === 'augmaj7';
-    const pianoRoots = cb.pianoRoots;
-    const shouldBeRootless = bassEnabled || !pianoRoots;
+export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnabled = true) {
+    const { ctx, gb } = stateModule;
     const isRich = density === 'rich';
     const intensity = ctx.bandIntensity;
 
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
-    if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk' || genre === 'Blues')) {
+    const shouldBeRootless = bassEnabled && (gb.genreFeel === 'Swing' || genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk' || genre === 'Blues');
+    if (shouldBeRootless) {
         const rootless = getRootlessVoicing(quality, is7th, isRich || intensity > 0.6);
         if (rootless) return rootless;
     }
@@ -536,6 +535,10 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     }
     if (quality === 'dim' && is7th && !intervals.includes(9)) intervals.push(9);
 
+    const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
+    const isAltered5 = quality.includes('alt') || quality.includes('b5') || quality.includes('#5') || quality.includes('aug');
+    const isAug = quality.includes('aug') || quality.includes('+');
+
     // FINAL SAFETY: if augmented or altered 5th, ensure natural 5th is NOT present
     if (isAltered5 || isAug) {
         intervals = intervals.filter(i => i % 12 !== 7);
@@ -604,6 +607,7 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
  * @returns {{chords: Array, finalMidis: number[]}}
  */
 function parseProgressionPart(input, key, timeSignature, initialMidis) {
+    const { cb, gb, bb } = stateModule;
     const parsed = [];
     const baseOctave = Math.floor(cb.octave / 12) * 12;
     const keyRootMidi = baseOctave + KEY_ORDER.indexOf(normalizeKey(key));
@@ -631,7 +635,20 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                 const part = token.trim();
                 const [chordPart, bassPart] = part.split('/');
                 
-                const { rootMidi, rootPart, romanMatch } = resolveChordRoot(chordPart, keyRootMidi, baseOctave);
+                const { rootMidi, rootPart, romanMatch, rootRomanBase } = resolveChordRoot(chordPart, keyRootMidi, baseOctave);
+
+                // Handle slash bass if present
+                let bassMidi = null;
+                let bassNameAbs = null, bassNameNNS = null, bassNameRom = null;
+                if (bassPart) {
+                    const resolvedBass = resolveChordRoot(bassPart, keyRootMidi, baseOctave);
+                    bassMidi = resolvedBass.rootMidi;
+                    
+                    const bassInterval = (bassMidi - keyRootMidi + 24) % 12;
+                    bassNameAbs = KEY_ORDER[bassMidi % 12];
+                    bassNameNNS = INTERVAL_TO_NNS[bassInterval];
+                    bassNameRom = INTERVAL_TO_ROMAN[bassInterval];
+                }
 
                 const suffixPart = chordPart.slice(rootPart.length);
                 let { quality, is7th } = getChordDetails(suffixPart);
@@ -649,35 +666,15 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                     }
 
                     // Only auto-diminished if it's a natural vii (no b or # prefix)
-                    if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|°|aug|\+|ø|h|7b5)/)) {
-                        quality = is7th ? 'halfdim' : 'dim';
+                if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|°|aug|\+|ø|h|7b5)/)) {
+                        quality = 'halfdim';
+                        is7th = true;
                     }
                 }
 
                 let intervals = getIntervals(quality, is7th, cb.density, gb.genreFeel, bb.enabled || cb.pianoRoots);
-
-                let bassMidi = null;
-                let bassNameAbs = "", bassNameNNS = "", bassNameRom = "";
-
-                if (bassPart) {
-                    const { rootMidi: bMidi } = resolveChordRoot(bassPart, keyRootMidi, baseOctave);
-                    bassMidi = bMidi;
-                    
-                    if (bassMidi !== null) {
-                        while (bassMidi >= rootMidi) bassMidi -= 12;
-                        while (bassMidi < rootMidi - 12) bassMidi += 12;
-                        const bInterval = (bassMidi - keyRootMidi + 24) % 12;
-                        bassNameAbs = KEY_ORDER[bassMidi % 12];
-                        bassNameNNS = INTERVAL_TO_NNS[bInterval];
-                        bassNameRom = INTERVAL_TO_ROMAN[bInterval];
-                    }
-                }
-
-                let isPivot = (barInternalOffset === 0); // Start of a bar is a pivot
-
-                // Prevent Piano from muddying the Bass register (lift to C3 if Bass is active)
                 const pianoMin = (bb.enabled || cb.pianoRoots) ? 48 : 43;
-
+                let isPivot = parsed.length === 0; 
                 let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot, cb.octave, pianoMin, 84);
                 if (bassMidi !== null) {
                     const bassPC = bassMidi % 12;
@@ -692,10 +689,10 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
 
                 const interval = (rootMidi - keyRootMidi + 24) % 12;
                 const rootNNS = INTERVAL_TO_NNS[interval];
-                const rootRomanBase = INTERVAL_TO_ROMAN[interval];
+                const displayRomanBase = INTERVAL_TO_ROMAN[interval];
                 const rootName = KEY_ORDER[rootMidi % 12];
                 
-                const formatted = getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality, is7th);
+                const formatted = getFormattedChordNames(rootName, rootNNS, displayRomanBase, quality, is7th);
 
                 let finalAbsName = formatted.name.root + formatted.name.suffix;
                 let finalNNSName = formatted.nns.root + formatted.nns.suffix;
@@ -737,6 +734,8 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
  * @param {Function} renderCallback - Callback to trigger visual update.
  */
 export function validateProgression(renderCallback) {
+    const { arranger } = stateModule;
+    const allSections = arranger.sections || [];
     let allChords = [];
     let lastMidis = [];
 
@@ -773,6 +772,7 @@ export function validateProgression(renderCallback) {
  * Caches progression metadata to avoid redundant calculations in the scheduler.
  */
 export function updateProgressionCache() {
+    const { arranger } = stateModule;
     if (!arranger.progression.length) {
         arranger.totalSteps = 0;
         arranger.stepMap = [];
