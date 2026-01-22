@@ -4,6 +4,61 @@ import { clearDrumPresetHighlight } from './instrument-controller.js';
 import { TIME_SIGNATURES } from './config.js';
 import { UIStore } from './ui-store.js';
 
+export function initSequencerHandlers(ui) {
+    if (!ui.sequencerGrid) return;
+
+    ui.sequencerGrid.addEventListener('click', (e) => {
+        const target = e.target;
+        
+        // 1. Handle Step Clicks
+        if (target.classList.contains('step')) {
+            const instIdx = parseInt(target.dataset.instIdx);
+            const stepIdx = parseInt(target.dataset.stepIdx);
+            const inst = gb.instruments[instIdx];
+            if (!inst) return;
+
+            if (inst.steps[stepIdx] === 0) inst.steps[stepIdx] = 1;
+            else if (inst.steps[stepIdx] === 1) inst.steps[stepIdx] = 2;
+            else inst.steps[stepIdx] = 0;
+            
+            target.classList.toggle('active', inst.steps[stepIdx] === 1);
+            target.classList.toggle('accented', inst.steps[stepIdx] === 2);
+            clearDrumPresetHighlight();
+            return;
+        }
+
+        // 2. Handle Track Symbol (Audition)
+        if (target.classList.contains('track-symbol')) {
+            const instIdx = parseInt(target.dataset.instIdx);
+            const inst = gb.instruments[instIdx];
+            if (!inst) return;
+
+            import('./engine.js').then(({ initAudio, playDrumSound }) => {
+                import('./state.js').then(({ ctx }) => {
+                    initAudio();
+                    playDrumSound(inst.name, ctx.audio.currentTime, 1.0);
+                });
+            });
+            target.classList.add('auditioning');
+            setTimeout(() => target.classList.remove('auditioning'), 100);
+            return;
+        }
+
+        // 3. Handle Mute Toggle
+        if (target.classList.contains('mute-toggle')) {
+            const instIdx = parseInt(target.dataset.instIdx);
+            const inst = gb.instruments[instIdx];
+            if (!inst) return;
+
+            inst.muted = !inst.muted;
+            target.classList.toggle('active', inst.muted);
+            const symbol = target.parentElement.querySelector('.track-symbol');
+            if (symbol) symbol.classList.toggle('muted', inst.muted);
+            return;
+        }
+    });
+}
+
 /**
  * Handles the rendering and state of the Drum Sequencer Grid UI.
  */
@@ -43,30 +98,15 @@ export function renderGrid(ui, skipScroll = false) {
         
         const symbol = document.createElement('span');
         symbol.className = 'track-symbol';
+        symbol.dataset.instIdx = idx;
         symbol.textContent = inst.symbol || inst.name.charAt(0);
         symbol.title = `Audition ${inst.name}`;
-        symbol.onclick = (e) => {
-            e.stopPropagation();
-            import('./engine.js').then(({ initAudio, playDrumSound }) => {
-                import('./state.js').then(({ ctx }) => {
-                    initAudio();
-                    playDrumSound(inst.name, ctx.audio.currentTime, 1.0);
-                });
-            });
-            symbol.classList.add('auditioning');
-            setTimeout(() => symbol.classList.remove('auditioning'), 100);
-        };
         
         const muteBtn = document.createElement('button');
         muteBtn.className = `mute-toggle ${inst.muted ? 'active' : ''}`;
+        muteBtn.dataset.instIdx = idx;
         muteBtn.textContent = 'M';
         muteBtn.title = inst.muted ? 'Unmute' : 'Mute';
-        muteBtn.onclick = (e) => {
-            e.stopPropagation();
-            inst.muted = !inst.muted;
-            muteBtn.classList.toggle('active', inst.muted);
-            symbol.classList.toggle('muted', inst.muted);
-        };
 
         label.appendChild(symbol);
         label.appendChild(muteBtn);
@@ -89,6 +129,8 @@ export function renderGrid(ui, skipScroll = false) {
         for (let i = 0; i < totalSteps; i++) {
             const step = steps[i];
             step.className = 'step';
+            step.dataset.instIdx = idx;
+            step.dataset.stepIdx = i;
             
             const stepInfo = getStepInfo(i, ts);
             if (stepInfo.isGroupStart) step.classList.add('group-marker');
@@ -96,16 +138,6 @@ export function renderGrid(ui, skipScroll = false) {
             
             if (inst.steps[i] === 1) step.classList.add('active');
             if (inst.steps[i] === 2) step.classList.add('accented');
-            
-            step.onclick = () => {
-                if (inst.steps[i] === 0) inst.steps[i] = 1;
-                else if (inst.steps[i] === 1) inst.steps[i] = 2;
-                else inst.steps[i] = 0;
-                
-                step.classList.toggle('active', inst.steps[i] === 1);
-                step.classList.toggle('accented', inst.steps[i] === 2);
-                clearDrumPresetHighlight();
-            };
         }
     });
 
