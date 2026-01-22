@@ -664,7 +664,10 @@ export const SOLOIST_STYLES = [
 export const HARMONY_STYLES = [
     { id: 'smart', name: 'Smart (Auto)', category: 'Experimental' },
     { id: 'horns', name: 'Horns (Stabs)', category: 'Modern' },
-    { id: 'strings', name: 'Strings (Pads)', category: 'Classical/Trad' }
+    { id: 'strings', name: 'Strings (Pads)', category: 'Classical/Trad' },
+    { id: 'organ', name: 'Organ (B3)', category: 'Soul/Funk' },
+    { id: 'plucks', name: 'Modern Synth (Plucks)', category: 'Electronic' },
+    { id: 'counter', name: 'Contrapuntal', category: 'Jazz' }
 ];
 
 export const CHORD_PRESETS = [

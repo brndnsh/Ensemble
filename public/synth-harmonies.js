@@ -85,6 +85,12 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     // --- Articulation: Vibrato (LFO) ---
     let lfo = null;
     let lfoGain = null;
+    
+    // Organ Leslie Effect override
+    if (style === 'organ') {
+        vibrato = { rate: 6.0, depth: 10 }; // Fast rotation
+    }
+
     if (vibrato && vibrato.rate > 0 && vibrato.depth > 0) {
         lfo = ctx.audio.createOscillator();
         lfoGain = ctx.audio.createGain();
@@ -93,8 +99,14 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         
         lfo.connect(lfoGain);
         lfoGain.connect(osc1.frequency);
-        lfoGain.connect(osc2.frequency);
-        if (sub) lfoGain.connect(sub.frequency);
+        // Organ: Leslie affects all drawbars
+        if (style === 'organ') {
+            lfoGain.connect(osc2.frequency);
+            if (sub) lfoGain.connect(sub.frequency);
+        } else {
+            lfoGain.connect(osc2.frequency);
+            if (sub) lfoGain.connect(sub.frequency);
+        }
         lfo.start(playTime);
     }
 
@@ -117,6 +129,46 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
             sub.type = 'triangle';
             sub.frequency.setValueAtTime(freq * 0.5, playTime);
         }
+    }
+    else if (style === 'organ') {
+        // B3 Drawbar Simulation: Root + Octave + Fifth + Percussion
+        osc1.type = 'sine'; // Fundamental
+        osc2.type = 'sine'; // Octave up (4')
+        osc2.frequency.setValueAtTime(freq * 2, playTime);
+        
+        if (sub) {
+            sub.type = 'sine'; // Sub-fundamental (16')
+            sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        }
+
+        // Key Click (Percussion)
+        const click = ctx.audio.createOscillator();
+        const clickGain = ctx.audio.createGain();
+        click.type = 'square';
+        click.frequency.setValueAtTime(freq * 3, playTime); // 12th (2 2/3')
+        clickGain.gain.setValueAtTime(finalVol * 0.4, playTime);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.05);
+        
+        click.connect(clickGain);
+        clickGain.connect(gain); // Route through main envelope
+        click.start(playTime);
+        click.stop(playTime + 0.1);
+    }
+    else if (style === 'plucks') {
+        // Modern EDM Pluck: Short, resonant, punchy
+        osc1.type = 'sawtooth';
+        osc2.type = 'square';
+        osc2.detune.setValueAtTime(5, playTime);
+        if (sub) {
+            sub.type = 'sine';
+            sub.frequency.setValueAtTime(freq * 0.5, playTime);
+        }
+    }
+    else if (style === 'counter') {
+        // Cello/Trombone hybrid: Sawtooth with heavy filtering
+        osc1.type = 'sawtooth';
+        osc2.type = 'triangle';
+        osc2.detune.setValueAtTime(4, playTime);
     }
     else if (style === 'stabs') {
         // Horn-like: Bright Sawtooth with body
@@ -169,6 +221,18 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         filter.frequency.setValueAtTime(startFreq, playTime);
         filter.frequency.exponentialRampToValueAtTime(freq * 2 * brightnessMult, playTime + 0.1);
         filter.Q.setValueAtTime(qVal, playTime);
+    } else if (style === 'plucks') {
+        // "Bubble" envelope
+        filter.frequency.setValueAtTime(freq * 8, playTime);
+        filter.frequency.exponentialRampToValueAtTime(freq * 1.5, playTime + 0.15); // Fast snap
+        filter.Q.setValueAtTime(5 + (intensity * 5), playTime); // High resonance
+    } else if (style === 'counter') {
+        // Expressive swell
+        const start = freq * 1.5;
+        const peak = freq * 3.0 * brightnessMult;
+        filter.frequency.setValueAtTime(start, playTime);
+        filter.frequency.linearRampToValueAtTime(peak, playTime + duration * 0.6); // Swell
+        filter.Q.setValueAtTime(1.0, playTime);
     } else {
         // Swell for pads
         const cutoff = (feel === 'Neo-Soul') ? freq * 1.5 * brightnessMult : freq * 3 * brightnessMult;

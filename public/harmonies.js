@@ -32,6 +32,30 @@ const STYLE_CONFIG = {
         octaveOffset: 0,
         padProb: 0.9
     },
+    organ: {
+        density: 3, // Rich triads
+        rhythmicStyle: 'stabs', // Hybrid: Sustains with rhythmic chirps
+        timingJitter: 0.015, // Looser, "jammy" feel
+        velocity: 0.8,
+        octaveOffset: 0,
+        padProb: 0.4
+    },
+    plucks: {
+        density: 2,
+        rhythmicStyle: 'stabs', // Percussive
+        timingJitter: 0.002, // Tight timing
+        velocity: 0.7,
+        octaveOffset: 12, // Play higher
+        padProb: 0
+    },
+    counter: {
+        density: 1, // Monophonic lines
+        rhythmicStyle: 'pads', // Sustained underlying logic, but we'll override for movement
+        timingJitter: 0.03, // Loose
+        velocity: 0.75,
+        octaveOffset: -12, // Lower register (trombone/cello)
+        padProb: 0.1
+    },
     smart: {
         density: 2, // Capped at 2
         rhythmicStyle: 'auto', // Depends on genre
@@ -244,10 +268,16 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
 
     // 3. INNER VOICE MOTION
     if (!shouldPlay && rhythmicStyle === 'pads') {
-        const motionProb = (ctx.bandIntensity - 0.3) * 0.6;
+        let motionProb = (ctx.bandIntensity - 0.3) * 0.6;
+        if (style === 'counter') motionProb = 0.8; // Counterpoint moves frequently
+
         const isMotionStep = (measureStep === 8 || measureStep === 12);
         const bit = (motif.motionMask >> (measureStep % 16)) & 1;
-        if (isMotionStep && bit && (measureStep / 16) < motionProb + 0.1) {
+        
+        // Counter style can move on any beat 2 or 4, not just motion steps
+        const isCounterMove = style === 'counter' && (measureStep % 4 === 0);
+        
+        if ((isMotionStep && bit && (measureStep / 16) < motionProb + 0.1) || isCounterMove) {
             shouldPlay = true;
             durationSteps = 4;
             isMovement = true;
