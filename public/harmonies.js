@@ -169,26 +169,18 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     // --- 1. Decide on Instrument & Rhythmic Style ---
     let activeStyle = style;
     if (style === 'smart') {
-        const mapping = {
-            'Blues': 'organ',
-            'Jazz': 'counter',
-            'Bossa Nova': 'counter',
-            'Disco': 'plucks',
-            'Hip Hop': 'plucks',
-            'Funk': 'horns',
-            'Rock': 'strings',
-            'Metal': 'horns',
-            'Neo-Soul': 'strings',
-            'Acoustic': 'strings'
-        };
-        activeStyle = mapping[feel] || 'strings';
+        if (feel === 'Blues') activeStyle = 'organ';
+        else if (feel === 'Jazz' || feel === 'Bossa Nova') activeStyle = 'counter';
+        else if (feel === 'Disco' || feel === 'Hip Hop') activeStyle = 'plucks';
+        else if (feel === 'Funk' || feel === 'Metal') activeStyle = 'horns';
+        else activeStyle = 'strings';
     }
 
-    let config = STYLE_CONFIG[activeStyle] || STYLE_CONFIG.smart;
+    const config = STYLE_CONFIG[activeStyle] || STYLE_CONFIG.smart;
     let rhythmicStyle = config.rhythmicStyle;
     
     if (rhythmicStyle === 'auto') {
-        const isPadGenre = ['Rock', 'Acoustic', 'Neo-Soul'].includes(feel);
+        const isPadGenre = (feel === 'Rock' || feel === 'Acoustic' || feel === 'Neo-Soul');
         rhythmicStyle = isPadGenre ? 'pads' : 'stabs';
     }
 
@@ -496,33 +488,21 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
 
     const finalMidisForMemory = [];
     
-    // Pre-calculate scale for safety net (optimization)
-    let currentScale = [];
-    if (!isApproach) {
-        const targetChordLocal = isAnticipating ? nextChord : chord;
-        currentScale = getScaleForChord(targetChordLocal, null, 'smart');
-    }
+    // Safety Net: Ensure notes stay within the current chord tones if not an approach
+    const chordTones = chord.intervals || [0, 4, 7];
 
     currentMidis.forEach((midi, i) => {
         let finalMidi = midi + liftShift + finalOctaveShift + styleOffset;
         
         // --- Scale Safety Net ---
-        // Safety: Only apply to non-approach notes. 
-        // Approach notes are INTENDED to be chromatic/off-scale.
-        if (!isApproach && currentScale.length > 0) {
-            const targetChordLocal = isAnticipating ? nextChord : chord; // Redundant but explicit for ref
+        if (!isApproach) {
             const pc = (finalMidi % 12 + 12) % 12;
-            const relPC = (pc - (targetChordLocal.rootMidi % 12) + 12) % 12;
+            const relPC = (pc - (rootMidi % 12) + 12) % 12;
             
-            if (!currentScale.includes(relPC)) {
-                // Nudge to nearest scale tone (prioritizing 3rd/7th/Root)
-                const targets = currentScale.sort((a, b) => {
-                    const isCore = (n) => [0, 3, 4, 10, 11].includes(n);
-                    if (isCore(a) && !isCore(b)) return -1;
-                    if (!isCore(a) && isCore(b)) return 1;
-                    return Math.abs(a - relPC) - Math.abs(b - relPC);
-                });
-                const nearestRel = targets[0];
+            // If the note isn't in the chord and isn't a common extension (2, 6), nudge it
+            if (!chordTones.includes(relPC) && ![2, 9].includes(relPC)) {
+                // Find nearest chord tone
+                const nearestRel = chordTones.sort((a, b) => Math.abs(a - relPC) - Math.abs(b - relPC))[0];
                 finalMidi += (nearestRel - relPC);
             }
         }
