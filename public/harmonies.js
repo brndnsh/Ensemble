@@ -124,7 +124,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     if (!chord) return [];
 
     // AUTO-DUCK: If intensity is very low, we treat the module as disabled
-    // to provide a \"Delayed Bloom\" where horns/strings only join when the jam builds up.
+    // to provide a "Delayed Bloom" where horns/strings only join when the jam builds up.
     if (ctx.bandIntensity < 0.22) return [];
 
     // Stab Termination: If we are at the start of a chord, ensure any hanging stabs are cleared
@@ -436,9 +436,9 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
 
     // --- NEW: Genre-Specific Pocketing ---
     let pocketOffset = hb.pocketOffset || 0;
-    if (feel === 'Neo-Soul') pocketOffset += 0.030; // Soulful "Lay back"
-    else if (feel === 'Jazz') pocketOffset += 0.012; // Swing feel "Behind the beat"
-    else if (feel === 'Funk' || feel === 'Disco') pocketOffset -= 0.008; // Driving "On top" of the beat
+    if (feel === 'Neo-Soul') pocketOffset += 0.020; // Tightened from 30ms to 20ms
+    else if (feel === 'Jazz') pocketOffset += 0.008; // Tightened from 12ms to 8ms
+    else if (feel === 'Funk' || feel === 'Disco') pocketOffset -= 0.006; // Driving "On top"
 
     currentMidis.forEach((midi, i) => {
         let finalMidi = midi + liftShift + finalOctaveShift;
@@ -501,15 +501,22 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             }
         }
 
-        // Soft Latch: Reinforcement should be felt, not heard as a solo instrument.
         const baseVol = config.velocity * (0.8 + Math.random() * 0.2);
         const latchMult = isLatched ? 1.05 : 1.0; 
         
         // --- NEW: Humanized Timing & Release ---
-        // 1. Voice Stagger: Voices in a section don't hit at the same microsecond.
-        const stagger = (i * 0.008); // 8ms cumulative stagger per voice
+        // 1. Centered Voice Stagger: Avoid cumulative lag by centering the ensemble around the pocket.
+        const ensembleSize = currentMidis.length;
+        const staggerAmount = 0.005; // 5ms per voice
+        const stagger = (i - (ensembleSize - 1) / 2) * staggerAmount;
         
-        // 2. Release Jitter: Chords don't release in perfect unison.
+        // 2. Lead-in Safety: Anticipations/Approaches MUST lead, never drag.
+        let finalOffset = pocketOffset + stagger + (Math.random() * config.timingJitter);
+        if ((isAnticipating || isApproach) && finalOffset > 0) {
+            finalOffset = -0.005 - (Math.random() * 0.010); // Force lead-in (5-15ms ahead)
+        }
+
+        // 3. Release Jitter: Chords don't release in perfect unison.
         const releaseJitter = (Math.random() - 0.5) * 0.1;
         const finalDuration = Math.max(0.1, durationSteps + releaseJitter);
 
@@ -517,7 +524,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             midi: finalMidi,
             velocity: baseVol * latchMult * polyphonyComp,
             durationSteps: finalDuration,
-            timingOffset: pocketOffset + stagger + (Math.random() * config.timingJitter), 
+            timingOffset: finalOffset, 
             style: rhythmicStyle,
             isLatched: isLatched,
             isChordStart: isChordStart || isMovement || isAnticipating || isApproach,
