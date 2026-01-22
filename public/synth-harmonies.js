@@ -85,13 +85,40 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     // --- Articulation: Vibrato (LFO) ---
     let lfo = null;
     let lfoGain = null;
+    let tremoloLfo = null;
+    let tremoloGain = null;
     
-    // Organ Leslie Effect override
+    // Organ Leslie Effect: Combined Pitch and Amplitude Modulation
     if (style === 'organ') {
-        vibrato = { rate: 6.0, depth: 10 }; // Fast rotation
-    }
+        const leslieSpeed = 6.2; // Fast Leslie setting
+        
+        // 1. Pitch Modulation (Doppler)
+        lfo = ctx.audio.createOscillator();
+        lfoGain = ctx.audio.createGain();
+        lfo.frequency.setValueAtTime(leslieSpeed, playTime);
+        lfoGain.gain.setValueAtTime(5, playTime); // Reduced from 10 to stop "warbling"
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc1.frequency);
+        lfoGain.connect(osc2.frequency);
+        if (sub) lfoGain.connect(sub.frequency);
+        lfo.start(playTime);
 
-    if (vibrato && vibrato.rate > 0 && vibrato.depth > 0) {
+        // 2. Amplitude Modulation (Tremolo)
+        tremoloLfo = ctx.audio.createOscillator();
+        tremoloGain = ctx.audio.createGain();
+        tremoloLfo.type = 'sine';
+        tremoloLfo.frequency.setValueAtTime(leslieSpeed, playTime);
+        
+        // Tremolo depth (0.1 to 0.3 is natural)
+        const tremDepth = 0.2;
+        tremoloGain.gain.setValueAtTime(1.0 - tremDepth, playTime);
+        const tremAmp = ctx.audio.createGain();
+        tremAmp.gain.setValueAtTime(tremDepth, playTime);
+        tremoloLfo.connect(tremAmp);
+        tremAmp.connect(gain.gain); // Modulate the main gain
+        
+        tremoloLfo.start(playTime);
+    } else if (vibrato && vibrato.rate > 0 && vibrato.depth > 0) {
         lfo = ctx.audio.createOscillator();
         lfoGain = ctx.audio.createGain();
         lfo.frequency.setValueAtTime(vibrato.rate, playTime);
@@ -99,14 +126,8 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         
         lfo.connect(lfoGain);
         lfoGain.connect(osc1.frequency);
-        // Organ: Leslie affects all drawbars
-        if (style === 'organ') {
-            lfoGain.connect(osc2.frequency);
-            if (sub) lfoGain.connect(sub.frequency);
-        } else {
-            lfoGain.connect(osc2.frequency);
-            if (sub) lfoGain.connect(sub.frequency);
-        }
+        lfoGain.connect(osc2.frequency);
+        if (sub) lfoGain.connect(sub.frequency);
         lfo.start(playTime);
     }
 
@@ -131,28 +152,58 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         }
     }
     else if (style === 'organ') {
-        // B3 Drawbar Simulation: Root + Octave + Fifth + Percussion
-        osc1.type = 'sine'; // Fundamental
-        osc2.type = 'sine'; // Octave up (4')
+        // B3 Drawbar Simulation (888 Setting): Root + Fifth + Octave + Sub
+        osc1.type = 'sine'; // 8' (Fundamental)
+        
+        osc2.type = 'sine'; // 4' (Octave up)
         osc2.frequency.setValueAtTime(freq * 2, playTime);
         
+        // 3rd Drawbar: 5 1/3' (Fifth above fundamental)
+        const fifthOsc = ctx.audio.createOscillator();
+        fifthOsc.type = 'sine';
+        fifthOsc.frequency.setValueAtTime(freq * 1.5, playTime);
+        
         if (sub) {
-            sub.type = 'sine'; // Sub-fundamental (16')
+            sub.type = 'sine'; // 16' (Sub-fundamental)
             sub.frequency.setValueAtTime(freq * 0.5, playTime);
         }
 
-        // Key Click (Percussion)
+        // Key Click (Percussion) - made slightly louder
         const click = ctx.audio.createOscillator();
         const clickGain = ctx.audio.createGain();
         click.type = 'square';
-        click.frequency.setValueAtTime(freq * 3, playTime); // 12th (2 2/3')
-        clickGain.gain.setValueAtTime(finalVol * 0.4, playTime);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.05);
+        click.frequency.setValueAtTime(freq * 4, playTime); 
+        clickGain.gain.setValueAtTime(finalVol * 0.6, playTime);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, playTime + 0.04);
         
         click.connect(clickGain);
-        clickGain.connect(gain); // Route through main envelope
+        clickGain.connect(gain);
         click.start(playTime);
         click.stop(playTime + 0.1);
+
+        // Saturation (Tube Grit)
+        const saturator = ctx.audio.createWaveShaper();
+        saturator.curve = (function() {
+            const n = 44100;
+            const curve = new Float32Array(n);
+            const k = 2; // Subtle drive
+            for (let i = 0; i < n; ++i) {
+                const x = (i * 2) / n - 1;
+                curve[i] = (1 + k) * x / (1 + k * Math.abs(x));
+            }
+            return curve;
+        })();
+        
+        osc1.connect(saturator);
+        osc2.connect(saturator);
+        fifthOsc.connect(saturator);
+        if (sub) sub.connect(saturator);
+        
+        saturator.connect(filter);
+        
+        fifthOsc.start(playTime);
+        fifthOsc.stop(playTime + duration + 0.5);
+        if (lfoGain) lfoGain.connect(fifthOsc.frequency);
     }
     else if (style === 'plucks') {
         // Modern EDM Pluck: Short, resonant, punchy

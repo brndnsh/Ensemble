@@ -35,8 +35,8 @@ const STYLE_CONFIG = {
     organ: {
         density: 3, // Rich triads
         rhythmicStyle: 'stabs', // Hybrid: Sustains with rhythmic chirps
-        timingJitter: 0.015, // Looser, "jammy" feel
-        velocity: 0.8,
+        timingJitter: 0.015, // Looser, \"jammy\" feel
+        velocity: 1.0, // Increased from 0.8
         octaveOffset: 0,
         padProb: 0.4
     },
