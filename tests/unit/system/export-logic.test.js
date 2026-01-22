@@ -62,7 +62,7 @@ describe('Export and Resolution Logic Validation', () => {
             value: 'C',
             quality: 'Major'
         };
-        arranger.progression = [{ chord: mockChord, start: 0, end: 16 }];
+        arranger.progression = [mockChord];
         arranger.totalSteps = 16;
         arranger.stepMap = [{ start: 0, end: 16, chord: mockChord, chordIndex: 0 }];
     });
@@ -154,7 +154,6 @@ describe('Export and Resolution Logic Validation', () => {
     });
 
     it('should complete MIDI export including harmonies', () => {
-        arranger.progression = [{ chord: {}, start: 0, end: 16 }];
         handleExport({ includedTracks: ['chords', 'bass', 'soloist', 'harmonies', 'drums'], targetDuration: 0.1, loopMode: 'once' }); 
         
         const exportMsg = capturedMessages.find(m => m.type === 'exportComplete');
