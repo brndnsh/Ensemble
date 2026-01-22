@@ -97,7 +97,8 @@ export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = f
         return intervals.map(i => rootMidi + i + bestShift).sort((a, b) => a - b);
     }
 
-    let result = intervals.map((inter, i) => {
+    const result = [];
+    intervals.forEach((inter, i) => {
         let note = rootMidi + inter;
         let pc = note % 12;
         let octaves = [-24, -12, 0, 12, 24];
@@ -108,14 +109,15 @@ export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = f
         if (i > 0 && best < 48) {
             while (best - result[i-1] < 7) best += 12;
         }
-        return best;
+        result.push(best);
     });
 
-    const avg = result.reduce((a, b) => a + b, 0) / result.length;
-    if (avg < RANGE_MIN) result = result.map(n => n + 12);
-    if (avg > RANGE_MAX) result = result.map(n => n - 12);
+    let finalResult = result;
+    const avg = finalResult.reduce((a, b) => a + b, 0) / finalResult.length;
+    if (avg < RANGE_MIN) finalResult = finalResult.map(n => n + 12);
+    if (avg > RANGE_MAX) finalResult = finalResult.map(n => n - 12);
 
-    return result.sort((a, b) => a - b);
+    return finalResult.sort((a, b) => a - b);
 }
 
 /**

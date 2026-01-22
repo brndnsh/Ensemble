@@ -166,12 +166,29 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const sectionId = chord.sectionId || 'default';
     const feel = gb.genreFeel;
     
-    // --- 1. Decide on Pad vs Stab ---
-    let config = STYLE_CONFIG[style] || STYLE_CONFIG.smart;
+    // --- 1. Decide on Instrument & Rhythmic Style ---
+    let activeStyle = style;
+    if (style === 'smart') {
+        const mapping = {
+            'Blues': 'organ',
+            'Jazz': 'counter',
+            'Bossa Nova': 'counter',
+            'Disco': 'plucks',
+            'Hip Hop': 'plucks',
+            'Funk': 'horns',
+            'Rock': 'strings',
+            'Metal': 'horns',
+            'Neo-Soul': 'strings',
+            'Acoustic': 'strings'
+        };
+        activeStyle = mapping[feel] || 'strings';
+    }
+
+    let config = STYLE_CONFIG[activeStyle] || STYLE_CONFIG.smart;
     let rhythmicStyle = config.rhythmicStyle;
     
     if (rhythmicStyle === 'auto') {
-        const isPadGenre = ['Rock', 'Acoustic', 'Neo-Soul'].includes(gb.genreFeel);
+        const isPadGenre = ['Rock', 'Acoustic', 'Neo-Soul'].includes(feel);
         rhythmicStyle = isPadGenre ? 'pads' : 'stabs';
     }
 
@@ -576,9 +593,9 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             velocity: baseVol * latchMult * polyphonyComp,
             durationSteps: finalDuration,
             timingOffset: finalOffset, 
-            style: rhythmicStyle,
+            style: activeStyle, // Use the specific instrument style (organ, plucks, etc)
             isLatched: isLatched,
-            // Force "Attack" (Kill previous notes) for any new note generation event
+            // Force \"Attack\" (Kill previous notes) for any new note generation event
             isChordStart: true, 
             killFade: isFastKill ? 0.005 : 0.05,
             slideInterval,
