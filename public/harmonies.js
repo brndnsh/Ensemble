@@ -529,8 +529,11 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             finalOffset = -0.005 - (Math.random() * 0.010); 
         }
 
+        // 3. Release Jitter: Chords don't release in perfect unison.
         const releaseJitter = (Math.random() - 0.5) * 0.1;
         const finalDuration = Math.max(0.1, durationSteps + releaseJitter);
+        
+        const isFastKill = isApproach || isAnticipating || isMovement;
 
         notes.push({
             midi: finalMidi,
@@ -541,6 +544,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             isLatched: isLatched,
             // Force "Attack" (Kill previous notes) for any new note generation event
             isChordStart: true, 
+            killFade: isFastKill ? 0.005 : 0.05,
             slideInterval,
             slideDuration,
             vibrato

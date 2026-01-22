@@ -492,8 +492,9 @@ export function scheduleHarmonies(chordData, step, time) {
 
         // If any note in this step is a chord start or movement, 
         // clear previous voices once before scheduling the new ones.
-        if (notes.some(n => n.isChordStart)) {
-            killHarmonyNote();
+        const starter = notes.find(n => n.isChordStart);
+        if (starter) {
+            killHarmonyNote(starter.killFade || 0.05);
         }
 
         // Power-compensation for multiple voices: Scale volume by 1/sqrt(N)

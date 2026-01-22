@@ -6,13 +6,13 @@ import { safeDisconnect } from './utils.js';
  * Optimized for Horns (stabs) and Strings (pads).
  */
 
-export function killHarmonyNote() {
+export function killHarmonyNote(fadeTime = 0.05) {
     if (hb.activeVoices && hb.activeVoices.length > 0) {
         hb.activeVoices.forEach(voice => {
             try {
                 const g = voice.gain.gain;
                 g.cancelScheduledValues(ctx.audio.currentTime);
-                g.setTargetAtTime(0, ctx.audio.currentTime, 0.01);
+                g.setTargetAtTime(0, ctx.audio.currentTime, fadeTime);
             } catch { /* ignore error */ }
         });
         hb.activeVoices = [];
@@ -202,6 +202,9 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     } else {
         gain.connect(ctx.harmoniesGain);
     }
+
+    // Register active voice
+    hb.activeVoices.push({ gain, time: playTime, duration, midi });
 
     osc1.start(playTime);
     osc2.start(playTime);
