@@ -45,7 +45,7 @@ const STYLE_CONFIG = {
         rhythmicStyle: 'stabs', // Percussive
         timingJitter: 0.002, // Tight timing
         velocity: 0.7,
-        octaveOffset: 12, // Play higher
+        octaveOffset: 24, // Play higher
         padProb: 0
     },
     counter: {
@@ -477,12 +477,14 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     let pocketOffset = hb.pocketOffset || 0;
     if (feel === 'Neo-Soul') pocketOffset += 0.020; // Tightened from 30ms to 20ms
     else if (feel === 'Jazz') pocketOffset += 0.008; // Tightened from 12ms to 8ms
-    else if (feel === 'Funk' || feel === 'Disco') pocketOffset -= 0.006; // Driving \"On top\"
+    else if (feel === 'Funk' || feel === 'Disco') pocketOffset -= 0.006; // Driving "On top"
+
+    const styleOffset = config.octaveOffset || 0;
 
     const finalMidisForMemory = [];
 
     currentMidis.forEach((midi, i) => {
-        let finalMidi = midi + liftShift + finalOctaveShift;
+        let finalMidi = midi + liftShift + finalOctaveShift + styleOffset;
         
         // --- Scale Safety Net ---
         // Safety: Only apply to non-approach notes. 
