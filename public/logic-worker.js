@@ -743,6 +743,7 @@ if (typeof self !== 'undefined') {
                     bb.busySteps = 0;
                     sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;
                     hb.motifBuffer = [];
+                    hb.lastMidis = [];
                     
                     // Reset accompaniment memory
                     compingState.lastChordIndex = -1;

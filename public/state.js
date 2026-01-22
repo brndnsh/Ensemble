@@ -366,6 +366,7 @@ export const hb = {
     style: 'smart',
     complexity: 0.5,
     motifBuffer: [],
+    lastMidis: [], // Track voice leading across cycles
     rhythmicMask: 0,
     activeTab: 'smart'
 };
