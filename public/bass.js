@@ -232,7 +232,9 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         }
 
         const isPopStyle = style === 'funk' || style === 'disco';
-        const finalVel = Math.min(1.35, velocityParam * velocity * (isPopStyle ? (0.86 + intensity * 0.3) : 1.0));
+        // Wider dynamic range: 0.6 + intensity * 0.7 (Range: 0.6 to 1.3)
+        const intensityFactor = 0.6 + (intensity * 0.7);
+        const finalVel = Math.min(1.35, velocityParam * velocity * intensityFactor);
 
         return {
             freq,
