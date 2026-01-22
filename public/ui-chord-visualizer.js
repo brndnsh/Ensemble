@@ -1,6 +1,7 @@
 import { arranger, cb } from './state.js';
 import { formatUnicodeSymbols } from './utils.js';
 import { TIME_SIGNATURES } from './config.js';
+import { UIStore } from './ui-store.js';
 
 /**
  * Handles the rendering and updating of the Chord Visualizer UI.
@@ -80,11 +81,13 @@ export function renderChordVisualizer(ui) {
             });
         });
 
+        UIStore.cachedCards = existingCards;
         if (!isMaximized) autoScrollToActive(ui.chordVisualizer);
         return;
     }
 
     ui.chordVisualizer.innerHTML = '';
+    const newCards = [];
     let activeBlockContent = null;
     let pendingKeyLabel = null;
 
@@ -158,11 +161,13 @@ export function renderChordVisualizer(ui) {
                 };
 
                 mBox.appendChild(card);
+                newCards.push(card);
             });
             content.appendChild(mBox);
         });
     });
 
+    UIStore.cachedCards = newCards;
     if (!isMaximized) autoScrollToActive(ui.chordVisualizer);
 }
 
