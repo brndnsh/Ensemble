@@ -43,98 +43,132 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 
 import { getSoloistNote, getScaleForChord } from '../../public/soloist.js';
 import { getBassNote } from '../../public/bass.js';
-import { validateProgression } from '../../public/chords.js';
+import { validateProgression, transformRelativeProgression } from '../../public/chords.js';
 import { arranger, sb } from '../../public/state.js';
+import { KEY_ORDER } from '../../public/config.js';
 
-describe('Jazz Standard Test: Giant Steps', () => {
+describe('Jazz Standard Test: Giant Steps (Multi-Key)', () => {
     
-    beforeEach(() => {
-        arranger.key = 'B';
-        arranger.isMinor = false;
-        // Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7 | Am7 D7 | Gmaj7 Bb7 | Ebmaj7 F#7 | Bmaj7
-        arranger.sections = [
-            { id: 'Main', label: 'Main', value: "Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7 | Am7 D7 | Gmaj7 Bb7 | Ebmaj7 F#7 | Bmaj7 | Fm7 Bb7 | Ebmaj7 | Am7 D7 | Gmaj7 | C#m7 F#7 | Bmaj7 | Fm7 Bb7 | Ebmaj7 | C#m7 F#7" }
-        ];
-        validateProgression();
-        
-        sb.isResting = false;
-        sb.currentPhraseSteps = 0;
-        sb.notesInPhrase = 0;
-    });
+    // Original in B Major
+    const BASE_KEY = 'B';
+    const BASE_PROG = "Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7 | Am7 D7 | Gmaj7 Bb7 | Ebmaj7 F#7 | Bmaj7 | Fm7 Bb7 | Ebmaj7 | Am7 D7 | Gmaj7 | C#m7 F#7 | Bmaj7 | Fm7 Bb7 | Ebmaj7 | C#m7 F#7";
 
-    it('should select correct scales for rapid major-third key shifts', () => {
-        const progression = arranger.progression;
-        
-        // 1. Bmaj7 (I)
-        expect(getScaleForChord(progression[0], progression[1], 'bird')).toEqual([0, 2, 4, 5, 7, 9, 11]);
-        
-        // 2. D7 (V of G)
-        // Transition from B Major area to G Major area
-        const scaleD7 = getScaleForChord(progression[1], progression[2], 'bird');
-        expect(scaleD7).toEqual([0, 2, 4, 5, 7, 9, 10]); // Mixolydian
-
-        // 3. Ebmaj7 (New key center)
-        const ebmaj7 = progression[4]; 
-        expect(ebmaj7.absName).toContain('Ebmaj7');
-        expect(getScaleForChord(ebmaj7, progression[5], 'bird')).toEqual([0, 2, 4, 5, 7, 9, 11]);
-    });
-
-    it('should maintain voice leading through "Coltrane Changes"', () => {
-        const progression = arranger.progression;
-        let lastAvg = null;
-
-        progression.forEach((chord) => {
-            const currentMidis = chord.freqs.map(f => Math.round(12 * Math.log2(f / 440) + 69));
-            const currentAvg = currentMidis.reduce((a, b) => a + b, 0) / currentMidis.length;
-
-            if (lastAvg !== null) {
-                const drift = Math.abs(currentAvg - lastAvg);
-                // Even with large jumps, the engine should keep voicings close (under 7 semitones)
-                expect(drift).toBeLessThan(7);
-            }
-            lastAvg = currentAvg;
-        });
-    });
-
-    it('should generate a walking bass line that handles two chords per bar', () => {
-        let prevMidi = 38; 
-        
-        // Test first 4 bars (which have mixed 1 and 2 chords per bar)
-        // Bar 1: Bmaj7 D7 (8 steps each)
-        // Bar 2: Gmaj7 Bb7
-        // Bar 3: Ebmaj7 (16 steps)
-        for (let bar = 0; bar < 4; bar++) {
-            for (let beat = 0; beat < 4; beat++) {
-                const globalStep = (bar * 16) + (beat * 4);
-                const chordEntry = arranger.stepMap.find(m => globalStep >= m.start && globalStep < m.end);
-                const currentChord = chordEntry.chord;
-                const nextChord = arranger.stepMap.find(m => (globalStep + 4) >= m.start && (globalStep + 4) < m.end)?.chord;
-
-                const result = getBassNote(currentChord, nextChord, beat, 440 * Math.pow(2, (prevMidi - 69) / 12), 38, 'quarter', 0, globalStep, globalStep - chordEntry.start);
+    KEY_ORDER.forEach(rootKey => {
+        describe(`Key of ${rootKey}`, () => {
+            beforeEach(() => {
+                arranger.key = rootKey;
+                arranger.isMinor = false;
                 
-                expect(result).not.toBeNull();
-                const midi = result.midi;
+                // Calculate semitone shift from B to rootKey
+                const baseIdx = KEY_ORDER.indexOf(BASE_KEY);
+                const targetIdx = KEY_ORDER.indexOf(rootKey);
+                const shift = targetIdx - baseIdx;
+                
+                const transposedProg = transformRelativeProgression(BASE_PROG, shift);
 
-                // Beat 1 of ANY chord should be root
-                if (globalStep === chordEntry.start) {
-                    expect(midi % 12).toBe(currentChord.rootMidi % 12);
+                arranger.sections = [
+                    { id: 'Main', label: 'Main', value: transposedProg }
+                ];
+                validateProgression();
+                
+                sb.isResting = false;
+                sb.currentPhraseSteps = 0;
+                sb.notesInPhrase = 0;
+            });
+
+            it('should select correct scales for rapid major-third key shifts', () => {
+                const progression = arranger.progression;
+                
+                // 1. Imaj7 (Start)
+                // Scale should be Ionian (Major Scale)
+                const scaleI = getScaleForChord(progression[0], progression[1], 'bird');
+                // Ionian: 0, 2, 4, 5, 7, 9, 11
+                expect(scaleI).toEqual([0, 2, 4, 5, 7, 9, 11]);
+                
+                // 2. V7 of bVI (Original D7 -> Gmaj7)
+                // In B: D7 is V7 of G. G is bVI of B.
+                // It's a modulation to a Major 3rd DOWN (or min 6th UP).
+                const scaleVofKey2 = getScaleForChord(progression[1], progression[2], 'bird');
+                expect(scaleVofKey2).toEqual([0, 2, 4, 5, 7, 9, 10]); // Mixolydian
+
+                // 3. Imaj7 of Key 2 (Original Gmaj7)
+                const key2I = progression[2];
+                // Should act as local Tonic (Ionian)
+                const scaleKey2I = getScaleForChord(key2I, progression[3], 'bird');
+                expect(scaleKey2I).toEqual([0, 2, 4, 5, 7, 9, 11]);
+            });
+
+            it('should maintain voice leading through "Coltrane Changes"', () => {
+                const progression = arranger.progression;
+                let lastAvg = null;
+
+                progression.forEach((chord) => {
+                    const currentMidis = chord.freqs.map(f => Math.round(12 * Math.log2(f / 440) + 69));
+                    const currentAvg = currentMidis.reduce((a, b) => a + b, 0) / currentMidis.length;
+
+                    if (lastAvg !== null) {
+                        const drift = Math.abs(currentAvg - lastAvg);
+                        // Even with large jumps, the engine should keep voicings close (under 7 semitones)
+                        expect(drift).toBeLessThan(7);
+                    }
+                    lastAvg = currentAvg;
+                });
+            });
+
+            it('should generate a walking bass line that handles two chords per bar', () => {
+                let prevMidi = 38; 
+                
+                for (let bar = 0; bar < 4; bar++) {
+                    for (let beat = 0; beat < 4; beat++) {
+                        const globalStep = (bar * 16) + (beat * 4);
+                        const chordEntry = arranger.stepMap.find(m => globalStep >= m.start && globalStep < m.end);
+                        const currentChord = chordEntry.chord;
+                        const nextChord = arranger.stepMap.find(m => (globalStep + 4) >= m.start && (globalStep + 4) < m.end)?.chord;
+
+                        // Ensure we have a valid previous freq roughly in bass range
+                        const prevFreq = 440 * Math.pow(2, (prevMidi - 69) / 12);
+                        
+                        const result = getBassNote(currentChord, nextChord, beat, prevFreq, 38, 'quarter', 0, globalStep, globalStep - chordEntry.start);
+                        
+                        expect(result).not.toBeNull();
+                        const midi = result.midi;
+
+                        // Beat 1 of ANY chord should be root
+                        if (globalStep === chordEntry.start) {
+                            expect(midi % 12).toBe(currentChord.rootMidi % 12);
+                        }
+
+                        prevMidi = midi;
+                    }
                 }
+            });
 
-                prevMidi = midi;
-            }
-        }
-    });
-
-    it('should select Phrygian Dominant when anticipating minor resolutions', () => {
-        // Giant steps doesn't have many minor resolutions, but let's check Am7 D7 Gmaj7
-        // progression[6] is Am7, progression[7] is D7, progression[8] is Gmaj7. 
-        // No minor resolution here. 
-        // Let's force a minor resolution to check logic integrity in this standard's context
-        const am7 = arranger.progression.find(c => c.absName.startsWith('Am7'));
-        const d7 = arranger.progression.find(c => c.absName.startsWith('D7'));
-        const gm = { rootMidi: 55, quality: 'minor', intervals: [0, 3, 7] };
-        
-        const scale = getScaleForChord(d7, gm, 'bird');
-        expect(scale).toEqual([0, 1, 4, 5, 7, 8, 10]); // Phrygian Dominant
+            it('should select Phrygian Dominant when anticipating minor resolutions', () => {
+                // We need to find a ii-V going to minor.
+                // In Giant Steps, most are Major.
+                // But let's verify if there is a minor resolution.
+                // "C#m7 F#7 | Bmaj7" -> II-V-I Major.
+                // There are NO minor resolutions in Giant Steps structure usually.
+                // The previous test "forced" a minor resolution context.
+                // Let's replicate that force logic dynamically.
+                
+                // Find a V7 chord.
+                // Original: Am7 D7 -> Gmaj7. D7 is V7.
+                // Let's pick the 2nd chord (index 1) which is V7 of Key 2.
+                
+                const v7 = arranger.progression[1];
+                
+                // Create a hypothetical minor target
+                // Target root should be perfect 4th above V7 root.
+                // V7 root = v7.rootMidi.
+                // Minor root = v7.rootMidi + 5.
+                const minorRootMidi = v7.rootMidi + 5;
+                const minorTarget = { rootMidi: minorRootMidi, quality: 'minor', intervals: [0, 3, 7] };
+                
+                const scale = getScaleForChord(v7, minorTarget, 'bird');
+                // Phrygian Dominant: [0, 1, 4, 5, 7, 8, 10]
+                expect(scale).toEqual([0, 1, 4, 5, 7, 8, 10]); 
+            });
+        });
     });
 });
