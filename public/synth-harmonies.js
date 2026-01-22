@@ -82,7 +82,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     // --- Lane Protection: Sub-Oscillator ---
     // Only use the sub-oscillator if the main frequency is high enough 
     // to keep the sub-octave out of the primary bass territory.
-    const useSub = freq > 200; // Above G3
+    const useSub = freq > 250; // Raised from 200 to clear the bass
     const sub = useSub ? ctx.audio.createOscillator() : null;
     
     // --- Articulation: Vibrato (LFO) ---
@@ -96,6 +96,8 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     let click = null;
     let clickGain = null;
     let saturator = null;
+    let subGain = null;
+    let hp = null;
     
     // Organ Leslie Effect: Combined Pitch and Amplitude Modulation
     if (style === 'organ') {
@@ -175,6 +177,11 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         if (sub) {
             sub.type = 'sine'; // 16' (Sub-fundamental)
             sub.frequency.setValueAtTime(freq * 0.5, playTime);
+            
+            subGain = ctx.audio.createGain();
+            subGain.gain.setValueAtTime(0.5, playTime); // Sub is 50% volume of fundamental
+            sub.connect(subGain);
+            subGain.connect(saturator);
         }
 
         // Key Click (Percussion) - made slightly louder
@@ -206,9 +213,14 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         osc1.connect(saturator);
         osc2.connect(saturator);
         fifthOsc.connect(saturator);
-        if (sub) sub.connect(saturator);
+        
+        hp = ctx.audio.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.setValueAtTime(120, playTime); // Strict roll-off below 120Hz
         
         saturator.connect(filter);
+        filter.connect(hp);
+        hp.connect(gain);
         
         fifthOsc.start(playTime);
         fifthOsc.stop(playTime + duration + 0.5);
@@ -316,9 +328,9 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         osc1.connect(filter);
         osc2.connect(filter);
         if (sub) sub.connect(filter);
+        filter.connect(gain);
     }
-    // Organ handles its own routing (via saturator) to filter
-    filter.connect(gain);
+    // Organ handles its own routing (via saturator -> filter -> hp) to gain
     
     if (panner) {
         gain.connect(panner);
@@ -343,7 +355,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
 
     // Enhanced Cleanup for complex styles
     osc1.onended = () => {
-        safeDisconnect([gain, filter, osc1, osc2, sub, lfo, lfoGain, panner]);
+        safeDisconnect([gain, filter, osc1, osc2, sub, lfo, lfoGain, panner, hp, subGain]);
         // Clean up Organ/Tremolo specific nodes if they exist (they are closure-scoped)
         if (tremoloLfo) safeDisconnect([tremoloLfo, tremoloGain]); 
         if (fifthOsc) safeDisconnect([fifthOsc]);

@@ -38,7 +38,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const STYLE_CONFIG = {
         horns: { density: 2, rhythmicStyle: 'stabs', timingJitter: 0.005, velocity: 0.85, octaveOffset: 0, padProb: 0.2 },
         strings: { density: 2, rhythmicStyle: 'pads', timingJitter: 0.02, velocity: 0.6, octaveOffset: 0, padProb: 0.9 },
-        organ: { density: 3, rhythmicStyle: 'stabs', timingJitter: 0.015, velocity: 1.0, octaveOffset: 0, padProb: 0.4 },
+        organ: { density: 3, rhythmicStyle: 'stabs', timingJitter: 0.015, velocity: 0.85, octaveOffset: 0, padProb: 0.4 },
         plucks: { density: 2, rhythmicStyle: 'stabs', timingJitter: 0.002, velocity: 0.7, octaveOffset: 24, padProb: 0 },
         counter: { density: 1, rhythmicStyle: 'pads', timingJitter: 0.03, velocity: 0.75, octaveOffset: -12, padProb: 0.1 },
         smart: { density: 2, rhythmicStyle: 'auto', timingJitter: 0.008, velocity: 0.75, octaveOffset: 0, padProb: 0.5 }
@@ -219,7 +219,8 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         intervals = intervals.slice(0, density);
     }
 
-    const currentMidis = getBestInversion(rootMidi, intervals, hb.lastMidis, stepInChord === 0, octave, 50, 79);    
+    const rangeMin = activeStyle === 'organ' ? 54 : 50;
+    const currentMidis = getBestInversion(rootMidi, intervals, hb.lastMidis, stepInChord === 0, octave, rangeMin, 79);    
     const soloistMidi = sb.enabled ? getMidi(sb.lastFreq) : 0;
     let finalOctaveShift = 0;
     if ((isChordStart || measureStep === 0) && soloistMidi > 0 && currentMidis.some(m => Math.abs(m - soloistMidi) < 7)) {
