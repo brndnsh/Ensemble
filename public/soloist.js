@@ -252,7 +252,8 @@ export function getScaleForChord(chord, nextChord, style) {
         return keyNotes.map(note => (note - chordRoot + 12) % 12).sort((a, b) => a - b);
     }
     if (chord.quality === 'minor' || (chord.quality.startsWith('m') && !chord.quality.startsWith('maj'))) return [0, 2, 3, 5, 7, 8, 10]; 
-    return chord.intervals.includes(11) ? [0, 2, 4, 5, 7, 9, 11] : [0, 2, 4, 5, 7, 9, 10];
+    // If it explicitly has a b7, treat as Mixolydian. Otherwise default to Ionian (safer for Pop/Rock).
+    return chord.intervals.includes(10) ? [0, 2, 4, 5, 7, 9, 10] : [0, 2, 4, 5, 7, 9, 11];
 }
 
 // --- Main Generator ---
