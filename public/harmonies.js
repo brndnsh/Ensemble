@@ -360,10 +360,6 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
 
     if (isApproach && nextChord) {
         // Smart Approach: Target a note that will ACTUALLY be played in the next chord
-        // 1. Calculate the next chord's likely voicing
-        const nextScale = getScaleForChord(nextChord, nextChord, 'smart');
-        let nextIntervals = [0, 4, 7];
-        // ... (Replicate interval selection logic or approximate it) ...
         // Simplification: Just target the Root or 5th, which are almost always present.
         // Avoiding the 3rd because it is often omitted in shell voicings or displaced.
         
