@@ -140,7 +140,7 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
 
     const prevMidi = getMidi(prevFreq);
 
-    const absMin = 36, absMax = 55; // Common bass range
+    const absMin = 28, absMax = 55; // Common bass range (E1 to G3)
 
     const clampAndNormalize = (midi) => {
         if (!Number.isFinite(midi)) return safeCenterMidi;

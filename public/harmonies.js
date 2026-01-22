@@ -441,18 +441,18 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     }
 
     const isDisco = feel === 'Disco';
-    if (isDisco && ctx.bandIntensity > 0.7) density = Math.max(density, 2);
-
-    // --- 5. Melodic Trend (Soaring) ---
-    const cycleMeasure = Math.floor(step / stepsPerMeasure) % 4;
-    const liftShift = isDisco ? (cycleMeasure * 2) : 0; 
-
-    if (isDisco && ctx.bandIntensity > 0.6 && rhythmicStyle === 'stabs' && !isLatched) {
-        intervals = [intervals[0], intervals[0] + 12];
-    }
-
-    const currentMidis = getBestInversion(rootMidi, intervals, lastMidis, stepInChord === 0, octave, 50, 84);
+            if (isDisco && ctx.bandIntensity > 0.7) density = Math.max(density, 2);
     
+            // --- 5. Melodic Trend (Soaring) ---
+            const cycleMeasure = Math.floor(step / stepsPerMeasure) % 4;
+            const liftShift = isDisco ? (cycleMeasure * 2) : 0;
+    
+            if (isDisco && ctx.bandIntensity > 0.6 && rhythmicStyle === 'stabs' && !isLatched) {
+                intervals = [intervals[0], intervals[0] + 12];
+            }
+    
+            // Cap harmonies at 79 (G5) to leave the "Air" (80+) for the Soloist
+            const currentMidis = getBestInversion(rootMidi, intervals, lastMidis, stepInChord === 0, octave, 50, 79);    
     // --- NEW: Dynamic Frequency Slotting (Soloist Pocket) ---
     // If the soloist is active and in our register, nudge the harmonies down 
     // to keep the "lane" clear.

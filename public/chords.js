@@ -418,7 +418,7 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
     const intensity = ctx.bandIntensity;
 
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
-    if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk')) {
+    if (shouldBeRootless && (genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk' || genre === 'Blues')) {
         const rootless = getRootlessVoicing(quality, is7th, isRich || intensity > 0.6);
         if (rootless) return rootless;
     }
@@ -440,6 +440,7 @@ export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnable
         else if (quality === 'dim') intervals = [0, 3, 6];
         else if (quality === 'aug') intervals = is7th ? [0, 4, 8, 10] : [0, 4, 8];
         else if (quality === 'augmaj7') intervals = [0, 4, 8, 11];
+        else if (quality === 'maj7') intervals = [0, 4, 7, 11];
         else if (quality === 'sus4') intervals = [0, 5, 7];
         else if (quality === 'sus2') intervals = [0, 2, 7];
         else if (quality === 'add9') intervals = [0, 4, 7, 14];
@@ -673,7 +674,10 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
 
                 let isPivot = (barInternalOffset === 0); // Start of a bar is a pivot
 
-                let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot, cb.octave, 43, 84);
+                // Prevent Piano from muddying the Bass register (lift to C3 if Bass is active)
+                const pianoMin = (bb.enabled || cb.pianoRoots) ? 48 : 43;
+
+                let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot, cb.octave, pianoMin, 84);
                 if (bassMidi !== null) {
                     const bassPC = bassMidi % 12;
                     const filtered = currentMidis.filter(m => m % 12 !== bassPC);
