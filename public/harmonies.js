@@ -530,7 +530,8 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             timingOffset: finalOffset, 
             style: rhythmicStyle,
             isLatched: isLatched,
-            isChordStart: isChordStart || isMovement || isAnticipating || isApproach,
+            // Force "Attack" (Kill previous notes) for any new note generation event
+            isChordStart: true, 
             slideInterval,
             slideDuration,
             vibrato
