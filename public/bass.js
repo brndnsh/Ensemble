@@ -232,7 +232,6 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
             else if (style === 'bossa') durationSteps = durationMultiplier ? durationMultiplier * (ts.stepsPerBeat / 4) : ts.stepsPerBeat;
         }
 
-        const isPopStyle = style === 'funk' || style === 'disco';
         // Wider dynamic range: 0.6 + intensity * 0.7 (Range: 0.6 to 1.3)
         const intensityFactor = 0.6 + (intensity * 0.7);
         const finalVel = Math.min(1.25, velocityParam * velocity * intensityFactor);
