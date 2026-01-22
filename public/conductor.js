@@ -38,9 +38,8 @@ export function applyConductor() {
     const targetIntentDensity = isSoloistBusy ? (0.3 * (1 - complexity)) : (0.5 + intensity * 0.4);
 
     // --- 4. Harmony Evolution ---
-    // Harmonies follow the intensity but with a "Delayed Bloom"
-    // They are soft-muted at low energy and peak during climax.
-    let targetHbComplexity = Math.max(0, (intensity - 0.2) * 1.25); // 0 at 0.2 intensity, 1.0 at 1.0 intensity
+    // Harmonies follow the complexity signal for activity level.
+    let targetHbComplexity = complexity; 
     
     // If session timer is active and we are in the last 30 seconds, push for a "Final Build"
     if (ctx.sessionTimer > 0 && ctx.isEndingPending) {

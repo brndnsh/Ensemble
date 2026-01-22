@@ -26,7 +26,7 @@ vi.mock('../../../public/state.js', () => ({
             { name: 'Kick', steps: new Array(16).fill(0), muted: false }
         ]
     },
-    ctx: { bandIntensity: 0.5, bpm: 120 },
+    ctx: { bandIntensity: 0.5, bpm: 120, complexity: 0.3 },
     cb: { pianoRoots: true },
     hb: { enabled: false, buffer: new Map() },
     arranger: { 

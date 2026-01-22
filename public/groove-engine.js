@@ -23,9 +23,9 @@ export function applyGrooveOverrides({ step, inst, stepVal, ctx, gb, isDownbeat,
         const drunkenFactor = ctx.bandIntensity * 0.012; 
         if (loopStep % 4 !== 0) instTimeOffset += (Math.random() - 0.5) * drunkenFactor;
 
-        // 2. Ghost Note "Peeling" (Density increases with intensity)
+        // 2. Ghost Note "Peeling" (Density increases with intensity and complexity)
         if (inst.name === 'Snare' && stepVal === 0) {
-            const ghostProb = 0.1 + (ctx.bandIntensity * 0.4);
+            const ghostProb = 0.1 + (ctx.bandIntensity * 0.3) + (ctx.complexity * 0.2);
             if (Math.random() < ghostProb && [2, 3, 6, 7, 10, 11, 14, 15].includes(loopStep)) {
                 shouldPlay = true;
                 velocity = 0.15 + (Math.random() * 0.1);
@@ -141,7 +141,8 @@ export function applyGrooveOverrides({ step, inst, stepVal, ctx, gb, isDownbeat,
                 }
             }
             if (loopStep % 2 === 1) { 
-                if (Math.random() < 0.6) {
+                const discoCompProb = 0.4 + (ctx.complexity * 0.4); // Scales from 0.4 to 0.8
+                if (Math.random() < discoCompProb) {
                     shouldPlay = true;
                     soundName = 'HiHat';
                     velocity = 0.5; 

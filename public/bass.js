@@ -56,7 +56,8 @@ export function isBassActive(style, step, stepInChord) {
         if (isQuarter) return true;
         
         // Probabilistic eighth-note "skips" for walking bass feel
-        const skipProb = 0.1 + (ctx.bandIntensity * 0.25);
+        // Complexity adds more "walking" rhythmic variety
+        const skipProb = 0.1 + (ctx.bandIntensity * 0.25) + (ctx.complexity * 0.2);
         if (isEighthSkip && Math.random() < skipProb) return true;
         
         return false;
@@ -492,7 +493,7 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
     if (intBeat === beatsInChord - 1 && nextChord) {
         const nextTarget = nextChord.bassMidi !== null && nextChord.bassMidi !== undefined ? nextChord.bassMidi : nextChord.rootMidi;
         const targetRoot = normalizeToRange(nextTarget);
-        const pullTension = (sb.tension || 0) + (intensity * 0.3);
+        const pullTension = (sb.tension || 0) + (intensity * 0.3) + (ctx.complexity * 0.2);
         const chromaticProb = (isSoloistBusy ? 0.1 : 0.25) + (pullTension * 0.3);
         if (Math.random() < chromaticProb && (gb.genreFeel === 'Jazz' || gb.genreFeel === 'Blues' || pullTension > 0.7)) {
             const choices = [{ midi: targetRoot - 5, weight: 1.0 }, { midi: targetRoot - 1, weight: 0.6 }, { midi: targetRoot + 1, weight: 0.4 }];

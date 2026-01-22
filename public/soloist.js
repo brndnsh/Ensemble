@@ -472,6 +472,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     if (stepInBeat === 0) {
         let pool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
         
+        // --- NEW: Complexity-driven Cell Expansion ---
+        // At high complexity, allow denser cells even if not in the base config
+        if (ctx.complexity > 0.7 && !config.cells.includes(1)) {
+            // Allow 16th note runs for everyone at high complexity
+            pool.push(RHYTHMIC_CELLS[1]);
+        }
+
         // --- NEW: Ensemble Rhythmic Interaction ---
         // If the harmony module is enabled, the soloist "listens" to its motifs.
         if (hb.enabled && hb.rhythmicMask > 0 && Math.random() < (0.2 + hb.complexity * 0.4)) {
@@ -612,7 +619,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     sb.lastInterval = selectedMidi - lastMidi;
 
     // --- 6. Melodic Devices ---
-    if (stepInBeat === 0 && Math.random() < (config.deviceProb * 0.7 * warmupFactor)) {
+    const deviceBaseProb = config.deviceProb * (0.5 + ctx.complexity * 1.0); // Scales from 0.5x to 1.5x of base
+    if (stepInBeat === 0 && Math.random() < (deviceBaseProb * 0.7 * warmupFactor)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         const devBaseVel = 0.5 + (effectiveIntensity * 0.6);
         

@@ -606,7 +606,25 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         const velocity = (isStructural ? 0.6 : (isDownbeat ? 0.5 : 0.35)) * intensityFactor;
 
         let voicing = [...chord.freqs];
-        
+        const complexity = ctx.complexity;
+
+        // --- NEW: Harmonic Tension Scaling ---
+        // At high complexity, favor 9ths, 11ths, and 13ths (extensions)
+        if (complexity > 0.5 && chord.intervals && chord.intervals.length > 3) {
+            // If we have extensions beyond the triad/7th, prioritize them in the voicing
+            const extensions = chord.intervals.filter(i => i !== 0 && i !== 3 && i !== 4 && i !== 7 && i !== 10 && i !== 11);
+            if (extensions.length > 0 && Math.random() < (complexity - 0.4) * 1.5) {
+                // Shift voicing to include more color tones
+                voicing = voicing.map((f, idx) => {
+                    if (idx > 1 && Math.random() < 0.5) {
+                        const ext = extensions[Math.floor(Math.random() * extensions.length)];
+                        return getFrequency(chord.rootMidi + ext + (Math.random() < 0.5 ? 12 : 0));
+                    }
+                    return f;
+                });
+            }
+        }
+
         // --- Low Intensity Arpeggiation / Fingerpicking (Acoustic) ---
         if (genre === 'Acoustic' && intensity < 0.45 && cb.style === 'smart') {
             // Pick a single note or dyad based on the step for a "fingerpicked" feel
