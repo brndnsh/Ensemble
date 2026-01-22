@@ -129,7 +129,7 @@ describe('Motown P-Bass Synthesis', () => {
         playBassNote(41.2, 10, 1.0, 1.0, true);
 
         const lp1 = ctx.audio.createBiquadFilter.mock.results[0].value;
-        expect(lp1.frequency.setValueAtTime).toHaveBeenCalledWith(350, 10);
+        expect(lp1.frequency.setValueAtTime).toHaveBeenCalledWith(300, 10);
         
         const mainGain = ctx.audio.createGain.mock.results[3].value;
         // Muted notes have short release (15ms)
