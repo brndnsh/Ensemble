@@ -310,8 +310,17 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const isAltered5 = targetChord.quality?.includes('b5') || targetChord.quality?.includes('#5') || targetChord.quality?.includes('alt') || targetChord.quality?.includes('dim') || targetChord.quality?.includes('aug') || targetChord.quality === '7#9';
 
     if (isApproach && nextChord) {
+        // Smart Approach: Target a note that will ACTUALLY be played in the next chord
+        // 1. Calculate the next chord's likely voicing
+        const nextScale = getScaleForChord(nextChord, nextChord, 'smart');
+        let nextIntervals = [0, 4, 7];
+        // ... (Replicate interval selection logic or approximate it) ...
+        // Simplification: Just target the Root or 5th, which are almost always present.
+        // Avoiding the 3rd because it is often omitted in shell voicings or displaced.
+        
         const nextRoot = nextChord.rootMidi % 12;
-        const targetPC = Math.random() > 0.5 ? nextRoot : (nextRoot + (nextChord.quality?.includes('m') ? 3 : 4)) % 12;
+        const targetPC = Math.random() > 0.3 ? nextRoot : (nextRoot + 7) % 12; // Favor Root (70%) or 5th (30%)
+        
         const approachPC = (targetPC + (Math.random() > 0.5 ? 1 : 11)) % 12;
         intervals = [(approachPC - (rootMidi % 12) + 12) % 12];
         density = 1;
