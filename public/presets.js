@@ -672,18 +672,21 @@ export const CHORD_PRESETS = [
         name: "Pop (Standard)", 
         sections: [{ label: 'Main', value: "I | V | vi | IV" }], 
         category: "Pop/Rock",
+        isMinor: false,
         settings: { bpm: 120, style: 'pop' }
     },
     { 
         name: "Pop (Ballad)", 
         sections: [{ label: 'Main', value: "vi | IV | I | V" }], 
         category: "Pop/Rock",
+        isMinor: false,
         settings: { bpm: 85, style: 'pad' }
     },
     { 
         name: "Country Standard", 
         sections: [{ label: 'Main', value: "I | I | IV | IV | I | V | I | I" }], 
         category: "Country/Folk",
+        isMinor: false,
         settings: { bpm: 100, style: 'strum-country' }
     },
     { 
@@ -697,18 +700,21 @@ export const CHORD_PRESETS = [
         name: "50s Rock", 
         sections: [{ label: 'Main', value: "I | vi | IV | V" }], 
         category: "Pop/Rock",
+        isMinor: false,
         settings: { bpm: 140, style: 'rock', timeSignature: '4/4' }
     },
     { 
         name: "Royal Road", 
         sections: [{ label: 'Main', value: "IVmaj7 | V7 | iii7 | vi7" }], 
         category: "Pop/Rock",
+        isMinor: false,
         settings: { bpm: 110, style: 'pop' }
     },
     { 
         name: "Canon", 
         sections: [{ label: 'Main', value: "I | V | vi | iii | IV | I | IV | V" }], 
         category: "Classical/Trad",
+        isMinor: false,
         settings: { bpm: 90, style: 'arpeggio' }
     },
     { 
@@ -722,6 +728,7 @@ export const CHORD_PRESETS = [
         name: "12-Bar Blues", 
         sections: [{ label: 'Main', value: "I7 | I7 | I7 | I7 | IV7 | IV7 | I7 | I7 | V7 | IV7 | I7 | V7" }], 
         category: "Blues",
+        isMinor: false,
         settings: { bpm: 100, style: 'blues' }
     },
     { 
@@ -735,18 +742,21 @@ export const CHORD_PRESETS = [
         name: "8-Bar Blues", 
         sections: [{ label: 'Main', value: "I7 | V7 | IV7 | IV7 | I7 | V7 | I7 | V7" }], 
         category: "Blues",
+        isMinor: false,
         settings: { bpm: 110, style: 'blues' }
     },
     { 
         name: "Jazz Blues", 
         sections: [{ label: 'Main', value: "I7 | IV7 | I7 | v7 I7 | IV7 | IV7 | I7 | iii7 VI7 | ii7 | V7 | I7 VI7 | ii7 V7" }], 
         category: "Blues",
+        isMinor: false,
         settings: { bpm: 140, style: 'jazz' }
     },
     { 
         name: "Giant Steps", 
         sections: [{ label: 'Main', value: "Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7 | Am7 D7 | Gmaj7 Bb7 | Ebmaj7 F#7 | Bmaj7 | Fm7 Bb7 | Ebmaj7 | Am7 D7 | Gmaj7 | C#m7 F#7 | Bmaj7 | Fm7 Bb7 | Ebmaj7 | C#m7 F#7" }], 
         category: "Jazz",
+        isMinor: false,
         settings: { bpm: 220, style: 'jazz' }
     },
     { 
@@ -758,6 +768,7 @@ export const CHORD_PRESETS = [
             { label: 'A', value: "Gmaj7 | Gmaj7 | Gm7 | C7 | Fm7 | Bb7 | Ebmaj7 D7 | Gmaj7" }
         ], 
         category: "Jazz",
+        isMinor: false,
         settings: { bpm: 160, style: 'jazz' }
     },
     { 
@@ -769,6 +780,7 @@ export const CHORD_PRESETS = [
             { label: "A", value: "I vi7 | ii7 V7 | I vi7 | ii7 V7 | I I7 | IV iv7 | I V7 | I" }
         ],
         category: "Jazz",
+        isMinor: false,
         settings: { bpm: 180, style: 'jazz' } 
     },
     { 
@@ -780,7 +792,7 @@ export const CHORD_PRESETS = [
             { label: "C", value: "viiø7 | III7+ | vi7 | vi7 | viiø7 | III7+ | vi7 | vi7" }
         ],
         category: "Jazz",
-        isMinor: false,
+        isMinor: false, // Often treated as relative minor of Bb, but starts major-ish. Let's keep false or set true? Relative minor G minor. But usually called Bb Major.
         settings: { bpm: 140, style: 'jazz' }
     },
     { 
@@ -792,6 +804,7 @@ export const CHORD_PRESETS = [
             { label: "D", value: "Bbmaj7 | Em7b5 A7alt | Dm7b5 | G7alt | Cm7b5 | F7alt | Bbmaj7 | Cm7 F7" }
         ],
         category: "Jazz",
+        isMinor: false,
         settings: { bpm: 120, style: 'jazz' }
     },
     { 
@@ -806,6 +819,7 @@ export const CHORD_PRESETS = [
             { label: "A3 (Ab)", key: "Ab", value: "Fm7 | Bbm7 | Eb7 | Abmaj7 | Dbmaj7 | Dbm7 | Cm7 | Bdim7 | Bbm7 | Eb7+ | Abmaj7 | Abmaj7" }
         ],
         category: "Jazz",
+        isMinor: false,
         settings: { bpm: 135, style: 'jazz' }
     },
     { 
@@ -815,6 +829,7 @@ export const CHORD_PRESETS = [
             { label: 'Chorus', value: "ii9 | bIImaj7 | Imaj9 | vi9", repeat: 2 }
         ], 
         category: "Soul/R&B",
+        isMinor: false,
         settings: { bpm: 85, style: 'neo' }
     },
     { 
@@ -844,12 +859,14 @@ export const CHORD_PRESETS = [
     { 
         name: "Circle of 4ths", 
         sections: [{ label: 'Main', value: "I7 | IV7 | bVII7 | bIII7 | bVI7 | bII7 | V7 | I7" }], 
-        category: "Theory" 
+        category: "Theory",
+        isMinor: false
     },
     { 
         name: "Plagal Flow", 
         sections: [{ label: 'Main', value: "I | IV | I | IV" }], 
-        category: "Theory" 
+        category: "Theory",
+        isMinor: false
     },
     {
         name: "Cherokee",
@@ -863,6 +880,7 @@ export const CHORD_PRESETS = [
             { label: "A", key: "Bb", value: "Bbmaj7 | Fm7 Bb7 | Ebmaj7 | Ebm7 Ab7 | Bbmaj7 C7 | Cm7 F7 | Bbmaj7 | Bbmaj7" }
         ],
         category: "Jazz",
+        isMinor: false,
         settings: { bpm: 240, style: 'jazz' }
     },
         {
