@@ -101,7 +101,8 @@ describe('Latin Drum Synthesis', () => {
     it('should use pulsed noise for the Guiro scrape effect', () => {
         playDrumSound('Guiro', 10, 1.0);
         expect(ctx.audio.createBufferSource).toHaveBeenCalledTimes(1);
-        const gain = ctx.audio.createGain.mock.results[0].value;
+        // The first Gain (results[0]) is the panner. The second (results[1]) is the effect gain.
+        const gain = ctx.audio.createGain.mock.results[1].value;
         // Should have multiple setTargetAtTime calls for the scrape pulses
         expect(gain.gain.setTargetAtTime).toHaveBeenCalledTimes(8); // 4 pulses * 2 (up/down)
     });

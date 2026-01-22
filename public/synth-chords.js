@@ -204,7 +204,20 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         }
 
         lastNode.connect(mainGain);
-        mainGain.connect(ctx.chordsGain);
+
+        // --- Mix Separation: HPF & Panning ---
+        const hpf = ctx.audio.createBiquadFilter();
+        hpf.type = 'highpass';
+        hpf.frequency.setValueAtTime(150, startTime);
+        
+        const panner = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
+        if (ctx.audio.createStereoPanner) {
+            panner.pan.setValueAtTime(-0.2, startTime); // Slight Left
+        }
+
+        mainGain.connect(hpf);
+        hpf.connect(panner);
+        panner.connect(ctx.chordsGain);
 
         osc.start(startTime);
         if (!ctx.sustainActive || muted) {

@@ -76,7 +76,7 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     }
 
     const pan = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
-    if (ctx.audio.createStereoPanner) pan.pan.setValueAtTime((Math.random() * 2 - 1) * 0.3, playTime);
+    if (ctx.audio.createStereoPanner) pan.pan.setValueAtTime((Math.random() * 2 - 1) * 0.05, playTime);
 
     // Primary Osc: Mixed Saw/Tri for a richer tone
     const osc1 = ctx.audio.createOscillator();

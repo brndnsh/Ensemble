@@ -71,10 +71,10 @@ describe('Drum Synthesis', () => {
     it('should create a 4-layer model for the Kick drum', () => {
         playDrumSound('Kick', 10, 1.0);
 
-        // Layers: Beater (Osc), Skin (Noise), Knock (Osc), Shell (Osc)
+        // Layers: Beater (Osc), Skin (Noise), Knock (Osc), Shell (Osc) + Panner (Gain)
         expect(ctx.audio.createOscillator).toHaveBeenCalledTimes(3);
         expect(ctx.audio.createBufferSource).toHaveBeenCalledTimes(1);
-        expect(ctx.audio.createGain).toHaveBeenCalledTimes(4);
+        expect(ctx.audio.createGain).toHaveBeenCalledTimes(5);
     });
 
     it('should use a pre-rendered AudioBuffer for HiHat to optimize CPU', () => {

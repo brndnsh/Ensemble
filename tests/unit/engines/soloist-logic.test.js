@@ -127,6 +127,7 @@ describe('Soloist Engine Logic', () => {
         });
 
         it('should generate staccato notes for Funk', () => {
+            gb.genreFeel = 'Funk';
             let shortNotes = 0;
             let played = 0;
             for (let i = 0; i < 100; i++) {

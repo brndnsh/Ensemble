@@ -46,6 +46,17 @@ export function playDrumSound(name, time, velocity = 1.0) {
     // Apply the density ducking factor to the master drum volume
     const masterVol = velocity * 1.3 * velJitter * mixState.densityDuck;
     
+    // --- Mix Separation: Stereo Panning ---
+    const panner = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
+    let panValue = 0;
+    if (['HiHat', 'Open', 'Crash', 'Shaker', 'Agogo', 'Perc', 'Guiro', 'Clave'].includes(name)) {
+        panValue = 0.2; // Right
+    } else if (name.includes('Tom') || name.includes('Conga') || name.includes('Bongo')) {
+        panValue = (Math.random() * 2 - 1) * 0.1; // Slight spread
+    }
+    if (ctx.audio.createStereoPanner) panner.pan.setValueAtTime(panValue, playTime);
+    panner.connect(ctx.drumsGain);
+
     // Round-robin variation (±1.5%)
     const rr = (amt = 0.03) => 1 + (Math.random() - 0.5) * amt;
 
@@ -105,7 +116,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         knock.connect(knockGain);
         shell.connect(shellGain);
 
-        [beaterGain, skinGain, knockGain, shellGain].forEach(g => g.connect(ctx.drumsGain));
+        [beaterGain, skinGain, knockGain, shellGain].forEach(g => g.connect(panner));
 
         beater.start(playTime);
         skin.start(playTime);
@@ -117,7 +128,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         knock.stop(playTime + 0.2);
         shell.stop(playTime + 0.5);
         
-        shell.onended = () => safeDisconnect([beater, beaterGain, skin, skinFilter, skinGain, knock, knockGain, shell, shellGain]);
+        shell.onended = () => safeDisconnect([beater, beaterGain, skin, skinFilter, skinGain, knock, knockGain, shell, shellGain, panner]);
 
     } else if (name === 'Snare' || name === 'Sidestick') {
         const isSidestick = name === 'Sidestick';
@@ -137,7 +148,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
             clickGain.gain.setTargetAtTime(0, playTime + 0.005, 0.005); // Faster decay
             
             click.connect(clickGain);
-            clickGain.connect(ctx.drumsGain);
+            clickGain.connect(panner);
             
             // 2. The "Body" (Woody Resonance)
             const body = ctx.audio.createOscillator();
@@ -159,7 +170,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
             
             body.connect(bodyFilter);
             bodyFilter.connect(bodyGain);
-            bodyGain.connect(ctx.drumsGain);
+            bodyGain.connect(panner);
             
             // 3. The "Snap" (Noise Texture)
             const noise = ctx.audio.createBufferSource();
@@ -176,7 +187,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
             
             noise.connect(noiseFilter);
             noiseFilter.connect(noiseGain);
-            noiseGain.connect(ctx.drumsGain);
+            noiseGain.connect(panner);
             
             // Trigger
             click.start(playTime);
@@ -188,7 +199,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
             body.stop(stopTime);
             noise.stop(stopTime);
             
-            noise.onended = () => safeDisconnect([click, clickGain, body, bodyFilter, bodyGain, noise, noiseFilter, noiseGain]);
+            noise.onended = () => safeDisconnect([click, clickGain, body, bodyFilter, bodyGain, noise, noiseFilter, noiseGain, panner]);
             
             return; // Exit early for Sidestick
         }
@@ -208,7 +219,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         toneGain.gain.setTargetAtTime(0, playTime + 0.01, 0.05);
         tone1.connect(toneGain);
         tone2.connect(toneGain);
-        toneGain.connect(ctx.drumsGain);
+        toneGain.connect(panner);
 
         // 2. The Wires (Snare rattle)
         const noise = ctx.audio.createBufferSource();
@@ -231,7 +242,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         noiseGain.gain.setTargetAtTime(0, playTime + 0.01, 0.08);
         noise.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
-        noiseGain.connect(ctx.drumsGain);
+        noiseGain.connect(panner);
 
         tone1.start(playTime);
         tone2.start(playTime);
@@ -240,7 +251,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         tone2.stop(playTime + 0.5);
         noise.stop(playTime + 0.5);
         
-        noise.onended = () => safeDisconnect([tone1, tone2, toneGain, noise, noiseFilter, noiseGain]);
+        noise.onended = () => safeDisconnect([tone1, tone2, toneGain, noise, noiseFilter, noiseGain, panner]);
 
     } else if (name === 'HiHat' || name === 'Open') {
         const isOpen = name === 'Open';
@@ -295,14 +306,14 @@ export function playDrumSound(name, time, velocity = 1.0) {
         source.connect(bpFilter);
         bpFilter.connect(hpFilter);
         hpFilter.connect(gain);
-        gain.connect(ctx.drumsGain);
+        gain.connect(panner);
 
         source.start(playTime);
         source.stop(playTime + (isOpen ? 2.0 : 0.4));
 
         source.onended = () => {
             if (gb.lastHatGain === gain) gb.lastHatGain = null;
-            safeDisconnect([source, bpFilter, hpFilter, gain]);
+            safeDisconnect([source, bpFilter, hpFilter, gain, panner]);
         };
 
     } else if (name === 'Crash') {
@@ -356,9 +367,9 @@ export function playDrumSound(name, time, velocity = 1.0) {
         noise.stop(killTime + 0.1);
 
         hpFilter.connect(gain);
-        gain.connect(ctx.drumsGain);
+        gain.connect(panner);
 
-        oscs[0].onended = () => safeDisconnect([...oscs, noise, hpFilter, gain]);
+        oscs[0].onended = () => safeDisconnect([...oscs, noise, hpFilter, gain, panner]);
     } else if (name === 'Clave') {
         const vol = masterVol * 0.7 * rr();
         
@@ -389,18 +400,18 @@ export function playDrumSound(name, time, velocity = 1.0) {
         strikeGain.gain.setTargetAtTime(0, playTime + 0.002, 0.003);
         
         osc.connect(gain);
-        gain.connect(ctx.drumsGain);
+        gain.connect(panner);
         
         strike.connect(strikeFilter);
         strikeFilter.connect(strikeGain);
-        strikeGain.connect(ctx.drumsGain);
+        strikeGain.connect(panner);
         
         osc.start(playTime);
         strike.start(playTime);
         osc.stop(playTime + 0.1);
         strike.stop(playTime + 0.1);
         
-        osc.onended = () => safeDisconnect([osc, gain, strike, strikeFilter, strikeGain]);
+        osc.onended = () => safeDisconnect([osc, gain, strike, strikeFilter, strikeGain, panner]);
 
     } else if (name.startsWith('Conga') || name.startsWith('Bongo')) {
         const isBongo = name.startsWith('Bongo');
@@ -427,7 +438,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         toneGain.gain.setTargetAtTime(0, playTime + 0.01, decay);
         
         tone.connect(toneGain);
-        toneGain.connect(ctx.drumsGain);
+        toneGain.connect(panner);
         
         // 2. The "Palm" (Impact transient)
         const noise = ctx.audio.createBufferSource();
@@ -446,14 +457,14 @@ export function playDrumSound(name, time, velocity = 1.0) {
         
         noise.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
-        noiseGain.connect(ctx.drumsGain);
+        noiseGain.connect(panner);
         
         tone.start(playTime);
         noise.start(playTime);
         tone.stop(playTime + 0.3);
         noise.stop(playTime + 0.3);
         
-        tone.onended = () => safeDisconnect([tone, toneGain, noise, noiseFilter, noiseGain]);
+        tone.onended = () => safeDisconnect([tone, toneGain, noise, noiseFilter, noiseGain, panner]);
 
     } else if (name.startsWith('Agogo') || name === 'Perc') {
         const isHigh = name.includes('High') || name === 'Perc';
@@ -493,14 +504,14 @@ export function playDrumSound(name, time, velocity = 1.0) {
         filter.connect(gain);
         body.connect(bodyGain);
         
-        [gain, bodyGain].forEach(g => g.connect(ctx.drumsGain));
+        [gain, bodyGain].forEach(g => g.connect(panner));
         
         [osc1, osc2, body].forEach(o => {
             o.start(playTime);
             o.stop(playTime + 0.5);
         });
         
-        osc1.onended = () => safeDisconnect([osc1, osc2, body, filter, gain, bodyGain]);
+        osc1.onended = () => safeDisconnect([osc1, osc2, body, filter, gain, bodyGain, panner]);
 
     } else if (name === 'Guiro') {
         const vol = masterVol * 0.5 * rr();
@@ -526,12 +537,12 @@ export function playDrumSound(name, time, velocity = 1.0) {
         
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(ctx.drumsGain);
+        gain.connect(panner);
         
         noise.start(playTime);
         noise.stop(playTime + 0.2);
         
-        noise.onended = () => safeDisconnect([noise, filter, gain]);
+        noise.onended = () => safeDisconnect([noise, filter, gain, panner]);
 
     } else if (name === 'Shaker') {
         const vol = masterVol * 0.45 * rr();
@@ -551,12 +562,12 @@ export function playDrumSound(name, time, velocity = 1.0) {
         
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(ctx.drumsGain);
+        gain.connect(panner);
         
         noise.start(playTime);
         noise.stop(playTime + 0.2);
         
-        noise.onended = () => safeDisconnect([noise, filter, gain]);
+        noise.onended = () => safeDisconnect([noise, filter, gain, panner]);
     } else if (name.includes('Tom')) {
         const vol = masterVol * 0.8 * rr();
         const isHigh = name.includes('High');
@@ -575,7 +586,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         toneGain.gain.setTargetAtTime(0, playTime + 0.05, 0.2);
         
         tone.connect(toneGain);
-        toneGain.connect(ctx.drumsGain);
+        toneGain.connect(panner);
         
         // 2. The "Stick" (Attack transient)
         const stick = ctx.audio.createOscillator();
@@ -589,14 +600,14 @@ export function playDrumSound(name, time, velocity = 1.0) {
         stickGain.gain.setTargetAtTime(0, playTime + 0.005, 0.01);
         
         stick.connect(stickGain);
-        stickGain.connect(ctx.drumsGain);
+        stickGain.connect(panner);
         
         tone.start(playTime);
         stick.start(playTime);
         tone.stop(playTime + 1.0);
         stick.stop(playTime + 0.1);
         
-        tone.onended = () => safeDisconnect([tone, toneGain, stick, stickGain]);
+        tone.onended = () => safeDisconnect([tone, toneGain, stick, stickGain, panner]);
     }
 }
 
