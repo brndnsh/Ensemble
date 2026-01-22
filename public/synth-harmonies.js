@@ -102,6 +102,19 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     // Organ Leslie Effect: Combined Pitch and Amplitude Modulation
     if (style === 'organ') {
         const leslieSpeed = 6.2; // Fast Leslie setting
+
+        // Saturation (Tube Grit) - Initialize early to avoid connection errors
+        saturator = ctx.audio.createWaveShaper();
+        saturator.curve = (function() {
+            const n = 44100;
+            const curve = new Float32Array(n);
+            const k = 2; // Subtle drive
+            for (let i = 0; i < n; ++i) {
+                const x = (i * 2) / n - 1;
+                curve[i] = (1 + k) * x / (1 + k * Math.abs(x));
+            }
+            return curve;
+        })();
         
         // 1. Pitch Modulation (Doppler)
         lfo = ctx.audio.createOscillator();
@@ -181,7 +194,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
             subGain = ctx.audio.createGain();
             subGain.gain.setValueAtTime(0.5, playTime); // Sub is 50% volume of fundamental
             sub.connect(subGain);
-            subGain.connect(saturator);
+            if (saturator) subGain.connect(saturator);
         }
 
         // Key Click (Percussion) - made slightly louder
@@ -197,30 +210,25 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         click.start(playTime);
         click.stop(playTime + 0.1);
 
-        // Saturation (Tube Grit)
-        saturator = ctx.audio.createWaveShaper();
-        saturator.curve = (function() {
-            const n = 44100;
-            const curve = new Float32Array(n);
-            const k = 2; // Subtle drive
-            for (let i = 0; i < n; ++i) {
-                const x = (i * 2) / n - 1;
-                curve[i] = (1 + k) * x / (1 + k * Math.abs(x));
-            }
-            return curve;
-        })();
-        
-        osc1.connect(saturator);
-        osc2.connect(saturator);
-        fifthOsc.connect(saturator);
-        
-        hp = ctx.audio.createBiquadFilter();
-        hp.type = 'highpass';
-        hp.frequency.setValueAtTime(120, playTime); // Strict roll-off below 120Hz
-        
-        saturator.connect(filter);
-        filter.connect(hp);
-        hp.connect(gain);
+        if (saturator) {
+            osc1.connect(saturator);
+            osc2.connect(saturator);
+            fifthOsc.connect(saturator);
+            
+            hp = ctx.audio.createBiquadFilter();
+            hp.type = 'highpass';
+            hp.frequency.setValueAtTime(120, playTime); // Strict roll-off below 120Hz
+            
+            saturator.connect(filter);
+            filter.connect(hp);
+            hp.connect(gain);
+        } else {
+            // Fallback if saturator failed
+            osc1.connect(filter);
+            osc2.connect(filter);
+            fifthOsc.connect(filter);
+            filter.connect(gain);
+        }
         
         fifthOsc.start(playTime);
         fifthOsc.stop(playTime + duration + 0.5);
@@ -334,9 +342,9 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     
     if (panner) {
         gain.connect(panner);
-        panner.connect(ctx.harmoniesGain);
+        if (ctx.harmoniesGain) panner.connect(ctx.harmoniesGain);
     } else {
-        gain.connect(ctx.harmoniesGain);
+        if (ctx.harmoniesGain) gain.connect(ctx.harmoniesGain);
     }
 
     // Register active voice
