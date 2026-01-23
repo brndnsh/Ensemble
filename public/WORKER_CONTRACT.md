@@ -28,12 +28,12 @@ Synchronizes the worker's internal state with the global state. Supports partial
   "type": "syncState",
   "data": {
     "arranger": { ... },
-    "cb": { ... },
-    "bb": { ... },
-    "sb": { ... },
-    "hb": { ... },
-    "gb": { ... },
-    "ctx": { ... }
+    "chords": { ... },
+    "bass": { ... },
+    "soloist": { ... },
+    "harmony": { ... },
+    "groove": { ... },
+    "playback": { ... }
   }
 }
 ```
@@ -85,7 +85,7 @@ Returns a list of generated notes to be scheduled by the audio engine.
   "type": "notes",
   "notes": [
     {
-      "module": "bb",
+      "module": "bass",
       "step": 0,
       "freq": 440.0,
       "midi": 69,
@@ -125,4 +125,4 @@ Reports an internal worker error.
 
 1.  **Step Mapping**: Both threads must use the same `arranger.stepMap`, `arranger.sectionMap`, and `totalSteps` to ensure harmonic and structural alignment.
 2.  **Lookahead**: The worker targets a `LOOKAHEAD` of 64 steps (typically 4 measures in 4/4) to prevent buffer underruns during CPU spikes.
-3.  **Priming**: During a `flush` operation, the worker can "prime" the engine by simulating multiple measures of playback to establish musical context (e.g., updating `bb.lastFreq`).
+3.  **Priming**: During a `flush` operation, the worker can "prime" the engine by simulating multiple measures of playback to establish musical context (e.g., updating `bass.lastFreq`).
