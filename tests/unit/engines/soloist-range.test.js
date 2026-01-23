@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getSoloistNote } from '../../../public/soloist.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { soloist } from '../../../public/state.js';
 
 // Mock state and global config
 vi.mock('../../../public/state.js', () => ({
