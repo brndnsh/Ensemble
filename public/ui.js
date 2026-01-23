@@ -1,4 +1,5 @@
 import { arranger, chords, playback, groove, bass, soloist, harmony, dispatch } from './state.js';
+import { ACTIONS } from './types.js';
 import { midiToNote, formatUnicodeSymbols } from './utils.js';
 import { saveCurrentState } from './persistence.js';
 import { syncWorker } from './worker-client.js';
@@ -467,8 +468,6 @@ export function switchInstrumentTab(module, target) {
     const classicTab = document.getElementById(classicId);
     const smartTab = document.getElementById(smartId);
     
-    console.log(`[UI] switchInstrumentTab: classicId=${classicId}, found=${!!classicTab}; smartId=${smartId}, found=${!!smartTab}`);
-    
     if (classicTab && smartTab) {
         classicTab.classList.toggle('active', target === 'classic');
         smartTab.classList.toggle('active', target === 'smart');
@@ -485,7 +484,6 @@ export function switchInstrumentTab(module, target) {
 
 export function initTabs() {
     const mobileTabItems = document.querySelectorAll('.tab-item');
-    const instrumentTabBtns = document.querySelectorAll('.instrument-tab-btn');
     
     const activateMobileTab = (item) => {
         const btn = item.querySelector('.tab-btn');
@@ -524,7 +522,6 @@ export function initTabs() {
             
             const module = btn.dataset.module;
             const target = btn.dataset.tab;
-            console.log(`[UI] Tab Click (Delegated): module=${module}, target=${target}`);
             dispatch(ACTIONS.SET_ACTIVE_TAB, { module, tab: target });
             switchInstrumentTab(module, target);
             syncWorker();
