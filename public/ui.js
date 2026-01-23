@@ -1,6 +1,7 @@
-import { arranger, chords, playback, groove, bass, soloist, harmony } from './state.js';
+import { arranger, chords, playback, groove, bass, soloist, harmony, dispatch } from './state.js';
 import { midiToNote, formatUnicodeSymbols } from './utils.js';
 import { saveCurrentState } from './persistence.js';
+import { syncWorker } from './worker-client.js';
 import { TIME_SIGNATURES, KEY_ORDER } from './config.js';
 import { UIStore } from './ui-store.js';
 
@@ -446,7 +447,7 @@ export function switchInstrumentTab(module, target) {
     const panelId = { 
         chords: 'chord', bass: 'bass', soloist: 'soloist', harmony: 'harmony', groove: 'groove',
         cb: 'chord', bb: 'bass', sb: 'soloist', hb: 'harmony', gb: 'groove',
-        chord: 'chord'
+        chord: 'chord', grooves: 'groove', harmonies: 'harmony'
     }[module];
     
     if (!panelId) {
@@ -460,13 +461,20 @@ export function switchInstrumentTab(module, target) {
     });
     
     // Update Content
-    const contents = document.querySelectorAll(`[id^="${panelId}-tab-"]`);
-    contents.forEach(c => {
-        c.classList.toggle('active', c.id === `${panelId}-tab-${target}`);
-    });
+    const classicTab = document.getElementById(`${panelId}-tab-classic`);
+    const smartTab = document.getElementById(`${panelId}-tab-smart`);
+    
+    if (classicTab && smartTab) {
+        classicTab.classList.toggle('active', target === 'classic');
+        smartTab.classList.toggle('active', target === 'smart');
+    }
     
     // Update State
-    const stateMap = { chords, bass, soloist, harmony, groove, cb: chords, bb: bass, sb: soloist, hb: harmony, gb: groove };
+    const stateMap = { 
+        chords, bass, soloist, harmony, groove, 
+        cb: chords, bb: bass, sb: soloist, hb: harmony, gb: groove,
+        grooves: groove, harmonies: harmony
+    };
     if (stateMap[module]) stateMap[module].activeTab = target;
 }
 
@@ -506,11 +514,16 @@ export function initTabs() {
             const target = btn.dataset.tab;
             dispatch(ACTIONS.SET_ACTIVE_TAB, { module, tab: target });
             switchInstrumentTab(module, target);
+            syncWorker();
             saveCurrentState();
         };
         
         const module = btn.dataset.module;
-        const stateMap = { chords, bass, soloist, harmony, groove, cb: chords, bb: bass, sb: soloist, hb: harmony, gb: groove };
+        const stateMap = { 
+            chords, bass, soloist, harmony, groove, 
+            cb: chords, bb: bass, sb: soloist, hb: harmony, gb: groove,
+            grooves: groove, harmonies: harmony
+        };
         if (stateMap[module] && btn.dataset.tab === stateMap[module].activeTab) {
             switchInstrumentTab(module, btn.dataset.tab);
         }

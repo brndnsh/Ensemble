@@ -67,40 +67,40 @@
 }
 
 .instrument-tab-btn.active {
-    background: var(--accent-color);
-    color: white;
-    border-color: var(--accent-color);
+    background: var(--accent-color) !important;
+    color: white !important;
+    border-color: var(--accent-color) !important;
 }
 
 /* Specific accent colors for panel headers */
 .chord-panel-header .instrument-tab-btn.active {
-    background: rgba(59, 130, 246, 0.15); /* Blue */
-    color: var(--blue);
-    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.15) !important; /* Blue */
+    color: var(--blue) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
 }
 
 .bass-panel-header .instrument-tab-btn.active {
-    background: rgba(220, 50, 47, 0.15); /* Red/Magentaish */
-    color: var(--red);
-    border-color: rgba(220, 50, 47, 0.3);
+    background: rgba(220, 50, 47, 0.15) !important; /* Red/Magentaish */
+    color: var(--red) !important;
+    border-color: rgba(220, 50, 47, 0.3) !important;
 }
 
 .soloist-panel-header .instrument-tab-btn.active {
-    background: rgba(133, 153, 0, 0.15); /* Green */
-    color: var(--green);
-    border-color: rgba(133, 153, 0, 0.3);
+    background: rgba(133, 153, 0, 0.15) !important; /* Green */
+    color: var(--green) !important;
+    border-color: rgba(133, 153, 0, 0.3) !important;
 }
 
 .groove-panel-header .instrument-tab-btn.active {
-    background: rgba(181, 137, 0, 0.15); /* Yellow */
-    color: var(--yellow);
-    border-color: rgba(181, 137, 0, 0.3);
+    background: rgba(181, 137, 0, 0.15) !important; /* Yellow */
+    color: var(--yellow) !important;
+    border-color: rgba(181, 137, 0, 0.3) !important;
 }
 
 .harmony-panel-header .instrument-tab-btn.active {
-    background: rgba(108, 113, 196, 0.15); /* Violet */
-    color: var(--violet);
-    border-color: rgba(108, 113, 196, 0.3);
+    background: rgba(108, 113, 196, 0.15) !important; /* Violet */
+    color: var(--violet) !important;
+    border-color: rgba(108, 113, 196, 0.3) !important;
 }
 
 .instrument-tab-content {
@@ -109,5 +109,5 @@
 }
 
 .instrument-tab-content.active {
-    display: block;
+    display: block !important;
 }

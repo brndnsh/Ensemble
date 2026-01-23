@@ -41,6 +41,7 @@ export function updateStyle(type, styleId) {
         chip.classList.toggle('active', chip.dataset.id === styleId);
     });
 
+    syncWorker();
     flushBuffers();
     restoreGains();
     saveCurrentState();
