@@ -443,21 +443,30 @@ export function recalculateScrollOffsets() {
 }
 
 export function switchInstrumentTab(module, target) {
-    const panelId = { chords: 'chord', bass: 'bass', soloist: 'soloist', harmony: 'harmony', groove: 'groove' }[module];
-    if (!panelId) return;
+    const panelId = { 
+        chords: 'chord', bass: 'bass', soloist: 'soloist', harmony: 'harmony', groove: 'groove',
+        cb: 'chord', bb: 'bass', sb: 'soloist', hb: 'harmony', gb: 'groove',
+        chord: 'chord'
+    }[module];
+    
+    if (!panelId) {
+        return;
+    }
 
     // Update Buttons
-    document.querySelectorAll(`.instrument-tab-btn[data-module="${module}"]`).forEach(b => {
+    const buttons = document.querySelectorAll(`.instrument-tab-btn[data-module="${module}"]`);
+    buttons.forEach(b => {
         b.classList.toggle('active', b.dataset.tab === target);
     });
     
     // Update Content
-    document.querySelectorAll(`[id^="${panelId}-tab-"]`).forEach(c => {
+    const contents = document.querySelectorAll(`[id^="${panelId}-tab-"]`);
+    contents.forEach(c => {
         c.classList.toggle('active', c.id === `${panelId}-tab-${target}`);
     });
     
     // Update State
-    const stateMap = { chords, bass, soloist, harmony, groove };
+    const stateMap = { chords, bass, soloist, harmony, groove, cb: chords, bb: bass, sb: soloist, hb: harmony, gb: groove };
     if (stateMap[module]) stateMap[module].activeTab = target;
 }
 
@@ -493,12 +502,15 @@ export function initTabs() {
 
     instrumentTabBtns.forEach(btn => {
         btn.onclick = () => {
-            switchInstrumentTab(btn.dataset.module, btn.dataset.tab);
+            const module = btn.dataset.module;
+            const target = btn.dataset.tab;
+            dispatch(ACTIONS.SET_ACTIVE_TAB, { module, tab: target });
+            switchInstrumentTab(module, target);
             saveCurrentState();
         };
         
         const module = btn.dataset.module;
-        const stateMap = { chords, bass, soloist, harmony, groove };
+        const stateMap = { chords, bass, soloist, harmony, groove, cb: chords, bb: bass, sb: soloist, hb: harmony, gb: groove };
         if (stateMap[module] && btn.dataset.tab === stateMap[module].activeTab) {
             switchInstrumentTab(module, btn.dataset.tab);
         }

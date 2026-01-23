@@ -53,6 +53,7 @@ export function hydrateState() {
             bass.octave = savedState.bass.octave; 
             bass.volume = savedState.bass.volume !== undefined ? savedState.bass.volume : 0.45; 
             bass.reverb = savedState.bass.reverb !== undefined ? savedState.bass.reverb : 0.05; 
+            bass.activeTab = savedState.bass.activeTab || 'smart';
         }
         if (savedState.soloist) { 
             soloist.enabled = savedState.soloist.enabled !== undefined ? savedState.soloist.enabled : false; 
@@ -61,6 +62,7 @@ export function hydrateState() {
             soloist.volume = savedState.soloist.volume !== undefined ? savedState.soloist.volume : 0.5; 
             soloist.reverb = savedState.soloist.reverb !== undefined ? savedState.soloist.reverb : 0.6; 
             soloist.doubleStops = savedState.soloist.doubleStops !== undefined ? savedState.soloist.doubleStops : false;
+            soloist.activeTab = savedState.soloist.activeTab || 'smart';
         }
         if (savedState.harmony) {
             harmony.enabled = savedState.harmony.enabled !== undefined ? savedState.harmony.enabled : false;
@@ -69,6 +71,7 @@ export function hydrateState() {
             harmony.volume = savedState.harmony.volume !== undefined ? savedState.harmony.volume : 0.4;
             harmony.reverb = savedState.harmony.reverb !== undefined ? savedState.harmony.reverb : 0.4;
             harmony.complexity = savedState.harmony.complexity !== undefined ? savedState.harmony.complexity : 0.5;
+            harmony.activeTab = savedState.harmony.activeTab || 'smart';
         }
         if (savedState.groove) { 
             groove.enabled = savedState.groove.enabled !== undefined ? savedState.groove.enabled : true; 
