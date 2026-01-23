@@ -14,13 +14,13 @@ vi.stubGlobal('self', {
 
 // Mock state
 vi.mock('../../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, lastFreq: 440, busySteps: 0, sessionSteps: 1000
     },
-    cb: { enabled: true },
-    bb: { enabled: true, lastFreq: 110, pocketOffset: 0 },
-    hb: { enabled: true, volume: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
-    ctx: { bandIntensity: 0.5, bpm: 120, intent: {}, audio: { currentTime: 0 } },
+    chords: { enabled: true },
+    bass: { enabled: true, lastFreq: 110, pocketOffset: 0 },
+    harmony: { enabled: true, volume: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
+    playback: { bandIntensity: 0.5, bpm: 120, intent: {}, audio: { currentTime: 0 } },
     arranger: { 
         key: 'C', 
         isMinor: false, 
@@ -29,7 +29,7 @@ vi.mock('../../../public/state.js', () => ({
         stepMap: [],
         timeSignature: '4/4'
     },
-    gb: { genreFeel: 'Rock', enabled: true, instruments: [], audioBuffers: { noise: {} } }
+    groove: { genreFeel: 'Rock', enabled: true, instruments: [], audioBuffers: { noise: {} } }
 }));
 
 vi.mock('../../../public/config.js', () => ({
@@ -41,7 +41,7 @@ vi.mock('../../../public/config.js', () => ({
     MIXER_GAIN_MULTIPLIERS: { chords: 0.22, bass: 0.35, soloist: 0.32, harmonies: 0.28, drums: 0.45, master: 0.85 }
 }));
 
-import { arranger, hb } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { handleResolution, handleExport } from '../../../public/logic-worker.js';
 
 describe('Export and Resolution Logic Validation', () => {
@@ -50,7 +50,7 @@ describe('Export and Resolution Logic Validation', () => {
         capturedMessages.length = 0;
         arranger.key = 'C';
         arranger.isMinor = false;
-        hb.enabled = true;
+        harmony.enabled = true;
         const mockChord = { 
             root: 'C', 
             beats: 4, 
@@ -73,7 +73,7 @@ describe('Export and Resolution Logic Validation', () => {
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
         expect(noteMsg).toBeDefined();
         
-        const chordNotes = noteMsg.notes.filter(n => n.module === 'cb' && n.midi > 0);
+        const chordNotes = noteMsg.notes.filter(n => n.module === 'chords' && n.midi > 0);
         const midis = chordNotes.map(n => n.midi).sort();
         // C Major 6/9: [60, 62, 64, 67, 69]
         expect(midis).toEqual([60, 62, 64, 67, 69]);
@@ -85,7 +85,7 @@ describe('Export and Resolution Logic Validation', () => {
         handleResolution(0);
         
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
-        const chordNotes = noteMsg.notes.filter(n => n.module === 'cb' && n.midi > 0);
+        const chordNotes = noteMsg.notes.filter(n => n.module === 'chords' && n.midi > 0);
         const midis = chordNotes.map(n => n.midi).sort();
         // A Minor m9: [69, 71, 72, 76, 79]
         expect(midis).toEqual([69, 71, 72, 76, 79]);
@@ -96,7 +96,7 @@ describe('Export and Resolution Logic Validation', () => {
         handleResolution(0);
         
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
-        const bassNote = noteMsg.notes.find(n => n.module === 'bb');
+        const bassNote = noteMsg.notes.find(n => n.module === 'bass');
         expect(bassNote).toBeDefined();
         expect(bassNote.midi).toBe(31);
         expect(bassNote.durationSteps).toBe(16); // 4 beats
@@ -126,7 +126,7 @@ describe('Export and Resolution Logic Validation', () => {
     it('should handle muted property by reducing velocity in resolution', () => {
         handleResolution(0);
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
-        const bass = noteMsg.notes.find(n => n.module === 'bb');
+        const bass = noteMsg.notes.find(n => n.module === 'bass');
         expect(bass.midiVelocity).toBeLessThanOrEqual(127);
     });
 
@@ -134,13 +134,13 @@ describe('Export and Resolution Logic Validation', () => {
         handleResolution(0);
         
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
-        const harmonyNotes = noteMsg.notes.filter(n => n.module === 'hb');
+        const harmonyNotes = noteMsg.notes.filter(n => n.module === 'harmony');
         // Harmony resolution usually plays a 1st or 5th interval
         expect(harmonyNotes.length).toBeGreaterThan(0);
     });
 
     it('should apply density-based velocity normalization in resolution', () => {
-        // Resolution Chord (cb) plays 5 notes.
+        // Resolution Chord (chords) plays 5 notes.
         // Formula: v = base_v * (1 / sqrt(num_voices))
         // base_v for chord resolution is 0.7.
         // comp = 1 / sqrt(5) = ~0.447
@@ -148,7 +148,7 @@ describe('Export and Resolution Logic Validation', () => {
         // midi_v = target_v * 127 = ~39
         handleResolution(0);
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
-        const chordNotes = noteMsg.notes.filter(n => n.module === 'cb' && n.midi > 0);
+        const chordNotes = noteMsg.notes.filter(n => n.module === 'chords' && n.midi > 0);
         
         expect(chordNotes[0].midiVelocity).toBeLessThan(50); // Normalized down from ~89
     });

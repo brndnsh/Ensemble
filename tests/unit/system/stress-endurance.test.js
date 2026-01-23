@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Unified mock for state and context
 vi.mock('../../../public/state.js', () => ({
-    ctx: { 
+    playback: { 
         audio: { 
             currentTime: 0,
             createOscillator: () => ({ connect: vi.fn(), start: vi.fn(), stop: vi.fn(), frequency: { setValueAtTime: vi.fn() } }),
@@ -24,7 +24,7 @@ vi.mock('../../../public/state.js', () => ({
         isDrawing: true,
         masterGain: {}
     },
-    gb: { 
+    groove: { 
         enabled: true, 
         genreFeel: 'Rock',
         humanize: 0,
@@ -39,10 +39,10 @@ vi.mock('../../../public/state.js', () => ({
         totalSteps: 16,
         measureMap: []
     },
-    bb: { enabled: true, buffer: new Map(), octave: 38 },
-    sb: { enabled: true, buffer: new Map(), octave: 72 },
-    cb: { enabled: true, buffer: new Map(), octave: 60 },
-    hb: { enabled: true, buffer: new Map(), octave: 60 },
+    bass: { enabled: true, buffer: new Map(), octave: 38 },
+    soloist: { enabled: true, buffer: new Map(), octave: 72 },
+    chords: { enabled: true, buffer: new Map(), octave: 60 },
+    harmony: { enabled: true, buffer: new Map(), octave: 60 },
     midi: { enabled: false },
     vizState: { enabled: true },
     conductorState: { larsBpmOffset: 0 }
@@ -84,48 +84,48 @@ vi.mock('../../../public/conductor.js', () => ({
 
 import { scheduler } from '../../../public/scheduler-core.js';
 import { draw } from '../../../public/animation-loop.js';
-import { ctx, bb, sb, cb } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import * as engine from '../../../public/engine.js';
 
 describe('Long-Session Stress & Endurance', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.audio.currentTime = 0;
-        ctx.nextNoteTime = 0;
-        ctx.step = 0;
-        ctx.drawQueue = [];
-        ctx.isPlaying = true;
-        bb.buffer.clear();
-        sb.buffer.clear();
-        cb.buffer.clear();
+        playback.audio.currentTime = 0;
+        playback.nextNoteTime = 0;
+        playback.step = 0;
+        playback.drawQueue = [];
+        playback.isPlaying = true;
+        bass.buffer.clear();
+        soloist.buffer.clear();
+        chords.buffer.clear();
         
         global.requestAnimationFrame = vi.fn();
     });
 
     it('should maintain a stable memory footprint over 1000 simulated measures', () => {
         const stepsToSimulate = 16 * 1000; 
-        const secondsPerStep = 0.25 * (60 / ctx.bpm); 
+        const secondsPerStep = 0.25 * (60 / playback.bpm); 
         
-        vi.spyOn(engine, 'getVisualTime').mockImplementation(() => ctx.audio.currentTime - 0.05);
+        vi.spyOn(engine, 'getVisualTime').mockImplementation(() => playback.audio.currentTime - 0.05);
 
         for (let i = 0; i < stepsToSimulate; i++) {
-            ctx.audio.currentTime += secondsPerStep;
+            playback.audio.currentTime += secondsPerStep;
             
-            bb.buffer.set(ctx.step, { freq: 100, durationSteps: 1 });
-            sb.buffer.set(ctx.step, [{ freq: 400, durationSteps: 1 }]);
-            cb.buffer.set(ctx.step, [{ freq: 300, durationSteps: 1 }]);
+            bass.buffer.set(playback.step, { freq: 100, durationSteps: 1 });
+            soloist.buffer.set(playback.step, [{ freq: 400, durationSteps: 1 }]);
+            chords.buffer.set(playback.step, [{ freq: 300, durationSteps: 1 }]);
             
             scheduler();
             draw(null); 
             
             if (i % 100 === 0) {
-                expect(ctx.drawQueue.length).toBeLessThan(350);
-                expect(bb.buffer.size).toBeLessThan(10); 
-                expect(sb.buffer.size).toBeLessThan(10);
-                expect(cb.buffer.size).toBeLessThan(10);
+                expect(playback.drawQueue.length).toBeLessThan(350);
+                expect(bass.buffer.size).toBeLessThan(10); 
+                expect(soloist.buffer.size).toBeLessThan(10);
+                expect(chords.buffer.size).toBeLessThan(10);
             }
         }
         
-        expect(ctx.step).toBeGreaterThanOrEqual(stepsToSimulate);
+        expect(playback.step).toBeGreaterThanOrEqual(stepsToSimulate);
     });
 });

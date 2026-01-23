@@ -3,15 +3,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
         qaState: 'Question', isResting: false, contourSteps: 0,
         melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
         lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
         sessionSteps: 1000
     },
-    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
-    ctx: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 } },
+    chords: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
+    playback: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 } },
     arranger: { 
         key: 'C', 
         isMinor: true,
@@ -21,9 +21,9 @@ vi.mock('../../public/state.js', () => ({
         timeSignature: '4/4',
         sections: []
     },
-    gb: { genreFeel: 'Jazz' },
-    bb: { enabled: true },
-    hb: { enabled: false }
+    groove: { genreFeel: 'Jazz' },
+    bass: { enabled: true },
+    harmony: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {
@@ -46,7 +46,7 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 import { getSoloistNote, getScaleForChord } from '../../public/soloist.js';
 import { getBassNote } from '../../public/bass.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger, sb, gb, ctx } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { getStepsPerMeasure } from '../../public/utils.js';
 
 describe('Jazz Anthology Tests', () => {
@@ -55,7 +55,7 @@ describe('Jazz Anthology Tests', () => {
         beforeEach(() => {
             arranger.key = 'C';
             arranger.isMinor = true;
-            gb.genreFeel = 'Bossa Nova';
+            groove.genreFeel = 'Bossa Nova';
             // Cm7 | Cm7 | Fm7 | Fm7 | Dm7b5 | G7alt | Cm7 | Cm7
             // Ebm7 | Ab7 | Dbmaj7 | Dbmaj7 | Dm7b5 | G7alt | Cm7 | Dm7b5 G7alt
             arranger.sections = [
@@ -98,7 +98,7 @@ describe('Jazz Anthology Tests', () => {
         beforeEach(() => {
             arranger.key = 'C'; // Key center usually D minor, let's say C Major (D is ii) or just D Minor
             arranger.isMinor = true; 
-            gb.genreFeel = 'Jazz';
+            groove.genreFeel = 'Jazz';
             // Dm7 (16) | Ebm7 (8) | Dm7 (8)
             // Simplified for test: 4 bars Dm7, 2 bars Ebm7, 2 bars Dm7
             arranger.sections = [
@@ -131,7 +131,7 @@ describe('Jazz Anthology Tests', () => {
             arranger.key = 'Eb';
             arranger.isMinor = true;
             arranger.timeSignature = '5/4';
-            gb.genreFeel = 'Jazz';
+            groove.genreFeel = 'Jazz';
             // Vamp: Ebm7 | Bbm7
             arranger.sections = [
                 { id: 'A', label: 'A', value: "Ebm7 | Bbm7 | Ebm7 | Bbm7" }

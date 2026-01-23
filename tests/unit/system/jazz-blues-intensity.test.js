@@ -4,15 +4,15 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { conductorState, checkSectionTransition } from '../../../public/conductor.js';
-import { ctx, gb, arranger, dispatch } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 vi.mock('../../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
     return {
         ...actual,
-        hb: { enabled: false, buffer: new Map() },
+        harmony: { enabled: false, buffer: new Map() },
         dispatch: vi.fn((action, payload) => {
-            if (action === 'SET_BAND_INTENSITY') ctx.bandIntensity = payload;
+            if (action === 'SET_BAND_INTENSITY') playback.bandIntensity = payload;
         })
     };
 });
@@ -36,13 +36,13 @@ vi.mock('../../../public/fills.js', () => ({
 describe('Jazz Blues Intensity Bug', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.autoIntensity = true;
-        ctx.isPlaying = true;
-        ctx.bandIntensity = 0.5;
+        playback.autoIntensity = true;
+        playback.isPlaying = true;
+        playback.bandIntensity = 0.5;
         conductorState.target = 0.5;
         conductorState.stepSize = 0;
         conductorState.formIteration = 0;
-        gb.enabled = true;
+        groove.enabled = true;
     });
 
     it('should trigger intensity change for 12-bar blues (1 chord per measure)', () => {

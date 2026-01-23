@@ -5,18 +5,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // 1. Hoist the mock factory
 vi.mock('../../public/state.js', () => {
     return {
-        sb: { tension: 0, sessionSteps: 1000, currentPhraseSteps: 0 },
-        cb: { style: 'smart' },
-        ctx: { bandIntensity: 0.5 },
+        soloist: { tension: 0, sessionSteps: 1000, currentPhraseSteps: 0 },
+        chords: { style: 'smart' },
+        playback: { bandIntensity: 0.5 },
         arranger: { key: 'C', isMinor: false, progression: [], grouping: null, timeSignature: '4/4' },
-        gb: { genreFeel: 'Funk', lastDrumPreset: 'Funk' },
-        bb: {},
-        hb: { enabled: false }
+        groove: { genreFeel: 'Funk', lastDrumPreset: 'Funk' },
+        bass: {},
+        harmony: { enabled: false }
     };
 });
 
 // 2. Import the mocked module to manipulate it
-import { sb, cb, ctx, arranger, gb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { getScaleForChord } from '../../public/soloist.js';
 import { getScaleForBass } from '../../public/bass.js';
 
@@ -32,8 +32,8 @@ describe('Harmonic Compatibility Integration', () => {
 
     beforeEach(() => {
         // Reset state defaults via the imported objects
-        gb.genreFeel = 'Funk';
-        sb.tension = 0.5;
+        groove.genreFeel = 'Funk';
+        soloist.tension = 0.5;
         arranger.key = 'C';
         arranger.isMinor = false;
     });
@@ -41,7 +41,7 @@ describe('Harmonic Compatibility Integration', () => {
     describe('Soloist Harmonic Integrity', () => {
         
         it('should treat m9 as minor in Funk/Neo-Soul context (avoid Major 3rd)', () => {
-            gb.genreFeel = 'Funk';
+            groove.genreFeel = 'Funk';
             const chord = mockChord('m9', 60); // C m9
             const scale = getScaleForChord(chord, null, 'funk');
             
@@ -58,7 +58,7 @@ describe('Harmonic Compatibility Integration', () => {
         });
 
         it('should treat m11 as minor in Neo-Soul context', () => {
-            gb.genreFeel = 'Neo-Soul';
+            groove.genreFeel = 'Neo-Soul';
             const chord = mockChord('m11', 60);
             const scale = getScaleForChord(chord, null, 'neo');
 
@@ -68,7 +68,7 @@ describe('Harmonic Compatibility Integration', () => {
         });
         
         it('should treat IV13 as Dominant (Mixolydian)', () => {
-             gb.genreFeel = 'Funk';
+             groove.genreFeel = 'Funk';
              const chord = mockChord('13', 65); // F13 (IV in C)
              const scale = getScaleForChord(chord, null, 'funk');
              
@@ -79,7 +79,7 @@ describe('Harmonic Compatibility Integration', () => {
         });
 
         it('should correctly handle m6 chords (Dorian/Melodic Minor)', () => {
-             gb.genreFeel = 'Jazz';
+             groove.genreFeel = 'Jazz';
              const chord = mockChord('m6', 60);
              const scale = getScaleForChord(chord, null, 'bird');
              
@@ -92,7 +92,7 @@ describe('Harmonic Compatibility Integration', () => {
 
     describe('Bass Harmonic Integrity', () => {
         it('should provide correct scale for m9 chords', () => {
-            gb.genreFeel = 'Funk';
+            groove.genreFeel = 'Funk';
             const chord = mockChord('m9', 60, [0, 3, 7, 10, 14]); 
             const scale = getScaleForBass(chord, null);
             

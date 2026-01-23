@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { initAudio, getVisualTime } from '../../../public/engine.js';
-import { ctx } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 // Mock dependencies
 vi.mock('../../../public/ui.js', () => ({
@@ -54,8 +54,8 @@ describe('Cross-Browser & Hardware Heuristics', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.audio = null;
-        ctx.isPlaying = false;
+        playback.audio = null;
+        playback.isPlaying = false;
     });
 
     it('should correctly initialize with a 48kHz sample rate (Mac/iOS standard)', () => {
@@ -63,21 +63,21 @@ describe('Cross-Browser & Hardware Heuristics', () => {
         
         initAudio();
         
-        expect(ctx.audio.sampleRate).toBe(48000);
+        expect(playback.audio.sampleRate).toBe(48000);
         // Noise buffer should scale to sample rate (2 seconds = 96000 samples)
-        expect(ctx.audio.createBuffer).toHaveBeenCalledWith(1, 96000, 48000);
+        expect(playback.audio.createBuffer).toHaveBeenCalledWith(1, 96000, 48000);
     });
 
     it('should automatically attempt to resume audio if suspended while playing (Safari fix)', async () => {
         global.window.AudioContext = getMockAudioContextClass({ state: 'suspended' });
         
         initAudio();
-        ctx.isPlaying = true;
+        playback.isPlaying = true;
         
         // Trigger the state change handler manually
-        ctx.audio.onstatechange();
+        playback.audio.onstatechange();
         
-        expect(ctx.audio.resume).toHaveBeenCalled();
+        expect(playback.audio.resume).toHaveBeenCalled();
     });
 
     it('should compensate for hardware output latency in visualizer timing', () => {
@@ -107,7 +107,7 @@ describe('Cross-Browser & Hardware Heuristics', () => {
         getVisualTime();
         
         nowValue += 100;
-        ctx.audio.currentTime += 0.1;
+        playback.audio.currentTime += 0.1;
         
         const visualTime = getVisualTime();
         // audioTime (10.1) + smoothDelta (approx 0) - fallback (0.015)
@@ -130,7 +130,7 @@ describe('Cross-Browser & Hardware Heuristics', () => {
         getVisualTime();
 
         nowValue += 100;
-        ctx.audio.currentTime += 0.1;
+        playback.audio.currentTime += 0.1;
 
         const visualTime = getVisualTime();
         // audioTime (10.1) - fallback (0.045)

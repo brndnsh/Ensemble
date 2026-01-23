@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { describe, it, expect, vi } from 'vitest';
 import { getBassNote, isBassActive } from '../../public/bass.js';
-import { ctx, gb, arranger } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { getStepsPerMeasure } from '../../public/utils.js';
 
 /**
@@ -12,7 +12,7 @@ import { getStepsPerMeasure } from '../../public/utils.js';
 
 describe('Genre Integrity Stability Test', () => {
     const runStabilityCheck = (genre, measures) => {
-        gb.genreFeel = genre;
+        groove.genreFeel = genre;
         arranger.timeSignature = '4/4';
         const spm = getStepsPerMeasure(arranger.timeSignature);
         const totalSteps = measures * spm;
@@ -38,8 +38,8 @@ describe('Genre Integrity Stability Test', () => {
             }
 
             // 2. Verify State Resilience
-            expect(ctx.bandIntensity).toBeLessThanOrEqual(1.0);
-            expect(ctx.bandIntensity).toBeGreaterThanOrEqual(0);
+            expect(playback.bandIntensity).toBeLessThanOrEqual(1.0);
+            expect(playback.bandIntensity).toBeGreaterThanOrEqual(0);
         }
     };
 
@@ -60,9 +60,9 @@ describe('Genre Integrity Stability Test', () => {
     });
 
     it('should handle rapid intensity fluctuations without breaking engines', () => {
-        gb.genreFeel = 'Jazz';
+        groove.genreFeel = 'Jazz';
         for (let i = 0; i < 500; i++) {
-            ctx.bandIntensity = Math.random();
+            playback.bandIntensity = Math.random();
             const note = getBassNote({ rootMidi: 48, intervals: [0, 4, 7], quality: 'major' }, null, 0, null, 38, 'smart', 0, i, i % 16);
             if (note) expect(note.velocity).toBeDefined();
         }

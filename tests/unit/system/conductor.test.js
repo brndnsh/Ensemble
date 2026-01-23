@@ -4,15 +4,15 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { conductorState, updateAutoConductor, checkSectionTransition, applyConductor } from '../../../public/conductor.js';
-import { ctx, gb, arranger, dispatch } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 vi.mock('../../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
     return {
         ...actual,
-        hb: { enabled: false, buffer: new Map() },
+        harmony: { enabled: false, buffer: new Map() },
         dispatch: vi.fn((action, payload) => {
-            if (action === 'SET_BAND_INTENSITY') ctx.bandIntensity = payload;
+            if (action === 'SET_BAND_INTENSITY') playback.bandIntensity = payload;
         })
     };
 });
@@ -36,9 +36,9 @@ vi.mock('../../../public/fills.js', () => ({
 describe('Conductor Logic', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.autoIntensity = true;
-        ctx.isPlaying = true;
-        ctx.bandIntensity = 0.5;
+        playback.autoIntensity = true;
+        playback.isPlaying = true;
+        playback.bandIntensity = 0.5;
         conductorState.target = 0.5;
         conductorState.stepSize = 0.01;
         conductorState.formIteration = 0;
@@ -53,23 +53,23 @@ describe('Conductor Logic', () => {
         it('should ramp intensity towards target', () => {
             conductorState.target = 0.6;
             updateAutoConductor();
-            expect(ctx.bandIntensity).toBeGreaterThan(0.5);
+            expect(playback.bandIntensity).toBeGreaterThan(0.5);
         });
 
         it('should use asymmetric ramping (faster drops)', () => {
             vi.spyOn(Math, 'random').mockReturnValue(0.5);
             // Test Build
-            ctx.bandIntensity = 0.5;
+            playback.bandIntensity = 0.5;
             conductorState.target = 0.7;
             conductorState.stepSize = 0.01;
             updateAutoConductor();
-            const buildDiff = ctx.bandIntensity - 0.5;
+            const buildDiff = playback.bandIntensity - 0.5;
 
             // Test Drop
-            ctx.bandIntensity = 0.5;
+            playback.bandIntensity = 0.5;
             conductorState.target = 0.3;
             updateAutoConductor();
-            const dropDiff = 0.5 - ctx.bandIntensity;
+            const dropDiff = 0.5 - playback.bandIntensity;
 
             // Drop should be faster (multiplier 2.5 in code when intensity > target)
             expect(dropDiff).toBeGreaterThan(buildDiff);
@@ -79,14 +79,14 @@ describe('Conductor Logic', () => {
     describe('checkSectionTransition', () => {
         it('should trigger a fill and update target energy at loop end', () => {
             vi.spyOn(Math, 'random').mockReturnValue(0.5);
-            gb.enabled = true;
+            groove.enabled = true;
             checkSectionTransition(0, 16); 
             expect(conductorState.formIteration).toBeGreaterThan(0);
         });
 
         it('should adhere to the Grand Story macro-arc cycles', () => {
             vi.spyOn(Math, 'random').mockReturnValue(0.5);
-            gb.enabled = true;
+            groove.enabled = true;
             
             // Cycle 0: Warm up (Macro Ceiling 0.45)
             conductorState.formIteration = 0;
@@ -100,7 +100,7 @@ describe('Conductor Logic', () => {
         });
 
         it('should suppress fills if the next section is seamless', () => {
-            gb.enabled = true;
+            groove.enabled = true;
             // Setup: End of Section 1 (steps 0-16), transitioning to Section 2
             arranger.stepMap = [
                 { start: 0, end: 16, chord: { sectionId: 's1', sectionLabel: 'Verse' } },

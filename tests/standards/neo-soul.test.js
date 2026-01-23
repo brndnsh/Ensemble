@@ -3,14 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
         qaState: 'Question', isResting: false, contourSteps: 0,
         melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
         lastFreq: 440, hookRetentionProb: 0.5
     },
-    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
-    ctx: { bandIntensity: 0.5, bpm: 80, audio: { currentTime: 0 } },
+    chords: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
+    playback: { bandIntensity: 0.5, bpm: 80, audio: { currentTime: 0 } },
     arranger: { 
         key: 'C', 
         isMinor: false,
@@ -20,9 +20,9 @@ vi.mock('../../public/state.js', () => ({
         timeSignature: '4/4',
         sections: []
     },
-    gb: { genreFeel: 'Neo-Soul' },
-    bb: { enabled: true },
-    hb: { enabled: false }
+    groove: { genreFeel: 'Neo-Soul' },
+    bass: { enabled: true },
+    harmony: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {
@@ -44,7 +44,7 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 
 import { getBassNote } from '../../public/bass.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Neo-Soul Integration Test: Slash Chords', () => {
     
@@ -93,7 +93,7 @@ describe('Neo-Soul Integration Test: Slash Chords', () => {
         const result = getBassNote(progression[0], progression[1], 0, null, 38, 'neo', 0, 0, 0);
         
         // Neo-soul style should have a specific timingOffset. 
-        // Base is 0.0 (from bb.pocketOffset in mock) + genre lag (0.010 + intensity * 0.015)
+        // Base is 0.0 (from bass.pocketOffset in mock) + genre lag (0.010 + intensity * 0.015)
         // At intensity 0.5, total is ~0.0175.
         expect(result.timingOffset).toBeGreaterThan(0.015); 
         expect(result.timingOffset).toBeCloseTo(0.0175, 2); 

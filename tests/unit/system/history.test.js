@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { arranger } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { pushHistory, undo } from '../../../public/history.js';
 
 // Mock UI and dependencies
@@ -16,7 +16,7 @@ vi.mock('../../../public/ui.js', () => ({
 }));
 
 vi.mock('../../../public/chords.js', () => ({
-    validateProgression: vi.fn(cb => cb())
+    validateProgression: vi.fn(chords => chords())
 }));
 
 vi.mock('../../../public/instrument-controller.js', () => ({

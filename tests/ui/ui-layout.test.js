@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ui, renderSections, renderGrid, renderChordVisualizer } from '../../public/ui.js';
-import { arranger, gb, cb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 // Mock dependencies that we don't need for layout testing
 vi.mock('../../public/persistence.js', () => ({
@@ -131,12 +131,12 @@ describe('UI Layout Integrity', () => {
 
     describe('renderGrid', () => {
         it('should render the correct number of instruments and steps', () => {
-            // Setup gb state
-            gb.instruments = [
+            // Setup groove state
+            groove.instruments = [
                 { name: 'Kick', steps: new Array(128).fill(0) },
                 { name: 'Snare', steps: new Array(128).fill(0) }
             ];
-            gb.measures = 1;
+            groove.measures = 1;
             arranger.timeSignature = '4/4';
 
             renderGrid();
@@ -150,8 +150,8 @@ describe('UI Layout Integrity', () => {
         });
 
         it('should update step count when measures change', () => {
-            gb.instruments = [{ name: 'Kick', steps: new Array(128).fill(0) }];
-            gb.measures = 2;
+            groove.instruments = [{ name: 'Kick', steps: new Array(128).fill(0) }];
+            groove.measures = 2;
             arranger.timeSignature = '4/4';
 
             renderGrid();
@@ -161,11 +161,11 @@ describe('UI Layout Integrity', () => {
         });
 
         it('should not leak rows when re-rendering', () => {
-            gb.instruments = [
+            groove.instruments = [
                 { name: 'Kick', steps: new Array(128).fill(0) },
                 { name: 'Snare', steps: new Array(128).fill(0) }
             ];
-            gb.measures = 1;
+            groove.measures = 1;
             arranger.timeSignature = '4/4';
 
             renderGrid();
@@ -177,8 +177,8 @@ describe('UI Layout Integrity', () => {
         });
 
         it('should render the correct number of subdivision labels', () => {
-            gb.instruments = [{ name: 'Kick', steps: new Array(128).fill(0) }];
-            gb.measures = 1;
+            groove.instruments = [{ name: 'Kick', steps: new Array(128).fill(0) }];
+            groove.measures = 1;
             arranger.timeSignature = '4/4';
 
             renderGrid();

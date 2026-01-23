@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global modules
 vi.mock('../../public/state.js', () => ({
-    ctx: {
+    playback: {
         audio: {
             currentTime: 0,
             createOscillator: vi.fn(() => ({
@@ -43,9 +43,9 @@ vi.mock('../../public/state.js', () => ({
         chordsGain: { connect: vi.fn() },
         sustainActive: false
     },
-    gb: { audioBuffers: { noise: {} } },
-    cb: { activeTab: 'smart' },
-    hb: { enabled: false }
+    groove: { audioBuffers: { noise: {} } },
+    chords: { activeTab: 'smart' },
+    harmony: { enabled: false }
 }));
 
 // Mock utils
@@ -54,26 +54,26 @@ vi.mock('../../public/utils.js', () => ({
 }));
 
 import { playNote, playChordScratch } from '../../public/synth-chords.js';
-import { ctx } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Chord Synthesis', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.audio.currentTime = 10;
-        ctx.sustainActive = false;
+        playback.audio.currentTime = 10;
+        playback.sustainActive = false;
     });
 
     it('should use a PeriodicWave for the "Piano" instrument', () => {
         playNote(440, 10, 1.0, { instrument: 'Piano' });
 
-        const osc = ctx.audio.createOscillator.mock.results[0].value;
+        const osc = playback.audio.createOscillator.mock.results[0].value;
         expect(osc.setPeriodicWave).toHaveBeenCalled();
     });
 
     it('should apply a randomized strum offset based on index', () => {
         playNote(440, 10, 1.0, { index: 2, instrument: 'Piano' });
 
-        const osc = ctx.audio.createOscillator.mock.results[0].value;
+        const osc = playback.audio.createOscillator.mock.results[0].value;
         const startTime = osc.frequency.setValueAtTime.mock.calls[0][1];
         
         // Base time is 10. Index 2 should add approx 0.01 - 0.03s
@@ -84,21 +84,21 @@ describe('Chord Synthesis', () => {
     it('should create a hammer strike noise layer for Piano', () => {
         playNote(440, 10, 1.0, { instrument: 'Piano' });
 
-        expect(ctx.audio.createBufferSource).toHaveBeenCalled();
+        expect(playback.audio.createBufferSource).toHaveBeenCalled();
     });
 
     it('should use a simple triangle wave for the "Warm" instrument', () => {
         playNote(440, 10, 1.0, { instrument: 'Warm' });
 
-        const osc = ctx.audio.createOscillator.mock.results[0].value;
+        const osc = playback.audio.createOscillator.mock.results[0].value;
         expect(osc.type).toBe('triangle');
     });
 
     it('should implement chord scratch synthesis', () => {
         playChordScratch(10, 0.5);
 
-        expect(ctx.audio.createBufferSource).toHaveBeenCalled();
-        const filter = ctx.audio.createBiquadFilter.mock.results[0].value;
+        expect(playback.audio.createBufferSource).toHaveBeenCalled();
+        const filter = playback.audio.createBiquadFilter.mock.results[0].value;
         expect(filter.type).toBe('bandpass');
     });
 });

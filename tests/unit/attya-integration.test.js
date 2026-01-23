@@ -15,7 +15,7 @@ vi.stubGlobal('navigator', { wakeLock: { request: vi.fn() } });
 
 // Mock the state and config
 vi.mock('../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, 
         busySteps: 0, 
         currentPhraseSteps: 0, 
@@ -33,10 +33,10 @@ vi.mock('../../public/state.js', () => ({
         sessionSteps: 1000,
         buffer: new Map()
     },
-    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: true, buffer: new Map() },
-    bb: { enabled: true, style: 'quarter', pocketOffset: 0, lastFreq: 110, volume: 0.5, buffer: new Map() },
-    hb: { enabled: false, style: 'smart', octave: 60, volume: 0.4, reverb: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
-    ctx: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 }, intent: {}, drawQueue: [] },
+    chords: { enabled: true, octave: 60, density: 'standard', pianoRoots: true, buffer: new Map() },
+    bass: { enabled: true, style: 'quarter', pocketOffset: 0, lastFreq: 110, volume: 0.5, buffer: new Map() },
+    harmony: { enabled: false, style: 'smart', octave: 60, volume: 0.4, reverb: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
+    playback: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 }, intent: {}, drawQueue: [] },
     midi: { enabled: false, selectedOutputId: null, soloistChannel: 3, chordsChannel: 1, bassChannel: 2, drumsChannel: 10, soloistOctave: 0, chordsOctave: 0, bassOctave: 0, drumsOctave: 0 },
     arranger: { 
         key: 'Ab', 
@@ -47,7 +47,7 @@ vi.mock('../../public/state.js', () => ({
         timeSignature: '4/4',
         sections: []
     },
-    gb: { genreFeel: 'Jazz', instruments: [] }
+    groove: { genreFeel: 'Jazz', instruments: [] }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {
@@ -87,7 +87,7 @@ vi.mock('../../public/animation-loop.js', () => ({ draw: vi.fn() }));
 import { getBassNote } from '../../public/bass.js';
 import { getSoloistNote, getScaleForChord } from '../../public/soloist.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger, sb, bb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { scheduleGlobalEvent } from '../../public/scheduler-core.js';
 
 describe('All The Things You Are - Instrument Intelligence Integration', () => {

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global modules
 vi.mock('../../public/state.js', () => ({
-    ctx: {
+    playback: {
         audio: {
             currentTime: 0,
             createOscillator: vi.fn(() => ({
@@ -44,12 +44,12 @@ vi.mock('../../public/state.js', () => ({
         },
         drumsGain: { connect: vi.fn() }
     },
-    gb: { 
+    groove: { 
         humanize: 20, 
         audioBuffers: { noise: {} },
         lastHatGain: null 
     },
-    hb: { enabled: false }
+    harmony: { enabled: false }
 }));
 
 // Mock utils
@@ -58,34 +58,34 @@ vi.mock('../../public/utils.js', () => ({
 }));
 
 import { playDrumSound } from '../../public/synth-drums.js';
-import { ctx, gb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Drum Synthesis', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        gb.lastHatGain = null;
-        ctx.audio.currentTime = 10;
-        gb.audioBuffers = { noise: {} };
+        groove.lastHatGain = null;
+        playback.audio.currentTime = 10;
+        groove.audioBuffers = { noise: {} };
     });
 
     it('should create a 4-layer model for the Kick drum', () => {
         playDrumSound('Kick', 10, 1.0);
 
         // Layers: Beater (Osc), Skin (Noise), Knock (Osc), Shell (Osc) + Panner (Gain)
-        expect(ctx.audio.createOscillator).toHaveBeenCalledTimes(3);
-        expect(ctx.audio.createBufferSource).toHaveBeenCalledTimes(1);
-        expect(ctx.audio.createGain).toHaveBeenCalledTimes(5);
+        expect(playback.audio.createOscillator).toHaveBeenCalledTimes(3);
+        expect(playback.audio.createBufferSource).toHaveBeenCalledTimes(1);
+        expect(playback.audio.createGain).toHaveBeenCalledTimes(5);
     });
 
     it('should use a pre-rendered AudioBuffer for HiHat to optimize CPU', () => {
         playDrumSound('HiHat', 10, 1.0);
 
         // Should create buffer ONCE (if not cached) and use BufferSource
-        expect(ctx.audio.createBuffer).toHaveBeenCalled(); 
-        expect(ctx.audio.createBufferSource).toHaveBeenCalled();
+        expect(playback.audio.createBuffer).toHaveBeenCalled(); 
+        expect(playback.audio.createBufferSource).toHaveBeenCalled();
         
         // Should use playbackRate for variation
-        const source = ctx.audio.createBufferSource.mock.results[0].value;
+        const source = playback.audio.createBufferSource.mock.results[0].value;
         expect(source.playbackRate.value).not.toBe(1.0); // Should be jittered
     });
 
@@ -96,7 +96,7 @@ describe('Drum Synthesis', () => {
                 setTargetAtTime: vi.fn()
             }
         };
-        gb.lastHatGain = mockPrevGain;
+        groove.lastHatGain = mockPrevGain;
 
         playDrumSound('HiHat', 11, 1.0);
 
@@ -108,7 +108,7 @@ describe('Drum Synthesis', () => {
         playDrumSound('Snare', 10, 1.0);
 
         // Snare creates Tone (2 Oscs) and Wires (Noise)
-        const filters = ctx.audio.createBiquadFilter.mock.results;
+        const filters = playback.audio.createBiquadFilter.mock.results;
         const wiresFilter = filters.find(f => f.value.type === 'bandpass');
         expect(wiresFilter).toBeDefined();
     });
@@ -117,7 +117,7 @@ describe('Drum Synthesis', () => {
         playDrumSound('Sidestick', 10, 1.0);
 
         // Sidestick has 3 layers: Click (Osc), Body (Osc), Snap (Noise)
-        expect(ctx.audio.createOscillator).toHaveBeenCalledTimes(2);
-        expect(ctx.audio.createBufferSource).toHaveBeenCalledTimes(1);
+        expect(playback.audio.createOscillator).toHaveBeenCalledTimes(2);
+        expect(playback.audio.createBufferSource).toHaveBeenCalledTimes(1);
     });
 });

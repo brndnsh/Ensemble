@@ -8,12 +8,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../../public/state.js', () => ({
     midi: { enabled: true },
     dispatch: vi.fn(),
-    ctx: { audio: { currentTime: 0 } },
-    hb: { enabled: false, buffer: new Map() }
+    playback: { audio: { currentTime: 0 } },
+    harmony: { enabled: false, buffer: new Map() }
 }));
 
 import { initMIDI } from '../../../public/midi-controller.js';
-import { midi, dispatch } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('MIDI Input Handling', () => {
     let mockInput;

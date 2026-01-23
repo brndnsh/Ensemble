@@ -3,16 +3,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the state modules
 vi.mock('../../public/state.js', () => ({
-    ctx: { bandIntensity: 0.5, bpm: 120, intent: { syncopation: 0, anticipation: 0, layBack: 0 } },
+    playback: { bandIntensity: 0.5, bpm: 120, intent: { syncopation: 0, anticipation: 0, layBack: 0 } },
     arranger: { 
         timeSignature: '4/4', 
         progression: []
     },
-    cb: { enabled: true, style: 'smart', density: 'standard', octave: 60 },
-    bb: { enabled: true },
-    sb: { enabled: false, busySteps: 0 },
-    gb: { genreFeel: 'Jazz' },
-    hb: { enabled: false, buffer: new Map() }
+    chords: { enabled: true, style: 'smart', density: 'standard', octave: 60 },
+    bass: { enabled: true },
+    soloist: { enabled: false, busySteps: 0 },
+    groove: { genreFeel: 'Jazz' },
+    harmony: { enabled: false, buffer: new Map() }
 }));
 // Mock config
 vi.mock('../../public/config.js', () => ({
@@ -22,7 +22,7 @@ vi.mock('../../public/config.js', () => ({
 }));
 
 import { getAccompanimentNotes, compingState } from '../../public/accompaniment.js';
-import { gb, cb, bb, hb, arranger } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Accompaniment Consistency Standards', () => {
     
@@ -43,13 +43,13 @@ describe('Accompaniment Consistency Standards', () => {
         compingState.lastSectionId = null;
         
         arranger.progression = [mockChord];
-        cb.enabled = true;
-        bb.enabled = false;
-        gb.genreFeel = 'Funk';
+        chords.enabled = true;
+        bass.enabled = false;
+        groove.genreFeel = 'Funk';
     });
 
     it('Scenario A: The Funk Loop - Should retain rhythmic pattern across measures', () => {
-        gb.genreFeel = 'Funk';
+        groove.genreFeel = 'Funk';
         
         // Measure 1 Generation
         getAccompanimentNotes(mockChord, 0, 0, 0, { isBeatStart: true });
@@ -69,7 +69,7 @@ describe('Accompaniment Consistency Standards', () => {
     });
 
     it('Scenario B: The Jazz Conversation - Should vary patterns frequently', () => {
-        gb.genreFeel = 'Jazz';
+        groove.genreFeel = 'Jazz';
 
         // Collect patterns over 5 measures
         const patterns = [];
@@ -87,7 +87,7 @@ describe('Accompaniment Consistency Standards', () => {
     });
 
     it('Scenario C: Section Change - Should force a pattern reset', () => {
-        gb.genreFeel = 'Funk';
+        groove.genreFeel = 'Funk';
         
         // Measure 1 (Section A)
         const chordA = { ...mockChord, sectionId: 'sectionA' };
@@ -126,8 +126,8 @@ describe('Accompaniment Consistency Standards', () => {
     
     it('Scenario D: Interlocking - Should avoid bass range when Bass is enabled', () => {
         // Mock Bass Enabled
-        bb.enabled = true;
-        bb.lastFreq = 65.41; // C2
+        bass.enabled = true;
+        bass.lastFreq = 65.41; // C2
         
         // Setup a chord that might have low notes
         const lowChord = { 
@@ -142,7 +142,7 @@ describe('Accompaniment Consistency Standards', () => {
         if (notes.length > 0) {
             const lowestNote = Math.min(...notes.map(n => n.midi).filter(m => m > 0));
             // Bass is ~36-48 range. Accompaniment should be > 48 + buffer or shifted.
-            // bb.lastFreq C2 is midi 36. C3 is 48.
+            // bass.lastFreq C2 is midi 36. C3 is 48.
             // If logic holds, it should shift up or avoid.
             
             // Note: The logic in accompaniment.js says:
@@ -152,8 +152,8 @@ describe('Accompaniment Consistency Standards', () => {
             // If bass is 36, limit is 48. If note is 48, 48 <= 48 is true.
             // So 48 should become 60.
             
-            // Wait, I need to make sure I mock bb.lastFreq correctly or bb state.
-            // In the real code `bb.lastFreq` is read.
+            // Wait, I need to make sure I mock bass.lastFreq correctly or bass state.
+            // In the real code `bass.lastFreq` is read.
         }
     });
 

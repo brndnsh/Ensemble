@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { describe, it, expect } from 'vitest';
 import { normalizeMidiVelocity } from '../../../public/midi-controller.js';
-import { midi } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('MIDI Velocity Mapping', () => {
     it('should boost low velocities significantly', () => {

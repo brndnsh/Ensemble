@@ -3,17 +3,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
         qaState: 'Question', isResting: false, contourSteps: 0,
         melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
         lastFreq: 440, lastInterval: 0, hookRetentionProb: 0.5, doubleStops: true,
         sessionSteps: 1000, deviceBuffer: [], deterministic: false
     },
-    cb: { enabled: true },
-    bb: { enabled: true },
-    hb: { enabled: true, rhythmicMask: 0, complexity: 0.5 },
-    ctx: { bandIntensity: 0.5, bpm: 120, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
+    chords: { enabled: true },
+    bass: { enabled: true },
+    harmony: { enabled: true, rhythmicMask: 0, complexity: 0.5 },
+    playback: { bandIntensity: 0.5, bpm: 120, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
     arranger: { 
         key: 'C', 
         isMinor: false, 
@@ -22,7 +22,7 @@ vi.mock('../../../public/state.js', () => ({
         stepMap: [{start: 0, end: 64, chord: {sectionId: 'A'}}],
         timeSignature: '4/4'
     },
-    gb: { genreFeel: 'Rock' }
+    groove: { genreFeel: 'Rock' }
 }));
 
 vi.mock('../../../public/config.js', () => {
@@ -45,7 +45,7 @@ vi.mock('../../../public/config.js', () => {
 import { getSoloistNote, getScaleForChord } from '../../../public/soloist.js';
 import { clearHarmonyMemory } from '../../../public/harmonies.js';
 import { getFrequency, getMidi } from '../../../public/utils.js';
-import { sb, gb, ctx, arranger } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Soloist Engine Logic', () => {
     const chordC = { rootMidi: 60, intervals: [0, 4, 7, 10], quality: '7', beats: 4 };
@@ -53,17 +53,17 @@ describe('Soloist Engine Logic', () => {
 
     beforeEach(() => {
         clearHarmonyMemory();
-        sb.isResting = false;
-        sb.currentPhraseSteps = 1;
-        sb.notesInPhrase = 0;
-        sb.busySteps = 0;
-        sb.deviceBuffer = [];
-        sb.lastInterval = 0;
-        sb.sessionSteps = 1000;
-        sb.tension = 0;
-        sb.currentCell = [1, 1, 1, 1];
-        sb.deterministic = false;
-        gb.genreFeel = 'Rock';
+        soloist.isResting = false;
+        soloist.currentPhraseSteps = 1;
+        soloist.notesInPhrase = 0;
+        soloist.busySteps = 0;
+        soloist.deviceBuffer = [];
+        soloist.lastInterval = 0;
+        soloist.sessionSteps = 1000;
+        soloist.tension = 0;
+        soloist.currentCell = [1, 1, 1, 1];
+        soloist.deterministic = false;
+        groove.genreFeel = 'Rock';
     });
 
     describe('Core Generation & Phrasing', () => {
@@ -79,7 +79,7 @@ describe('Soloist Engine Logic', () => {
         });
 
         it('should respect the note budget', () => {
-            sb.notesInPhrase = 20; 
+            soloist.notesInPhrase = 20; 
             let rests = 0;
             for(let i=0; i<100; i++) {
                 if (!getSoloistNote(chordC, null, i+32, 440, 72, 'scalar', i%4)) rests++;
@@ -99,13 +99,13 @@ describe('Soloist Engine Logic', () => {
             deviceTests.forEach(t => {
                 let triggered = false;
                 for (let i = 0; i < 500; i++) {
-                    sb.deviceBuffer = [];
-                    sb.busySteps = 0;
-                    sb.isResting = false;
-                    sb.currentPhraseSteps = 1;
+                    soloist.deviceBuffer = [];
+                    soloist.busySteps = 0;
+                    soloist.isResting = false;
+                    soloist.currentPhraseSteps = 1;
                     const res = getSoloistNote(chordC, null, 16, 440, 72, t.style, 0);
                     // Check buffer OR immediate double stop result (Quartal/GuitarDouble)
-                    if (sb.deviceBuffer.length > 0 || (Array.isArray(res) && res.some(n => n.isDoubleStop))) { triggered = true; break; }
+                    if (soloist.deviceBuffer.length > 0 || (Array.isArray(res) && res.some(n => n.isDoubleStop))) { triggered = true; break; }
                 }
                 expect(triggered, `Failed to trigger ${t.label} for ${t.style}`).toBe(true);
             });
@@ -127,11 +127,11 @@ describe('Soloist Engine Logic', () => {
         });
 
         it('should generate staccato notes for Funk', () => {
-            gb.genreFeel = 'Funk';
+            groove.genreFeel = 'Funk';
             let shortNotes = 0;
             let played = 0;
             for (let i = 0; i < 100; i++) {
-                sb.busySteps = 0;
+                soloist.busySteps = 0;
                 const note = getSoloistNote(chordC, chordC, i+32, 261.63, 72, 'smart');
                 if (note) {
                     played++;
@@ -146,10 +146,10 @@ describe('Soloist Engine Logic', () => {
 
     describe('Integrity & Overlaps', () => {
         it('should respect double stop toggle', () => {
-            sb.doubleStops = false;
+            soloist.doubleStops = false;
             let arrayFound = false;
             for (let i = 0; i < 500; i++) {
-                sb.busySteps = 0;
+                soloist.busySteps = 0;
                 if (Array.isArray(getSoloistNote(chordC, null, i+32, 440, 72, 'blues', i % 16))) {
                     arrayFound = true; break;
                 }
@@ -177,7 +177,7 @@ describe('Soloist Engine Logic', () => {
 
     describe('Scale Selection & Harmonic Integrity', () => {
         it('should select Altered scale when tension is high', () => {
-            sb.tension = 0.8;
+            soloist.tension = 0.8;
             expect(getScaleForChord(chordC, null, 'bird')).toEqual([0, 1, 3, 4, 6, 8, 10]);
         });
 
@@ -199,8 +199,8 @@ describe('Soloist Engine Logic', () => {
         it('should produce sustained notes and soulful scoops', () => {
             let sustained = 0, scoops = 0, total = 0;
             for (let i = 0; i < 500; i++) {
-                sb.isResting = false; sb.busySteps = 0; sb.notesInPhrase = 0;
-                sb.currentCell = [1, 1, 1, 1];
+                soloist.isResting = false; soloist.busySteps = 0; soloist.notesInPhrase = 0;
+                soloist.currentCell = [1, 1, 1, 1];
                 const res = getSoloistNote(chordC, null, 16, 440, 72, 'neo', 0);
                 if (res) {
                     total++;
@@ -221,20 +221,20 @@ describe('Soloist Engine Logic', () => {
             const spy = vi.spyOn(Math, 'random').mockReturnValue(0.5); // Fixed randomness for phrased rest checks
             
             // Conservative start
-            sb.sessionSteps = 0;
-            sb.busySteps = 0;
+            soloist.sessionSteps = 0;
+            soloist.busySteps = 0;
             let noteCountStart = 0;
             for (let i = 0; i < 1000; i++) {
-                sb.busySteps = 0;
+                soloist.busySteps = 0;
                 if (getSoloistNote(chord, null, i * 4, 440, 72, 'scalar', 0)) noteCountStart++;
             }
 
             // Matured start
-            sb.sessionSteps = 10000;
-            sb.busySteps = 0;
+            soloist.sessionSteps = 10000;
+            soloist.busySteps = 0;
             let noteCountLate = 0;
             for (let i = 0; i < 1000; i++) {
-                sb.busySteps = 0;
+                soloist.busySteps = 0;
                 if (getSoloistNote(chord, null, i * 4, 440, 72, 'scalar', 0)) noteCountLate++;
             }
 
@@ -251,13 +251,13 @@ describe('Soloist Engine Logic', () => {
 
              let midNoteCount = 0;
              for (let i = 0; i < 500; i++) {
-                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 16;
+                 soloist.isResting = false; soloist.busySteps = 0; soloist.currentPhraseSteps = 16;
                  if (getSoloistNote(chord, null, 16, 440, 72, 'scalar', 0, false, sectionInfo)) midNoteCount++;
              }
 
              let endNoteCount = 0;
              for (let i = 0; i < 500; i++) {
-                 sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 16;
+                 soloist.isResting = false; soloist.busySteps = 0; soloist.currentPhraseSteps = 16;
                  if (getSoloistNote(chord, null, 62, 440, 72, 'scalar', 14, false, sectionInfo)) endNoteCount++;
              }
 
@@ -271,8 +271,8 @@ describe('Soloist Engine Logic', () => {
             const chord = { rootMidi: 60, quality: 'major', intervals: [0, 4, 7], beats: 4 };
             let scoops = 0;
             for (let i = 0; i < 500; i++) {
-                sb.isResting = false; sb.busySteps = 0; sb.notesInPhrase = 0;
-                sb.currentCell = [1, 1, 1, 1];
+                soloist.isResting = false; soloist.busySteps = 0; soloist.notesInPhrase = 0;
+                soloist.currentCell = [1, 1, 1, 1];
                 const res = getSoloistNote(chord, null, 16, 440, 72, 'neo', 0);
                 if (res && res.bendStartInterval > 0) scoops++;
             }
@@ -281,10 +281,10 @@ describe('Soloist Engine Logic', () => {
 
         it('should adjust bendStartInterval when nudging motif notes for scale compliance', () => {
             const recordedNote = { midi: 64, bendStartInterval: 1, durationSteps: 4 };
-            sb.motifBuffer = [recordedNote];
-            sb.motifRoot = 0;
-            sb.isReplayingMotif = true;
-            sb.motifReplayIndex = 0;
+            soloist.motifBuffer = [recordedNote];
+            soloist.motifRoot = 0;
+            soloist.isReplayingMotif = true;
+            soloist.motifReplayIndex = 0;
 
             const chordGm = { rootMidi: 67, quality: 'minor', intervals: [0, 3, 7], beats: 4 };
             const replayed = getSoloistNote(chordGm, null, 16, 440, 72, 'scalar', 0);
@@ -303,11 +303,11 @@ describe('Soloist Engine Logic', () => {
 
     describe('Double Stop Generation', () => {
         it('should return an array of notes when double stops are triggered', () => {
-            sb.doubleStops = true;
+            soloist.doubleStops = true;
             let arrayFound = false;
             for (let i = 0; i < 2000; i++) {
-                sb.busySteps = 0;
-                sb.isResting = false;
+                soloist.busySteps = 0;
+                soloist.isResting = false;
                 const res = getSoloistNote(chordC, null, 16, 440, 72, 'blues', 0);
                 if (Array.isArray(res)) {
                     arrayFound = true;

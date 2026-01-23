@@ -4,12 +4,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getVisualTime } from '../../../public/engine.js';
-import { ctx } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Engine Logic & Sync', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.audio = {
+        playback.audio = {
             currentTime: 10.0,
             outputLatency: 0.015
         };
@@ -19,13 +19,13 @@ describe('Engine Logic & Sync', () => {
 
     describe('getVisualTime', () => {
         it('should return 0 if audio context is missing', () => {
-            ctx.audio = null;
+            playback.audio = null;
             expect(getVisualTime()).toBe(0);
         });
 
         it('should apply latency compensation', () => {
             vi.spyOn(performance, 'now').mockReturnValue(1000); // 1s
-            ctx.audio = { currentTime: 10.0, outputLatency: 0.02 };
+            playback.audio = { currentTime: 10.0, outputLatency: 0.02 };
             
             // First call sets lastAudioTime = 10.0, lastPerfTime = 1000
             getVisualTime();
@@ -40,7 +40,7 @@ describe('Engine Logic & Sync', () => {
 
         it('should use default offsets if outputLatency is unavailable', () => {
             vi.spyOn(performance, 'now').mockReturnValue(1000);
-            ctx.audio = { currentTime: 10.0 }; // no outputLatency
+            playback.audio = { currentTime: 10.0 }; // no outputLatency
             
             // Mock user agent for Chromium-like behavior
             Object.defineProperty(navigator, 'userAgent', { value: 'Chrome', configurable: true });

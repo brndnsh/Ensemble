@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state
 vi.mock('../../../public/state.js', () => ({
-    ctx: {
+    playback: {
         audio: { currentTime: 0 },
         isPlaying: true,
         bpm: 120,
@@ -16,11 +16,11 @@ vi.mock('../../../public/state.js', () => ({
         step: 0,
         drawQueue: []
     },
-    gb: { enabled: true, swing: 0, humanize: 0, instruments: [] },
-    bb: { enabled: true, buffer: new Map() },
-    sb: { enabled: true, buffer: new Map() },
-    hb: { enabled: false, buffer: new Map() },
-    cb: { enabled: true, buffer: new Map() },
+    groove: { enabled: true, swing: 0, humanize: 0, instruments: [] },
+    bass: { enabled: true, buffer: new Map() },
+    soloist: { enabled: true, buffer: new Map() },
+    harmony: { enabled: false, buffer: new Map() },
+    chords: { enabled: true, buffer: new Map() },
     arranger: { totalSteps: 64, stepMap: [], timeSignature: '4/4' },
     midi: { enabled: false, selectedOutputId: null, soloistChannel: 3, chordsChannel: 1, bassChannel: 2, drumsChannel: 10, soloistOctave: 0, chordsOctave: 0, bassOctave: 0, drumsOctave: 0 },
     dispatch: vi.fn(),
@@ -63,45 +63,45 @@ vi.mock('../../../public/ui.js', () => ({
     clearActiveVisuals: vi.fn()
 }));
 
-import { ctx } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { scheduler } from '../../../public/scheduler-core.js';
 
 describe('Main Thread Congestion Resilience', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.audio.currentTime = 0;
-        ctx.nextNoteTime = 0;
-        ctx.unswungNextNoteTime = 0;
-        ctx.step = 0;
-        ctx.scheduleAheadTime = 0.2;
+        playback.audio.currentTime = 0;
+        playback.nextNoteTime = 0;
+        playback.unswungNextNoteTime = 0;
+        playback.step = 0;
+        playback.scheduleAheadTime = 0.2;
     });
 
     it('should schedule multiple steps to catch up if the main thread was blocked', () => {
         // Simulate normal start
         scheduler();
-        const firstStep = ctx.step;
+        const firstStep = playback.step;
         
         // Simulate a 500ms block of the main thread
         // currentTime advances, but scheduler wasn't called.
-        ctx.audio.currentTime += 0.5;
+        playback.audio.currentTime += 0.5;
         
         // Call scheduler again
         scheduler();
         
         // It should have scheduled many more steps to get ahead of currentTime + scheduleAheadTime
-        expect(ctx.step).toBeGreaterThan(firstStep); 
-        expect(ctx.nextNoteTime).toBeGreaterThanOrEqual(ctx.audio.currentTime + ctx.scheduleAheadTime);
+        expect(playback.step).toBeGreaterThan(firstStep); 
+        expect(playback.nextNoteTime).toBeGreaterThanOrEqual(playback.audio.currentTime + playback.scheduleAheadTime);
     });
 
     it('should not enter an infinite loop if scheduleAheadTime is large', () => {
-        ctx.scheduleAheadTime = 1.0; // Large lookahead
-        ctx.audio.currentTime = 0;
+        playback.scheduleAheadTime = 1.0; // Large lookahead
+        playback.audio.currentTime = 0;
         
         const start = Date.now();
         scheduler();
         const elapsed = Date.now() - start;
         
         expect(elapsed).toBeLessThan(100); // Should finish quickly
-        expect(ctx.nextNoteTime).toBeGreaterThanOrEqual(1.0);
+        expect(playback.nextNoteTime).toBeGreaterThanOrEqual(1.0);
     });
 });

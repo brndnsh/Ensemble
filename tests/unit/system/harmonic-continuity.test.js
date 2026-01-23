@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state
 vi.mock('../../../public/state.js', () => ({
-    ctx: {
+    playback: {
         audio: { currentTime: 0 },
         isPlaying: true,
         bpm: 120,
@@ -16,14 +16,14 @@ vi.mock('../../../public/state.js', () => ({
         step: 0,
         drawQueue: []
     },
-    gb: { 
+    groove: { 
         enabled: true, swing: 0, humanize: 0, instruments: [], 
         genreFeel: 'Rock', pendingGenreFeel: null 
     },
-    cb: { enabled: false, buffer: new Map() },
-    bb: { enabled: false, buffer: new Map() },
-    sb: { enabled: false, buffer: new Map() },
-    hb: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
+    chords: { enabled: false, buffer: new Map() },
+    bass: { enabled: false, buffer: new Map() },
+    soloist: { enabled: false, buffer: new Map() },
+    harmony: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
     arranger: { totalSteps: 64, stepMap: [], timeSignature: '4/4' },
     midi: { enabled: false, selectedOutputId: null, soloistChannel: 3, chordsChannel: 1, bassChannel: 2, drumsChannel: 10, soloistOctave: 0, chordsOctave: 0, bassOctave: 0, drumsOctave: 0 },
     dispatch: vi.fn(),
@@ -75,43 +75,43 @@ vi.mock('../../../public/instrument-controller.js', () => ({
     switchMeasure: vi.fn()
 }));
 
-import { ctx, gb } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { scheduler } from '../../../public/scheduler-core.js';
 import { flushWorker } from '../../../public/worker-client.js';
 
 describe('Harmonic Continuity & Genre Transitions', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.audio.currentTime = 0;
-        ctx.nextNoteTime = 0;
-        ctx.unswungNextNoteTime = 0;
-        ctx.step = 0;
-        gb.genreFeel = 'Rock';
-        gb.pendingGenreFeel = null;
+        playback.audio.currentTime = 0;
+        playback.nextNoteTime = 0;
+        playback.unswungNextNoteTime = 0;
+        playback.step = 0;
+        groove.genreFeel = 'Rock';
+        groove.pendingGenreFeel = null;
     });
 
     it('should NOT apply a pending genre mid-measure', () => {
         // Set up a pending genre change
-        gb.pendingGenreFeel = { feel: 'Jazz' };
+        groove.pendingGenreFeel = { feel: 'Jazz' };
         
         // Start at step 1 (not a measure boundary)
-        ctx.step = 1;
-        ctx.nextNoteTime = 0.125; // 120BPM, 16th note
+        playback.step = 1;
+        playback.nextNoteTime = 0.125; // 120BPM, 16th note
         
         scheduler();
         
         // Genre should still be Rock
-        expect(gb.genreFeel).toBe('Rock');
-        expect(gb.pendingGenreFeel).not.toBeNull();
+        expect(groove.genreFeel).toBe('Rock');
+        expect(groove.pendingGenreFeel).not.toBeNull();
     });
 
     it('should apply a pending genre exactly at Step 0 of a measure', () => {
-        gb.pendingGenreFeel = { feel: 'Jazz' };
+        groove.pendingGenreFeel = { feel: 'Jazz' };
         
         // Advance to just before next measure (assuming 4/4 = 16 steps)
-        ctx.step = 15;
-        ctx.nextNoteTime = 15 * 0.125;
-        ctx.audio.currentTime = 15 * 0.125;
+        playback.step = 15;
+        playback.nextNoteTime = 15 * 0.125;
+        playback.audio.currentTime = 15 * 0.125;
         
         scheduler();
         
@@ -119,8 +119,8 @@ describe('Harmonic Continuity & Genre Transitions', () => {
         // Then it advances to step 16.
         // 16 % 16 === 0, so it should apply the genre.
         
-        expect(gb.genreFeel).toBe('Jazz');
-        expect(gb.pendingGenreFeel).toBeNull();
+        expect(groove.genreFeel).toBe('Jazz');
+        expect(groove.pendingGenreFeel).toBeNull();
         
         // It should have flushed the worker to ensure atomic scale change
         expect(flushWorker).toHaveBeenCalled();

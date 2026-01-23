@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global modules
 vi.mock('../../public/state.js', () => ({
-    ctx: {
+    playback: {
         audio: null,
         masterGain: null,
         saturator: null,
@@ -20,11 +20,11 @@ vi.mock('../../public/state.js', () => ({
         isPlaying: false,
         conductorVelocity: 1.0
     },
-    cb: { volume: 0.5, enabled: true, reverb: 0.2 },
-    bb: { volume: 0.45, enabled: true, reverb: 0.05 },
-    sb: { volume: 0.5, enabled: true, reverb: 0.6 },
-    hb: { volume: 0.4, enabled: true, reverb: 0.4 },
-    gb: { volume: 0.5, enabled: true, reverb: 0.2, audioBuffers: { noise: {} } },
+    chords: { volume: 0.5, enabled: true, reverb: 0.2 },
+    bass: { volume: 0.45, enabled: true, reverb: 0.05 },
+    soloist: { volume: 0.5, enabled: true, reverb: 0.6 },
+    harmony: { volume: 0.4, enabled: true, reverb: 0.4 },
+    groove: { volume: 0.5, enabled: true, reverb: 0.2, audioBuffers: { noise: {} } },
     midi: { enabled: false, muteLocal: false }
 }));
 
@@ -35,7 +35,7 @@ vi.mock('../../public/ui.js', () => ({
 }));
 
 import { initAudio, restoreGains } from '../../public/engine.js';
-import { ctx } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Mix Stress & Headroom Test', () => {
     
@@ -77,7 +77,7 @@ describe('Mix Stress & Headroom Test', () => {
             this.destination = {};
         });
         global.window.AudioContext = MockAudioContext;
-        ctx.audio = null;
+        playback.audio = null;
     });
 
     it('should maintain cumulative gain below 1.0 before the limiter', () => {
@@ -96,11 +96,11 @@ describe('Mix Stress & Headroom Test', () => {
         // Actually the test checks the gainNode.setTargetAtTime which is set in restoreGains
         // restoreGains uses state.volume * mult.
         
-        const drumGain = ctx.drumsGain.gain.setTargetAtTime.mock.calls[0][0];
-        const bassGain = ctx.bassGain.gain.setTargetAtTime.mock.calls[0][0];
-        const chordsGain = ctx.chordsGain.gain.setTargetAtTime.mock.calls[0][0];
-        const soloistGain = ctx.soloistGain.gain.setTargetAtTime.mock.calls[0][0];
-        const harmonyGain = ctx.harmoniesGain.gain.setTargetAtTime.mock.calls[0][0];
+        const drumGain = playback.drumsGain.gain.setTargetAtTime.mock.calls[0][0];
+        const bassGain = playback.bassGain.gain.setTargetAtTime.mock.calls[0][0];
+        const chordsGain = playback.chordsGain.gain.setTargetAtTime.mock.calls[0][0];
+        const soloistGain = playback.soloistGain.gain.setTargetAtTime.mock.calls[0][0];
+        const harmonyGain = playback.harmoniesGain.gain.setTargetAtTime.mock.calls[0][0];
 
         const totalInstrumentGain = drumGain + bassGain + chordsGain + soloistGain + harmonyGain;
         
@@ -112,7 +112,7 @@ describe('Mix Stress & Headroom Test', () => {
     it('should have additional master headroom when Master Vol is 0.4', () => {
         initAudio();
         // Master Gain = ui.masterVol (0.4) * masterMultiplier (0.85) = 0.34
-        const masterGain = ctx.masterGain.gain.exponentialRampToValueAtTime.mock.calls[0][0];
+        const masterGain = playback.masterGain.gain.exponentialRampToValueAtTime.mock.calls[0][0];
         expect(masterGain).toBeCloseTo(0.34, 4);
     });
 });

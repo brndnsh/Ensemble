@@ -23,7 +23,7 @@ vi.mock('../../public/fills.js', () => ({
 
 import { createSoftClipCurve } from '../../public/utils.js';
 import { initAudio } from '../../public/engine.js';
-import { ctx, cb, bb, sb, gb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { applyConductor } from '../../public/conductor.js';
 
 describe('DSP & Signal Safety', () => {
@@ -64,7 +64,7 @@ describe('DSP & Signal Safety', () => {
         });
 
         global.window.AudioContext = MockAudioContext;
-        ctx.audio = null;
+        playback.audio = null;
     });
 
     it('should generate a valid soft-clip curve for the saturator', () => {
@@ -89,14 +89,14 @@ describe('DSP & Signal Safety', () => {
         initAudio(); // Initialize nodes
         
         // Low intensity
-        ctx.bandIntensity = 0.2;
+        playback.bandIntensity = 0.2;
         applyConductor();
-        const lowThreshold = ctx.masterLimiter.threshold.setTargetAtTime.mock.calls[0][0];
+        const lowThreshold = playback.masterLimiter.threshold.setTargetAtTime.mock.calls[0][0];
         
         // High intensity
-        ctx.bandIntensity = 0.9;
+        playback.bandIntensity = 0.9;
         applyConductor();
-        const highThreshold = ctx.masterLimiter.threshold.setTargetAtTime.mock.calls[1][0];
+        const highThreshold = playback.masterLimiter.threshold.setTargetAtTime.mock.calls[1][0];
         
         // High intensity should have a lower threshold (more compression/limiting)
         expect(highThreshold).toBeLessThan(lowThreshold);
@@ -104,8 +104,8 @@ describe('DSP & Signal Safety', () => {
 
     it('should ensure all instrument reverb sends are within safe bounds', () => {
         // High reverb settings in state
-        cb.reverb = 1.2; // Over 1.0!
-        bb.reverb = 0.8;
+        chords.reverb = 1.2; // Over 1.0!
+        bass.reverb = 0.8;
         
         initAudio();
         

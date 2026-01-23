@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Unified mock for state.js to ensure internal synthesis logic sees consistent state
 vi.mock('../../../public/state.js', () => {
     return {
-        ctx: { 
+        playback: { 
             audio: { 
                 currentTime: 0, 
                 createOscillator: vi.fn(() => ({
@@ -30,37 +30,37 @@ vi.mock('../../../public/state.js', () => {
             chordsGain: {},
             audioBuffers: { noise: {} }
         },
-        gb: { audioBuffers: { noise: {} } },
-        cb: {}
+        groove: { audioBuffers: { noise: {} } },
+        chords: {}
     };
 });
 
 import { playNote, updateSustain } from '../../../public/synth-chords.js';
-import { ctx } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Voice Exhaustion & Stealing', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.audio.currentTime = 10.0;
-        ctx.sustainActive = true;
-        if (!ctx.heldNotes) ctx.heldNotes = new Set();
-        ctx.heldNotes.clear();
+        playback.audio.currentTime = 10.0;
+        playback.sustainActive = true;
+        if (!playback.heldNotes) playback.heldNotes = new Set();
+        playback.heldNotes.clear();
     });
 
     it('should limit total active voices to 64 when sustain is active', () => {
         // Ensure theft logic triggers
         for (let i = 0; i < 70; i++) {
-            ctx.audio.currentTime = 10.0 + (i * 0.1);
-            playNote(440, ctx.audio.currentTime, 1.0, { instrument: 'Piano' });
+            playback.audio.currentTime = 10.0 + (i * 0.1);
+            playNote(440, playback.audio.currentTime, 1.0, { instrument: 'Piano' });
         }
 
         // The Set should never exceed 64
-        expect(ctx.heldNotes.size).toBe(64);
+        expect(playback.heldNotes.size).toBe(64);
     });
 
     it('should release all held voices when sustain pedal is lifted', () => {
         const gains = [];
-        vi.mocked(ctx.audio.createGain).mockImplementation(() => {
+        vi.mocked(playback.audio.createGain).mockImplementation(() => {
             const g = {
                 connect: vi.fn(),
                 gain: {

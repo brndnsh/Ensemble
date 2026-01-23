@@ -6,8 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock State
 vi.mock('../../../public/state.js', () => ({
-    cb: { enabled: true, octave: 60 },
-    hb: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
+    chords: { enabled: true, octave: 60 },
+    harmony: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
     arranger: { 
         key: 'C', 
         isMinor: false, 
@@ -16,10 +16,10 @@ vi.mock('../../../public/state.js', () => ({
         stepMap: [],
         timeSignature: '4/4'
     },
-    gb: { enabled: true, genreFeel: 'Rock' },
-    bb: { enabled: false },
-    sb: { enabled: false },
-    ctx: { isPlaying: false, bandIntensity: 0.5, complexity: 0.3 }
+    groove: { enabled: true, genreFeel: 'Rock' },
+    bass: { enabled: false },
+    soloist: { enabled: false },
+    playback: { isPlaying: false, bandIntensity: 0.5, complexity: 0.3 }
 }));
 
 // Mock Config
@@ -58,7 +58,7 @@ vi.mock('../../../public/history.js', () => ({ pushHistory: vi.fn() }));
 import { validateProgression, updateProgressionCache } from '../../../public/chords.js';
 import { onSectionUpdate, addSection } from '../../../public/arranger-controller.js';
 import { getSectionEnergy, analyzeForm } from '../../../public/form-analysis.js';
-import { arranger } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Arrangement Logic & Mixed Meter', () => {
     

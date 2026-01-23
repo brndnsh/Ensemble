@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, 
         busySteps: 0, 
         currentPhraseSteps: 0, 
@@ -18,8 +18,8 @@ vi.mock('../../public/state.js', () => ({
         lastFreq: 440,
         hookRetentionProb: 0.5
     },
-    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
-    ctx: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 } },
+    chords: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
+    playback: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 } },
     arranger: { 
         key: 'C', 
         isMinor: false,
@@ -29,9 +29,9 @@ vi.mock('../../public/state.js', () => ({
         timeSignature: '4/4',
         sections: []
     },
-    gb: { genreFeel: 'Jazz' },
-    bb: { enabled: true },
-    hb: { enabled: false },
+    groove: { genreFeel: 'Jazz' },
+    bass: { enabled: true },
+    harmony: { enabled: false },
     sb_enabled: true
 }));
 
@@ -55,7 +55,7 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 
 import { getSoloistNote, getScaleForChord } from '../../public/soloist.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger, sb, gb, cb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { CHORD_PRESETS, SONG_TEMPLATES } from '../../public/presets.js';
 
 describe('Progression Audit: Verifying All Library Presets', () => {
@@ -63,14 +63,14 @@ describe('Progression Audit: Verifying All Library Presets', () => {
     const allTemplates = [...CHORD_PRESETS, ...SONG_TEMPLATES];
 
     beforeEach(() => {
-        sb.isResting = false;
-        sb.currentPhraseSteps = 0;
-        sb.notesInPhrase = 0;
-        sb.busySteps = 0;
-        sb.motifBuffer = [];
-        sb.hookBuffer = [];
-        sb.activeBuffer = null;
-        sb.isReplayingMotif = false;
+        soloist.isResting = false;
+        soloist.currentPhraseSteps = 0;
+        soloist.notesInPhrase = 0;
+        soloist.busySteps = 0;
+        soloist.motifBuffer = [];
+        soloist.hookBuffer = [];
+        soloist.activeBuffer = null;
+        soloist.isReplayingMotif = false;
     });
 
     allTemplates.forEach(template => {
@@ -81,11 +81,11 @@ describe('Progression Audit: Verifying All Library Presets', () => {
             arranger.sections = template.sections.map(s => ({ ...s, id: Math.random().toString() }));
             
             // Set genre based on category or name for Smart logic
-            if (template.category === 'Jazz' || template.name.includes('Jazz')) gb.genreFeel = 'Jazz';
-            else if (template.category === 'Blues' || template.name.includes('Blues')) gb.genreFeel = 'Blues';
-            else if (template.name.includes('Funk')) gb.genreFeel = 'Funk';
-            else if (template.category === 'Soul/R&B' || template.name.includes('Neo')) gb.genreFeel = 'Neo-Soul';
-            else gb.genreFeel = 'Rock';
+            if (template.category === 'Jazz' || template.name.includes('Jazz')) groove.genreFeel = 'Jazz';
+            else if (template.category === 'Blues' || template.name.includes('Blues')) groove.genreFeel = 'Blues';
+            else if (template.name.includes('Funk')) groove.genreFeel = 'Funk';
+            else if (template.category === 'Soul/R&B' || template.name.includes('Neo')) groove.genreFeel = 'Neo-Soul';
+            else groove.genreFeel = 'Rock';
 
             // Validate Progression
             validateProgression();
@@ -94,7 +94,7 @@ describe('Progression Audit: Verifying All Library Presets', () => {
             // Audit Harmonic Cohesion: Accompanist vs Soloist
             // We specifically check if 'Rich' density extensions clash with the soloist's scale
             arranger.progression.forEach(chord => {
-                sb.tension = 0; // Reset tension to avoid triggering Altered scale logic during basic audit
+                soloist.tension = 0; // Reset tension to avoid triggering Altered scale logic during basic audit
                 const soloistScale = getScaleForChord(chord, null, 'smart');
                 const accompanistIntervals = chord.intervals;
 
@@ -113,9 +113,9 @@ describe('Progression Audit: Verifying All Library Presets', () => {
             });
 
             // Audit Phrase Generation
-            sb.isResting = false;
-            sb.currentPhraseSteps = 0;
-            sb.notesInPhrase = 0;
+            soloist.isResting = false;
+            soloist.currentPhraseSteps = 0;
+            soloist.notesInPhrase = 0;
             
             // "Play" the first 32 steps (2 bars)
             for (let step = 0; step < 32; step++) {
@@ -142,7 +142,7 @@ describe('Progression Audit: Verifying All Library Presets', () => {
                         
                         // Harmonic integrity check: Is the pitch in the selected scale?
                         const interval = (note.midi - currentChord.rootMidi + 120) % 12;
-                        const isExpressive = ['rock', 'blues', 'neo', 'bird', 'jazz', 'neo-soul', 'funk', 'soul/r&b'].includes(gb.genreFeel.toLowerCase()) || 
+                        const isExpressive = ['rock', 'blues', 'neo', 'bird', 'jazz', 'neo-soul', 'funk', 'soul/r&b'].includes(groove.genreFeel.toLowerCase()) || 
                                              ['rock', 'blues', 'neo', 'bird', 'jazz', 'neo-soul', 'funk', 'soul/r&b'].includes(template.category?.toLowerCase());
 
                         let isInScale = scale.includes(interval);

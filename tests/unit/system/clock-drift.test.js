@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ctx, gb, arranger } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { scheduler } from '../../../public/scheduler-core.js';
 
 // Mock dependencies
@@ -61,24 +61,24 @@ vi.mock('../../../public/animation-loop.js', () => ({ draw: vi.fn() }));
 describe('Clock Drift & Scheduling Precision', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.isPlaying = true;
-        ctx.bpm = 120;
-        ctx.step = 0;
-        ctx.scheduleAheadTime = 0.1;
-        gb.swing = 60;
-        gb.swingSub = '8th';
+        playback.isPlaying = true;
+        playback.bpm = 120;
+        playback.step = 0;
+        playback.scheduleAheadTime = 0.1;
+        groove.swing = 60;
+        groove.swingSub = '8th';
         arranger.timeSignature = '4/4';
         arranger.totalSteps = 64;
         arranger.stepMap = [{ start: 0, end: 64, chord: { freqs: [261.63] } }];
         
-        ctx.audio = {
+        playback.audio = {
             currentTime: 0,
             createOscillator: vi.fn(() => ({ connect: vi.fn(), start: vi.fn(), stop: vi.fn(), frequency: { setValueAtTime: vi.fn() } })),
             createGain: vi.fn(() => ({ connect: vi.fn(), gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() } })),
             state: 'running'
         };
-        ctx.nextNoteTime = 0;
-        ctx.unswungNextNoteTime = 0;
+        playback.nextNoteTime = 0;
+        playback.unswungNextNoteTime = 0;
     });
 
     it('should maintain sub-millisecond precision over a simulated 30-minute session', () => {
@@ -89,60 +89,60 @@ describe('Clock Drift & Scheduling Precision', () => {
         
         // Mock the advanceGlobalStep logic to run without real-time delay
         for (let i = 0; i < TOTAL_STEPS; i++) {
-            const step = ctx.step;
-            const sixteenth = 0.25 * (60.0 / ctx.bpm);
+            const step = playback.step;
+            const sixteenth = 0.25 * (60.0 / playback.bpm);
             let duration = sixteenth;
             
-            if (gb.swing > 0) {
-                const shift = (sixteenth / 3) * (gb.swing / 100);
+            if (groove.swing > 0) {
+                const shift = (sixteenth / 3) * (groove.swing / 100);
                 // Swing 8th (swing every other 8th note, i.e., steps 2, 6, 10...)
                 duration += (((step % 4) < 2) ? shift : -shift);
             }
 
-            ctx.nextNoteTime += duration;
-            ctx.unswungNextNoteTime += sixteenth;
-            ctx.step++;
+            playback.nextNoteTime += duration;
+            playback.unswungNextNoteTime += sixteenth;
+            playback.step++;
 
             // Periodically check drift
             if (i % 1000 === 0) {
                 const expectedUnswung = i * SIXTEENTH + SIXTEENTH; 
-                expect(ctx.unswungNextNoteTime).toBeCloseTo(expectedUnswung, 10);
+                expect(playback.unswungNextNoteTime).toBeCloseTo(expectedUnswung, 10);
                 
                 // Ensure swung time hasn't drifted from unswung reference by more than one swing shift
-                const shift = (SIXTEENTH / 3) * (gb.swing / 100);
-                const diff = Math.abs(ctx.nextNoteTime - ctx.unswungNextNoteTime);
+                const shift = (SIXTEENTH / 3) * (groove.swing / 100);
+                const diff = Math.abs(playback.nextNoteTime - playback.unswungNextNoteTime);
                 expect(diff).toBeLessThanOrEqual(shift + 0.0001);
             }
         }
 
-        expect(ctx.step).toBe(TOTAL_STEPS);
+        expect(playback.step).toBe(TOTAL_STEPS);
         const finalExpectedUnswung = TOTAL_STEPS * SIXTEENTH;
-        expect(ctx.unswungNextNoteTime).toBeCloseTo(finalExpectedUnswung, 8);
+        expect(playback.unswungNextNoteTime).toBeCloseTo(finalExpectedUnswung, 8);
     });
 
     it('should correctly reset nextNoteTime to unswung reference on genre changes', () => {
-        ctx.nextNoteTime = 10.05; // Swung
-        ctx.unswungNextNoteTime = 10.0; // Anchor
+        playback.nextNoteTime = 10.05; // Swung
+        playback.unswungNextNoteTime = 10.0; // Anchor
         
         // Simulating the applyPendingGenre reset logic
-        ctx.nextNoteTime = ctx.unswungNextNoteTime;
+        playback.nextNoteTime = playback.unswungNextNoteTime;
         
-        expect(ctx.nextNoteTime).toBe(10.0);
+        expect(playback.nextNoteTime).toBe(10.0);
     });
 
     it('should handle BPM changes mid-session without losing the grid', () => {
         const sixteenthOld = 0.25 * (60.0 / 120); // 0.125
-        ctx.nextNoteTime = 10 * sixteenthOld;
-        ctx.unswungNextNoteTime = 10 * sixteenthOld;
+        playback.nextNoteTime = 10 * sixteenthOld;
+        playback.unswungNextNoteTime = 10 * sixteenthOld;
         
-        ctx.bpm = 60; // Half speed
+        playback.bpm = 60; // Half speed
         const sixteenthNew = 0.25 * (60.0 / 60); // 0.25
         
         // Advance one step at new BPM
-        ctx.nextNoteTime += sixteenthNew;
-        ctx.unswungNextNoteTime += sixteenthNew;
+        playback.nextNoteTime += sixteenthNew;
+        playback.unswungNextNoteTime += sixteenthNew;
         
-        expect(ctx.unswungNextNoteTime).toBe(10 * sixteenthOld + sixteenthNew);
-        expect(ctx.unswungNextNoteTime).toBe(1.25 + 0.25);
+        expect(playback.unswungNextNoteTime).toBe(10 * sixteenthOld + sixteenthNew);
+        expect(playback.unswungNextNoteTime).toBe(1.25 + 0.25);
     });
 });

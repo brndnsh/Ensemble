@@ -4,7 +4,7 @@ import { getAccompanimentNotes } from '../../public/accompaniment.js';
 import { getBassNote } from '../../public/bass.js';
 import { getScaleForChord } from '../../public/soloist.js';
 import { DRUM_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES } from '../../public/presets.js';
-import { gb, cb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 // Mock state
 vi.mock('../../public/state.js', () => ({
@@ -14,16 +14,16 @@ vi.mock('../../public/state.js', () => ({
         key: 'C',
         isMinor: false
     },
-    gb: {
+    groove: {
         genreFeel: 'Country',
         lastDrumPreset: 'Country (Two-Step)',
         instruments: []
     },
-    cb: { enabled: true, style: 'strum-country' },
-    bb: { enabled: true, pocketOffset: 0 },
-    sb: { enabled: true, tension: 0, busySteps: 0, motifBuffer: [] },
-    hb: { enabled: false },
-    ctx: {
+    chords: { enabled: true, style: 'strum-country' },
+    bass: { enabled: true, pocketOffset: 0 },
+    soloist: { enabled: true, tension: 0, busySteps: 0, motifBuffer: [] },
+    harmony: { enabled: false },
+    playback: {
         bandIntensity: 0.5,
         complexity: 0.5,
         intent: { anticipation: 0, layBack: 0 }
@@ -70,8 +70,8 @@ describe('Genre Expansion Integration', () => {
         };
 
         beforeEach(() => {
-            gb.genreFeel = 'Country';
-            cb.style = 'strum-country';
+            groove.genreFeel = 'Country';
+            chords.style = 'strum-country';
         });
 
         it('should generate alternating bass on beats 1 and 3 for chords', () => {
@@ -118,8 +118,8 @@ describe('Genre Expansion Integration', () => {
         };
 
         beforeEach(() => {
-            gb.genreFeel = 'Metal';
-            cb.style = 'power-metal';
+            groove.genreFeel = 'Metal';
+            chords.style = 'power-metal';
         });
 
         it('should generate power chords (root+5) on 8th notes', () => {

@@ -3,15 +3,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
         qaState: 'Question', isResting: false, contourSteps: 0,
         melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
         lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
         sessionSteps: 1000
     },
-    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
-    ctx: { bandIntensity: 0.5, bpm: 100, audio: { currentTime: 0 } },
+    chords: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
+    playback: { bandIntensity: 0.5, bpm: 100, audio: { currentTime: 0 } },
     arranger: { 
         key: 'F', 
         isMinor: false,
@@ -21,9 +21,9 @@ vi.mock('../../public/state.js', () => ({
         timeSignature: '4/4',
         sections: []
     },
-    gb: { genreFeel: 'Blues' },
-    bb: { enabled: true },
-    hb: { enabled: false }
+    groove: { genreFeel: 'Blues' },
+    bass: { enabled: true },
+    harmony: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {
@@ -44,7 +44,7 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 
 import { getSoloistNote, getScaleForChord } from '../../public/soloist.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger, sb, gb, ctx } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Genre Specific Test: 12-Bar Blues in F', () => {
     
@@ -63,10 +63,10 @@ describe('Genre Specific Test: 12-Bar Blues in F', () => {
         validateProgression();
         
         // Reset Soloist State
-        sb.isResting = false;
-        sb.currentPhraseSteps = 0;
-        sb.notesInPhrase = 0;
-        gb.genreFeel = 'Blues';
+        soloist.isResting = false;
+        soloist.currentPhraseSteps = 0;
+        soloist.notesInPhrase = 0;
+        groove.genreFeel = 'Blues';
     });
 
     it('should prioritize the Blues Scale (Minor Pentatonic + b5) over Dominant I chords', () => {
@@ -111,7 +111,7 @@ describe('Genre Specific Test: 12-Bar Blues in F', () => {
 
         for (let i = 0; i < totalAttempts; i++) {
             // Force activity
-            sb.busySteps = 0; 
+            soloist.busySteps = 0; 
             const result = getSoloistNote(arranger.progression[0], null, i % 16, 440, 72, 'blues', i % 16);
             
             if (result) {
@@ -134,7 +134,7 @@ describe('Genre Specific Test: 12-Bar Blues in F', () => {
         
         // Boost tension to ensure engine chooses the "Sophisticated/Altered" option
         // instead of the "Safe/Blues" fallback.
-        sb.tension = 0.9;
+        soloist.tension = 0.9;
         
         // Should use Altered scale or Phrygian Dominant depending on context
         const scale = getScaleForChord(d7alt, arranger.progression[8], 'blues');
@@ -158,17 +158,17 @@ describe('Genre Specific Test: 12-Bar Blues in F', () => {
         const iterations = 1000;
         
         // Boost intensity to ensure we actually generate notes despite the high "BB King" rest probability
-        ctx.bandIntensity = 1.0; 
+        playback.bandIntensity = 1.0; 
         
         for (let i = 0; i < iterations; i++) {
             // Force state continuously so internal logic doesn't reset it
-            sb.qaState = 'Answer';
-            sb.currentPhraseSteps = 0; // Start of phrase to minimize rest probability
-            sb.notesInPhrase = 0; // Ensure we have budget
-            sb.isResting = false;
-            sb.busySteps = 0;
-            sb.currentCell = [1, 1, 1, 1]; // Force activity on all steps
-            sb.isReplayingMotif = false; // Ensure we generate new notes
+            soloist.qaState = 'Answer';
+            soloist.currentPhraseSteps = 0; // Start of phrase to minimize rest probability
+            soloist.notesInPhrase = 0; // Ensure we have budget
+            soloist.isResting = false;
+            soloist.busySteps = 0;
+            soloist.currentCell = [1, 1, 1, 1]; // Force activity on all steps
+            soloist.isReplayingMotif = false; // Ensure we generate new notes
 
             // Test on Step 1 (Weak beat) to bypass "New Cell" randomization logic on Step 0
             // Start from F4 (349.23 Hz) to give Proximity bonus to F as well

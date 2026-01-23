@@ -2,15 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
         qaState: 'Question', isResting: false, contourSteps: 0,
         melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
         lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
         sessionSteps: 1000
     },
-    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
-    ctx: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 } },
+    chords: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
+    playback: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 } },
     arranger: { 
         key: 'C', 
         isMinor: false,
@@ -20,9 +20,9 @@ vi.mock('../../public/state.js', () => ({
         timeSignature: '4/4',
         sections: []
     },
-    gb: { genreFeel: 'Jazz' },
-    bb: { enabled: true },
-    hb: { enabled: false },
+    groove: { genreFeel: 'Jazz' },
+    bass: { enabled: true },
+    harmony: { enabled: false },
     sb_enabled: true
 }));
 
@@ -47,7 +47,7 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 import { getScaleForChord } from '../../public/soloist.js';
 import { getBassNote } from '../../public/bass.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { KEY_ORDER } from '../../public/config.js';
 
 describe('Multi-Key Integration: Autumn Leaves', () => {

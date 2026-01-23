@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { arranger, ctx, cb, gb } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { shareProgression } from '../../../public/sharing.js';
 import { loadFromUrl } from '../../../public/state-hydration.js';
 
@@ -28,7 +28,7 @@ const mockUi = actualUi;
 
 vi.mock('../../../public/app-controller.js', () => ({
     applyTheme: vi.fn(),
-    setBpm: vi.fn((bpm) => { ctx.bpm = parseInt(bpm); })
+    setBpm: vi.fn((bpm) => { playback.bpm = parseInt(bpm); })
 }));
 
 vi.mock('../../../public/instrument-controller.js', () => ({
@@ -48,8 +48,8 @@ describe('Sharing & Hydration Round-trip', () => {
         arranger.sections = [{ id: '1', label: 'Intro', value: 'I' }];
         arranger.key = 'C';
         arranger.timeSignature = '4/4';
-        ctx.bpm = 120;
-        cb.style = 'smart';
+        playback.bpm = 120;
+        chords.style = 'smart';
         
         // Mock clipboard
         vi.stubGlobal('navigator', {
@@ -63,9 +63,9 @@ describe('Sharing & Hydration Round-trip', () => {
     });
 
     it('should generate a URL containing critical state', async () => {
-        gb.genreFeel = 'Funk';
-        ctx.bandIntensity = 0.85;
-        ctx.complexity = 0.6;
+        groove.genreFeel = 'Funk';
+        playback.bandIntensity = 0.85;
+        playback.complexity = 0.6;
         shareProgression();
         
         expect(navigator.clipboard.writeText).toHaveBeenCalled();
@@ -83,10 +83,10 @@ describe('Sharing & Hydration Round-trip', () => {
         // 1. Setup specific state
         arranger.sections = [{ id: '1', label: 'Blues', value: 'I | IV | I | V' }];
         arranger.key = 'F';
-        ctx.bpm = 80;
-        cb.style = 'jazz';
-        gb.genreFeel = 'Jazz';
-        ctx.bandIntensity = 0.4;
+        playback.bpm = 80;
+        chords.style = 'jazz';
+        groove.genreFeel = 'Jazz';
+        playback.bandIntensity = 0.4;
         
         // 2. Generate Share URL
         mockUi.keySelect.value = 'F';
@@ -105,10 +105,10 @@ describe('Sharing & Hydration Round-trip', () => {
         // 3. Reset State
         arranger.sections = [];
         arranger.key = 'C';
-        ctx.bpm = 120;
-        cb.style = 'smart';
-        gb.genreFeel = 'Rock';
-        ctx.bandIntensity = 0.5;
+        playback.bpm = 120;
+        chords.style = 'smart';
+        groove.genreFeel = 'Rock';
+        playback.bandIntensity = 0.5;
         
         // 4. Simulate Load from that URL
         vi.stubGlobal('location', new URL(urlString));
@@ -116,10 +116,10 @@ describe('Sharing & Hydration Round-trip', () => {
         
         // 5. Verify restored state
         expect(arranger.key).toBe('F');
-        expect(ctx.bpm).toBe(80);
-        expect(cb.style).toBe('jazz');
+        expect(playback.bpm).toBe(80);
+        expect(chords.style).toBe('jazz');
         expect(arranger.sections[0].label).toBe('Blues');
         expect(btn.onclick).toHaveBeenCalled(); // Verified click simulation
-        expect(ctx.bandIntensity).toBe(0.4);
+        expect(playback.bandIntensity).toBe(0.4);
     });
 });

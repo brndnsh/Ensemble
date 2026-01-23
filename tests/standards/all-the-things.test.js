@@ -3,15 +3,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
         qaState: 'Question', isResting: false, contourSteps: 0,
         melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
         lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
         sessionSteps: 1000
     },
-    cb: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
-    ctx: { bandIntensity: 0.5, bpm: 135, audio: { currentTime: 0 } },
+    chords: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
+    playback: { bandIntensity: 0.5, bpm: 135, audio: { currentTime: 0 } },
     arranger: { 
         key: 'Ab', 
         isMinor: false,
@@ -21,9 +21,9 @@ vi.mock('../../public/state.js', () => ({
         timeSignature: '4/4',
         sections: []
     },
-    gb: { genreFeel: 'Jazz' },
-    bb: { enabled: true },
-    hb: { enabled: false }
+    groove: { genreFeel: 'Jazz' },
+    bass: { enabled: true },
+    harmony: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {
@@ -44,7 +44,7 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 
 import { getSoloistNote, getScaleForChord } from '../../public/soloist.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger, sb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { KEY_ORDER } from '../../public/config.js';
 
 function getKeyAtOffset(startKey, semitones) {
@@ -85,9 +85,9 @@ describe('Jazz Standard Test: All The Things You Are (Multi-Key)', () => {
                 ];
                 validateProgression();
                 
-                sb.isResting = false;
-                sb.currentPhraseSteps = 0;
-                sb.notesInPhrase = 0;
+                soloist.isResting = false;
+                soloist.currentPhraseSteps = 0;
+                soloist.notesInPhrase = 0;
             });
 
             it('should navigate the Cycle of Fifths in the first 5 bars', () => {

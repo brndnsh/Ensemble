@@ -9,11 +9,11 @@ vi.stubGlobal('postMessage', (msg) => capturedMessages.push(msg));
 
 // Mock state
 vi.mock('../../../public/state.js', () => ({
-    sb: { enabled: true, lastFreq: 440, busySteps: 0, sessionSteps: 1000 },
-    cb: { enabled: true },
-    bb: { enabled: true, lastFreq: 110, pocketOffset: 0 },
-    hb: { enabled: true, volume: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
-    ctx: { bandIntensity: 1.0, bpm: 120, intent: {}, autoIntensity: false },
+    soloist: { enabled: true, lastFreq: 440, busySteps: 0, sessionSteps: 1000 },
+    chords: { enabled: true },
+    bass: { enabled: true, lastFreq: 110, pocketOffset: 0 },
+    harmony: { enabled: true, volume: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
+    playback: { bandIntensity: 1.0, bpm: 120, intent: {}, autoIntensity: false },
     arranger: { 
         key: 'C', 
         isMinor: false, 
@@ -22,7 +22,7 @@ vi.mock('../../../public/state.js', () => ({
         stepMap: [],
         timeSignature: '4/4'
     },
-    gb: { genreFeel: 'Rock', enabled: true, instruments: [] }
+    groove: { genreFeel: 'Rock', enabled: true, instruments: [] }
 }));
 
 vi.mock('../../../public/config.js', () => ({
@@ -38,13 +38,13 @@ vi.mock('../../../public/form-analysis.js', () => ({
     analyzeForm: vi.fn(() => ({ sequence: 'A', sections: [] }))
 }));
 
-import { arranger, ctx } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { handleExport } from '../../../public/logic-worker.js';
 
 describe('Velocity Normalization & MIDI Limits', () => {
     beforeEach(() => {
         capturedMessages.length = 0;
-        ctx.bandIntensity = 1.0; // Max intensity
+        playback.bandIntensity = 1.0; // Max intensity
         
         const mockChord = { 
             root: 'C', beats: 4, sectionId: 's1', sectionLabel: 'Verse',
@@ -57,7 +57,7 @@ describe('Velocity Normalization & MIDI Limits', () => {
 
     it('should clamp all MIDI velocities to 127 even at maximum intensity', () => {
         // High intensity + high conductor velocity
-        ctx.bandIntensity = 1.0;
+        playback.bandIntensity = 1.0;
         
         handleExport({ includedTracks: ['chords', 'bass', 'soloist', 'drums'], targetDuration: 0.1 });
         

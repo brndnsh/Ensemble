@@ -3,14 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../../public/state.js', () => ({
-    hb: { 
+    harmony: { 
         enabled: true, volume: 0.4, complexity: 0.5, octave: 60, style: 'smart',
         motifBuffer: [], rhythmicMask: 0
     },
-    cb: { enabled: true, octave: 60, density: 'standard', rhythmicMask: 0 },
-    bb: { enabled: true, octave: 36 },
-    sb: { enabled: true, isResting: false, notesInPhrase: 0, sessionSteps: 0, isReplayingMotif: false },
-    ctx: { bandIntensity: 0.5, bpm: 120 },
+    chords: { enabled: true, octave: 60, density: 'standard', rhythmicMask: 0 },
+    bass: { enabled: true, octave: 36 },
+    soloist: { enabled: true, isResting: false, notesInPhrase: 0, sessionSteps: 0, isReplayingMotif: false },
+    playback: { bandIntensity: 0.5, bpm: 120 },
     arranger: { 
         key: 'C', 
         isMinor: false, 
@@ -19,7 +19,7 @@ vi.mock('../../../public/state.js', () => ({
         stepMap: [],
         timeSignature: '4/4'
     },
-    gb: { genreFeel: 'Rock', snareMask: 0 }
+    groove: { genreFeel: 'Rock', snareMask: 0 }
 }));
 
 vi.mock('../../../public/config.js', () => ({
@@ -30,20 +30,20 @@ vi.mock('../../../public/config.js', () => ({
 }));
 
 import { getHarmonyNotes, clearHarmonyMemory } from '../../../public/harmonies.js';
-import { hb, sb, gb, ctx, arranger } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Harmony Engine Logic', () => {
     const chordC = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major', beats: 4, sectionId: 'A' };
 
     beforeEach(() => {
         clearHarmonyMemory();
-        gb.genreFeel = 'Funk';
-        hb.style = 'smart';
-        ctx.bandIntensity = 0.5;
-        hb.complexity = 0.5;
-        sb.enabled = true;
-        sb.isResting = true;
-        sb.notesInPhrase = 0;
+        groove.genreFeel = 'Funk';
+        harmony.style = 'smart';
+        playback.bandIntensity = 0.5;
+        harmony.complexity = 0.5;
+        soloist.enabled = true;
+        soloist.isResting = true;
+        soloist.notesInPhrase = 0;
     });
 
     describe('Core Generation', () => {
@@ -60,12 +60,12 @@ describe('Harmony Engine Logic', () => {
         });
 
         it('should scale density with intensity', () => {
-            ctx.bandIntensity = 0.1;
-            hb.complexity = 0.1;
+            playback.bandIntensity = 0.1;
+            harmony.complexity = 0.1;
             const lowNotes = getHarmonyNotes(chordC, null, 0, 60, 'smart', 0);
             
-            ctx.bandIntensity = 1.0;
-            hb.complexity = 1.0;
+            playback.bandIntensity = 1.0;
+            harmony.complexity = 1.0;
             const highNotes = getHarmonyNotes(chordC, null, 0, 60, 'smart', 0);
             
             expect(highNotes.length).toBeGreaterThanOrEqual(lowNotes.length);
@@ -74,8 +74,8 @@ describe('Harmony Engine Logic', () => {
 
     describe('Soloist Awareness', () => {
         it('should play stabs when soloist is resting', () => {
-            sb.isResting = true;
-            gb.genreFeel = 'Funk';
+            soloist.isResting = true;
+            groove.genreFeel = 'Funk';
             // Find a step that is a hit in Funk but NOT a downbeat (to distinguish from pads)
             let stabFound = false;
             for (let s = 1; s < 16; s++) {
@@ -89,8 +89,8 @@ describe('Harmony Engine Logic', () => {
         });
 
         it('should switch to pads when soloist is busy', () => {
-            sb.isResting = false;
-            sb.notesInPhrase = 10;
+            soloist.isResting = false;
+            soloist.notesInPhrase = 10;
             
             const res = getHarmonyNotes(chordC, null, 0, 60, 'smart', 0);
             expect(res.length).toBeGreaterThan(0);
@@ -104,8 +104,8 @@ describe('Harmony Engine Logic', () => {
 
     describe('Genre-Specific Rhythms', () => {
         it('should use Jazz rhythms in Jazz genre', () => {
-            gb.genreFeel = 'Jazz';
-            sb.isResting = true;
+            groove.genreFeel = 'Jazz';
+            soloist.isResting = true;
             
             let hitFound = false;
             for (let s = 0; s < 16; s++) {
@@ -140,10 +140,10 @@ describe('Harmony Engine Logic', () => {
 
     describe('Soloist Hook Reinforcement', () => {
         it('should reinforce (latch onto) the soloist hook at high intensity', () => {
-            sb.enabled = true;
-            sb.isReplayingMotif = true;
-            sb.sessionSteps = 128; // 8 bars into the jam
-            ctx.bandIntensity = 0.8;
+            soloist.enabled = true;
+            soloist.isReplayingMotif = true;
+            soloist.sessionSteps = 128; // 8 bars into the jam
+            playback.bandIntensity = 0.8;
 
             const chord = { rootMidi: 60, symbol: 'Cmaj7', quality: 'major7', beats: 4, sectionId: 'A' };
             const soloistNote = { midi: 72, freq: 523.25 };

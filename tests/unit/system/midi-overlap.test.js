@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { sendMIDINote, sendMIDIDrum, initMIDI, panic } from '../../../public/midi-controller.js';
-import { ctx, midi } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('MIDI Note Overlap Logic', () => {
     let mockOutput;
@@ -15,7 +15,7 @@ describe('MIDI Note Overlap Logic', () => {
         panic();
         
         // Mock Audio Context
-        ctx.audio = { currentTime: 1000 }; // Start at T=1000s
+        playback.audio = { currentTime: 1000 }; // Start at T=1000s
 
         // Mock MIDI Output
         mockOutput = {
@@ -94,7 +94,7 @@ describe('MIDI Note Overlap Logic', () => {
         expect(mockOutput.send).toHaveBeenCalledTimes(1);
 
         // Advance past duration
-        ctx.audio.currentTime = 1000.6;
+        playback.audio.currentTime = 1000.6;
         vi.advanceTimersByTime(600);
 
         expect(mockOutput.send).toHaveBeenCalledTimes(2);
@@ -147,8 +147,8 @@ describe('MIDI Note Overlap Logic', () => {
         sendMIDINote(1, 62, 0.8, 1000.5, 2.0, true);
         
         // Advance time to allow the scheduled Note Off to fire
-        // We MUST advance ctx.audio.currentTime because MIDI controller uses it for delta calculation
-        ctx.audio.currentTime = 1000.5; 
+        // We MUST advance playback.audio.currentTime because MIDI controller uses it for delta calculation
+        playback.audio.currentTime = 1000.5; 
         vi.advanceTimersByTime(500);
         
         const calls = mockOutput.send.mock.calls;

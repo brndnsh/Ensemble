@@ -5,12 +5,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() } }));
 vi.mock('../../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('../../../public/state.js', () => ({
-    ctx: { bandIntensity: 0.5 },
-    cb: { density: 'standard', octave: 60, pianoRoots: true },
+    playback: { bandIntensity: 0.5 },
+    chords: { density: 'standard', octave: 60, pianoRoots: true },
     arranger: { timeSignature: '4/4', key: 'C', isMinor: false, notation: 'roman' },
-    gb: { genreFeel: 'Rock' },
-    bb: { enabled: true },
-    hb: { enabled: false }
+    groove: { genreFeel: 'Rock' },
+    bass: { enabled: true },
+    harmony: { enabled: false }
 }));
 
 vi.mock('../../../public/config.js', () => ({
@@ -26,16 +26,16 @@ vi.mock('../../../public/config.js', () => ({
 }));
 
 import { getChordDetails, getIntervals, transformRelativeProgression, getBestInversion, validateProgression } from '../../../public/chords.js';
-import { gb, bb, cb, ctx, arranger } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Chords & Voicing Logic', () => {
     
     beforeEach(() => {
         vi.clearAllMocks();
-        gb.genreFeel = 'Rock';
-        bb.enabled = true;
-        cb.density = 'standard';
-        ctx.bandIntensity = 0.5;
+        groove.genreFeel = 'Rock';
+        bass.enabled = true;
+        chords.density = 'standard';
+        playback.bandIntensity = 0.5;
     });
 
     describe('Chord Parsing (getChordDetails)', () => {
@@ -57,7 +57,7 @@ describe('Chords & Voicing Logic', () => {
         });
 
         it('should use rootless functional voicings for Jazz', () => {
-            gb.genreFeel = 'Jazz';
+            groove.genreFeel = 'Jazz';
             // maj7 -> 3, 5, 7
             expect(getIntervals('maj7', true, 'standard', 'Jazz', true)).toEqual([4, 7, 11]);
             // m7 -> b3, 5, b7
@@ -67,7 +67,7 @@ describe('Chords & Voicing Logic', () => {
         });
 
         it('should scale density for Jazz voicings', () => {
-            gb.genreFeel = 'Jazz';
+            groove.genreFeel = 'Jazz';
             // standard maj7: 3, 5, 7 [4, 7, 11]
             // rich maj7: 3, 7, 9 [4, 11, 14]
             expect(getIntervals('maj7', true, 'rich', 'Jazz', true)).toEqual([4, 11, 14]);
@@ -76,14 +76,14 @@ describe('Chords & Voicing Logic', () => {
         });
 
         it('should handle altered dominants correctly', () => {
-            gb.genreFeel = 'Jazz';
+            groove.genreFeel = 'Jazz';
             const intervals = getIntervals('7alt', true, 'standard', 'Jazz', true);
             // 3, b7, #9, b13 -> [4, 10, 15, 20]
             expect(intervals).toEqual([4, 10, 15, 20]);
         });
 
         it('should use "So What" voicing for Neo-Soul minor 7', () => {
-            gb.genreFeel = 'Neo-Soul';
+            groove.genreFeel = 'Neo-Soul';
             expect(getIntervals('minor', true, 'standard', 'Neo-Soul', true)).toEqual([5, 10, 15, 19]);
         });
 

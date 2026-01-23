@@ -3,7 +3,7 @@ import { expect, describe, it } from 'vitest';
 
 describe('Resolution Logic', () => {
 
-    const enabled = { bb: true, cb: true, sb: true, gb: true };
+    const enabled = { bass: true, chords: true, soloist: true, groove: true };
 
     it('should use the global key if stepMap is empty', () => {
         const arranger = {
@@ -14,9 +14,9 @@ describe('Resolution Logic', () => {
 
         const notes = generateResolutionNotes(100, arranger, enabled);
         
-        // Find the bass note (bb) which is (keyPC % 12) + 24
+        // Find the bass note (bass) which is (keyPC % 12) + 24
         // C is index 0. Bass should be 24.
-        const bassNote = notes.find(n => n.module === 'bb');
+        const bassNote = notes.find(n => n.module === 'bass');
         expect(bassNote).to.exist;
         expect(bassNote.midi).to.equal(24);
     });
@@ -41,7 +41,7 @@ describe('Resolution Logic', () => {
         
         // D is index 2 in KEY_ORDER (C, Db, D...)
         // Bass note should be 2 + 24 = 26
-        const bassNote = notes.find(n => n.module === 'bb');
+        const bassNote = notes.find(n => n.module === 'bass');
         expect(bassNote).to.exist;
         expect(bassNote.midi).to.equal(26);
     });
@@ -62,7 +62,7 @@ describe('Resolution Logic', () => {
         const notes = generateResolutionNotes(100, arranger, enabled);
         
         // E is index 4. Bass should be 4 + 24 = 28.
-        const bassNote = notes.find(n => n.module === 'bb');
+        const bassNote = notes.find(n => n.module === 'bass');
         expect(bassNote).to.exist;
         expect(bassNote.midi).to.equal(28);
     });

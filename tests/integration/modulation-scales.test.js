@@ -4,18 +4,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies
 vi.mock('../../public/state.js', () => ({
-    sb: { tension: 0.5 },
-    cb: { density: 'standard', octave: 60, pianoRoots: true },
-    ctx: { bandIntensity: 0.5, bpm: 120 },
+    soloist: { tension: 0.5 },
+    chords: { density: 'standard', octave: 60, pianoRoots: true },
+    playback: { bandIntensity: 0.5, bpm: 120 },
     arranger: { 
         key: 'C', 
         isMinor: false,
         progression: [],
         timeSignature: '4/4'
     },
-    gb: { genreFeel: 'Jazz' },
-    bb: { enabled: true },
-    hb: { enabled: false }
+    groove: { genreFeel: 'Jazz' },
+    bass: { enabled: true },
+    harmony: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {
@@ -31,7 +31,7 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 
 import { getScaleForChord } from '../../public/soloist.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Modulation Scale Selection Integration', () => {
     

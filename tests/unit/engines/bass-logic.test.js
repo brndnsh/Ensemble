@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../../public/state.js', () => ({
-    bb: { 
+    bass: { 
         enabled: true, 
         busySteps: 0, 
         lastFreq: 440,
@@ -12,13 +12,13 @@ vi.mock('../../../public/state.js', () => ({
         buffer: new Map(),
         style: 'smart'
     },
-    sb: { 
+    soloist: { 
         enabled: true, 
         busySteps: 0, 
         tension: 0,
         buffer: new Map()
     },
-    gb: { 
+    groove: { 
         genreFeel: 'Rock',
         measures: 1,
         lastDrumPreset: 'Standard',
@@ -26,9 +26,9 @@ vi.mock('../../../public/state.js', () => ({
             { name: 'Kick', steps: new Array(16).fill(0), muted: false }
         ]
     },
-    ctx: { bandIntensity: 0.5, bpm: 120, complexity: 0.3 },
-    cb: { pianoRoots: true },
-    hb: { enabled: false, buffer: new Map() },
+    playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.3 },
+    chords: { pianoRoots: true },
+    harmony: { enabled: false, buffer: new Map() },
     arranger: { 
         key: 'C', 
         isMinor: false, 
@@ -48,29 +48,29 @@ vi.mock('../../../public/config.js', () => ({
 }));
 
 import { getBassNote, isBassActive, getScaleForBass } from '../../../public/bass.js';
-import { bb, sb, gb, ctx, arranger } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Bass Engine Logic', () => {
     const chordC = { rootMidi: 48, intervals: [0, 4, 7, 10], quality: '7', beats: 4, sectionId: 's1', bassMidi: null };
     const chordF = { rootMidi: 53, intervals: [0, 4, 7, 10], quality: '7', beats: 4, sectionId: 's1', bassMidi: null };
 
     beforeEach(() => {
-        bb.busySteps = 0;
-        sb.busySteps = 0;
-        sb.tension = 0;
-        ctx.bandIntensity = 0.5;
-        gb.genreFeel = 'Rock';
-        gb.instruments[0].steps.fill(0);
+        bass.busySteps = 0;
+        soloist.busySteps = 0;
+        soloist.tension = 0;
+        playback.bandIntensity = 0.5;
+        groove.genreFeel = 'Rock';
+        groove.instruments[0].steps.fill(0);
     });
 
     describe('Style Mapping & Activation', () => {
         it('should map genres to internal styles correctly', () => {
-            gb.genreFeel = 'Rock';
+            groove.genreFeel = 'Rock';
             expect(isBassActive('smart', 0, 0)).toBe(true);
             expect(isBassActive('smart', 2, 2)).toBe(true);
             expect(isBassActive('smart', 1, 1)).toBe(false); 
 
-            gb.genreFeel = 'Jazz';
+            groove.genreFeel = 'Jazz';
             expect(isBassActive('smart', 0, 0)).toBe(true);
             expect(isBassActive('smart', 4, 4)).toBe(true);
         });
@@ -93,14 +93,14 @@ describe('Bass Engine Logic', () => {
 
     describe('Intelligence & Contextual Awareness', () => {
         it('should mirror the Kick drum pattern in rock style', () => {
-            gb.instruments[0].steps[0] = 2;
-            gb.instruments[0].steps[4] = 1;
+            groove.instruments[0].steps[0] = 2;
+            groove.instruments[0].steps[4] = 1;
             
             const hitResult = getBassNote(chordC, null, 1, 110, 38, 'rock', 0, 4, 4);
             expect(hitResult).not.toBeNull();
             expect(hitResult.velocity).toBeGreaterThan(1.1);
 
-            ctx.bandIntensity = 0.1;
+            playback.bandIntensity = 0.1;
             let silentCount = 0;
             for (let i = 0; i < 20; i++) {
                 if (getBassNote(chordC, null, 0.25, 110, 38, 'rock', 0, 1, 1) === null) silentCount++;
@@ -109,8 +109,8 @@ describe('Bass Engine Logic', () => {
         });
 
         it('should reduce complexity when the soloist is busy', () => {
-            gb.genreFeel = 'Funk';
-            sb.busySteps = 4;
+            groove.genreFeel = 'Funk';
+            soloist.busySteps = 4;
             expect(getBassNote(chordC, null, 0.25, 110, 38, 'funk', 0, 1, 1)).toBeNull();
 
             let rootOrFifthCount = 0;
@@ -127,8 +127,8 @@ describe('Bass Engine Logic', () => {
         });
 
         it('should boost velocity for "Pop" articulation in funk at high intensity', () => {
-            ctx.bandIntensity = 0.9;
-            gb.instruments[0].steps[2] = 1;
+            playback.bandIntensity = 0.9;
+            groove.instruments[0].steps[2] = 1;
             const result = getBassNote(chordC, null, 0.5, 110, 38, 'funk', 0, 2, 2);
             expect(result).not.toBeNull();
             expect(result.velocity).toBeGreaterThanOrEqual(1.2);
@@ -146,7 +146,7 @@ describe('Bass Engine Logic', () => {
         });
 
         it('should use a chromatic approach on beat 4 leading to the next chord', () => {
-            gb.genreFeel = 'Jazz';
+            groove.genreFeel = 'Jazz';
             let chromaticCount = 0;
             for (let i = 0; i < 500; i++) {
                 const result = getBassNote(chordC, chordF, 3, null, 38, 'quarter', 0, 12, 12);
@@ -175,7 +175,7 @@ describe('Bass Engine Logic', () => {
 
         it('should vary intensity-based register in quarter style', () => {
             let highCount = 0;
-            ctx.bandIntensity = 1.0; 
+            playback.bandIntensity = 1.0; 
             for (let i = 0; i < 100; i++) {
                 // Step 63 in 64 total steps
                 const result = getBassNote(chordC, chordF, 0, null, 38, 'quarter', 0, 63, 63);

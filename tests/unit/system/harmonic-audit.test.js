@@ -6,7 +6,7 @@ import { getSoloistNote, getScaleForChord } from '../../../public/soloist.js';
 import { getHarmonyNotes } from '../../../public/harmonies.js';
 import { getAccompanimentNotes } from '../../../public/accompaniment.js';
 import { validateProgression } from '../../../public/chords.js';
-import { ctx, arranger, gb, cb, bb, sb, hb, dispatch } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { getMidi } from '../../../public/utils.js';
 
 // Mock UI and Worker
@@ -27,15 +27,15 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
         arranger.key = 'C';
         arranger.isMinor = false;
         arranger.timeSignature = '4/4';
-        gb.enabled = true;
-        bb.enabled = true;
-        sb.enabled = true;
-        hb.enabled = true;
-        cb.enabled = true;
-        cb.style = 'smart';
-        bb.style = 'smart';
-        sb.style = 'smart';
-        hb.style = 'smart';
+        groove.enabled = true;
+        bass.enabled = true;
+        soloist.enabled = true;
+        harmony.enabled = true;
+        chords.enabled = true;
+        chords.style = 'smart';
+        bass.style = 'smart';
+        soloist.style = 'smart';
+        harmony.style = 'smart';
     });
 
     const runAudit = (presetName, sections, isMinor = false) => {
@@ -47,11 +47,11 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
             const errors = [];
 
             GENRES.forEach(genre => {
-                gb.genreFeel = genre;
+                groove.genreFeel = genre;
 
                 INTENSITIES.forEach(intensity => {
-                    ctx.bandIntensity = intensity;
-                    ctx.conductorVelocity = 0.7 + (intensity * 0.45);
+                    playback.bandIntensity = intensity;
+                    playback.conductorVelocity = 0.7 + (intensity * 0.45);
 
                     // Test first 16 steps of the progression
                     for (let step = 0; step < Math.min(16, arranger.totalSteps); step++) {
@@ -63,11 +63,11 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
                         const stepInChord = step - entry.start;
 
                         // 1. Bass Check
-                        if (isBassActive(bb.style, step, stepInChord)) {
-                            const bassNote = getBassNote(chord, null, step / 4, bb.lastFreq, 38, bb.style, 0, step, stepInChord);
+                        if (isBassActive(bass.style, step, stepInChord)) {
+                            const bassNote = getBassNote(chord, null, step / 4, bass.lastFreq, 38, bass.style, 0, step, stepInChord);
                             if (bassNote) {
                                 // Velocity Check
-                                const finalVel = bassNote.velocity * ctx.conductorVelocity;
+                                const finalVel = bassNote.velocity * playback.conductorVelocity;
                                 if (finalVel > 1.5) errors.push(`[${genre} @ ${intensity}] Bass Vel Overload: ${finalVel.toFixed(2)} at step ${step}`);
                                 
                                 // Range Check
@@ -85,16 +85,16 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
                                         }
                                     }
                                 }
-                                bb.lastFreq = bassNote.freq;
+                                bass.lastFreq = bassNote.freq;
                             }
                         }
 
                         // 2. Soloist Check
-                        const soloNote = getSoloistNote(chord, null, step, sb.lastFreq, 72, sb.style, stepInChord);
+                        const soloNote = getSoloistNote(chord, null, step, soloist.lastFreq, 72, soloist.style, stepInChord);
                         if (soloNote) {
                             const notes = Array.isArray(soloNote) ? soloNote : [soloNote];
                             notes.forEach(n => {
-                                const finalVel = n.velocity * ctx.conductorVelocity;
+                                const finalVel = n.velocity * playback.conductorVelocity;
                                 if (finalVel > 1.5) errors.push(`[${genre} @ ${intensity}] Soloist Vel Overload: ${finalVel.toFixed(2)} at step ${step}`);
                                 if (n.midi < 40 || n.midi > 110) errors.push(`[${genre} @ ${intensity}] Soloist Range Warning: MIDI ${n.midi} at step ${step}`);
                                 
@@ -108,22 +108,22 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
                                 }
                             });
                             const primary = Array.isArray(soloNote) ? soloNote[soloNote.length - 1] : soloNote;
-                            sb.lastFreq = primary.freq;
+                            soloist.lastFreq = primary.freq;
                         }
 
                         // 3. Accompaniment Check
                         const accNotes = getAccompanimentNotes(chord, step, stepInChord, stepInMeasure, { isBeatStart: step % 4 === 0 });
                         accNotes.forEach(n => {
                             if (n.midi > 0 && !n.muted) {
-                                const finalVel = n.velocity * ctx.conductorVelocity;
+                                const finalVel = n.velocity * playback.conductorVelocity;
                                 if (finalVel > 1.5) errors.push(`[${genre} @ ${intensity}] Accomp Vel Overload: ${finalVel.toFixed(2)} at step ${step}`);
                             }
                         });
 
                         // 4. Harmony Check
-                        const harmonyNotes = getHarmonyNotes(chord, null, step, 60, hb.style, stepInChord);
+                        const harmonyNotes = getHarmonyNotes(chord, null, step, 60, harmony.style, stepInChord);
                         harmonyNotes.forEach(n => {
-                            const finalVel = n.velocity * ctx.conductorVelocity;
+                            const finalVel = n.velocity * playback.conductorVelocity;
                             if (finalVel > 1.5) errors.push(`[${genre} @ ${intensity}] Harmony Vel Overload: ${finalVel.toFixed(2)} at step ${step}`);
                             if (n.midi < 30 || n.midi > 100) errors.push(`[${genre} @ ${intensity}] Harmony Range Warning: MIDI ${n.midi} at step ${step}`);
                             

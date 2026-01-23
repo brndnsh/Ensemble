@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state
 vi.mock('../../../public/state.js', () => ({
-    ctx: { 
+    playback: { 
         audio: { currentTime: 0, createOscillator: () => ({ connect: vi.fn(), start: vi.fn(), stop: vi.fn(), frequency: { setValueAtTime: vi.fn() } }), createGain: () => ({ connect: vi.fn(), gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() } }) },
         nextNoteTime: 0,
         unswungNextNoteTime: 0,
@@ -19,7 +19,7 @@ vi.mock('../../../public/state.js', () => ({
         bandIntensity: 0.5,
         masterGain: {}
     },
-    gb: { 
+    groove: { 
         enabled: true, 
         genreFeel: 'Rock',
         humanize: 0,
@@ -33,10 +33,10 @@ vi.mock('../../../public/state.js', () => ({
         totalSteps: 16,
         measureMap: []
     },
-    bb: { enabled: false, buffer: new Map() },
-    sb: { enabled: false, buffer: new Map() },
-    cb: { enabled: false, buffer: new Map() },
-    hb: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
+    bass: { enabled: false, buffer: new Map() },
+    soloist: { enabled: false, buffer: new Map() },
+    chords: { enabled: false, buffer: new Map() },
+    harmony: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
     midi: { enabled: false },
     vizState: { enabled: true },
     conductorState: { larsBpmOffset: 0 }
@@ -98,18 +98,18 @@ vi.mock('../../../public/midi-controller.js', () => ({
 }));
 
 import { scheduler } from '../../../public/scheduler-core.js';
-import { ctx, arranger, gb } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Phase Integrity (Audio/Visual Sync)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.audio.currentTime = 0;
-        ctx.nextNoteTime = 0.05; 
-        ctx.unswungNextNoteTime = 0.05;
-        ctx.drawQueue = [];
-        ctx.step = 0;
-        ctx.isPlaying = true;
-        gb.swing = 0;
+        playback.audio.currentTime = 0;
+        playback.nextNoteTime = 0.05; 
+        playback.unswungNextNoteTime = 0.05;
+        playback.drawQueue = [];
+        playback.step = 0;
+        playback.isPlaying = true;
+        groove.swing = 0;
         arranger.totalSteps = 16;
         arranger.stepMap = [{ 
             start: 0, 
@@ -119,15 +119,15 @@ describe('Phase Integrity (Audio/Visual Sync)', () => {
     });
 
     it('should align drawQueue events with exact audio time for Step 0', () => {
-        const expectedTime = ctx.nextNoteTime;
+        const expectedTime = playback.nextNoteTime;
         
         // Execute one iteration of the scheduler loop
         scheduler();
 
         // Check if Step 0 visuals are correctly timestamped
-        const flash = ctx.drawQueue.find(ev => ev.type === 'flash');
-        const drumVis = ctx.drawQueue.find(ev => ev.type === 'drum_vis');
-        const chordVis = ctx.drawQueue.find(ev => ev.type === 'chord_vis');
+        const flash = playback.drawQueue.find(ev => ev.type === 'flash');
+        const drumVis = playback.drawQueue.find(ev => ev.type === 'drum_vis');
+        const chordVis = playback.drawQueue.find(ev => ev.type === 'chord_vis');
 
         expect(flash).toBeDefined();
         expect(drumVis).toBeDefined();
@@ -140,24 +140,24 @@ describe('Phase Integrity (Audio/Visual Sync)', () => {
     });
 
     it('should maintain perfect phase alignment even when Swing is applied', () => {
-        gb.swing = 50; 
-        gb.swingSub = '16th';
+        groove.swing = 50; 
+        groove.swingSub = '16th';
         
-        const startTime = ctx.nextNoteTime;
+        const startTime = playback.nextNoteTime;
         
         // Mock currentTime so the while loop in scheduler runs multiple times
-        // ctx.nextNoteTime is 0.05. scheduleAheadTime is 0.1.
+        // playback.nextNoteTime is 0.05. scheduleAheadTime is 0.1.
         // Loop runs while nextNoteTime < currentTime + 0.1
         // If currentTime is 0.1, it can schedule until 0.2 (at least one more step)
-        ctx.audio.currentTime = 0.1;
+        playback.audio.currentTime = 0.1;
         
         scheduler(); 
 
-        const drumEvents = ctx.drawQueue.filter(ev => ev.type === 'drum_vis');
+        const drumEvents = playback.drawQueue.filter(ev => ev.type === 'drum_vis');
         expect(drumEvents.length).toBeGreaterThan(1);
         
-        const sixteenth = 0.25 * (60 / ctx.bpm); // 0.125s at 120bpm
-        const shift = (sixteenth / 3) * (gb.swing / 100); 
+        const sixteenth = 0.25 * (60 / playback.bpm); // 0.125s at 120bpm
+        const shift = (sixteenth / 3) * (groove.swing / 100); 
         
         expect(drumEvents[0].time).toBe(startTime);
         
@@ -168,11 +168,11 @@ describe('Phase Integrity (Audio/Visual Sync)', () => {
 
     it('should clear the drawQueue when playback is stopped to prevent ghost visuals', () => {
         // Mocking a few items in the queue
-        ctx.drawQueue.push({ type: 'flash', time: 1.0 });
+        playback.drawQueue.push({ type: 'flash', time: 1.0 });
         
         // We can't easily call togglePlay because it's a complex export, 
         // but we can verify the logic that scheduler-core.js uses
-        ctx.drawQueue = []; 
-        expect(ctx.drawQueue).toHaveLength(0);
+        playback.drawQueue = []; 
+        expect(playback.drawQueue).toHaveLength(0);
     });
 });

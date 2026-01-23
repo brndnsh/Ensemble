@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getScaleForChord } from '../../public/soloist.js';
-import { arranger, gb, sb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Dissonance Reproduction', () => {
     beforeEach(() => {
         arranger.key = 'C';
         arranger.isMinor = false;
-        gb.genreFeel = 'Rock';
-        sb.tension = 0;
+        groove.genreFeel = 'Rock';
+        soloist.tension = 0;
     });
 
     it('should return Ionian/Lydian for F Major even if global key is C Minor (State Leak)', () => {

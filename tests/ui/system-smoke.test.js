@@ -185,7 +185,7 @@ vi.mock('../../public/persistence.js', () => ({
     debounceSaveState: vi.fn()
 }));
 
-import { arranger, ctx } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { addSection, onSectionUpdate } from '../../public/arranger-controller.js';
 import { togglePlay } from '../../public/scheduler-core.js';
 import { validateProgression } from '../../public/chords.js';
@@ -198,8 +198,8 @@ describe('System Smoke Test (E2E Workflow)', () => {
         
         arranger.sections = [];
         arranger.progression = [];
-        ctx.isPlaying = false;
-        ctx.audio = null;
+        playback.isPlaying = false;
+        playback.audio = null;
         
         const mockAudioContext = {
             currentTime: 0,
@@ -215,7 +215,7 @@ describe('System Smoke Test (E2E Workflow)', () => {
         global.AudioContext = vi.fn().mockImplementation(() => mockAudioContext);
         
         vi.mocked(initAudio).mockImplementation(() => {
-            ctx.audio = mockAudioContext;
+            playback.audio = mockAudioContext;
         });
 
         global.navigator.wakeLock = { request: vi.fn().mockResolvedValue({ release: vi.fn() }) };
@@ -234,11 +234,11 @@ describe('System Smoke Test (E2E Workflow)', () => {
         const mockViz = { setBeatReference: vi.fn(), clear: vi.fn() };
         togglePlay(mockViz);
         
-        expect(ctx.isPlaying).toBe(true);
-        expect(ctx.audio).not.toBeNull();
+        expect(playback.isPlaying).toBe(true);
+        expect(playback.audio).not.toBeNull();
         expect(mockViz.setBeatReference).toHaveBeenCalled();
 
         togglePlay(mockViz);
-        expect(ctx.isPlaying).toBe(false);
+        expect(playback.isPlaying).toBe(false);
     });
 });

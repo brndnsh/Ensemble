@@ -14,11 +14,11 @@ vi.mock('../../../public/state.js', () => ({
         stepMap: [], // Added to prevent analyzeForm crashes
         lastChordPreset: null
     },
-    cb: {},
-    ctx: {},
-    sb: { enabled: true },
-    hb: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
-    gb: { genreFeel: 'Rock', enabled: true },
+    chords: {},
+    playback: {},
+    soloist: { enabled: true },
+    harmony: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
+    groove: { genreFeel: 'Rock', enabled: true },
     conductorState: {}
 }));
 
@@ -38,7 +38,7 @@ vi.mock('../../../public/ui.js', () => ({
 }));
 
 vi.mock('../../../public/chords.js', () => ({
-    validateProgression: vi.fn((cb) => cb && cb()),
+    validateProgression: vi.fn((chords) => chords && chords()),
     transformRelativeProgression: vi.fn((val, shift) => {
         if (val === 'I | V' && shift === -3) return 'bIII | bVII';
         if (val === 'i | iv' && shift === 3) return 'vi | ii';
@@ -75,7 +75,7 @@ vi.mock('../../../public/history.js', () => ({
 }));
 
 import { addSection, onSectionUpdate, onSectionDelete, onSectionDuplicate, transposeKey, switchToRelativeKey } from '../../../public/arranger-controller.js';
-import { arranger } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { ui } from '../../../public/ui.js';
 import { transformRelativeProgression } from '../../../public/chords.js';
 

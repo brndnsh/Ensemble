@@ -9,9 +9,9 @@ vi.mock('../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
     return {
         ...actual,
-        hb: { enabled: false, buffer: new Map() },
+        harmony: { enabled: false, buffer: new Map() },
         dispatch: vi.fn((action, payload) => {
-            if (action === 'SET_BAND_INTENSITY') actual.ctx.bandIntensity = payload;
+            if (action === 'SET_BAND_INTENSITY') actual.playback.bandIntensity = payload;
         })
     };
 });
@@ -36,20 +36,20 @@ vi.mock('../../public/fills.js', () => ({
 }));
 
 import { getAccompanimentNotes, compingState } from '../../public/accompaniment.js';
-import { ctx, gb, cb, bb, sb, hb, arranger } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { getMidi, getFrequency } from '../../public/utils.js';
 import { conductorState, checkSectionTransition } from '../../public/conductor.js';
 
 describe('Musical Sanity & Collision Detection', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ctx.bandIntensity = 0.5;
-        ctx.complexity = 0.5;
-        gb.genreFeel = 'Jazz';
-        hb.enabled = false;
-        cb.style = 'smart';
-        bb.enabled = true;
-        sb.enabled = false;
+        playback.bandIntensity = 0.5;
+        playback.complexity = 0.5;
+        groove.genreFeel = 'Jazz';
+        harmony.enabled = false;
+        chords.style = 'smart';
+        bass.enabled = true;
+        soloist.enabled = false;
         arranger.timeSignature = '4/4';
         arranger.progression = [{ sectionId: 's1', sectionLabel: 'A', beats: 4, quality: 'maj7' }];
         compingState.lastChordIndex = -1;
@@ -67,7 +67,7 @@ describe('Musical Sanity & Collision Detection', () => {
             };
 
             // Set bass to play a C2 (MIDI 36)
-            bb.lastFreq = 65.41; // C2
+            bass.lastFreq = 65.41; // C2
             const bassMidi = 36;
 
             // Try multiple times to ensure we get a hit (it's probabilistic)
@@ -93,9 +93,9 @@ describe('Musical Sanity & Collision Detection', () => {
             };
 
             // Soloist is busy and high (C5 = 72)
-            sb.enabled = true;
-            sb.busySteps = 16;
-            sb.lastFreq = 523.25; // C5
+            soloist.enabled = true;
+            soloist.busySteps = 16;
+            soloist.lastFreq = 523.25; // C5
 
             // Run multiple times to overcome Math.random() < 0.7
             let totalNotes = 0;
@@ -120,8 +120,8 @@ describe('Musical Sanity & Collision Detection', () => {
             ];
             conductorState.formIteration = 0;
             conductorState.target = 0.5; // Reset target to avoid state pollution
-            ctx.autoIntensity = true;
-            gb.enabled = true;
+            playback.autoIntensity = true;
+            groove.enabled = true;
         });
 
         it('should statistically maintain lower intensity during the Warm Up cycle', () => {

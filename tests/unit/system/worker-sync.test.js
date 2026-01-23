@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { arranger, cb, bb, sb, gb, ctx } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 // We need to import syncWorker and initWorker AFTER we mock the global Worker
 let lastWorkerInstance = null;
@@ -27,10 +27,10 @@ describe('Worker Synchronization Integrity', () => {
 
     it('should include all critical state properties in the sync message', () => {
         // Setup state
-        ctx.bpm = 120;
-        ctx.bandIntensity = 0.7;
-        gb.genreFeel = 'Jazz';
-        gb.swing = 50;
+        playback.bpm = 120;
+        playback.bandIntensity = 0.7;
+        groove.genreFeel = 'Jazz';
+        groove.swing = 50;
         arranger.key = 'F';
         
         syncWorker();
@@ -45,29 +45,29 @@ describe('Worker Synchronization Integrity', () => {
         expect(data.arranger.key).toBe('F');
         
         // Verify Context
-        expect(data.ctx.bpm).toBe(120);
-        expect(data.ctx.bandIntensity).toBe(0.7);
+        expect(data.playback.bpm).toBe(120);
+        expect(data.playback.bandIntensity).toBe(0.7);
 
         // Verify Groove
-        expect(data.gb.genreFeel).toBe('Jazz');
-        expect(data.gb.swing).toBe(50);
+        expect(data.groove.genreFeel).toBe('Jazz');
+        expect(data.groove.swing).toBe(50);
         
         // Verify Instruments
-        expect(data.cb).toBeDefined();
-        expect(data.bb).toBeDefined();
-        expect(data.sb).toBeDefined();
+        expect(data.chords).toBeDefined();
+        expect(data.bass).toBeDefined();
+        expect(data.soloist).toBeDefined();
     });
 
     it('should correctly deep-copy drum instrument steps to avoid reference sharing', () => {
-        gb.instruments[0].steps[0] = 1;
+        groove.instruments[0].steps[0] = 1;
         
         syncWorker();
         
         const data = getTimerWorker().postMessage.mock.calls[0][0].data;
-        const sentSteps = data.gb.instruments[0].steps;
+        const sentSteps = data.groove.instruments[0].steps;
         
         // Modify local state
-        gb.instruments[0].steps[0] = 2;
+        groove.instruments[0].steps[0] = 2;
         
         // Sent steps should remain 1 (deep copy check)
         expect(sentSteps[0]).toBe(1);
@@ -77,7 +77,7 @@ describe('Worker Synchronization Integrity', () => {
         const onNotes = vi.fn();
         initWorker(null, onNotes);
         
-        const mockNotes = [{ midi: 60, step: 0, module: 'bb' }];
+        const mockNotes = [{ midi: 60, step: 0, module: 'bass' }];
         getTimerWorker().onmessage({ data: { type: 'notes', notes: mockNotes } });
         
         expect(onNotes).toHaveBeenCalledWith(mockNotes, undefined);
@@ -96,7 +96,7 @@ describe('Worker Synchronization Integrity', () => {
         const onNotes = vi.fn();
         initWorker(null, onNotes);
         
-        const mockNotes = [{ midi: 60, step: 0, module: 'bb' }];
+        const mockNotes = [{ midi: 60, step: 0, module: 'bass' }];
         
         // Simulate a 100ms delay in the worker response
         await new Promise(resolve => {

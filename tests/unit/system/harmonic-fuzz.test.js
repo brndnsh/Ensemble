@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { arranger, cb, gb, bb } from '../../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 import { validateProgression, getChordDetails } from '../../../public/chords.js';
 
 // Mock dependencies
@@ -15,10 +15,10 @@ describe('Harmonic Fuzz Testing', () => {
         vi.clearAllMocks();
         arranger.key = 'C';
         arranger.timeSignature = '4/4';
-        cb.octave = 60;
-        cb.density = 'standard';
-        gb.genreFeel = 'Rock';
-        bb.enabled = true;
+        chords.octave = 60;
+        chords.density = 'standard';
+        groove.genreFeel = 'Rock';
+        bass.enabled = true;
     });
 
     const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/ ';

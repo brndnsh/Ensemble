@@ -3,11 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
 vi.mock('../../public/state.js', () => ({
-    sb: { 
+    soloist: { 
         enabled: true, busySteps: 0, lastFreq: 440
     },
-    cb: { enabled: true, style: 'smart', density: 'standard', octave: 60 },
-    ctx: { bandIntensity: 0.5, complexity: 0.5, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
+    chords: { enabled: true, style: 'smart', density: 'standard', octave: 60 },
+    playback: { bandIntensity: 0.5, complexity: 0.5, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
     arranger: { 
         key: 'Bb', 
         isMinor: false,
@@ -16,9 +16,9 @@ vi.mock('../../public/state.js', () => ({
         stepMap: [],
         timeSignature: '4/4'
     },
-    gb: { genreFeel: 'Jazz' },
-    bb: { enabled: true, lastFreq: 65.41 }, // C2
-    hb: { enabled: false }
+    groove: { genreFeel: 'Jazz' },
+    bass: { enabled: true, lastFreq: 65.41 }, // C2
+    harmony: { enabled: false }
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {
@@ -51,19 +51,19 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 
 import { getAccompanimentNotes, compingState } from '../../public/accompaniment.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger, sb, gb, ctx, bb, cb } from '../../public/state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Jazz Comping Integrity', () => {
     
     beforeEach(() => {
         arranger.key = 'Bb';
         arranger.isMinor = false;
-        gb.genreFeel = 'Jazz';
-        cb.style = 'smart';
-        ctx.bandIntensity = 0.5;
-        sb.busySteps = 0;
-        bb.enabled = true;
-        bb.lastFreq = 65.41; // C2 (Midi 36)
+        groove.genreFeel = 'Jazz';
+        chords.style = 'smart';
+        playback.bandIntensity = 0.5;
+        soloist.busySteps = 0;
+        bass.enabled = true;
+        bass.lastFreq = 65.41; // C2 (Midi 36)
         
         compingState.lockedUntil = 0;
         compingState.lastChordIndex = -1;
@@ -81,7 +81,7 @@ describe('Jazz Comping Integrity', () => {
             beats: 4
         };
 
-        ctx.bandIntensity = 0.8;
+        playback.bandIntensity = 0.8;
         
         // We need to force updateRhythmicIntent to pick a hit
         compingState.currentCell[0] = 1; 
@@ -110,8 +110,8 @@ describe('Jazz Comping Integrity', () => {
         };
 
         // Soloist is shredding
-        sb.busySteps = 16;
-        cb.style = 'smart';
+        soloist.busySteps = 16;
+        chords.style = 'smart';
 
         // We'll try many times to see if suppression hits
         let totalHits = 0;
@@ -140,7 +140,7 @@ describe('Jazz Comping Integrity', () => {
 
         // 1. Soloist was busy
         compingState.soloistActivity = 1;
-        sb.busySteps = 0; // But now they stopped
+        soloist.busySteps = 0; // But now they stopped
         
         compingState.lockedUntil = 0;
         getAccompanimentNotes(chord, 16, 0, 0, { isBeatStart: true });
@@ -150,8 +150,8 @@ describe('Jazz Comping Integrity', () => {
     });
 
     it('should avoid clashing with the bass range (Register Slotting)', () => {
-        bb.enabled = true;
-        bb.lastFreq = 110; // A2 (Midi 45)
+        bass.enabled = true;
+        bass.lastFreq = 110; // A2 (Midi 45)
         
         // A chord that has a note right on A2 or below
         const chord = {
@@ -223,7 +223,7 @@ describe('Jazz Comping Integrity', () => {
         const chord = { rootMidi: 60, quality: 'maj7', freqs: [261.63], intervals: [0], beats: 4, sectionId: 'A' };
         
         // 1. Jazz should vary
-        gb.genreFeel = 'Jazz';
+        groove.genreFeel = 'Jazz';
         let patterns = new Set();
         for (let i = 0; i < 10; i++) {
             compingState.lockedUntil = 0;
@@ -233,7 +233,7 @@ describe('Jazz Comping Integrity', () => {
         expect(patterns.size).toBeGreaterThan(1);
 
         // 2. Neo-Soul should stick
-        gb.genreFeel = 'Neo-Soul';
+        groove.genreFeel = 'Neo-Soul';
         compingState.lockedUntil = 0;
         getAccompanimentNotes(chord, 200, 0, 0, { isBeatStart: true });
         const initialPattern = compingState.currentCell.join('');

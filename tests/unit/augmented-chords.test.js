@@ -3,11 +3,11 @@ import { getChordDetails, getIntervals } from '../../public/chords.js';
 
 // Mock state
 vi.mock('../../public/state.js', () => ({
-    ctx: { bandIntensity: 0.5 },
-    cb: { density: 'standard', octave: 60, pianoRoots: true },
+    playback: { bandIntensity: 0.5 },
+    chords: { density: 'standard', octave: 60, pianoRoots: true },
     arranger: { timeSignature: '4/4', key: 'C', isMinor: false, notation: 'roman' },
-    gb: { genreFeel: 'Rock' },
-    bb: { enabled: true }
+    groove: { genreFeel: 'Rock' },
+    bass: { enabled: true }
 }));
 
 describe('Augmented Chords Support', () => {
