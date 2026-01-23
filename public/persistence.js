@@ -1,4 +1,4 @@
-import { arranger, ctx, cb, bb, sb, hb, gb, vizState, storage, midi } from './state.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi } from './state.js';
 import { ui, createPresetChip, renderSections, renderMeasurePagination, renderGrid } from './ui.js';
 import { decompressSections, generateId } from './utils.js';
 
@@ -13,32 +13,32 @@ export function saveCurrentState() {
         isMinor: arranger.isMinor,
         notation: arranger.notation,
         lastChordPreset: arranger.lastChordPreset,
-        theme: ctx.theme,
-        bpm: ctx.bpm,
-        metronome: ctx.metronome,
-        applyPresetSettings: ctx.applyPresetSettings,
-        sessionTimer: ctx.sessionTimer,
+        theme: playback.theme,
+        bpm: playback.bpm,
+        metronome: playback.metronome,
+        applyPresetSettings: playback.applyPresetSettings,
+        sessionTimer: playback.sessionTimer,
         vizEnabled: vizState.enabled,
-        autoIntensity: ctx.autoIntensity,
-        cb: { enabled: cb.enabled, style: cb.style, instrument: cb.instrument, octave: cb.octave, density: cb.density, volume: cb.volume, reverb: cb.reverb, pianoRoots: cb.pianoRoots },
-        bb: { enabled: bb.enabled, style: bb.style, octave: bb.octave, volume: bb.volume, reverb: bb.reverb },
-        sb: { enabled: sb.enabled, style: sb.style, octave: sb.octave, volume: sb.volume, reverb: sb.reverb, doubleStops: sb.doubleStops },
-        hb: { enabled: hb.enabled, style: hb.style, octave: hb.octave, volume: hb.volume, reverb: hb.reverb, complexity: hb.complexity },
-        gb: {
-            enabled: gb.enabled,
-            volume: gb.volume,
-            reverb: gb.reverb,
-            swing: gb.swing,
-                        swingSub: gb.swingSub,
-                        followPlayback: gb.followPlayback,
-                        humanize: gb.humanize,            lastDrumPreset: gb.lastDrumPreset,
-            genreFeel: gb.genreFeel,
-            larsMode: gb.larsMode,
-            larsIntensity: gb.larsIntensity,
-            lastSmartGenre: gb.lastSmartGenre,
-            activeTab: gb.activeTab,
-            mobileTab: gb.mobileTab,
-            pattern: gb.instruments.map(inst => ({ name: inst.name, steps: [...inst.steps] }))
+        autoIntensity: playback.autoIntensity,
+        chords: { enabled: chords.enabled, style: chords.style, instrument: chords.instrument, octave: chords.octave, density: chords.density, volume: chords.volume, reverb: chords.reverb, pianoRoots: chords.pianoRoots },
+        bass: { enabled: bass.enabled, style: bass.style, octave: bass.octave, volume: bass.volume, reverb: bass.reverb },
+        soloist: { enabled: soloist.enabled, style: soloist.style, octave: soloist.octave, volume: soloist.volume, reverb: soloist.reverb, doubleStops: soloist.doubleStops },
+        harmony: { enabled: harmony.enabled, style: harmony.style, octave: harmony.octave, volume: harmony.volume, reverb: harmony.reverb, complexity: harmony.complexity },
+        groove: {
+            enabled: groove.enabled,
+            volume: groove.volume,
+            reverb: groove.reverb,
+            swing: groove.swing,
+                        swingSub: groove.swingSub,
+                        followPlayback: groove.followPlayback,
+                        humanize: groove.humanize,            lastDrumPreset: groove.lastDrumPreset,
+            genreFeel: groove.genreFeel,
+            larsMode: groove.larsMode,
+            larsIntensity: groove.larsIntensity,
+            lastSmartGenre: groove.lastSmartGenre,
+            activeTab: groove.activeTab,
+            mobileTab: groove.mobileTab,
+            pattern: groove.instruments.map(inst => ({ name: inst.name, steps: [...inst.steps] }))
         },
         midi: {
             enabled: midi.enabled,
@@ -78,7 +78,7 @@ export function renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDup
                 renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, togglePlay);
             }
         }, () => {
-            if (ctx.isPlaying && togglePlay) togglePlay();
+            if (playback.isPlaying && togglePlay) togglePlay();
             arranger.sections = p.sections ? decompressSections(p.sections) : [{ id: generateId(), label: 'Main', value: p.prog }];
             arranger.lastChordPreset = p.name;
             renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
@@ -106,27 +106,27 @@ export function renderUserDrumPresets(switchMeasure) {
             }
         }, () => {
             if (p.measures) {
-                gb.measures = p.measures;
-                gb.currentMeasure = 0;
+                groove.measures = p.measures;
+                groove.currentMeasure = 0;
                 ui.drumBarsSelect.value = p.measures;
                 renderMeasurePagination(switchMeasure);
                 renderGrid();
             }
             p.pattern.forEach(savedInst => {
-                const inst = gb.instruments.find(i => i.name === savedInst.name);
+                const inst = groove.instruments.find(i => i.name === savedInst.name);
                 if (inst) {
                     inst.steps.fill(0);
                     savedInst.steps.forEach((v, i) => { if (i < 128) inst.steps[i] = v; });
                 }
             });
-            if (p.swing !== undefined) { gb.swing = p.swing; ui.swingSlider.value = p.swing; }
-            if (p.swingSub) { gb.swingSub = p.swingSub; ui.swingBase.value = p.swingSub; }
-            gb.lastDrumPreset = p.name;
+            if (p.swing !== undefined) { groove.swing = p.swing; ui.swingSlider.value = p.swing; }
+            if (p.swingSub) { groove.swingSub = p.swingSub; ui.swingBase.value = p.swingSub; }
+            groove.lastDrumPreset = p.name;
             document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
             saveCurrentState();
         }, 'drum-preset-chip');
-        if (p.name === gb.lastDrumPreset) chip.classList.add('active');
+        if (p.name === groove.lastDrumPreset) chip.classList.add('active');
         ui.userDrumPresetsContainer.appendChild(chip);
     });
 }

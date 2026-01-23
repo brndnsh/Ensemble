@@ -1,4 +1,4 @@
-import { ctx, gb, cb, bb, sb, hb, midi } from './state.js';
+import { playback, groove, chords, bass, soloist, harmony, midi } from './state.js';
 import { ui } from './ui.js';
 import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { createReverbImpulse, createSoftClipCurve } from './utils.js';
@@ -21,186 +21,186 @@ export { playDrumSound, killDrumNote };
  * Must be called in response to a user gesture.
  */
 export function initAudio() {
-    if (!ctx.audio || ctx.audio.state === 'closed') {
+    if (!playback.audio || playback.audio.state === 'closed') {
         if (navigator.audioSession) {
             navigator.audioSession.type = 'playback';
         }
 
-        ctx.audio = new (window.AudioContext || window.webkitAudioContext)();
+        playback.audio = new (window.AudioContext || window.webkitAudioContext)();
 
-        ctx.audio.onstatechange = () => {
-            // console.log(`[DSP] AudioContext state changed to: ${ctx.audio.state}`);
-            if (ctx.audio.state === 'suspended' && ctx.isPlaying) {
+        playback.audio.onstatechange = () => {
+            // console.log(`[DSP] AudioContext state changed to: ${playback.audio.state}`);
+            if (playback.audio.state === 'suspended' && playback.isPlaying) {
                 // console.log("[DSP] Unexpected suspension. Attempting auto-resume...");
-                ctx.audio.resume().catch(e => console.error("[DSP] Auto-resume failed:", e));
+                playback.audio.resume().catch(e => console.error("[DSP] Auto-resume failed:", e));
             }
         };
 
-        ctx.masterGain = ctx.audio.createGain();
+        playback.masterGain = playback.audio.createGain();
         const initMasterVol = (parseFloat(ui.masterVol.value) || 0.4) * MIXER_GAIN_MULTIPLIERS.master;
-        ctx.masterGain.gain.setValueAtTime(0.0001, ctx.audio.currentTime);
-        ctx.masterGain.gain.exponentialRampToValueAtTime(initMasterVol, ctx.audio.currentTime + 0.04);
+        playback.masterGain.gain.setValueAtTime(0.0001, playback.audio.currentTime);
+        playback.masterGain.gain.exponentialRampToValueAtTime(initMasterVol, playback.audio.currentTime + 0.04);
         
-        ctx.saturator = ctx.audio.createWaveShaper();
-        ctx.saturator.curve = createSoftClipCurve();
-        ctx.saturator.oversample = '4x';
+        playback.saturator = playback.audio.createWaveShaper();
+        playback.saturator.curve = createSoftClipCurve();
+        playback.saturator.oversample = '4x';
 
-        ctx.masterLimiter = ctx.audio.createDynamicsCompressor();
-        ctx.masterLimiter.threshold.setValueAtTime(-1.5, ctx.audio.currentTime);
-        ctx.masterLimiter.knee.setValueAtTime(30, ctx.audio.currentTime);
-        ctx.masterLimiter.ratio.setValueAtTime(20, ctx.audio.currentTime);
-        ctx.masterLimiter.attack.setValueAtTime(0.002, ctx.audio.currentTime); 
-        ctx.masterLimiter.release.setValueAtTime(0.5, ctx.audio.currentTime); 
+        playback.masterLimiter = playback.audio.createDynamicsCompressor();
+        playback.masterLimiter.threshold.setValueAtTime(-1.5, playback.audio.currentTime);
+        playback.masterLimiter.knee.setValueAtTime(30, playback.audio.currentTime);
+        playback.masterLimiter.ratio.setValueAtTime(20, playback.audio.currentTime);
+        playback.masterLimiter.attack.setValueAtTime(0.002, playback.audio.currentTime); 
+        playback.masterLimiter.release.setValueAtTime(0.5, playback.audio.currentTime); 
         
-        ctx.masterGain.connect(ctx.saturator);
-        ctx.saturator.connect(ctx.masterLimiter);
-        ctx.masterLimiter.connect(ctx.audio.destination);
+        playback.masterGain.connect(playback.saturator);
+        playback.saturator.connect(playback.masterLimiter);
+        playback.masterLimiter.connect(playback.audio.destination);
 
-        ctx.reverbNode = ctx.audio.createConvolver();
-        ctx.reverbNode.buffer = createReverbImpulse(ctx.audio, 1.5, 3.0);
-        ctx.reverbNode.connect(ctx.masterGain);
+        playback.reverbNode = playback.audio.createConvolver();
+        playback.reverbNode.buffer = createReverbImpulse(playback.audio, 1.5, 3.0);
+        playback.reverbNode.connect(playback.masterGain);
 
         const modules = [
-            { name: 'chords', state: cb, mult: MIXER_GAIN_MULTIPLIERS.chords },
-            { name: 'bass', state: bb, mult: MIXER_GAIN_MULTIPLIERS.bass },
-            { name: 'soloist', state: sb, mult: MIXER_GAIN_MULTIPLIERS.soloist },
-            { name: 'harmonies', state: hb, mult: MIXER_GAIN_MULTIPLIERS.harmonies },
-            { name: 'drums', state: gb, mult: MIXER_GAIN_MULTIPLIERS.drums }
+            { name: 'chords', state: chords, mult: MIXER_GAIN_MULTIPLIERS.chords },
+            { name: 'bass', state: bass, mult: MIXER_GAIN_MULTIPLIERS.bass },
+            { name: 'soloist', state: soloist, mult: MIXER_GAIN_MULTIPLIERS.soloist },
+            { name: 'harmonies', state: harmony, mult: MIXER_GAIN_MULTIPLIERS.harmonies },
+            { name: 'drums', state: groove, mult: MIXER_GAIN_MULTIPLIERS.drums }
         ];
 
         modules.forEach(m => {
-            const gainNode = ctx.audio.createGain();
+            const gainNode = playback.audio.createGain();
             const isLocalMuted = midi.enabled && midi.muteLocal;
             const targetGain = (m.state.enabled && !isLocalMuted) ? Math.max(0.0001, m.state.volume * m.mult) : 0.0001;
-            gainNode.gain.setValueAtTime(0.0001, ctx.audio.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(targetGain, ctx.audio.currentTime + 0.04);
+            gainNode.gain.setValueAtTime(0.0001, playback.audio.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(targetGain, playback.audio.currentTime + 0.04);
             
             if (m.name === 'chords') {
-                const hp = ctx.audio.createBiquadFilter();
+                const hp = playback.audio.createBiquadFilter();
                 hp.type = 'highpass';
-                hp.frequency.setValueAtTime(180, ctx.audio.currentTime); 
+                hp.frequency.setValueAtTime(180, playback.audio.currentTime); 
                 
-                const lowShelf = ctx.audio.createBiquadFilter();
+                const lowShelf = playback.audio.createBiquadFilter();
                 lowShelf.type = 'lowshelf';
-                lowShelf.frequency.setValueAtTime(350, ctx.audio.currentTime);
-                lowShelf.gain.setValueAtTime(-6, ctx.audio.currentTime); // Reduce mud
+                lowShelf.frequency.setValueAtTime(350, playback.audio.currentTime);
+                lowShelf.gain.setValueAtTime(-6, playback.audio.currentTime); // Reduce mud
 
-                const notch = ctx.audio.createBiquadFilter();
+                const notch = playback.audio.createBiquadFilter();
                 notch.type = 'peaking';
-                notch.frequency.setValueAtTime(2500, ctx.audio.currentTime);
-                notch.Q.setValueAtTime(0.7, ctx.audio.currentTime);
-                notch.gain.setValueAtTime(-4, ctx.audio.currentTime); 
+                notch.frequency.setValueAtTime(2500, playback.audio.currentTime);
+                notch.Q.setValueAtTime(0.7, playback.audio.currentTime);
+                notch.gain.setValueAtTime(-4, playback.audio.currentTime); 
                 
                 gainNode.connect(hp); 
                 hp.connect(lowShelf); 
                 lowShelf.connect(notch); 
-                notch.connect(ctx.masterGain);
-                ctx.chordsEQ = hp;
+                notch.connect(playback.masterGain);
+                playback.chordsEQ = hp;
             } else if (m.name === 'bass') {
-                const weight = ctx.audio.createBiquadFilter();
+                const weight = playback.audio.createBiquadFilter();
                 weight.type = 'lowshelf';
-                weight.frequency.setValueAtTime(100, ctx.audio.currentTime);
-                weight.gain.setValueAtTime(2, ctx.audio.currentTime);
+                weight.frequency.setValueAtTime(100, playback.audio.currentTime);
+                weight.gain.setValueAtTime(2, playback.audio.currentTime);
                 
-                const scoop = ctx.audio.createBiquadFilter();
+                const scoop = playback.audio.createBiquadFilter();
                 scoop.type = 'peaking';
-                scoop.frequency.setValueAtTime(450, ctx.audio.currentTime); // Slightly lower scoop
-                scoop.Q.setValueAtTime(1.2, ctx.audio.currentTime);
-                scoop.gain.setValueAtTime(-12, ctx.audio.currentTime); // Clear room for low-mids
+                scoop.frequency.setValueAtTime(450, playback.audio.currentTime); // Slightly lower scoop
+                scoop.Q.setValueAtTime(1.2, playback.audio.currentTime);
+                scoop.gain.setValueAtTime(-12, playback.audio.currentTime); // Clear room for low-mids
 
-                const definition = ctx.audio.createBiquadFilter();
+                const definition = playback.audio.createBiquadFilter();
                 definition.type = 'peaking';
-                definition.frequency.setValueAtTime(2000, ctx.audio.currentTime);
-                definition.Q.setValueAtTime(1.2, ctx.audio.currentTime);
-                definition.gain.setValueAtTime(3, ctx.audio.currentTime);
+                definition.frequency.setValueAtTime(2000, playback.audio.currentTime);
+                definition.Q.setValueAtTime(1.2, playback.audio.currentTime);
+                definition.gain.setValueAtTime(3, playback.audio.currentTime);
 
-                const comp = ctx.audio.createDynamicsCompressor();
-                comp.threshold.setValueAtTime(-16, ctx.audio.currentTime);
-                comp.knee.setValueAtTime(12, ctx.audio.currentTime);
-                comp.ratio.setValueAtTime(4, ctx.audio.currentTime);
-                comp.attack.setValueAtTime(0.005, ctx.audio.currentTime);
-                comp.release.setValueAtTime(0.125, ctx.audio.currentTime);
+                const comp = playback.audio.createDynamicsCompressor();
+                comp.threshold.setValueAtTime(-16, playback.audio.currentTime);
+                comp.knee.setValueAtTime(12, playback.audio.currentTime);
+                comp.ratio.setValueAtTime(4, playback.audio.currentTime);
+                comp.attack.setValueAtTime(0.005, playback.audio.currentTime);
+                comp.release.setValueAtTime(0.125, playback.audio.currentTime);
 
                 gainNode.connect(weight); 
                 weight.connect(scoop); 
                 scoop.connect(definition); 
                 definition.connect(comp);
-                comp.connect(ctx.masterGain);
-                ctx.bassEQ = weight; 
+                comp.connect(playback.masterGain);
+                playback.bassEQ = weight; 
             } else if (m.name === 'soloist') {
-                const presence = ctx.audio.createBiquadFilter();
+                const presence = playback.audio.createBiquadFilter();
                 presence.type = 'peaking';
-                presence.frequency.setValueAtTime(3500, ctx.audio.currentTime);
-                presence.gain.setValueAtTime(4, ctx.audio.currentTime); // Cut through the mix
-                presence.Q.setValueAtTime(1.0, ctx.audio.currentTime);
+                presence.frequency.setValueAtTime(3500, playback.audio.currentTime);
+                presence.gain.setValueAtTime(4, playback.audio.currentTime); // Cut through the mix
+                presence.Q.setValueAtTime(1.0, playback.audio.currentTime);
 
-                const air = ctx.audio.createBiquadFilter();
+                const air = playback.audio.createBiquadFilter();
                 air.type = 'highshelf';
-                air.frequency.setValueAtTime(8000, ctx.audio.currentTime);
-                air.gain.setValueAtTime(3, ctx.audio.currentTime);
+                air.frequency.setValueAtTime(8000, playback.audio.currentTime);
+                air.gain.setValueAtTime(3, playback.audio.currentTime);
 
                 gainNode.connect(presence);
                 presence.connect(air);
-                air.connect(ctx.masterGain);
-                ctx.soloistEQ = presence;
+                air.connect(playback.masterGain);
+                playback.soloistEQ = presence;
             } else if (m.name === 'harmonies') {
-                const hp = ctx.audio.createBiquadFilter();
+                const hp = playback.audio.createBiquadFilter();
                 hp.type = 'highpass';
-                hp.frequency.setValueAtTime(300, ctx.audio.currentTime); // Keep it above bass/piano fundamentals
+                hp.frequency.setValueAtTime(300, playback.audio.currentTime); // Keep it above bass/piano fundamentals
 
-                const warmth = ctx.audio.createBiquadFilter();
+                const warmth = playback.audio.createBiquadFilter();
                 warmth.type = 'peaking';
-                warmth.frequency.setValueAtTime(1200, ctx.audio.currentTime);
-                warmth.gain.setValueAtTime(2, ctx.audio.currentTime);
+                warmth.frequency.setValueAtTime(1200, playback.audio.currentTime);
+                warmth.gain.setValueAtTime(2, playback.audio.currentTime);
 
                 gainNode.connect(hp);
                 hp.connect(warmth);
-                warmth.connect(ctx.masterGain);
-                ctx.harmoniesEQ = hp;
+                warmth.connect(playback.masterGain);
+                playback.harmoniesEQ = hp;
             } else if (m.name === 'drums') {
                 // Parallel-style Drum Compression (Internal Routing)
-                const drumComp = ctx.audio.createDynamicsCompressor();
-                drumComp.threshold.setValueAtTime(-20, ctx.audio.currentTime);
-                drumComp.ratio.setValueAtTime(8, ctx.audio.currentTime);
-                drumComp.attack.setValueAtTime(0.001, ctx.audio.currentTime);
-                drumComp.release.setValueAtTime(0.1, ctx.audio.currentTime);
+                const drumComp = playback.audio.createDynamicsCompressor();
+                drumComp.threshold.setValueAtTime(-20, playback.audio.currentTime);
+                drumComp.ratio.setValueAtTime(8, playback.audio.currentTime);
+                drumComp.attack.setValueAtTime(0.001, playback.audio.currentTime);
+                drumComp.release.setValueAtTime(0.1, playback.audio.currentTime);
 
                 gainNode.connect(drumComp);
-                drumComp.connect(ctx.masterGain);
+                drumComp.connect(playback.masterGain);
                 // Also connect dry for punch
-                gainNode.connect(ctx.masterGain);
+                gainNode.connect(playback.masterGain);
             } else {
-                gainNode.connect(ctx.masterGain);
+                gainNode.connect(playback.masterGain);
             }
 
-            ctx[`${m.name}Gain`] = gainNode;
+            playback[`${m.name}Gain`] = gainNode;
 
-            const reverbGain = ctx.audio.createGain();
+            const reverbGain = playback.audio.createGain();
             const targetReverb = Math.max(0.0001, m.state.reverb);
-            reverbGain.gain.setValueAtTime(0.0001, ctx.audio.currentTime);
-            reverbGain.gain.exponentialRampToValueAtTime(targetReverb, ctx.audio.currentTime + 0.04);
+            reverbGain.gain.setValueAtTime(0.0001, playback.audio.currentTime);
+            reverbGain.gain.exponentialRampToValueAtTime(targetReverb, playback.audio.currentTime + 0.04);
             gainNode.connect(reverbGain);
-            reverbGain.connect(ctx.reverbNode);
-            ctx[`${m.name}Reverb`] = reverbGain;
+            reverbGain.connect(playback.reverbNode);
+            playback[`${m.name}Reverb`] = reverbGain;
         });
 
-        const bufSize = ctx.audio.sampleRate * 2;
-        const buffer = ctx.audio.createBuffer(1, bufSize, ctx.audio.sampleRate);
+        const bufSize = playback.audio.sampleRate * 2;
+        const buffer = playback.audio.createBuffer(1, bufSize, playback.audio.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
-        gb.audioBuffers.noise = buffer;
+        groove.audioBuffers.noise = buffer;
 
-        // console.log(`[DSP] Audio Context Initialized: SampleRate=${ctx.audio.sampleRate}, Latency=${(ctx.audio.baseLatency * 1000).toFixed(1)}ms`);
+        // console.log(`[DSP] Audio Context Initialized: SampleRate=${playback.audio.sampleRate}, Latency=${(playback.audio.baseLatency * 1000).toFixed(1)}ms`);
     }
-    if (ctx.audio.state === 'suspended') ctx.audio.resume();
+    if (playback.audio.state === 'suspended') playback.audio.resume();
 }
 
 /**
  * Diagnostic: Monitors the master limiter's gain reduction.
  */
 export function monitorMasterLimiter() {
-    if (ctx.masterLimiter && ctx.masterLimiter.reduction.value < -0.1) {
-        // console.log(`[DSP] Master Limiting: ${ctx.masterLimiter.reduction.value.toFixed(2)}dB`);
+    if (playback.masterLimiter && playback.masterLimiter.reduction.value < -0.1) {
+        // console.log(`[DSP] Master Limiting: ${playback.masterLimiter.reduction.value.toFixed(2)}dB`);
     }
 }
 
@@ -208,7 +208,7 @@ export function monitorMasterLimiter() {
  * Diagnostic: Bypasses the visual updates to isolate UI-induced audio glitches.
  */
 window.bypassVisuals = (shouldBypass) => {
-    ctx.isDrawing = !shouldBypass;
+    playback.isDrawing = !shouldBypass;
     // console.log(`[DSP] Visual Updates ${shouldBypass ? 'DISABLED' : 'ENABLED'}`);
 };
 
@@ -216,49 +216,49 @@ window.bypassVisuals = (shouldBypass) => {
  * Diagnostic: Bypasses the mastering chain (Saturator + Limiter).
  */
 window.bypassMaster = (shouldBypass) => {
-    if (!ctx.audio || !ctx.masterGain) return;
-    ctx.masterGain.disconnect();
+    if (!playback.audio || !playback.masterGain) return;
+    playback.masterGain.disconnect();
     if (shouldBypass) {
-        ctx.masterGain.connect(ctx.audio.destination);
+        playback.masterGain.connect(playback.audio.destination);
         // console.log("[DSP] Master Chain BYPASSED");
     } else {
-        ctx.masterGain.connect(ctx.saturator);
+        playback.masterGain.connect(playback.saturator);
         // console.log("[DSP] Master Chain ACTIVE");
     }
 };
 
 export function killChordBus() {
-    if (ctx.chordsGain) {
-        ctx.chordsGain.gain.cancelScheduledValues(ctx.audio.currentTime);
-        ctx.chordsGain.gain.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
+    if (playback.chordsGain) {
+        playback.chordsGain.gain.cancelScheduledValues(playback.audio.currentTime);
+        playback.chordsGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
     }
 }
 
 export function killBassBus() {
-    if (ctx.bassGain) {
-        ctx.bassGain.gain.cancelScheduledValues(ctx.audio.currentTime);
-        ctx.bassGain.gain.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
+    if (playback.bassGain) {
+        playback.bassGain.gain.cancelScheduledValues(playback.audio.currentTime);
+        playback.bassGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
     }
 }
 
 export function killSoloistBus() {
-    if (ctx.soloistGain) {
-        ctx.soloistGain.gain.cancelScheduledValues(ctx.audio.currentTime);
-        ctx.soloistGain.gain.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
+    if (playback.soloistGain) {
+        playback.soloistGain.gain.cancelScheduledValues(playback.audio.currentTime);
+        playback.soloistGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
     }
 }
 
 export function killHarmonyBus() {
-    if (ctx.harmoniesGain) {
-        ctx.harmoniesGain.gain.cancelScheduledValues(ctx.audio.currentTime);
-        ctx.harmoniesGain.gain.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
+    if (playback.harmoniesGain) {
+        playback.harmoniesGain.gain.cancelScheduledValues(playback.audio.currentTime);
+        playback.harmoniesGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
     }
 }
 
 export function killDrumBus() {
-    if (ctx.drumsGain) {
-        ctx.drumsGain.gain.cancelScheduledValues(ctx.audio.currentTime);
-        ctx.drumsGain.gain.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
+    if (playback.drumsGain) {
+        playback.drumsGain.gain.cancelScheduledValues(playback.audio.currentTime);
+        playback.drumsGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
     }
 }
 
@@ -285,14 +285,14 @@ export async function killAllNotes() {
  * Restores instrument buses to their state-defined volumes.
  */
 export function restoreGains() {
-    if (!ctx.audio) return;
-    const t = ctx.audio.currentTime;
+    if (!playback.audio) return;
+    const t = playback.audio.currentTime;
     const modules = [
-        { node: ctx.chordsGain, state: cb, mult: MIXER_GAIN_MULTIPLIERS.chords },
-        { node: ctx.bassGain, state: bb, mult: MIXER_GAIN_MULTIPLIERS.bass },
-        { node: ctx.soloistGain, state: sb, mult: MIXER_GAIN_MULTIPLIERS.soloist },
-        { node: ctx.harmoniesGain, state: hb, mult: MIXER_GAIN_MULTIPLIERS.harmonies },
-        { node: ctx.drumsGain, state: gb, mult: MIXER_GAIN_MULTIPLIERS.drums }
+        { node: playback.chordsGain, state: chords, mult: MIXER_GAIN_MULTIPLIERS.chords },
+        { node: playback.bassGain, state: bass, mult: MIXER_GAIN_MULTIPLIERS.bass },
+        { node: playback.soloistGain, state: soloist, mult: MIXER_GAIN_MULTIPLIERS.soloist },
+        { node: playback.harmoniesGain, state: harmony, mult: MIXER_GAIN_MULTIPLIERS.harmonies },
+        { node: playback.drumsGain, state: groove, mult: MIXER_GAIN_MULTIPLIERS.drums }
     ];
     modules.forEach(m => {
         if (m.node) {
@@ -308,9 +308,9 @@ let lastAudioTime = 0;
 let lastPerfTime = 0;
 
 export function getVisualTime() {
-    if (!ctx.audio) return 0;
+    if (!playback.audio) return 0;
     
-    const audioTime = ctx.audio.currentTime;
+    const audioTime = playback.audio.currentTime;
     const perfTime = performance.now();
     
     if (audioTime !== lastAudioTime) {
@@ -321,7 +321,7 @@ export function getVisualTime() {
     const dt = (perfTime - lastPerfTime) / 1000;
     const smoothAudioTime = audioTime + Math.min(dt, 0.1);
 
-    const outputLatency = ctx.audio.outputLatency || 0;
+    const outputLatency = playback.audio.outputLatency || 0;
     const isChromium = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
     const offset = outputLatency > 0 ? outputLatency : (isChromium ? 0.015 : 0.045);
     

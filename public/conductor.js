@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { ctx, sb, gb, arranger, dispatch } from './state.js';
+import { playback, soloist, groove, arranger, dispatch } from './state.js';
 import { ui, triggerFlash } from './ui.js';
 import { getSectionEnergy } from './form-analysis.js';
 import { debounceSaveState } from './persistence.js';
@@ -15,8 +15,8 @@ export const conductorState = {
 };
 
 export function applyConductor() {
-    const intensity = ctx.bandIntensity; // 0.0 - 1.0
-    const complexity = ctx.complexity;   // 0.0 - 1.0
+    const intensity = playback.bandIntensity; // 0.0 - 1.0
+    const complexity = playback.complexity;   // 0.0 - 1.0
 
     // --- 1. Master Dynamics ---
     let targetDensity = 'standard';
@@ -34,7 +34,7 @@ export function applyConductor() {
 
     // --- 3. Musical Conversation (Soloist Density) ---
     // If soloist is active, the accompanist should "listen" and back off.
-    const isSoloistBusy = sb.enabled && sb.busySteps > 0;
+    const isSoloistBusy = soloist.enabled && soloist.busySteps > 0;
     const targetIntentDensity = isSoloistBusy ? (0.3 * (1 - complexity)) : (0.5 + intensity * 0.4);
 
     // --- 4. Harmony Evolution ---
@@ -42,7 +42,7 @@ export function applyConductor() {
     let targetHbComplexity = complexity; 
     
     // If session timer is active and we are in the last 30 seconds, push for a "Final Build"
-    if (ctx.sessionTimer > 0 && ctx.isEndingPending) {
+    if (playback.sessionTimer > 0 && playback.isEndingPending) {
         targetHbComplexity = Math.max(targetHbComplexity, 0.85);
     }
 
@@ -59,20 +59,20 @@ export function applyConductor() {
 
     // --- 5. Micro-Timing (Pocket) ---
     let targetBassPocket = 0;
-    const genre = gb.genreFeel;
+    const genre = groove.genreFeel;
     if (genre === 'Neo-Soul') targetBassPocket = 0.025; // 25ms "Dilla" lag
     else if (genre === 'Funk') targetBassPocket = -0.005; // 5ms "Ahead of the beat" push for Funk energy
     
-    dispatch(ACTIONS.SET_PARAM, { module: 'bb', param: 'pocketOffset', value: targetBassPocket });
+    dispatch(ACTIONS.SET_PARAM, { module: 'bass', param: 'pocketOffset', value: targetBassPocket });
 
     // --- 5. Intensity-Aware Mixing ---
-    if (ctx.masterLimiter && ctx.audio) {
+    if (playback.masterLimiter && playback.audio) {
         // Dynamic Compression: Tighter at high intensity to glue the mix
         const targetThreshold = -0.5 - (intensity * 1.5); // -0.5 to -2.0 dB
         const targetRatio = 12 + (intensity * 8); // 12:1 to 20:1
         
-        ctx.masterLimiter.threshold.setTargetAtTime(targetThreshold, ctx.audio.currentTime, 0.5);
-        ctx.masterLimiter.ratio.setTargetAtTime(targetRatio, ctx.audio.currentTime, 0.5);
+        playback.masterLimiter.threshold.setTargetAtTime(targetThreshold, playback.audio.currentTime, 0.5);
+        playback.masterLimiter.ratio.setTargetAtTime(targetRatio, playback.audio.currentTime, 0.5);
     }
 
     debounceSaveState();
@@ -82,15 +82,15 @@ export function applyConductor() {
  * Updates auto-intensity and monitors the band's "conversation".
  */
 export function updateAutoConductor() {
-    if (!ctx.autoIntensity || !ctx.isPlaying) return;
+    if (!playback.autoIntensity || !playback.isPlaying) return;
 
-    if (Math.abs(ctx.bandIntensity - conductorState.target) > 0.001) {
+    if (Math.abs(playback.bandIntensity - conductorState.target) > 0.001) {
         // Asymmetric ramping: humans tend to build energy gradually but can stop/drop quickly
-        const multiplier = (ctx.bandIntensity > conductorState.target) ? 2.5 : 1.0;
-        let newIntensity = ctx.bandIntensity + ((ctx.bandIntensity < conductorState.target) ? Math.abs(conductorState.stepSize) : -Math.abs(conductorState.stepSize)) * multiplier;
+        const multiplier = (playback.bandIntensity > conductorState.target) ? 2.5 : 1.0;
+        let newIntensity = playback.bandIntensity + ((playback.bandIntensity < conductorState.target) ? Math.abs(conductorState.stepSize) : -Math.abs(conductorState.stepSize)) * multiplier;
         newIntensity = Math.max(0.01, Math.min(1.0, newIntensity));
         
-    if (newIntensity !== ctx.bandIntensity) {
+    if (newIntensity !== playback.bandIntensity) {
         dispatch(ACTIONS.SET_BAND_INTENSITY, newIntensity);
     }
 
@@ -110,7 +110,7 @@ export function updateAutoConductor() {
  * Calculates and applies tempo drift for "Lars Mode".
  */
 export function updateLarsTempo(currentStep) {
-    if (!gb.larsMode || !ctx.isPlaying) {
+    if (!groove.larsMode || !playback.isPlaying) {
         if (conductorState.larsBpmOffset !== 0) {
             conductorState.larsBpmOffset = 0;
             updateBpmUI();
@@ -133,20 +133,20 @@ export function updateLarsTempo(currentStep) {
     // Blend with global band intensity (which includes macro-arc and randomness)
     // If the label is generic (e.g., "Section 1"), rely more on bandIntensity.
     const isGeneric = entry.chord.sectionLabel.toLowerCase().includes('section');
-    const energy = isGeneric ? ctx.bandIntensity : (labelEnergy * 0.6 + ctx.bandIntensity * 0.4);
+    const energy = isGeneric ? playback.bandIntensity : (labelEnergy * 0.6 + playback.bandIntensity * 0.4);
     
     // Lars Mode Intensity scales the maximum drift. 
     // Max drift at 100% intensity is +/- 15 BPM (based on live recording research).
-    const maxDrift = 15 * gb.larsIntensity;
+    const maxDrift = 15 * groove.larsIntensity;
     let targetOffset = (energy - 0.5) * 2 * maxDrift;
 
     // "Fill Rush" - Drummers often push even harder during transitions/fills
-    if (gb.fillActive) {
-        targetOffset += (8 * gb.larsIntensity); // Increased to +8 BPM surge during fills
+    if (groove.fillActive) {
+        targetOffset += (8 * groove.larsIntensity); // Increased to +8 BPM surge during fills
     }
 
     // 2. Smoothly ramp towards target offset
-    const lerpFactor = gb.fillActive ? 0.08 : 0.03; // Snappier transitions
+    const lerpFactor = groove.fillActive ? 0.08 : 0.03; // Snappier transitions
     conductorState.larsBpmOffset += (targetOffset - conductorState.larsBpmOffset) * lerpFactor;
 
     if (Math.abs(conductorState.larsBpmOffset) < 0.01) {
@@ -162,11 +162,11 @@ export function updateLarsTempo(currentStep) {
 export function updateBpmUI() {
     if (!ui.bpmInput || !ui.bpmControlGroup) return;
     
-    const baseBpm = ctx.bpm;
+    const baseBpm = playback.bpm;
     const offset = conductorState.larsBpmOffset;
     const effectiveBpm = Math.round(baseBpm + offset);
 
-    if (gb.larsMode && ctx.isPlaying) {
+    if (groove.larsMode && playback.isPlaying) {
         ui.bpmControlGroup.classList.add('lars-active');
         
         // Calculate intensity of the color (0 to 1)
@@ -205,7 +205,7 @@ export function updateBpmUI() {
 }
 
 export function checkSectionTransition(currentStep, stepsPerMeasure) {
-    if (!gb.enabled) return;
+    if (!groove.enabled) return;
     
     // Find where we are
     const total = arranger.totalSteps;
@@ -240,14 +240,14 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
                 conductorState.formIteration++;
                 
                 if (arranger.totalSteps <= 64) {
-                    const freq = ctx.bandIntensity > 0.75 ? 1 : (ctx.bandIntensity > 0.4 ? 2 : 4);
+                    const freq = playback.bandIntensity > 0.75 ? 1 : (playback.bandIntensity > 0.4 ? 2 : 4);
                     shouldFill = (conductorState.loopCount % freq === 0);
                 }
             }
 
             if (shouldFill) {
                 let targetEnergy = 0.5;
-                const currentInt = ctx.bandIntensity;
+                const currentInt = playback.bandIntensity;
 
                 // --- 1. THE MACRO-ARC (5+ Minute Jam Logic) ---
                 const grandCycle = conductorState.formIteration % 8;
@@ -287,17 +287,17 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
                 targetEnergy += (Math.random() * 0.15 - 0.075);
                 targetEnergy = Math.max(0.1, Math.min(1.0, targetEnergy));
 
-                if (isLoopEnd && ctx.autoIntensity) {
+                if (isLoopEnd && playback.autoIntensity) {
                     targetEnergy = Math.max(0.3, Math.min(0.95, targetEnergy + (Math.random() * 0.2 - 0.1)));
                 }
 
-                const fillSteps = generateProceduralFill(gb.genreFeel, ctx.bandIntensity, stepsPerMeasure);
+                const fillSteps = generateProceduralFill(groove.genreFeel, playback.bandIntensity, stepsPerMeasure);
                 dispatch(ACTIONS.TRIGGER_FILL, { steps: fillSteps, startStep: currentStep, length: stepsPerMeasure, crash: true });
                 if (ui.visualFlash && ui.visualFlash.checked) triggerFlash(0.25);
                 
-                if (ctx.autoIntensity) {
+                if (playback.autoIntensity) {
                     conductorState.target = targetEnergy;
-                    conductorState.stepSize = (conductorState.target - ctx.bandIntensity) / stepsPerMeasure; 
+                    conductorState.stepSize = (conductorState.target - playback.bandIntensity) / stepsPerMeasure; 
                 }
             }
         }
@@ -314,7 +314,7 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
         const nextEntry = arranger.stepMap[currentChordIdx + 1];
         const isTransition = !nextEntry || nextEntry.chord.sectionId !== entry.chord.sectionId;
 
-        if (isTransition && !gb.fillActive && ctx.bandIntensity > 0.4) {
+        if (isTransition && !groove.fillActive && playback.bandIntensity > 0.4) {
             dispatch(ACTIONS.TRIGGER_FILL, {
                 steps: { 0: [{ name: 'Kick', vel: 0.6 }, { name: 'Open', vel: 0.9 }] },
                 startStep: currentStep,

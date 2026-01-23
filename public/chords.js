@@ -65,8 +65,8 @@ export function getChordDetails(symbol) {
  * @returns {number[]} - Optimized MIDI notes for the chord.
  */
 export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false, anchor = null, min = 40, max = 80, style = 'stabs') {
-    const { cb } = stateModule;
-    const homeAnchor = anchor || cb.octave || 60;
+    const { chords } = stateModule;
+    const homeAnchor = anchor || chords.octave || 60;
     
     // Organ needs more aggressive correction back to the anchor to avoid mud
     const registerPullWeight = style === 'organ' ? 0.8 : 0.6;
@@ -363,8 +363,8 @@ export function resolveChordRoot(part, keyRootMidi, baseOctave) {
  * Omits root and often the 5th to focus on 3rd, 7th, and extensions.
  */
 function getRootlessVoicing(quality, is7th, isRich) {
-    const { gb } = stateModule;
-    const genre = gb.genreFeel;
+    const { groove } = stateModule;
+    const genre = groove.genreFeel;
     // Basic types
     const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
     const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && (is7th || ['9', '11', '13', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(quality) || quality.startsWith('7'));
@@ -420,15 +420,15 @@ function getRootlessVoicing(quality, is7th, isRich) {
 }
 
 export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnabled = true) {
-    const { ctx, gb } = stateModule;
+    const { playback, groove } = stateModule;
     const isRich = density === 'rich';
-    const intensity = ctx.bandIntensity;
+    const intensity = playback.bandIntensity;
 
     const isAltered5 = quality.includes('alt') || quality.includes('b5') || quality.includes('#5') || quality.includes('aug');
     const isAug = quality.includes('aug') || quality.includes('+');
 
     // 1. JAZZ & SOUL: ROOTLESS VOICINGS
-    const shouldBeRootless = bassEnabled && (gb.genreFeel === 'Swing' || genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk' || genre === 'Blues');
+    const shouldBeRootless = bassEnabled && (groove.genreFeel === 'Swing' || genre === 'Jazz' || genre === 'Neo-Soul' || genre === 'Funk' || genre === 'Blues');
     if (shouldBeRootless) {
         const rootless = getRootlessVoicing(quality, is7th, isRich || intensity > 0.6);
         if (rootless) return rootless;
@@ -614,9 +614,9 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
  * @returns {{chords: Array, finalMidis: number[]}}
  */
 function parseProgressionPart(input, key, timeSignature, initialMidis) {
-    const { cb, gb, bb } = stateModule;
+    const { chords, groove, bass } = stateModule;
     const parsed = [];
-    const baseOctave = Math.floor(cb.octave / 12) * 12;
+    const baseOctave = Math.floor(chords.octave / 12) * 12;
     const keyRootMidi = baseOctave + KEY_ORDER.indexOf(normalizeKey(key));
     
     const barParts = input.split(/(\|)/);
@@ -679,10 +679,10 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                     }
                 }
 
-                let intervals = getIntervals(quality, is7th, cb.density, gb.genreFeel, bb.enabled || cb.pianoRoots);
-                const pianoMin = (bb.enabled || cb.pianoRoots) ? 48 : 43;
+                let intervals = getIntervals(quality, is7th, chords.density, groove.genreFeel, bass.enabled || chords.pianoRoots);
+                const pianoMin = (bass.enabled || chords.pianoRoots) ? 48 : 43;
                 let isPivot = parsed.length === 0; 
-                let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot, cb.octave, pianoMin, 84);
+                let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot, chords.octave, pianoMin, 84);
                 if (bassMidi !== null) {
                     const bassPC = bassMidi % 12;
                     const filtered = currentMidis.filter(m => m % 12 !== bassPC);

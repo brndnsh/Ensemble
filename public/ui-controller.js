@@ -1,6 +1,6 @@
 import { ACTIONS } from './types.js';
 import { ui, showToast, renderChordVisualizer, renderSections, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels, switchInstrumentTab } from './ui.js';
-import { ctx, cb, bb, sb, hb, gb, arranger, dispatch } from './state.js';
+import { playback, chords, bass, soloist, harmony, groove, arranger, dispatch } from './state.js';
 import { saveCurrentState } from './persistence.js';
 import { restoreGains, initAudio } from './engine.js';
 import { syncWorker } from './worker-client.js';
@@ -21,10 +21,10 @@ import { midi as midiState } from './state.js';
 
 export function updateStyle(type, styleId) {
     const UPDATE_STYLE_CONFIG = {
-        chord: { selector: '.chord-style-chip', module: 'cb', panelId: 'chord' },
-        bass: { selector: '.bass-style-chip', module: 'bb', panelId: 'bass' },
-        soloist: { selector: '.soloist-style-chip', module: 'sb', panelId: 'soloist' },
-        harmony: { selector: '.harmony-style-chip', module: 'hb', panelId: 'harmony' }
+        chord: { selector: '.chord-style-chip', module: 'chords', panelId: 'chord' },
+        bass: { selector: '.bass-style-chip', module: 'bass', panelId: 'bass' },
+        soloist: { selector: '.soloist-style-chip', module: 'soloist', panelId: 'soloist' },
+        harmony: { selector: '.harmony-style-chip', module: 'harmony', panelId: 'harmony' }
     };
     const c = UPDATE_STYLE_CONFIG[type];
     if (!c) return;
@@ -81,10 +81,10 @@ export function setupPresets(refs = {}) {
         });
     };
 
-    renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', cb.style, (item) => updateStyle('chord', item.id));
-    renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', sb.state?.style || sb.style, (item) => updateStyle('soloist', item.id));
-    renderCategorized(ui.bassStylePresets, BASS_STYLES, 'bass-style', bb.state?.style || bb.style, (item) => updateStyle('bass', item.id));
-    renderCategorized(ui.harmonyStylePresets, HARMONY_STYLES, 'harmony-style', hb.style, (item) => updateStyle('harmony', item.id));
+    renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', chords.style, (item) => updateStyle('chord', item.id));
+    renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', soloist.state?.style || soloist.style, (item) => updateStyle('soloist', item.id));
+    renderCategorized(ui.bassStylePresets, BASS_STYLES, 'bass-style', bass.state?.style || bass.style, (item) => updateStyle('bass', item.id));
+    renderCategorized(ui.harmonyStylePresets, HARMONY_STYLES, 'harmony-style', harmony.style, (item) => updateStyle('harmony', item.id));
 
     const drumPresetsArray = Object.keys(DRUM_PRESETS).map(name => ({
         name,
@@ -95,15 +95,15 @@ export function setupPresets(refs = {}) {
         loadDrumPreset(item.name);
         document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
         document.querySelectorAll(`.drum-preset-chip[data-id="${item.name}"]`).forEach(c => c.classList.add('active'));
-        gb.lastDrumPreset = item.name;
+        groove.lastDrumPreset = item.name;
         syncWorker();
         saveCurrentState();
     };
 
-    renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, onDrumPresetSelect);
+    renderCategorized(ui.drumPresets, drumPresetsArray, 'drum-preset', groove.lastDrumPreset, onDrumPresetSelect);
 
     if (ui.smartDrumPresets) {
-        renderCategorized(ui.smartDrumPresets, drumPresetsArray, 'drum-preset', gb.lastDrumPreset, onDrumPresetSelect);
+        renderCategorized(ui.smartDrumPresets, drumPresetsArray, 'drum-preset', groove.lastDrumPreset, onDrumPresetSelect);
     }
 
     renderCategorized(ui.chordPresets, CHORD_PRESETS, 'chord-preset', arranger.lastChordPreset, (item) => {
@@ -111,7 +111,7 @@ export function setupPresets(refs = {}) {
             if (!confirm("Discard your custom arrangement and load this preset?")) return;
         }
 
-        if (ctx.isPlaying && togglePlay) togglePlay();
+        if (playback.isPlaying && togglePlay) togglePlay();
         
         arranger.sections = item.sections.map(s => ({
             id: generateId(),
@@ -126,7 +126,7 @@ export function setupPresets(refs = {}) {
         arranger.isDirty = false;
 
         if (item.settings) {
-            if (ctx.applyPresetSettings) {
+            if (playback.applyPresetSettings) {
                 if (item.settings.bpm) setBpm(item.settings.bpm, null);
                 if (item.settings.style) updateStyle('chord', item.settings.style);
             }
@@ -163,7 +163,7 @@ export function setupUIHandlers(refs) {
         
         let defaultName = arranger.lastChordPreset || "Ensemble Export";
         defaultName = defaultName.replace(/[^a-zA-Z0-9\s-_]/g, '').trim();
-        ui.exportFilenameInput.value = `${defaultName} - ${arranger.key} - ${ctx.bpm}bpm`;
+        ui.exportFilenameInput.value = `${defaultName} - ${arranger.key} - ${playback.bpm}bpm`;
         
         ui.exportOverlay.classList.add('active');
     };
@@ -194,8 +194,8 @@ export function setupUIHandlers(refs) {
     if (ui.autoIntensityCheck) {
         ui.autoIntensityCheck.addEventListener('change', (e) => {
             dispatch(ACTIONS.SET_AUTO_INTENSITY, e.target.checked);
-            ui.intensitySlider.disabled = ctx.autoIntensity;
-            if (ctx.autoIntensity) {
+            ui.intensitySlider.disabled = playback.autoIntensity;
+            if (playback.autoIntensity) {
                 ui.intensitySlider.style.opacity = 0.5;
             } else {
                 ui.intensitySlider.style.opacity = 1;
@@ -205,11 +205,11 @@ export function setupUIHandlers(refs) {
     }
 
     document.querySelectorAll('.genre-btn').forEach(btn => {
-        if (btn.dataset.genre === gb.lastSmartGenre) btn.classList.add('active');
+        if (btn.dataset.genre === groove.lastSmartGenre) btn.classList.add('active');
         btn.addEventListener('click', () => {
             const genre = btn.dataset.genre;
             
-            if (ctx.isPlaying) {
+            if (playback.isPlaying) {
                 document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('pending'));
                 btn.classList.add('pending');
                 showToast(`Queued ${genre} for next measure...`);
@@ -220,7 +220,7 @@ export function setupUIHandlers(refs) {
                 });
                 btn.classList.add('active');
                 btn.setAttribute('aria-pressed', 'true');
-                gb.lastSmartGenre = genre;
+                groove.lastSmartGenre = genre;
             }
             
             const config = SMART_GENRES[genre];
@@ -236,21 +236,21 @@ export function setupUIHandlers(refs) {
                     soloist: config.soloist
                 });
                 
-                if (!ctx.isPlaying) {
+                if (!playback.isPlaying) {
                     ui.swingSlider.value = config.swing;
                     if (config.sub) ui.swingBase.value = config.sub;
                     loadDrumPreset(config.drum);
                     
                     const modules = [
-                        { id: 'chord', state: cb, configKey: 'chord' },
-                        { id: 'bass', state: bb, configKey: 'bass' },
-                        { id: 'soloist', state: sb, configKey: 'soloist' },
-                        { id: 'harmony', state: hb, configKey: 'harmony' }
+                        { id: 'chord', state: chords, configKey: 'chord' },
+                        { id: 'bass', state: bass, configKey: 'bass' },
+                        { id: 'soloist', state: soloist, configKey: 'soloist' },
+                        { id: 'harmony', state: harmony, configKey: 'harmony' }
                     ];
 
                     modules.forEach(m => {
                         if (m.state.activeTab === 'smart') {
-                            const moduleKey = m.state === cb ? 'cb' : (m.state === bb ? 'bb' : (m.state === sb ? 'sb' : 'hb'));
+                            const moduleKey = m.state === chords ? 'chords' : (m.state === bass ? 'bass' : (m.state === soloist ? 'soloist' : 'harmony'));
                             dispatch(ACTIONS.SET_STYLE, { module: moduleKey, style: 'smart' });
                             const chipSelector = { 'chord': '.chord-style-chip', 'bass': '.bass-style-chip', 'soloist': '.soloist-style-chip', 'harmony': '.harmony-style-chip' }[m.id];
                             if (chipSelector) document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
@@ -330,7 +330,7 @@ export function setupUIHandlers(refs) {
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
             pushHistory();
-            const newProg = generateRandomProgression(cb.style);
+            const newProg = generateRandomProgression(chords.style);
             const targetId = arranger.lastInteractedSectionId;
             const section = arranger.sections.find(s => s.id === targetId);
             if (section) {
@@ -352,7 +352,7 @@ export function setupUIHandlers(refs) {
                 return;
             }
             pushHistory();
-            section.value = mutateProgression(section.value, cb.style);
+            section.value = mutateProgression(section.value, chords.style);
             showToast(`Mutated ${section.label}`);
             clearChordPresetHighlight();
             refreshArrangerUI();
@@ -419,7 +419,7 @@ export function setupUIHandlers(refs) {
             exportToMidi({ includedTracks, loopMode, targetDuration, filename });
         }],
         [ui.clearDrums, 'click', () => { 
-            gb.instruments.forEach(i => i.steps.fill(0)); 
+            groove.instruments.forEach(i => i.steps.fill(0)); 
             clearDrumPresetHighlight();
             renderGridState(); 
             saveCurrentState();
@@ -486,8 +486,8 @@ export function setupUIHandlers(refs) {
         arranger.timeSignature = ui.timeSigSelect.value;
         arranger.grouping = null; 
         
-        if (gb.lastDrumPreset) {
-            loadDrumPreset(gb.lastDrumPreset);
+        if (groove.lastDrumPreset) {
+            loadDrumPreset(groove.lastDrumPreset);
         }
         
         updateGroupingUI();
@@ -533,7 +533,7 @@ export function setupUIHandlers(refs) {
     });
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-        if (ctx.theme === 'auto') {
+        if (playback.theme === 'auto') {
             document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
         }
     });
@@ -546,48 +546,48 @@ export function setupUIHandlers(refs) {
     });
 
     const volumeNodes = [
-        { el: ui.chordVol, state: cb, gain: 'chordsGain', mult: MIXER_GAIN_MULTIPLIERS.chords },
-        { el: ui.bassVol, state: bb, gain: 'bassGain', mult: MIXER_GAIN_MULTIPLIERS.bass },
-        { el: ui.soloistVol, state: sb, gain: 'soloistGain', mult: MIXER_GAIN_MULTIPLIERS.soloist },
-        { el: ui.harmonyVol, state: hb, gain: 'harmoniesGain', mult: MIXER_GAIN_MULTIPLIERS.harmonies },
-        { el: ui.drumVol, state: gb, gain: 'drumsGain', mult: MIXER_GAIN_MULTIPLIERS.drums },
-        { el: ui.masterVol, state: ctx, gain: 'masterGain', mult: MIXER_GAIN_MULTIPLIERS.master }
+        { el: ui.chordVol, state: chords, gain: 'chordsGain', mult: MIXER_GAIN_MULTIPLIERS.chords },
+        { el: ui.bassVol, state: bass, gain: 'bassGain', mult: MIXER_GAIN_MULTIPLIERS.bass },
+        { el: ui.soloistVol, state: soloist, gain: 'soloistGain', mult: MIXER_GAIN_MULTIPLIERS.soloist },
+        { el: ui.harmonyVol, state: harmony, gain: 'harmoniesGain', mult: MIXER_GAIN_MULTIPLIERS.harmonies },
+        { el: ui.drumVol, state: groove, gain: 'drumsGain', mult: MIXER_GAIN_MULTIPLIERS.drums },
+        { el: ui.masterVol, state: playback, gain: 'masterGain', mult: MIXER_GAIN_MULTIPLIERS.master }
     ];
     volumeNodes.forEach(({ el, state, gain, mult }) => {
         el.addEventListener('input', e => {
             const val = parseFloat(e.target.value);
-            if (state !== ctx) state.volume = val;
-            if (ctx[gain]) {
+            if (state !== playback) state.volume = val;
+            if (playback[gain]) {
                 const target = Math.max(0.0001, val * mult);
-                ctx[gain].gain.setValueAtTime(ctx[gain].gain.value, ctx.audio.currentTime);
-                ctx[gain].gain.exponentialRampToValueAtTime(target, ctx.audio.currentTime + 0.04);
+                playback[gain].gain.setValueAtTime(playback[gain].gain.value, playback.audio.currentTime);
+                playback[gain].gain.exponentialRampToValueAtTime(target, playback.audio.currentTime + 0.04);
             }
         });
         el.addEventListener('change', () => saveCurrentState());
     });
 
     const reverbNodes = [
-        { el: ui.chordReverb, state: cb, gain: 'chordsReverb' },
-        { el: ui.bassReverb, state: bb, gain: 'bassReverb' },
-        { el: ui.soloistReverb, state: sb, gain: 'soloistReverb' },
-        { el: ui.harmonyReverb, state: hb, gain: 'harmoniesReverb' },
-        { el: ui.drumReverb, state: gb, gain: 'drumsReverb' }
+        { el: ui.chordReverb, state: chords, gain: 'chordsReverb' },
+        { el: ui.bassReverb, state: bass, gain: 'bassReverb' },
+        { el: ui.soloistReverb, state: soloist, gain: 'soloistReverb' },
+        { el: ui.harmonyReverb, state: harmony, gain: 'harmoniesReverb' },
+        { el: ui.drumReverb, state: groove, gain: 'drumsReverb' }
     ];
     reverbNodes.forEach(({ el, state, gain }) => {
         el.addEventListener('input', e => {
             state.reverb = parseFloat(e.target.value);
-            if (ctx[gain]) {
+            if (playback[gain]) {
                 const target = Math.max(0.0001, state.reverb);
-                ctx[gain].gain.setValueAtTime(ctx[gain].gain.value, ctx.audio.currentTime);
-                ctx[gain].gain.exponentialRampToValueAtTime(target, ctx.audio.currentTime + 0.04);
+                playback[gain].gain.setValueAtTime(playback[gain].gain.value, playback.audio.currentTime);
+                playback[gain].gain.exponentialRampToValueAtTime(target, playback.audio.currentTime + 0.04);
             }
         });
         el.addEventListener('change', () => saveCurrentState());
     });
 
-    ui.swingSlider.addEventListener('input', e => { gb.swing = parseInt(e.target.value); saveCurrentState(); });
-    ui.swingBase.addEventListener('change', e => { gb.swingSub = e.target.value; saveCurrentState(); });
-    ui.humanizeSlider.addEventListener('input', e => { gb.humanize = parseInt(e.target.value); saveCurrentState(); });
+    ui.swingSlider.addEventListener('input', e => { groove.swing = parseInt(e.target.value); saveCurrentState(); });
+    ui.swingBase.addEventListener('change', e => { groove.swingSub = e.target.value; saveCurrentState(); });
+    ui.humanizeSlider.addEventListener('input', e => { groove.humanize = parseInt(e.target.value); saveCurrentState(); });
     ui.drumBarsSelect.addEventListener('change', e => updateMeasures(e.target.value));
     ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
 
@@ -598,7 +598,7 @@ export function setupUIHandlers(refs) {
     if (ui.harmonyComplexity) {
         ui.harmonyComplexity.addEventListener('input', (e) => {
             const val = parseFloat(e.target.value);
-            hb.complexity = val;
+            harmony.complexity = val;
             if (ui.harmonyComplexityValue) ui.harmonyComplexityValue.textContent = `${Math.round(val * 100)}%`;
             syncWorker();
         });
@@ -618,9 +618,9 @@ export function setupUIHandlers(refs) {
         };
 
         // Sync initial UI from potentially hydrated state
-        ui.sessionTimerCheck.checked = ctx.sessionTimer > 0;
-        ui.sessionTimerInput.value = ctx.sessionTimer > 0 ? ctx.sessionTimer : 5;
-        updateTimerUI(ctx.sessionTimer > 0);
+        ui.sessionTimerCheck.checked = playback.sessionTimer > 0;
+        ui.sessionTimerInput.value = playback.sessionTimer > 0 ? playback.sessionTimer : 5;
+        updateTimerUI(playback.sessionTimer > 0);
 
         ui.sessionTimerCheck.addEventListener('change', (e) => {
             const isChecked = e.target.checked;
@@ -672,8 +672,8 @@ export function setupUIHandlers(refs) {
             }
         };
 
-        ui.larsModeCheck.checked = gb.larsMode;
-        updateLarsUI(gb.larsMode);
+        ui.larsModeCheck.checked = groove.larsMode;
+        updateLarsUI(groove.larsMode);
         
         ui.larsModeCheck.addEventListener('change', (e) => {
             dispatch(ACTIONS.SET_LARS_MODE, e.target.checked);
@@ -684,7 +684,7 @@ export function setupUIHandlers(refs) {
     }
 
     if (ui.larsIntensitySlider) {
-        ui.larsIntensitySlider.value = Math.round(gb.larsIntensity * 100);
+        ui.larsIntensitySlider.value = Math.round(groove.larsIntensity * 100);
         if (ui.larsIntensityValue) ui.larsIntensityValue.textContent = `${ui.larsIntensitySlider.value}%`;
 
         ui.larsIntensitySlider.addEventListener('input', (e) => {
@@ -706,9 +706,9 @@ export function setupUIHandlers(refs) {
         btn.addEventListener('click', () => {
             const module = btn.dataset.module;
             const tab = btn.dataset.tab;
-            if (tab === 'smart' && module !== 'gb') {
+            if (tab === 'smart' && module !== 'groove') {
                 dispatch(ACTIONS.SET_STYLE, { module, style: 'smart' });
-                const chipSelector = { 'cb': '.chord-style-chip', 'bb': '.bass-style-chip', 'sb': '.soloist-style-chip' }[module];
+                const chipSelector = { 'chords': '.chord-style-chip', 'bass': '.bass-style-chip', 'soloist': '.soloist-style-chip' }[module];
                 if (chipSelector) document.querySelectorAll(chipSelector).forEach(c => c.classList.remove('active'));
                 
                 flushBuffers();
@@ -720,7 +720,7 @@ export function setupUIHandlers(refs) {
 
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-            if (ctx.audio?.state === 'suspended' || ctx.audio?.state === 'interrupted') ctx.audio.resume();
+            if (playback.audio?.state === 'suspended' || playback.audio?.state === 'interrupted') playback.audio.resume();
         }
     });
 
@@ -746,8 +746,8 @@ export function setupUIHandlers(refs) {
         if (e.key === ' ' && !isTyping) { e.preventDefault(); togglePlay(); }
         if (e.key.toLowerCase() === 'e' && !isTyping && !e.metaKey && !e.ctrlKey) { e.preventDefault(); if (ui.editorOverlay.classList.contains('active')) ui.editorOverlay.classList.remove('active'); else ui.editorOverlay.classList.add('active'); }
         if (['1', '2', '3', '4'].includes(e.key) && !isTyping) { const index = parseInt(e.key) - 1; const tabItem = document.querySelectorAll('.tab-item')[index]; if (tabItem) tabItem.click(); }
-        if (e.key === '[' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (gb.currentMeasure - 1 + gb.measures) % gb.measures; switchMeasure(next); }
-        if (e.key === ']' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (gb.currentMeasure + 1) % gb.measures; switchMeasure(next); }
+        if (e.key === '[' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (groove.currentMeasure - 1 + groove.measures) % groove.measures; switchMeasure(next); }
+        if (e.key === ']' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (groove.currentMeasure + 1) % groove.measures; switchMeasure(next); }
         if (e.key === 'Escape') {
             if (document.body.classList.contains('chord-maximized')) { document.body.classList.remove('chord-maximized'); ui.maximizeChordBtn.textContent = '⛶'; ui.maximizeChordBtn.title = 'Maximize'; renderChordVisualizer(); }
             if (ui.settingsOverlay.classList.contains('active')) ui.settingsOverlay.classList.remove('active');
@@ -829,7 +829,7 @@ export function setupAnalyzerHandlers() {
     const drawWaveform = (buffer) => {
         // console.log("[Analyzer] Drawing waveform...");
         const canvas = ui.analyzerWaveformCanvas;
-        const ctx = canvas.getContext('2d');
+        const canvasCtx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
         
         const rect = canvas.getBoundingClientRect();
@@ -847,15 +847,15 @@ export function setupAnalyzerHandlers() {
         const step = Math.ceil(data.length / width);
         const amp = height / 2;
 
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
-        ctx.clearRect(0, 0, width, height);
+        canvasCtx.fillStyle = 'rgba(59, 130, 246, 0.5)';
+        canvasCtx.clearRect(0, 0, width, height);
         
         // Draw baseline
-        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-        ctx.beginPath();
-        ctx.moveTo(0, amp);
-        ctx.lineTo(width, amp);
-        ctx.stroke();
+        canvasCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(0, amp);
+        canvasCtx.lineTo(width, amp);
+        canvasCtx.stroke();
 
         for (let i = 0; i < width; i++) {
             let min = 1.0;
@@ -865,7 +865,7 @@ export function setupAnalyzerHandlers() {
                 if (datum < min) min = datum;
                 if (datum > max) max = datum;
             }
-            ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+            canvasCtx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
         }
         
         drawSelectionOverlay();
@@ -902,11 +902,11 @@ export function setupAnalyzerHandlers() {
             
             // console.log("[Analyzer] Decoding audio data...");
             // Use the global audio context to decode
-            if (!ctx.audio) {
+            if (!playback.audio) {
                 initAudio();
             }
 
-            currentAudioBuffer = await ctx.audio.decodeAudioData(arrayBuffer);
+            currentAudioBuffer = await playback.audio.decodeAudioData(arrayBuffer);
             // console.log(`[Analyzer] Decoded: ${currentAudioBuffer.duration.toFixed(2)}s`);
             
             ui.analyzerProcessing.style.display = 'none';
@@ -1264,8 +1264,8 @@ export function setupAnalyzerHandlers() {
         // Apply BPM Sync if checked
         if (ui.analyzerSyncBpmCheck && ui.analyzerSyncBpmCheck.checked) {
             const detectedBpm = parseInt(ui.detectedBpmLabel.textContent);
-            if (detectedBpm && detectedBpm !== ctx.bpm) {
-                setBpm(detectedBpm, ctx.viz);
+            if (detectedBpm && detectedBpm !== playback.bpm) {
+                setBpm(detectedBpm, playback.viz);
             }
         }
 

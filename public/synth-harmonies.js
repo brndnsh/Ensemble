@@ -1,21 +1,21 @@
-import { ctx, hb, gb } from './state.js';
+import { playback, harmony, groove } from './state.js';
 import { safeDisconnect } from './utils.js';
 
 /**
- * Polyphonic Synthesizer for the Harmony Module (hb).
+ * Polyphonic Synthesizer for the Harmony Module (harmony).
  * Optimized for Horns (stabs) and Strings (pads).
  */
 
 export function killHarmonyNote(fadeTime = 0.05) {
-    if (hb.activeVoices && hb.activeVoices.length > 0) {
-        hb.activeVoices.forEach(voice => {
+    if (harmony.activeVoices && harmony.activeVoices.length > 0) {
+        harmony.activeVoices.forEach(voice => {
             try {
                 const g = voice.gain.gain;
-                g.cancelScheduledValues(ctx.audio.currentTime);
-                g.setTargetAtTime(0, ctx.audio.currentTime, fadeTime);
+                g.cancelScheduledValues(playback.audio.currentTime);
+                g.setTargetAtTime(0, playback.audio.currentTime, fadeTime);
             } catch { /* ignore error */ }
         });
-        hb.activeVoices = [];
+        harmony.activeVoices = [];
     }
 }
 
@@ -23,31 +23,31 @@ export function killHarmonyNote(fadeTime = 0.05) {
  * Plays a harmony note with genre-specific synthesis and articulations.
  */
 export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs', midi = null, slideInterval = 0, slideDuration = 0, vibrato = { rate: 0, depth: 0 }) {
-    if (!Number.isFinite(freq) || !ctx.audio) return;
+    if (!Number.isFinite(freq) || !playback.audio) return;
     
-    const now = ctx.audio.currentTime;
+    const now = playback.audio.currentTime;
     const playTime = Math.max(time, now);
-    const feel = gb.genreFeel;
+    const feel = groove.genreFeel;
 
-    if (!hb.activeVoices) hb.activeVoices = [];
+    if (!harmony.activeVoices) harmony.activeVoices = [];
     
     // 1. Strict Voice Management & Stealing
     // Remove expired voices
-    hb.activeVoices = hb.activeVoices.filter(v => (v.time + v.duration + 0.1) > playTime);
+    harmony.activeVoices = harmony.activeVoices.filter(v => (v.time + v.duration + 0.1) > playTime);
     
     // Pitch-aware Stealing: If this exact MIDI note is already playing, kill it immediately
     if (midi !== null) {
-        const existing = hb.activeVoices.find(v => v.midi === midi);
+        const existing = harmony.activeVoices.find(v => v.midi === midi);
         if (existing) {
             existing.gain.gain.cancelScheduledValues(playTime);
             existing.gain.gain.setTargetAtTime(0, playTime, 0.005);
-            hb.activeVoices = hb.activeVoices.filter(v => v !== existing);
+            harmony.activeVoices = harmony.activeVoices.filter(v => v !== existing);
         }
     }
 
     // Polyphonic Limit (Max 3 voices for clarity and ensemble focus)
-    if (hb.activeVoices.length >= 3) {
-        const oldest = hb.activeVoices.shift();
+    if (harmony.activeVoices.length >= 3) {
+        const oldest = harmony.activeVoices.shift();
         if (oldest) {
             oldest.gain.gain.cancelScheduledValues(playTime);
             oldest.gain.gain.setTargetAtTime(0, playTime, 0.01);
@@ -55,35 +55,35 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     }
 
     // Module-Level Polyphony Scaling
-    const polyphonyDucking = hb.activeVoices.length > 1 ? 0.85 : 1.0;
+    const polyphonyDucking = harmony.activeVoices.length > 1 ? 0.85 : 1.0;
     const finalVol = vol * polyphonyDucking;
 
-    const gain = ctx.audio.createGain();
+    const gain = playback.audio.createGain();
     gain.gain.value = 0;
 
-    const filter = ctx.audio.createBiquadFilter();
+    const filter = playback.audio.createBiquadFilter();
     filter.type = 'lowpass';
 
     // --- Articulation: Stereo Stage Bloom ---
     // Widens the ensemble as intensity builds. 
     // Low intensity = centered/focused. High intensity = wide/orchestral.
-    const panner = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : null;
+    const panner = playback.audio.createStereoPanner ? playback.audio.createStereoPanner() : null;
     if (panner) {
         // Random slight pan per voice, depth scales with intensity
-        const panRange = 0.1 + (ctx.bandIntensity * 0.7); 
+        const panRange = 0.1 + (playback.bandIntensity * 0.7); 
         const panValue = (Math.random() * 2 - 1) * panRange;
         panner.pan.setValueAtTime(panValue, playTime);
     }
 
     // Synthesis: Multi-oscillator setup for "Ensemble" feel
-    const osc1 = ctx.audio.createOscillator();
-    const osc2 = ctx.audio.createOscillator();
+    const osc1 = playback.audio.createOscillator();
+    const osc2 = playback.audio.createOscillator();
 
     // --- Lane Protection: Sub-Oscillator ---
     // Only use the sub-oscillator if the main frequency is high enough 
     // to keep the sub-octave out of the primary bass territory.
     const useSub = freq > 250; // Raised from 200 to clear the bass
-    const sub = useSub ? ctx.audio.createOscillator() : null;
+    const sub = useSub ? playback.audio.createOscillator() : null;
     
     // --- Articulation: Vibrato (LFO) ---
     let lfo = null;
@@ -104,7 +104,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         const leslieSpeed = 6.2; // Fast Leslie setting
 
         // Saturation (Tube Grit) - Initialize early to avoid connection errors
-        saturator = ctx.audio.createWaveShaper();
+        saturator = playback.audio.createWaveShaper();
         saturator.curve = (function() {
             const n = 44100;
             const curve = new Float32Array(n);
@@ -117,8 +117,8 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         })();
         
         // 1. Pitch Modulation (Doppler)
-        lfo = ctx.audio.createOscillator();
-        lfoGain = ctx.audio.createGain();
+        lfo = playback.audio.createOscillator();
+        lfoGain = playback.audio.createGain();
         lfo.frequency.setValueAtTime(leslieSpeed, playTime);
         lfoGain.gain.setValueAtTime(5, playTime); // Reduced from 10 to stop "warbling"
         lfo.connect(lfoGain);
@@ -128,23 +128,23 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         lfo.start(playTime);
 
         // 2. Amplitude Modulation (Tremolo)
-        tremoloLfo = ctx.audio.createOscillator();
-        tremoloGain = ctx.audio.createGain();
+        tremoloLfo = playback.audio.createOscillator();
+        tremoloGain = playback.audio.createGain();
         tremoloLfo.type = 'sine';
         tremoloLfo.frequency.setValueAtTime(leslieSpeed, playTime);
         
         // Tremolo depth (0.1 to 0.3 is natural)
         const tremDepth = 0.2;
         tremoloGain.gain.setValueAtTime(1.0 - tremDepth, playTime);
-        const tremAmp = ctx.audio.createGain();
+        const tremAmp = playback.audio.createGain();
         tremAmp.gain.setValueAtTime(tremDepth, playTime);
         tremoloLfo.connect(tremAmp);
         tremAmp.connect(gain.gain); // Modulate the main gain
         
         tremoloLfo.start(playTime);
     } else if (vibrato && vibrato.rate > 0 && vibrato.depth > 0) {
-        lfo = ctx.audio.createOscillator();
-        lfoGain = ctx.audio.createGain();
+        lfo = playback.audio.createOscillator();
+        lfoGain = playback.audio.createGain();
         lfo.frequency.setValueAtTime(vibrato.rate, playTime);
         lfoGain.gain.setValueAtTime(vibrato.depth, playTime);
         
@@ -183,7 +183,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
         osc2.frequency.setValueAtTime(freq * 2, playTime);
         
         // 3rd Drawbar: 5 1/3' (Fifth above fundamental)
-        fifthOsc = ctx.audio.createOscillator();
+        fifthOsc = playback.audio.createOscillator();
         fifthOsc.type = 'sine';
         fifthOsc.frequency.setValueAtTime(freq * 1.5, playTime);
         
@@ -191,15 +191,15 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
             sub.type = 'sine'; // 16' (Sub-fundamental)
             sub.frequency.setValueAtTime(freq * 0.5, playTime);
             
-            subGain = ctx.audio.createGain();
+            subGain = playback.audio.createGain();
             subGain.gain.setValueAtTime(0.5, playTime); // Sub is 50% volume of fundamental
             sub.connect(subGain);
             if (saturator) subGain.connect(saturator);
         }
 
         // Key Click (Percussion) - made slightly louder
-        click = ctx.audio.createOscillator();
-        clickGain = ctx.audio.createGain();
+        click = playback.audio.createOscillator();
+        clickGain = playback.audio.createGain();
         click.type = 'square';
         click.frequency.setValueAtTime(freq * 4, playTime); 
         clickGain.gain.setValueAtTime(finalVol * 0.6, playTime);
@@ -215,7 +215,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
             osc2.connect(saturator);
             fifthOsc.connect(saturator);
             
-            hp = ctx.audio.createBiquadFilter();
+            hp = playback.audio.createBiquadFilter();
             hp.type = 'highpass';
             hp.frequency.setValueAtTime(120, playTime); // Strict roll-off below 120Hz
             
@@ -288,7 +288,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
 
     // --- Articulation: Timbral Bloom ---
     // Brightness scales with intensity. 
-    const intensity = ctx.bandIntensity;
+    const intensity = playback.bandIntensity;
     const brightnessMult = 1.0 + (intensity * 2.0); // Up to 3x brightness increase
 
     if (style === 'stabs') {
@@ -342,14 +342,14 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     
     if (panner) {
         gain.connect(panner);
-        if (ctx.harmoniesGain) panner.connect(ctx.harmoniesGain);
+        if (playback.harmoniesGain) panner.connect(playback.harmoniesGain);
     } else {
-        if (ctx.harmoniesGain) gain.connect(ctx.harmoniesGain);
+        if (playback.harmoniesGain) gain.connect(playback.harmoniesGain);
     }
 
     // Register active voice
     const voiceRefs = { gain, time: playTime, duration, midi };
-    hb.activeVoices.push(voiceRefs);
+    harmony.activeVoices.push(voiceRefs);
 
     osc1.start(playTime);
     osc2.start(playTime);

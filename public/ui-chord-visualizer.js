@@ -1,4 +1,4 @@
-import { arranger, cb } from './state.js';
+import { arranger, chords } from './state.js';
 import { formatUnicodeSymbols } from './utils.js';
 import { TIME_SIGNATURES } from './config.js';
 import { UIStore } from './ui-store.js';
@@ -56,7 +56,7 @@ export function renderChordVisualizer(ui) {
                 measure.chords.forEach(chord => {
                     const card = existingCards[cardIndex];
                     const isMinor = chord.isMinor;
-                    const isActive = chord.globalIndex === cb.lastActiveChordIndex;
+                    const isActive = chord.globalIndex === chords.lastActiveChordIndex;
                     
                     if (card.classList.contains('minor') !== isMinor) card.classList.toggle('minor', isMinor);
                     if (card.classList.contains('active') !== isActive) card.classList.toggle('active', isActive);
@@ -138,7 +138,7 @@ export function renderChordVisualizer(ui) {
                 card.className = 'chord-card';
                 if (chord.isMinor) card.classList.add('minor');
                 if (chord.quality === 'aug' || chord.quality === 'augmaj7') card.classList.add('aug');
-                if (chord.globalIndex === cb.lastActiveChordIndex) card.classList.add('active');
+                if (chord.globalIndex === chords.lastActiveChordIndex) card.classList.add('active');
 
                 const notation = arranger.notation || 'roman';
                 const disp = chord.display ? chord.display[notation] : null;

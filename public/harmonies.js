@@ -15,14 +15,14 @@ let lastPlayedStep = -1;
  * Clears the internal motif memory. Used for section changes or testing.
  */
 export function clearHarmonyMemory() {
-    const { hb, sb } = State;
+    const { harmony, soloist } = State;
     motifCache.clear();
-    hb.lastMidis = [];
+    harmony.lastMidis = [];
     lastPlayedStep = -1;
-    sb.motifBuffer = [];
-    sb.motifRoot = undefined;
-    sb.motifReplayCount = 0;
-    sb.isReplayingMotif = false;
+    soloist.motifBuffer = [];
+    soloist.motifRoot = undefined;
+    soloist.motifReplayCount = 0;
+    soloist.isReplayingMotif = false;
 }
 
 /**
@@ -32,7 +32,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     if (!chord) return [];
     
     // Destructure state here to avoid ReferenceError during evaluation
-    const { ctx, gb, cb, hb, sb, arranger } = State;
+    const { playback, groove, chords, harmony, soloist, arranger } = State;
 
     // Internal Style Config (Inlined for TDZ safety)
     const STYLE_CONFIG = {
@@ -59,7 +59,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         'Hip Hop': [[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]]
     };
 
-    if (ctx.bandIntensity < 0.22) return [];
+    if (playback.bandIntensity < 0.22) return [];
     const isChordStart = stepInChord === 0;
     if (lastPlayedStep !== -1 && step === lastPlayedStep + 1 && soloistResult) return [];
 
@@ -68,7 +68,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
     const measureStep = step % stepsPerMeasure;
     const sectionId = chord.sectionId || 'default';
-    const feel = gb.genreFeel;
+    const feel = groove.genreFeel;
     
     let activeStyle = style;
     if (style === 'smart') {
@@ -86,7 +86,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         rhythmicStyle = isPadGenre ? 'pads' : 'stabs';
     }
 
-    const isSoloistBusy = sb.enabled && !sb.isResting && sb.notesInPhrase > 2;
+    const isSoloistBusy = soloist.enabled && !soloist.isResting && soloist.notesInPhrase > 2;
     if (isSoloistBusy) rhythmicStyle = 'pads';
 
     if (!motifCache.has(sectionId)) {
@@ -102,9 +102,9 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         const isRhythmic = ['Funk', 'Reggae', 'Disco', 'Jazz'].includes(feel);
         if (isRhythmic) {
             for (let i = 0; i < 16; i++) {
-                const snareHit = (gb.snareMask >> i) & 1;
-                const chordHit = (cb.rhythmicMask >> i) & 1;
-                if (snareHit && ctx.bandIntensity > 0.6 && Math.random() < 0.4) pattern[i] = 1;
+                const snareHit = (groove.snareMask >> i) & 1;
+                const chordHit = (chords.rhythmicMask >> i) & 1;
+                if (snareHit && playback.bandIntensity > 0.6 && Math.random() < 0.4) pattern[i] = 1;
                 if (chordHit && pattern[i] === 1 && Math.random() < 0.7) pattern[i] = 0;
             }
         }
@@ -122,35 +122,35 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         });
     }
     const motif = motifCache.get(sectionId);
-    if (hb.rhythmicMask !== motif.rhythmicMask) hb.rhythmicMask = motif.rhythmicMask;
+    if (harmony.rhythmicMask !== motif.rhythmicMask) harmony.rhythmicMask = motif.rhythmicMask;
 
     let shouldPlay = false;
     let durationSteps = 1;
     let isLatched = false;
     let isMovement = false;
 
-    if (gb.enabled && gb.fillActive && step % 4 === 0) {
-        const fillStep = step - gb.fillStartStep;
-        if (fillStep < gb.fillLength) { shouldPlay = true; durationSteps = 4; isMovement = true; }
+    if (groove.enabled && groove.fillActive && step % 4 === 0) {
+        const fillStep = step - groove.fillStartStep;
+        if (fillStep < groove.fillLength) { shouldPlay = true; durationSteps = 4; isMovement = true; }
     }
 
-    if (sb.enabled && sb.isReplayingMotif && ctx.bandIntensity > 0.4 && soloistResult) {
+    if (soloist.enabled && soloist.isReplayingMotif && playback.bandIntensity > 0.4 && soloistResult) {
         const stepInCell = step % 4;
-        const isStrongStep = stepInCell === 0 || (stepInCell === 2 && ctx.bandIntensity > 0.7);
+        const isStrongStep = stepInCell === 0 || (stepInCell === 2 && playback.bandIntensity > 0.7);
         const hasSoloNote = Array.isArray(soloistResult) ? soloistResult.length > 0 : !!soloistResult;
         if (hasSoloNote && isStrongStep) { shouldPlay = true; durationSteps = 2; isLatched = true; }
     }
 
-    if (!shouldPlay && sb.enabled && sb.isResting) {
+    if (!shouldPlay && soloist.enabled && soloist.isResting) {
         const baseProb = feel === 'Jazz' ? 0.45 : (feel === 'Funk' || feel === 'Disco' ? 0.35 : 0.2);
-        const responseProb = baseProb * hb.complexity; 
+        const responseProb = baseProb * harmony.complexity; 
         const isResponseStep = [6, 7, 10, 14].includes(measureStep);
         const bit = (motif.responseMask >> (measureStep % 16)) & 1;
         if (isResponseStep && bit && (measureStep / 16) < responseProb + 0.2) { shouldPlay = true; durationSteps = 2; isMovement = true; }
     }
 
     if (!shouldPlay && rhythmicStyle === 'pads') {
-        let motionProb = (ctx.bandIntensity - 0.3) * 0.6;
+        let motionProb = (playback.bandIntensity - 0.3) * 0.6;
         if (activeStyle === 'counter') motionProb = 0.8;
         const isMotionStep = (measureStep === 8 || measureStep === 12);
         const bit = (motif.motionMask >> (measureStep % 16)) & 1;
@@ -163,13 +163,13 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     let isAnticipating = false;
     const isJazzy = feel === 'Jazz' || style === 'horns' || activeStyle === 'counter';
     if (!shouldPlay && nextChord && measureStep === stepsPerMeasure - 1) {
-        const anticipationProb = (isJazzy ? 0.3 : 0.1) * hb.complexity * ctx.bandIntensity;
+        const anticipationProb = (isJazzy ? 0.3 : 0.1) * harmony.complexity * playback.bandIntensity;
         if (Math.random() < anticipationProb) { shouldPlay = true; durationSteps = 2; isAnticipating = true; }
     }
 
     let isApproach = false;
     if (!shouldPlay && nextChord && measureStep === stepsPerMeasure - 1 && rhythmicStyle !== 'pads') {
-        const approachProb = (isJazzy ? 0.5 : 0.15) * hb.complexity;
+        const approachProb = (isJazzy ? 0.5 : 0.15) * harmony.complexity;
         if (Math.random() < approachProb) { shouldPlay = true; durationSteps = 1; isApproach = true; }
     }
 
@@ -190,8 +190,8 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const targetChord = isAnticipating ? nextChord : chord;
     const rootMidi = targetChord.rootMidi;
     const baseDensity = config.density || 2;
-    let density = Math.max(1, Math.floor(baseDensity * (0.4 + ctx.bandIntensity * 0.3 + hb.complexity * 0.3)));
-    if (isLatched) density = Math.max(density, 1 + Math.min(1, Math.floor(sb.sessionSteps / 64)));
+    let density = Math.max(1, Math.floor(baseDensity * (0.4 + playback.bandIntensity * 0.3 + harmony.complexity * 0.3)));
+    if (isLatched) density = Math.max(density, 1 + Math.min(1, Math.floor(soloist.sessionSteps / 64)));
 
     let intervals = [0, 4, 7]; 
     if (isApproach && nextChord) {
@@ -208,11 +208,11 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     }
 
     const isDisco = feel === 'Disco';
-    if (isDisco && ctx.bandIntensity > 0.7) density = Math.max(density, 2);
+    if (isDisco && playback.bandIntensity > 0.7) density = Math.max(density, 2);
     
     const cycleMeasure = Math.floor(step / stepsPerMeasure) % 4;
     const liftShift = isDisco ? (cycleMeasure * 2) : 0;
-    if (isDisco && ctx.bandIntensity > 0.6 && rhythmicStyle === 'stabs' && !isLatched) intervals = [intervals[0], intervals[0] + 12];
+    if (isDisco && playback.bandIntensity > 0.6 && rhythmicStyle === 'stabs' && !isLatched) intervals = [intervals[0], intervals[0] + 12];
 
     // Apply density to intervals (Strict limit)
     if (intervals.length > density) {
@@ -220,8 +220,8 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     }
 
     const rangeMin = activeStyle === 'organ' ? 54 : 50;
-    const currentMidis = getBestInversion(rootMidi, intervals, hb.lastMidis, stepInChord === 0, octave, rangeMin, 79, activeStyle);    
-    const soloistMidi = sb.enabled ? getMidi(sb.lastFreq) : 0;
+    const currentMidis = getBestInversion(rootMidi, intervals, harmony.lastMidis, stepInChord === 0, octave, rangeMin, 79, activeStyle);    
+    const soloistMidi = soloist.enabled ? getMidi(soloist.lastFreq) : 0;
     let finalOctaveShift = 0;
     if ((isChordStart || measureStep === 0) && soloistMidi > 0 && currentMidis.some(m => Math.abs(m - soloistMidi) < 7)) {
         if (currentMidis[0] > 48) finalOctaveShift = -12;
@@ -235,7 +235,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         else if (durationSteps >= 4) durationSteps = 4;
     }
 
-    const pocketOffset = hb.pocketOffset || 0;
+    const pocketOffset = harmony.pocketOffset || 0;
     const styleOffset = config.octaveOffset || 0;
     const finalMidisForMemory = [];
     const tones = targetChord.intervals || [0, 4, 7];
@@ -258,8 +258,8 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             }
         }
         
-        const lastMidi = (hb.lastMidis || [])[i] || (hb.lastMidis || [])[0];
-        const intensity = ctx.bandIntensity;
+        const lastMidi = (harmony.lastMidis || [])[i] || (harmony.lastMidis || [])[0];
+        const intensity = playback.bandIntensity;
         let slideInterval = 0, slideDuration = 0, vibrato = { rate: 0, depth: 0 };
 
         if (feel === 'Neo-Soul') {
@@ -268,7 +268,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
             }
             if (durationSteps >= 4 && intensity > 0.4) vibrato = { rate: 3.5, depth: 5 + (intensity * 5) };
         } else if (feel === 'Jazz' || feel === 'Blues') {
-            if (Math.random() < (0.2 + hb.complexity * 0.3)) { slideInterval = -1; slideDuration = 0.05 + (intensity * 0.03); }
+            if (Math.random() < (0.2 + harmony.complexity * 0.3)) { slideInterval = -1; slideDuration = 0.05 + (intensity * 0.03); }
             if (durationSteps >= 4 && intensity > 0.5) vibrato = { rate: 5.0, depth: 5 + (intensity * 10) };
         }
 
@@ -286,6 +286,6 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         finalMidisForMemory.push(finalMidi);
     }
 
-    hb.lastMidis = finalMidisForMemory;
+    harmony.lastMidis = finalMidisForMemory;
     return notes;
 }

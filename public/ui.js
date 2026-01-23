@@ -1,4 +1,4 @@
-import { arranger, cb, ctx, gb, bb, sb, hb } from './state.js';
+import { arranger, chords, playback, groove, bass, soloist, harmony } from './state.js';
 import { midiToNote, formatUnicodeSymbols } from './utils.js';
 import { saveCurrentState } from './persistence.js';
 import { TIME_SIGNATURES, KEY_ORDER } from './config.js';
@@ -8,60 +8,184 @@ import { UIStore } from './ui-store.js';
 import { renderChordVisualizer as internalRenderChordVisualizer } from './ui-chord-visualizer.js';
 import { renderGrid as internalRenderGrid, renderGridState as internalRenderGridState, initSequencerHandlers as internalInitSequencerHandlers } from './ui-sequencer-grid.js';
 
-// ID Aliases (Mapping logical names to HTML IDs)
-const ID_ALIASES = {
-    vizPanel: 'panel-visualizer',
-    chordVol: 'chordVolume',
-    bassVol: 'bassVolume',
-    soloistVol: 'soloistVolume',
-    harmonyVol: 'harmonyVolume',
-    drumVol: 'drumVolume',
-    harmonyComplexity: 'harmonyComplexity',
-    harmonyComplexityValue: 'harmonyComplexityValue',
-    bpmLabel: 'bpm-label',
-    bpmControlGroup: 'bpmControlGroup',
-    larsIndicator: 'larsIndicator',
-    clearDrums: 'clearDrumsBtn',
-    masterVol: 'masterVolume',
-    countIn: 'countInCheck',
-    metronome: 'metronomeCheck',
-    visualFlash: 'visualFlashCheck',
-    haptic: 'hapticCheck',
-    sessionTimerCheck: 'sessionTimerCheck',
-    sessionTimerInput: 'sessionTimerInput',
-    sessionTimerDurationContainer: 'sessionTimerDurationContainer',
-    applyPresetSettings: 'applyPresetSettingsCheck',
-    swingBase: 'swingBaseSelect',
-    closeSettings: 'closeSettingsBtn',
-    sessionTimerDec: 'sessionTimerDec',
-    sessionTimerInc: 'sessionTimerInc',
-    sessionTimerStepper: 'sessionTimerStepper'
-};
+const getEl = (id) => document.getElementById(id);
 
 /**
- * Proxy object that lazily fetches DOM elements by ID.
- * Accessing ui.someId will return document.getElementById('someId').
- * Use ID_ALIASES for special mappings.
+ * Explicit UI Element References.
+ * Replaces the previous Proxy implementation to ensuring all dependencies are searchable.
  */
-export const ui = new Proxy({}, {
-    get: (target, prop) => {
-        // If we have a cached element, verify it is still in the current document
-        if (prop in target && target[prop] && target[prop].isConnected) {
-            return target[prop];
-        }
-        
-        if (typeof prop !== 'string') return undefined;
+export const ui = {
+    // --- Aliases (formerly ID_ALIASES) ---
+    get vizPanel() { return getEl('panel-visualizer'); },
+    get chordVol() { return getEl('chordVolume'); },
+    get bassVol() { return getEl('bassVolume'); },
+    get soloistVol() { return getEl('soloistVolume'); },
+    get harmonyVol() { return getEl('harmonyVolume'); },
+    get drumVol() { return getEl('drumVolume'); },
+    get harmonyComplexity() { return getEl('harmonyComplexity'); },
+    get harmonyComplexityValue() { return getEl('harmonyComplexityValue'); },
+    get bpmLabel() { return getEl('bpm-label'); },
+    get bpmControlGroup() { return getEl('bpmControlGroup'); },
+    get larsIndicator() { return getEl('larsIndicator'); },
+    get clearDrums() { return getEl('clearDrumsBtn'); },
+    get masterVol() { return getEl('masterVolume'); },
+    get countIn() { return getEl('countInCheck'); },
+    get metronome() { return getEl('metronomeCheck'); },
+    get visualFlash() { return getEl('visualFlashCheck'); },
+    get haptic() { return getEl('hapticCheck'); },
+    get sessionTimerCheck() { return getEl('sessionTimerCheck'); },
+    get sessionTimerInput() { return getEl('sessionTimerInput'); },
+    get sessionTimerDurationContainer() { return getEl('sessionTimerDurationContainer'); },
+    get applyPresetSettings() { return getEl('applyPresetSettingsCheck'); },
+    get swingBase() { return getEl('swingBaseSelect'); },
+    get closeSettings() { return getEl('closeSettingsBtn'); },
+    get sessionTimerDec() { return getEl('sessionTimerDec'); },
+    get sessionTimerInc() { return getEl('sessionTimerInc'); },
+    get sessionTimerStepper() { return getEl('sessionTimerStepper'); },
 
-        const id = ID_ALIASES[prop] || prop;
-        const element = document.getElementById(id);
-        
-        // Cache found elements to avoid repeated DOM queries
-        if (element) {
-            target[prop] = element;
-        }
-        return element;
-    }
-});
+    // --- Direct IDs (Extracted from usage analysis) ---
+    get playBtn() { return getEl('playBtn'); },
+    get sequencerGrid() { return getEl('sequencerGrid'); },
+    get intensitySlider() { return getEl('intensitySlider'); },
+    get intensityValue() { return getEl('intensityValue'); },
+    get userPresetsContainer() { return getEl('userPresetsContainer'); },
+    get userDrumPresetsContainer() { return getEl('userDrumPresetsContainer'); },
+    get drumBarsSelect() { return getEl('drumBarsSelect'); },
+    get swingSlider() { return getEl('swingSlider'); },
+    get chordPowerBtn() { return getEl('chordPowerBtn'); },
+    get chordPowerBtnDesktop() { return getEl('chordPowerBtnDesktop'); },
+    get groovePowerBtn() { return getEl('groovePowerBtn'); },
+    get groovePowerBtnDesktop() { return getEl('groovePowerBtnDesktop'); },
+    get bassPowerBtn() { return getEl('bassPowerBtn'); },
+    get bassPowerBtnDesktop() { return getEl('bassPowerBtnDesktop'); },
+    get soloistPowerBtn() { return getEl('soloistPowerBtn'); },
+    get soloistPowerBtnDesktop() { return getEl('soloistPowerBtnDesktop'); },
+    get harmonyPowerBtn() { return getEl('harmonyPowerBtn'); },
+    get harmonyPowerBtnDesktop() { return getEl('harmonyPowerBtnDesktop'); },
+    get vizPowerBtn() { return getEl('vizPowerBtn'); },
+    get bpmInput() { return getEl('bpmInput'); },
+    get keySelect() { return getEl('keySelect'); },
+    get timeSigSelect() { return getEl('timeSigSelect'); },
+    get notationSelect() { return getEl('notationSelect'); },
+    get densitySelect() { return getEl('densitySelect'); },
+    get chordReverb() { return getEl('chordReverb'); },
+    get bassReverb() { return getEl('bassReverb'); },
+    get soloistReverb() { return getEl('soloistReverb'); },
+    get harmonyReverb() { return getEl('harmonyReverb'); },
+    get drumReverb() { return getEl('drumReverb'); },
+    get humanizeSlider() { return getEl('humanizeSlider'); },
+    get autoIntensityCheck() { return getEl('autoIntensityCheck'); },
+    get soloistDoubleStops() { return getEl('soloistDoubleStops'); },
+    get complexitySlider() { return getEl('complexitySlider'); },
+    get complexityValue() { return getEl('complexityValue'); },
+    get themeSelect() { return getEl('themeSelect'); },
+    get flashOverlay() { return getEl('flashOverlay'); },
+    get sectionList() { return getEl('sectionList'); },
+    get measurePagination() { return getEl('measurePagination'); },
+    get chordVisualizer() { return getEl('chordVisualizer'); },
+    get pianoRootsCheck() { return getEl('pianoRootsCheck'); },
+    get relKeyBtn() { return getEl('relKeyBtn'); },
+    get chordStylePresets() { return getEl('chordStylePresets'); },
+    get soloistStylePresets() { return getEl('soloistStylePresets'); },
+    get bassStylePresets() { return getEl('bassStylePresets'); },
+    get harmonyStylePresets() { return getEl('harmonyStylePresets'); },
+    get drumPresets() { return getEl('drumPresets'); },
+    get smartDrumPresets() { return getEl('smartDrumPresets'); },
+    get chordPresets() { return getEl('chordPresets'); },
+    get arrangerActionMenu() { return getEl('arrangerActionMenu'); },
+    get arrangerActionTrigger() { return getEl('arrangerActionTrigger'); },
+    get settingsOverlay() { return getEl('settingsOverlay'); },
+    get exportFilenameInput() { return getEl('exportFilenameInput'); },
+    get exportOverlay() { return getEl('exportOverlay'); },
+    get tapBtn() { return getEl('tapBtn'); },
+    get addSectionBtn() { return getEl('addSectionBtn'); },
+    get templatesBtn() { return getEl('templatesBtn'); },
+    get templatesOverlay() { return getEl('templatesOverlay'); },
+    get closeTemplatesBtn() { return getEl('closeTemplatesBtn'); },
+    get undoBtn() { return getEl('undoBtn'); },
+    get randomizeBtn() { return getEl('randomizeBtn'); },
+    get mutateBtn() { return getEl('mutateBtn'); },
+    get clearProgBtn() { return getEl('clearProgBtn'); },
+    get saveBtn() { return getEl('saveBtn'); },
+    get saveDrumBtn() { return getEl('saveDrumBtn'); },
+    get shareBtn() { return getEl('shareBtn'); },
+    get transUpBtn() { return getEl('transUpBtn'); },
+    get transDownBtn() { return getEl('transDownBtn'); },
+    get installAppBtn() { return getEl('installAppBtn'); },
+    get settingsBtn() { return getEl('settingsBtn'); },
+    get resetSettingsBtn() { return getEl('resetSettingsBtn'); },
+    get refreshAppBtn() { return getEl('refreshAppBtn'); },
+    get exportMidiBtn() { return getEl('exportMidiBtn'); },
+    get settingsExportMidiBtn() { return getEl('settingsExportMidiBtn'); },
+    get closeExportBtn() { return getEl('closeExportBtn'); },
+    get confirmExportBtn() { return getEl('confirmExportBtn'); },
+    get exportChordsCheck() { return getEl('exportChordsCheck'); },
+    get exportBassCheck() { return getEl('exportBassCheck'); },
+    get exportSoloistCheck() { return getEl('exportSoloistCheck'); },
+    get exportHarmoniesCheck() { return getEl('exportHarmoniesCheck'); },
+    get exportDrumsCheck() { return getEl('exportDrumsCheck'); },
+    get exportDurationInput() { return getEl('exportDurationInput'); },
+    get maximizeChordBtn() { return getEl('maximizeChordBtn'); },
+    get exportDurationContainer() { return getEl('exportDurationContainer'); },
+    get exportDurationStepper() { return getEl('exportDurationStepper'); },
+    get exportDurationDec() { return getEl('exportDurationDec'); },
+    get exportDurationInc() { return getEl('exportDurationInc'); },
+    get editArrangementBtn() { return getEl('editArrangementBtn'); },
+    get editorOverlay() { return getEl('editorOverlay'); },
+    get closeEditorBtn() { return getEl('closeEditorBtn'); },
+    get groupingLabel() { return getEl('groupingLabel'); },
+    get cloneMeasureBtn() { return getEl('cloneMeasureBtn'); },
+    get larsModeCheck() { return getEl('larsModeCheck'); },
+    get larsIntensityContainer() { return getEl('larsIntensityContainer'); },
+    get larsIntensitySlider() { return getEl('larsIntensitySlider'); },
+    get larsIntensityValue() { return getEl('larsIntensityValue'); },
+    get analyzeAudioBtn() { return getEl('analyzeAudioBtn'); },
+    get closeAnalyzerBtn() { return getEl('closeAnalyzerBtn'); },
+    get analyzerOverlay() { return getEl('analyzerOverlay'); },
+    get analyzerDropZone() { return getEl('analyzerDropZone'); },
+    get analyzerFileInput() { return getEl('analyzerFileInput'); },
+    get liveListenContainer() { return getEl('liveListenContainer'); },
+    get analyzerTrimView() { return getEl('analyzerTrimView'); },
+    get analyzerProcessing() { return getEl('analyzerProcessing'); },
+    get analyzerResults() { return getEl('analyzerResults'); },
+    get analyzerProgressBar() { return getEl('analyzerProgressBar'); },
+    get analyzerWaveformCanvas() { return getEl('analyzerWaveformCanvas'); },
+    get analyzerStartInput() { return getEl('analyzerStartInput'); },
+    get analyzerEndInput() { return getEl('analyzerEndInput'); },
+    get analyzerSelectionOverlay() { return getEl('analyzerSelectionOverlay'); },
+    get analyzerDurationLabel() { return getEl('analyzerDurationLabel'); },
+    get bpmChips() { return getEl('bpmChips'); },
+    get suggestedSectionsContainer() { return getEl('suggestedSectionsContainer'); },
+    get analyzerSummary() { return getEl('analyzerSummary'); },
+    get detectedBpmLabel() { return getEl('detectedBpmLabel'); },
+    get analyzerSyncBpmCheck() { return getEl('analyzerSyncBpmCheck'); },
+    get liveListenBtn() { return getEl('liveListenBtn'); },
+    get liveListenView() { return getEl('liveListenView'); },
+    get liveHistoryDisplay() { return getEl('liveHistoryDisplay'); },
+    get liveChordDisplay() { return getEl('liveChordDisplay'); },
+    get stopLiveListenBtn() { return getEl('stopLiveListenBtn'); },
+    get startAnalysisBtn() { return getEl('startAnalysisBtn'); },
+    get applyAnalysisBtn() { return getEl('applyAnalysisBtn'); },
+    get midiEnableCheck() { return getEl('midiEnableCheck'); },
+    get midiMuteLocalCheck() { return getEl('midiMuteLocalCheck'); },
+    get midiOutputSelect() { return getEl('midiOutputSelect'); },
+    get midiLatencySlider() { return getEl('midiLatencySlider'); },
+    get midiLatencyValue() { return getEl('midiLatencyValue'); },
+    get midiVelocitySlider() { return getEl('midiVelocitySlider'); },
+    get midiVelocityValue() { return getEl('midiVelocityValue'); },
+    get midiChordsChannel() { return getEl('midiChordsChannel'); },
+    get midiBassChannel() { return getEl('midiBassChannel'); },
+    get midiSoloistChannel() { return getEl('midiSoloistChannel'); },
+    get midiHarmonyChannel() { return getEl('midiHarmonyChannel'); },
+    get midiDrumsChannel() { return getEl('midiDrumsChannel'); },
+    get midiChordsOctave() { return getEl('midiChordsOctave'); },
+    get midiBassOctave() { return getEl('midiBassOctave'); },
+    get midiSoloistOctave() { return getEl('midiSoloistOctave'); },
+    get midiHarmonyOctave() { return getEl('midiHarmonyOctave'); },
+    get midiDrumsOctave() { return getEl('midiDrumsOctave'); },
+    get midiControls() { return getEl('midiControls'); },
+    get groupingToggle() { return getEl('groupingToggle'); }
+};
 
 export function showToast(msg) {
     const toast = document.createElement('div');
@@ -319,7 +443,7 @@ export function recalculateScrollOffsets() {
 }
 
 export function switchInstrumentTab(module, target) {
-    const panelId = { cb: 'chord', bb: 'bass', sb: 'soloist', hb: 'harmony', gb: 'groove' }[module];
+    const panelId = { chords: 'chord', bass: 'bass', soloist: 'soloist', harmony: 'harmony', groove: 'groove' }[module];
     if (!panelId) return;
 
     // Update Buttons
@@ -333,7 +457,7 @@ export function switchInstrumentTab(module, target) {
     });
     
     // Update State
-    const stateMap = { cb, bb, sb, hb, gb };
+    const stateMap = { chords, bass, soloist, harmony, groove };
     if (stateMap[module]) stateMap[module].activeTab = target;
 }
 
@@ -352,7 +476,7 @@ export function initTabs() {
         const content = document.getElementById(`panel-${target}`);
         if (content) content.classList.add('active-mobile');
         btn.classList.add('active');
-        gb.mobileTab = target;
+        groove.mobileTab = target;
     };
 
     mobileTabItems.forEach(item => {
@@ -362,7 +486,7 @@ export function initTabs() {
         };
         
         const btn = item.querySelector('.tab-btn');
-        if (btn && btn.dataset.tab === gb.mobileTab) {
+        if (btn && btn.dataset.tab === groove.mobileTab) {
             activateMobileTab(item);
         }
     });
@@ -374,7 +498,7 @@ export function initTabs() {
         };
         
         const module = btn.dataset.module;
-        const stateMap = { cb, bb, sb, hb, gb };
+        const stateMap = { chords, bass, soloist, harmony, groove };
         if (stateMap[module] && btn.dataset.tab === stateMap[module].activeTab) {
             switchInstrumentTab(module, btn.dataset.tab);
         }
@@ -384,11 +508,11 @@ export function initTabs() {
 export function renderMeasurePagination(onSwitch) {
     if (!ui.measurePagination) return;
     ui.measurePagination.innerHTML = '';
-    for (let i = 0; i < gb.measures; i++) {
+    for (let i = 0; i < groove.measures; i++) {
         const btn = document.createElement('button');
         btn.className = 'measure-btn';
         btn.textContent = i + 1;
-        if (i === gb.currentMeasure) btn.classList.add('active');
+        if (i === groove.currentMeasure) btn.classList.add('active');
         btn.onclick = () => onSwitch(i);
         ui.measurePagination.appendChild(btn);
     }
@@ -463,7 +587,7 @@ export function createPresetChip(name, onDelete, onSelect, extraClass = '') {
 }
 
 export function updateActiveChordUI(index) {
-    cb.lastActiveChordIndex = index;
+    chords.lastActiveChordIndex = index;
     const cards = UIStore.cachedCards;
     cards.forEach((c, i) => c.classList.toggle('active', i === index));
     
@@ -508,7 +632,7 @@ export function updateActiveChordUI(index) {
     }
 
     // --- 2. Sequencer Grid Scrolling (Auto-Follow) ---
-    if (gb.followPlayback && ctx.isPlaying && ui.sequencerGrid) {
+    if (groove.followPlayback && playback.isPlaying && ui.sequencerGrid) {
         const playingSteps = ui.sequencerGrid.querySelectorAll('.step.playing');
         if (playingSteps.length > 0) {
             const firstStep = playingSteps[0];
@@ -561,7 +685,7 @@ export function updateGenreUI(stepsUntilNextMeasure = 0, stepsPerBeat = 4) {
     const beatsRemaining = Math.ceil(stepsUntilNextMeasure / stepsPerBeat);
     
     btns.forEach(btn => {
-        const isTarget = gb.pendingGenreFeel && btn.dataset.genre === (gb.pendingGenreFeel.genreName || getGenreNameFromFeel(gb.pendingGenreFeel.feel));
+        const isTarget = groove.pendingGenreFeel && btn.dataset.genre === (groove.pendingGenreFeel.genreName || getGenreNameFromFeel(groove.pendingGenreFeel.feel));
         
         if (isTarget) {
             btn.classList.add('pending');
@@ -572,7 +696,7 @@ export function updateGenreUI(stepsUntilNextMeasure = 0, stepsPerBeat = 4) {
         }
 
         // Active state should reflect ACTUAL current feel
-        const isActive = btn.dataset.genre === gb.lastSmartGenre && !btn.classList.contains('pending');
+        const isActive = btn.dataset.genre === groove.lastSmartGenre && !btn.classList.contains('pending');
         btn.classList.toggle('active', isActive);
         btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
@@ -580,10 +704,10 @@ export function updateGenreUI(stepsUntilNextMeasure = 0, stepsPerBeat = 4) {
     // --- Lane Protection: Toggle Visibility ---
     // If Virtual Bass is ON, Piano Roots should be hidden or disabled to prevent clutter.
     if (ui.pianoRootsCheck && ui.pianoRootsCheck.parentElement) {
-        const isBassOn = bb.enabled;
+        const isBassOn = bass.enabled;
         const container = ui.pianoRootsCheck.parentElement;
         container.style.display = isBassOn ? 'none' : 'flex';
-        ui.pianoRootsCheck.checked = cb.pianoRoots;
+        ui.pianoRootsCheck.checked = chords.pianoRoots;
     }
 }
 

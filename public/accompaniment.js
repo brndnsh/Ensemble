@@ -1,4 +1,4 @@
-import { ctx, arranger, cb, bb, sb, gb, hb } from './state.js';
+import { playback, arranger, chords, bass, soloist, groove, harmony } from './state.js';
 import { getMidi, getFrequency } from './utils.js';
 import { TIME_SIGNATURES } from './config.js';
 
@@ -26,7 +26,7 @@ export const compingState = {
  */
 export function generateCompingPattern(genre, vibe, length = 16) {
     const pattern = new Array(length).fill(0);
-    const intensity = ctx.bandIntensity;
+    const intensity = playback.bandIntensity;
     
     // Helper to set a beat if it's within bounds
     const hit = (step) => { if (step < length) pattern[step] = 1; };
@@ -148,7 +148,7 @@ export function generateCompingPattern(genre, vibe, length = 16) {
     }
     
     // Syncopation
-    if (ctx.complexity > 0.6 && Math.random() > 0.5) {
+    if (playback.complexity > 0.6 && Math.random() > 0.5) {
         // Remove a downbeat and shift it
         if (pattern[8] === 1) {
             pattern[8] = 0;
@@ -175,16 +175,16 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
     compingState.soloistActivity = soloistBusy ? 1 : 0;
     const soloistJustStopped = wasBusy && !soloistBusy;
 
-    const intensity = ctx.bandIntensity;
-    const complexity = ctx.complexity;
-    let genre = gb.genreFeel;
+    const intensity = playback.bandIntensity;
+    const complexity = playback.complexity;
+    let genre = groove.genreFeel;
 
     // --- Style Override ---
-    if (cb.style === 'jazz') genre = 'Jazz';
-    else if (cb.style === 'funk') genre = 'Funk';
-    else if (cb.style === 'strum8') genre = 'Rock';
-    else if (cb.style === 'strum-country') genre = 'Country';
-    else if (cb.style === 'power-metal') genre = 'Metal';
+    if (chords.style === 'jazz') genre = 'Jazz';
+    else if (chords.style === 'funk') genre = 'Funk';
+    else if (chords.style === 'strum8') genre = 'Rock';
+    else if (chords.style === 'strum-country') genre = 'Country';
+    else if (chords.style === 'power-metal') genre = 'Metal';
 
     // --- Sticky Groove Logic ---
     const stickyGenres = ['Funk', 'Soul', 'Reggae', 'Neo-Soul'];
@@ -237,16 +237,16 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
     for (let i = 0; i < 16; i++) {
         if (newCell[i] === 1) mask |= (1 << i);
     }
-    cb.rhythmicMask = mask;
+    chords.rhythmicMask = mask;
 
-    ctx.intent.anticipation = (intensity * 0.2);
-    if (genre === 'Jazz' || genre === 'Bossa') ctx.intent.anticipation += 0.15;
+    playback.intent.anticipation = (intensity * 0.2);
+    if (genre === 'Jazz' || genre === 'Bossa') playback.intent.anticipation += 0.15;
     
-    ctx.intent.syncopation = (complexity * 0.4);
-    if (genre === 'Funk') ctx.intent.syncopation += 0.2;
+    playback.intent.syncopation = (complexity * 0.4);
+    if (genre === 'Funk') playback.intent.syncopation += 0.2;
 
-    ctx.intent.layBack = (intensity < 0.4) ? 0.02 : 0; 
-    if (genre === 'Neo-Soul') ctx.intent.layBack += 0.05; // More lag for Dilla feel
+    playback.intent.layBack = (intensity < 0.4) ? 0.02 : 0; 
+    if (genre === 'Neo-Soul') playback.intent.layBack += 0.05; // More lag for Dilla feel
 
     compingState.lockedUntil = step + spm;
 }
@@ -302,11 +302,11 @@ function handleSustainEvents(step, measureStep, chordIndex, intensity, genre, st
  * Returns an array of standardized Note Objects.
  */
 export function getAccompanimentNotes(chord, step, stepInChord, measureStep, stepInfo) {
-    if (!cb.enabled || !chord) return [];
+    if (!chords.enabled || !chord) return [];
 
     const notes = [];
-    const genre = gb.genreFeel;
-    const intensity = ctx.bandIntensity;
+    const genre = groove.genreFeel;
+    const intensity = playback.bandIntensity;
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const spm = ts.beats * ts.stepsPerBeat;
     
@@ -314,11 +314,11 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
     const chordIndex = arranger.progression.indexOf(chord);
     const ccEvents = handleSustainEvents(step, measureStep, chordIndex, intensity, genre, stepInfo, chord.quality);
     
-    updateRhythmicIntent(step, (sb.enabled && sb.busySteps > 0), spm, chord.sectionId);
+    updateRhythmicIntent(step, (soloist.enabled && soloist.busySteps > 0), spm, chord.sectionId);
 
     // --- GENRE LANES ---
 
-    if (cb.style === 'strum-country') {
+    if (chords.style === 'strum-country') {
         // Boom-Chick Pattern (Root/5th Bass, Chord Strum)
         // Beats 1 and 3 (0 and 8 in 4/4): Bass Note
         // Beats 2 and 4 (4 and 12 in 4/4): Chord Strum
@@ -374,7 +374,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         return [];
     }
 
-    if (cb.style === 'power-metal') {
+    if (chords.style === 'power-metal') {
         // Driving 8th notes (chugs) with Power Chords (Root + 5th + Octave)
         // 4/4: 0, 2, 4, 6, 8, 10, 12, 14
         const isEighth = (measureStep % 2 === 0);
@@ -447,7 +447,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
                     velocity: (isGhost ? 0.2 : 0.55) * (0.5 + intensity * 0.9),
                     durationSteps: isGhost ? 0.5 : 2.5,
                     ccEvents: (i === 0) ? ccEvents : [],
-                    timingOffset: (i * 0.012) + ctx.intent.layBack + drunk,
+                    timingOffset: (i * 0.012) + playback.intent.layBack + drunk,
                     instrument: 'Piano',
                     muted: isGhost,
                     dry: true
@@ -557,15 +557,15 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
 
     // Conversational: Listen to Soloist
     // If soloist is busy, suppress hits to avoid clutter (Call & Response)
-    if (sb.enabled && sb.busySteps > 0 && cb.style === 'smart') {
+    if (soloist.enabled && soloist.busySteps > 0 && chords.style === 'smart') {
          if (Math.random() < 0.7) isHit = false; 
     }
 
     // --- NEW: Harmony Interlocking ---
     // If backgrounds are busy, the main accompanist should find gaps.
-    if (isHit && hb.enabled && hb.rhythmicMask > 0 && cb.style === 'smart') {
-        const hasHarmonyHit = (hb.rhythmicMask >> (measureStep % 16)) & 1;
-        if (hasHarmonyHit && Math.random() < (0.4 + ctx.bandIntensity * 0.3)) {
+    if (isHit && harmony.enabled && harmony.rhythmicMask > 0 && chords.style === 'smart') {
+        const hasHarmonyHit = (harmony.rhythmicMask >> (measureStep % 16)) & 1;
+        if (hasHarmonyHit && Math.random() < (0.4 + playback.bandIntensity * 0.3)) {
             // Background stab present, suppress piano hit to let it pop
             isHit = false;
         }
@@ -576,19 +576,19 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
     if (stepInfo && stepInfo.isGroupStart && !isHit && Math.random() < (0.4 + intensity * 0.4)) isHit = true;
     
     // Pad Style Override
-    if (cb.style === 'pad') isHit = (stepInChord === 0);
+    if (chords.style === 'pad') isHit = (stepInChord === 0);
 
     if (isHit) {
         let timingOffset = 0;
         const isDownbeat = stepInfo ? stepInfo.isBeatStart : (measureStep % 4 === 0);
         const isStructural = stepInfo ? stepInfo.isGroupStart : (measureStep % 8 === 0);
-        const intensity = ctx.bandIntensity;
+        const intensity = playback.bandIntensity;
 
-        if (cb.style === 'smart') {
+        if (chords.style === 'smart') {
             const pushProb = 0.15 + (intensity * 0.2);
             if (!isDownbeat && Math.random() < pushProb) timingOffset = -0.025;
-            if (Math.random() < ctx.intent.anticipation) timingOffset -= 0.010;
-            if (Math.random() < ctx.intent.layBack) timingOffset += 0.020;
+            if (Math.random() < playback.intent.anticipation) timingOffset -= 0.010;
+            if (Math.random() < playback.intent.layBack) timingOffset += 0.020;
         }
 
         let durationSteps = ts.stepsPerBeat * 2; // Default 2 beats
@@ -597,7 +597,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         else if (genre === 'Acoustic') durationSteps = ts.stepsPerBeat * 2.5; 
         else if (genre === 'Rock' || genre === 'Bossa') durationSteps = ts.stepsPerBeat * 1.5;
         
-        if (cb.style === 'pad') durationSteps = chord.beats * ts.stepsPerBeat;
+        if (chords.style === 'pad') durationSteps = chord.beats * ts.stepsPerBeat;
         
         durationSteps = Math.max(1, Math.round(durationSteps));
 
@@ -606,7 +606,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         const velocity = (isStructural ? 0.6 : (isDownbeat ? 0.5 : 0.35)) * intensityFactor;
 
         let voicing = [...chord.freqs];
-        const complexity = ctx.complexity;
+        const complexity = playback.complexity;
 
         // --- NEW: Harmonic Tension Scaling ---
         // At high complexity, favor 9ths, 11ths, and 13ths (extensions)
@@ -626,7 +626,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         }
 
         // --- Low Intensity Arpeggiation / Fingerpicking (Acoustic) ---
-        if (genre === 'Acoustic' && intensity < 0.45 && cb.style === 'smart') {
+        if (genre === 'Acoustic' && intensity < 0.45 && chords.style === 'smart') {
             // Pick a single note or dyad based on the step for a "fingerpicked" feel
             const pattern = [0, 2, 1, 3]; // Bass, High, Mid, High sequence
             const pickIdx = pattern[Math.floor(measureStep / 2) % pattern.length];
@@ -640,11 +640,11 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         }
 
         // --- Frequency Slotting & Soloist Pocket ---
-        const soloistMidi = sb.enabled ? getMidi(sb.lastFreq) : 0;
-        const bassMidi = bb.enabled ? getMidi(bb.lastFreq) : 0;
+        const soloistMidi = soloist.enabled ? getMidi(soloist.lastFreq) : 0;
+        const bassMidi = bass.enabled ? getMidi(bass.lastFreq) : 0;
         const useClarity = soloistMidi > 72;
 
-        if (cb.style === 'smart') {
+        if (chords.style === 'smart') {
             // Jazz Shell Lesson: If things are hot and harmony is complex, stick to shells (3 & 7)
             const isComplex = chord.quality === '7alt' || chord.quality === 'halfdim' || chord.quality === 'dim';
             if (genre === 'Jazz' && intensity > 0.6 && isComplex) {
@@ -664,7 +664,7 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             if (!isStructural && voicing.length > 3 && Math.random() < 0.5) voicing = voicing.slice(0, 3);
             
             // Frequency Slotting: Avoid masking the bass
-            if (bb.enabled && voicing.length > 0) {
+            if (bass.enabled && voicing.length > 0) {
                 // Ensure sorted for predictable slotting
                 voicing.sort((a, b) => getMidi(a) - getMidi(b));
                 

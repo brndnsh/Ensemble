@@ -1,4 +1,4 @@
-import { ctx, cb, bb, sb, hb, gb, arranger, subscribe } from './state.js';
+import { playback, chords, bass, soloist, harmony, groove, arranger, subscribe } from './state.js';
 import { renderChordVisualizer, renderGrid, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, initSequencerHandlers } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';
@@ -20,7 +20,7 @@ let viz;
  * Diagnostic: Enables detailed logging of worker/scheduler interactions.
  */
 window.enableWorkerLogging = (enabled) => {
-    ctx.workerLogging = enabled;
+    playback.workerLogging = enabled;
     console.log(`[Worker] Logging ${enabled ? 'ENABLED' : 'DISABLED'}`);
 };
 
@@ -30,31 +30,31 @@ function init() {
         initWorker(() => scheduler(), (notes) => { 
             const sbUpdatedSteps = new Set();
             notes.forEach(n => { 
-                if (n.module === 'bb') bb.buffer.set(n.step, n); 
-                else if (n.module === 'sb') {
+                if (n.module === 'bass') bass.buffer.set(n.step, n); 
+                else if (n.module === 'soloist') {
                     // ENFORCE MONOPHONIC: If double stops are disabled, skip additional notes for the same step
-                    if (!sb.doubleStops && sb.buffer.has(n.step)) return;
+                    if (!soloist.doubleStops && soloist.buffer.has(n.step)) return;
 
                     if (!sbUpdatedSteps.has(n.step)) {
-                        sb.buffer.set(n.step, []);
+                        soloist.buffer.set(n.step, []);
                         sbUpdatedSteps.add(n.step);
                     }
-                    sb.buffer.get(n.step).push(n);
+                    soloist.buffer.get(n.step).push(n);
                 }
-                else if (n.module === 'hb') {
-                    if (!hb.buffer.has(n.step)) hb.buffer.set(n.step, []);
-                    hb.buffer.get(n.step).push(n);
+                else if (n.module === 'harmony') {
+                    if (!harmony.buffer.has(n.step)) harmony.buffer.set(n.step, []);
+                    harmony.buffer.get(n.step).push(n);
                 }
-                else if (n.module === 'cb') {
-                    if (!cb.buffer.has(n.step)) cb.buffer.set(n.step, []);
-                    cb.buffer.get(n.step).push(n);
+                else if (n.module === 'chords') {
+                    if (!chords.buffer.has(n.step)) chords.buffer.set(n.step, []);
+                    chords.buffer.get(n.step).push(n);
                 }
             }); 
-            if (ctx.isPlaying) scheduler(); 
+            if (playback.isPlaying) scheduler(); 
         });
 
         viz = new UnifiedVisualizer('unifiedVizContainer'); 
-        ctx.viz = viz;
+        playback.viz = viz;
         viz.addTrack('bass', 'var(--success-color)'); 
         viz.addTrack('soloist', 'var(--soloist-color)');
         viz.addTrack('harmony', 'var(--violet)');
@@ -69,8 +69,8 @@ function init() {
         renderGrid(); 
         renderMeasurePagination(switchMeasure);
         
-        const hasDrumPattern = gb.instruments.some(inst => inst.steps.some(s => s > 0));
-        if (!hasDrumPattern) loadDrumPreset(gb.lastDrumPreset || 'Basic Rock');
+        const hasDrumPattern = groove.instruments.some(inst => inst.steps.some(s => s > 0));
+        if (!hasDrumPattern) loadDrumPreset(groove.lastDrumPreset || 'Basic Rock');
         
         setupPresets({ togglePlay: () => togglePlay(viz) }); 
         setupUIHandlers({ 
@@ -89,8 +89,8 @@ function init() {
         // --- BACKGROUND RECOVERY ---
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                if (ctx.audio && ctx.audio.state === 'suspended' && ctx.isPlaying) {
-                    ctx.audio.resume().catch(() => {});
+                if (playback.audio && playback.audio.state === 'suspended' && playback.isPlaying) {
+                    playback.audio.resume().catch(() => {});
                 }
             }
         });
@@ -105,26 +105,26 @@ function init() {
         if (versionEl) versionEl.textContent = `Ensemble v${APP_VERSION}`;
 
         // Start animation loop
-        ctx.isDrawing = true;
+        playback.isDrawing = true;
         requestAnimationFrame(() => draw(viz));
 
     } catch (e) { console.error("Error during init:", e); }
 }
 
 window.previewChord = (index) => {
-    if (ctx.isPlaying) return; 
+    if (playback.isPlaying) return; 
     initAudio(); 
     const chord = arranger.progression[index]; 
     if (!chord) return;
-    const wasSustainActive = ctx.sustainActive;
-    ctx.sustainActive = false;
-    const now = ctx.audio.currentTime; 
+    const wasSustainActive = playback.sustainActive;
+    playback.sustainActive = false;
+    const now = playback.audio.currentTime; 
     chord.freqs.forEach(f => playNote(f, now, 1.0, { vol: 0.15, instrument: 'Piano' }));
-    ctx.sustainActive = wasSustainActive;
+    playback.sustainActive = wasSustainActive;
     const cards = document.querySelectorAll('.chord-card'); 
     if (cards[index]) { 
         cards[index].classList.add('active'); 
-        setTimeout(() => { if (!ctx.isPlaying) cards[index].classList.remove('active'); }, 300); 
+        setTimeout(() => { if (!playback.isPlaying) cards[index].classList.remove('active'); }, 300); 
     }
 };
 

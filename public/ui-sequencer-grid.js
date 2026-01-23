@@ -1,4 +1,4 @@
-import { arranger, gb } from './state.js';
+import { arranger, groove } from './state.js';
 import { getStepsPerMeasure, getStepInfo } from './utils.js';
 import { clearDrumPresetHighlight } from './instrument-controller.js';
 import { TIME_SIGNATURES } from './config.js';
@@ -14,7 +14,7 @@ export function initSequencerHandlers(ui) {
         if (target.classList.contains('step')) {
             const instIdx = parseInt(target.dataset.instIdx);
             const stepIdx = parseInt(target.dataset.stepIdx);
-            const inst = gb.instruments[instIdx];
+            const inst = groove.instruments[instIdx];
             if (!inst) return;
 
             if (inst.steps[stepIdx] === 0) inst.steps[stepIdx] = 1;
@@ -30,13 +30,13 @@ export function initSequencerHandlers(ui) {
         // 2. Handle Track Symbol (Audition)
         if (target.classList.contains('track-symbol')) {
             const instIdx = parseInt(target.dataset.instIdx);
-            const inst = gb.instruments[instIdx];
+            const inst = groove.instruments[instIdx];
             if (!inst) return;
 
             import('./engine.js').then(({ initAudio, playDrumSound }) => {
-                import('./state.js').then(({ ctx }) => {
+                import('./state.js').then(({ playback }) => {
                     initAudio();
-                    playDrumSound(inst.name, ctx.audio.currentTime, 1.0);
+                    playDrumSound(inst.name, playback.audio.currentTime, 1.0);
                 });
             });
             target.classList.add('auditioning');
@@ -47,7 +47,7 @@ export function initSequencerHandlers(ui) {
         // 3. Handle Mute Toggle
         if (target.classList.contains('mute-toggle')) {
             const instIdx = parseInt(target.dataset.instIdx);
-            const inst = gb.instruments[instIdx];
+            const inst = groove.instruments[instIdx];
             if (!inst) return;
 
             inst.muted = !inst.muted;
@@ -66,13 +66,13 @@ export function renderGrid(ui, skipScroll = false) {
     if (!ui.sequencerGrid) return;
     const currentScroll = ui.sequencerGrid.scrollLeft;
     const spm = getStepsPerMeasure(arranger.timeSignature);
-    const totalSteps = gb.measures * spm;
+    const totalSteps = groove.measures * spm;
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     
     const existingTracks = Array.from(ui.sequencerGrid.querySelectorAll('.track:not(.label-row)'));
     
     // --- 1. RENDER INSTRUMENT TRACKS ---
-    gb.instruments.forEach((inst, idx) => {
+    groove.instruments.forEach((inst, idx) => {
         let row = existingTracks[idx];
         let stepsContainer;
 
@@ -141,7 +141,7 @@ export function renderGrid(ui, skipScroll = false) {
         }
     });
 
-    while (existingTracks.length > gb.instruments.length) {
+    while (existingTracks.length > groove.instruments.length) {
         existingTracks.pop().remove();
     }
     
@@ -193,9 +193,9 @@ export function renderGrid(ui, skipScroll = false) {
 
 export function renderGridState(ui) {
     const spm = getStepsPerMeasure(arranger.timeSignature);
-    const totalSteps = gb.measures * spm;
+    const totalSteps = groove.measures * spm;
     const rows = ui.sequencerGrid.querySelectorAll('.track:not(.label-row)');
-    gb.instruments.forEach((inst, rowIdx) => {
+    groove.instruments.forEach((inst, rowIdx) => {
         if (!rows[rowIdx]) return;
         const steps = rows[rowIdx].querySelectorAll('.step');
         steps.forEach((step, i) => {
@@ -207,7 +207,7 @@ export function renderGridState(ui) {
     UIStore.cachedSteps = [];
     for (let i = 0; i < totalSteps; i++) {
         const activeInStep = [];
-        gb.instruments.forEach((inst, rowIdx) => {
+        groove.instruments.forEach((inst, rowIdx) => {
             if (inst.steps[i] > 0 && rows[rowIdx]) {
                 const stepEl = rows[rowIdx].querySelectorAll('.step')[i];
                 if (stepEl) activeInStep.push(stepEl);

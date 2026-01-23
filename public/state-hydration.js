@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { ctx, cb, bb, sb, hb, gb, arranger, vizState, storage, dispatch } from './state.js';
+import { playback, chords, bass, soloist, harmony, groove, arranger, vizState, storage, dispatch } from './state.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { ui, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
 import { decompressSections, generateId, normalizeKey } from './utils.js';
@@ -14,75 +14,75 @@ export function hydrateState() {
         arranger.isMinor = savedState.isMinor || false; 
         arranger.notation = savedState.notation || 'roman'; 
         arranger.lastChordPreset = savedState.lastChordPreset || 'Pop (Standard)'; 
-        ctx.theme = savedState.theme || 'auto'; 
-        ctx.bpm = savedState.bpm || 100; 
-        ctx.bandIntensity = savedState.bandIntensity !== undefined ? savedState.bandIntensity : 0.5; 
-        ctx.complexity = savedState.complexity !== undefined ? savedState.complexity : 0.3; 
-        ctx.autoIntensity = savedState.autoIntensity !== undefined ? savedState.autoIntensity : true; 
-        ctx.metronome = savedState.metronome || false; 
-        ctx.sessionTimer = savedState.sessionTimer !== undefined ? savedState.sessionTimer : 5;
-        ctx.stopAtEnd = false;
+        playback.theme = savedState.theme || 'auto'; 
+        playback.bpm = savedState.bpm || 100; 
+        playback.bandIntensity = savedState.bandIntensity !== undefined ? savedState.bandIntensity : 0.5; 
+        playback.complexity = savedState.complexity !== undefined ? savedState.complexity : 0.3; 
+        playback.autoIntensity = savedState.autoIntensity !== undefined ? savedState.autoIntensity : true; 
+        playback.metronome = savedState.metronome || false; 
+        playback.sessionTimer = savedState.sessionTimer !== undefined ? savedState.sessionTimer : 5;
+        playback.stopAtEnd = false;
         
-        if (ui.sessionTimerCheck) ui.sessionTimerCheck.checked = ctx.sessionTimer > 0;
-        if (ui.sessionTimerInput) ui.sessionTimerInput.value = ctx.sessionTimer > 0 ? ctx.sessionTimer : 5;
+        if (ui.sessionTimerCheck) ui.sessionTimerCheck.checked = playback.sessionTimer > 0;
+        if (ui.sessionTimerInput) ui.sessionTimerInput.value = playback.sessionTimer > 0 ? playback.sessionTimer : 5;
         
         // Also ensure the visual container reflects the state
         if (ui.sessionTimerDurationContainer) {
-            ui.sessionTimerDurationContainer.style.opacity = ctx.sessionTimer > 0 ? '1' : '0.4';
-            ui.sessionTimerDurationContainer.style.pointerEvents = ctx.sessionTimer > 0 ? 'auto' : 'none';
+            ui.sessionTimerDurationContainer.style.opacity = playback.sessionTimer > 0 ? '1' : '0.4';
+            ui.sessionTimerDurationContainer.style.pointerEvents = playback.sessionTimer > 0 ? 'auto' : 'none';
         }
 
 
-        ctx.applyPresetSettings = savedState.applyPresetSettings !== undefined ? savedState.applyPresetSettings : false; 
+        playback.applyPresetSettings = savedState.applyPresetSettings !== undefined ? savedState.applyPresetSettings : false; 
         vizState.enabled = savedState.vizEnabled !== undefined ? savedState.vizEnabled : false;
         
-        if (savedState.cb) { 
-            cb.enabled = savedState.cb.enabled !== undefined ? savedState.cb.enabled : true; 
-            cb.style = savedState.cb.style || 'smart'; 
-            cb.instrument = 'Piano'; 
-            cb.octave = savedState.cb.octave; 
-            cb.density = savedState.cb.density; 
-        cb.volume = savedState.cb.volume !== undefined ? savedState.cb.volume : 0.5;
-        cb.reverb = savedState.cb.reverb !== undefined ? savedState.cb.reverb : 0.3;
-        cb.pianoRoots = savedState.cb.pianoRoots || false;
-        cb.activeTab = savedState.cb.activeTab || 'smart';
+        if (savedState.chords) { 
+            chords.enabled = savedState.chords.enabled !== undefined ? savedState.chords.enabled : true; 
+            chords.style = savedState.chords.style || 'smart'; 
+            chords.instrument = 'Piano'; 
+            chords.octave = savedState.chords.octave; 
+            chords.density = savedState.chords.density; 
+        chords.volume = savedState.chords.volume !== undefined ? savedState.chords.volume : 0.5;
+        chords.reverb = savedState.chords.reverb !== undefined ? savedState.chords.reverb : 0.3;
+        chords.pianoRoots = savedState.chords.pianoRoots || false;
+        chords.activeTab = savedState.chords.activeTab || 'smart';
         }
-        if (savedState.bb) { 
-            bb.enabled = savedState.bb.enabled !== undefined ? savedState.bb.enabled : true; 
-            bb.style = savedState.bb.style || 'smart'; 
-            bb.octave = savedState.bb.octave; 
-            bb.volume = savedState.bb.volume !== undefined ? savedState.bb.volume : 0.45; 
-            bb.reverb = savedState.bb.reverb !== undefined ? savedState.bb.reverb : 0.05; 
+        if (savedState.bass) { 
+            bass.enabled = savedState.bass.enabled !== undefined ? savedState.bass.enabled : true; 
+            bass.style = savedState.bass.style || 'smart'; 
+            bass.octave = savedState.bass.octave; 
+            bass.volume = savedState.bass.volume !== undefined ? savedState.bass.volume : 0.45; 
+            bass.reverb = savedState.bass.reverb !== undefined ? savedState.bass.reverb : 0.05; 
         }
-        if (savedState.sb) { 
-            sb.enabled = savedState.sb.enabled !== undefined ? savedState.sb.enabled : false; 
-            sb.style = savedState.sb.style || 'smart'; 
-            sb.octave = (savedState.sb.octave === 77 || savedState.sb.octave === 67 || savedState.sb.octave === undefined) ? 72 : savedState.sb.octave; 
-            sb.volume = savedState.sb.volume !== undefined ? savedState.sb.volume : 0.5; 
-            sb.reverb = savedState.sb.reverb !== undefined ? savedState.sb.reverb : 0.6; 
-            sb.doubleStops = savedState.sb.doubleStops !== undefined ? savedState.sb.doubleStops : false;
+        if (savedState.soloist) { 
+            soloist.enabled = savedState.soloist.enabled !== undefined ? savedState.soloist.enabled : false; 
+            soloist.style = savedState.soloist.style || 'smart'; 
+            soloist.octave = (savedState.soloist.octave === 77 || savedState.soloist.octave === 67 || savedState.soloist.octave === undefined) ? 72 : savedState.soloist.octave; 
+            soloist.volume = savedState.soloist.volume !== undefined ? savedState.soloist.volume : 0.5; 
+            soloist.reverb = savedState.soloist.reverb !== undefined ? savedState.soloist.reverb : 0.6; 
+            soloist.doubleStops = savedState.soloist.doubleStops !== undefined ? savedState.soloist.doubleStops : false;
         }
-        if (savedState.hb) {
-            hb.enabled = savedState.hb.enabled !== undefined ? savedState.hb.enabled : false;
-            hb.style = savedState.hb.style || 'smart';
-            hb.octave = savedState.hb.octave || 60;
-            hb.volume = savedState.hb.volume !== undefined ? savedState.hb.volume : 0.4;
-            hb.reverb = savedState.hb.reverb !== undefined ? savedState.hb.reverb : 0.4;
-            hb.complexity = savedState.hb.complexity !== undefined ? savedState.hb.complexity : 0.5;
+        if (savedState.harmony) {
+            harmony.enabled = savedState.harmony.enabled !== undefined ? savedState.harmony.enabled : false;
+            harmony.style = savedState.harmony.style || 'smart';
+            harmony.octave = savedState.harmony.octave || 60;
+            harmony.volume = savedState.harmony.volume !== undefined ? savedState.harmony.volume : 0.4;
+            harmony.reverb = savedState.harmony.reverb !== undefined ? savedState.harmony.reverb : 0.4;
+            harmony.complexity = savedState.harmony.complexity !== undefined ? savedState.harmony.complexity : 0.5;
         }
-        if (savedState.gb) { 
-            gb.enabled = savedState.gb.enabled !== undefined ? savedState.gb.enabled : true; 
-            gb.volume = savedState.gb.volume !== undefined ? savedState.gb.volume : 0.5; 
-            gb.reverb = savedState.gb.reverb !== undefined ? savedState.gb.reverb : 0.2; 
-            gb.swing = savedState.gb.swing; 
-            gb.swingSub = savedState.gb.swingSub; 
-            gb.measures = savedState.gb.measures || 1; 
-            gb.humanize = savedState.gb.humanize !== undefined ? savedState.gb.humanize : 20; 
-            gb.followPlayback = savedState.gb.followPlayback !== undefined ? savedState.gb.followPlayback : (savedState.gb.autoFollow !== undefined ? savedState.gb.autoFollow : true); 
-            gb.lastDrumPreset = savedState.gb.lastDrumPreset || 'Basic Rock'; 
-            if (savedState.gb.pattern && savedState.gb.pattern.length > 0) { 
-                savedState.gb.pattern.forEach(savedInst => { 
-                    const inst = gb.instruments.find(i => i.name === savedInst.name); 
+        if (savedState.groove) { 
+            groove.enabled = savedState.groove.enabled !== undefined ? savedState.groove.enabled : true; 
+            groove.volume = savedState.groove.volume !== undefined ? savedState.groove.volume : 0.5; 
+            groove.reverb = savedState.groove.reverb !== undefined ? savedState.groove.reverb : 0.2; 
+            groove.swing = savedState.groove.swing; 
+            groove.swingSub = savedState.groove.swingSub; 
+            groove.measures = savedState.groove.measures || 1; 
+            groove.humanize = savedState.groove.humanize !== undefined ? savedState.groove.humanize : 20; 
+            groove.followPlayback = savedState.groove.followPlayback !== undefined ? savedState.groove.followPlayback : (savedState.groove.autoFollow !== undefined ? savedState.groove.autoFollow : true); 
+            groove.lastDrumPreset = savedState.groove.lastDrumPreset || 'Basic Rock'; 
+            if (savedState.groove.pattern && savedState.groove.pattern.length > 0) { 
+                savedState.groove.pattern.forEach(savedInst => { 
+                    const inst = groove.instruments.find(i => i.name === savedInst.name); 
                     if (inst) { inst.steps.fill(0); savedInst.steps.forEach((v, i) => { if (i < 128) inst.steps[i] = v; }); } 
                 }); 
             } else {
@@ -101,58 +101,58 @@ export function hydrateState() {
                 
                 // Let's modify main.js instead!
             }
-            gb.genreFeel = savedState.gb.genreFeel || 'Rock'; 
-            gb.larsMode = savedState.gb.larsMode || false;
-            gb.larsIntensity = savedState.gb.larsIntensity !== undefined ? savedState.gb.larsIntensity : 0.5;
-            gb.lastSmartGenre = savedState.gb.lastSmartGenre || 'Rock'; 
-            gb.activeTab = savedState.gb.activeTab || 'smart'; 
-            gb.mobileTab = savedState.gb.mobileTab || 'chords'; 
-            gb.currentMeasure = 0; 
+            groove.genreFeel = savedState.groove.genreFeel || 'Rock'; 
+            groove.larsMode = savedState.groove.larsMode || false;
+            groove.larsIntensity = savedState.groove.larsIntensity !== undefined ? savedState.groove.larsIntensity : 0.5;
+            groove.lastSmartGenre = savedState.groove.lastSmartGenre || 'Rock'; 
+            groove.activeTab = savedState.groove.activeTab || 'smart'; 
+            groove.mobileTab = savedState.groove.mobileTab || 'chords'; 
+            groove.currentMeasure = 0; 
         }
         ui.keySelect.value = arranger.key; 
         ui.timeSigSelect.value = arranger.timeSignature; 
-        ui.bpmInput.value = ctx.bpm;
+        ui.bpmInput.value = playback.bpm;
         
         if (ui.intensitySlider) { 
-            ui.intensitySlider.value = Math.round(ctx.bandIntensity * 100); 
+            ui.intensitySlider.value = Math.round(playback.bandIntensity * 100); 
             if (ui.intensityValue) ui.intensityValue.textContent = `${ui.intensitySlider.value}%`; 
-            ui.intensitySlider.disabled = ctx.autoIntensity; 
-            ui.intensitySlider.style.opacity = ctx.autoIntensity ? 0.5 : 1; 
+            ui.intensitySlider.disabled = playback.autoIntensity; 
+            ui.intensitySlider.style.opacity = playback.autoIntensity ? 0.5 : 1; 
         }
         if (ui.complexitySlider) { 
-            ui.complexitySlider.value = Math.round(ctx.complexity * 100); 
+            ui.complexitySlider.value = Math.round(playback.complexity * 100); 
             let label = 'Low'; 
-            if (ctx.complexity > 0.33) label = 'Medium'; 
-            if (ctx.complexity > 0.66) label = 'High'; 
+            if (playback.complexity > 0.33) label = 'Medium'; 
+            if (playback.complexity > 0.66) label = 'High'; 
             if (ui.complexityValue) ui.complexityValue.textContent = label; 
         }
-        if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = ctx.autoIntensity;
+        if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = playback.autoIntensity;
         document.querySelectorAll('.genre-btn').forEach(btn => { 
-            btn.classList.toggle('active', btn.dataset.genre === gb.lastSmartGenre); 
+            btn.classList.toggle('active', btn.dataset.genre === groove.lastSmartGenre); 
         });
         ui.notationSelect.value = arranger.notation; 
-        ui.densitySelect.value = cb.density; 
-    if (ui.chordVol) ui.chordVol.value = cb.volume;
-    if (ui.pianoRootsCheck) ui.pianoRootsCheck.checked = cb.pianoRoots;
-    if (ui.chordReverb) ui.chordReverb.value = cb.reverb;
-        if (ui.bassVol) ui.bassVol.value = bb.volume;
-        if (ui.bassReverb) ui.bassReverb.value = bb.reverb;
-        if (ui.soloistVol) ui.soloistVol.value = sb.volume;
-        if (ui.soloistReverb) ui.soloistReverb.value = sb.reverb;
-        if (ui.soloistDoubleStops) ui.soloistDoubleStops.checked = sb.doubleStops;
-        if (ui.harmonyVol) ui.harmonyVol.value = hb.volume;
-        if (ui.harmonyReverb) ui.harmonyReverb.value = hb.reverb;
+        ui.densitySelect.value = chords.density; 
+    if (ui.chordVol) ui.chordVol.value = chords.volume;
+    if (ui.pianoRootsCheck) ui.pianoRootsCheck.checked = chords.pianoRoots;
+    if (ui.chordReverb) ui.chordReverb.value = chords.reverb;
+        if (ui.bassVol) ui.bassVol.value = bass.volume;
+        if (ui.bassReverb) ui.bassReverb.value = bass.reverb;
+        if (ui.soloistVol) ui.soloistVol.value = soloist.volume;
+        if (ui.soloistReverb) ui.soloistReverb.value = soloist.reverb;
+        if (ui.soloistDoubleStops) ui.soloistDoubleStops.checked = soloist.doubleStops;
+        if (ui.harmonyVol) ui.harmonyVol.value = harmony.volume;
+        if (ui.harmonyReverb) ui.harmonyReverb.value = harmony.reverb;
         if (ui.harmonyComplexity) {
-            ui.harmonyComplexity.value = hb.complexity;
-            if (ui.harmonyComplexityValue) ui.harmonyComplexityValue.textContent = `${Math.round(hb.complexity * 100)}%`;
+            ui.harmonyComplexity.value = harmony.complexity;
+            if (ui.harmonyComplexityValue) ui.harmonyComplexityValue.textContent = `${Math.round(harmony.complexity * 100)}%`;
         }
-        if (ui.drumVol) ui.drumVol.value = gb.volume;
-        if (ui.drumReverb) ui.drumReverb.value = gb.reverb;
-        if (ui.swingSlider) ui.swingSlider.value = gb.swing;
-        if (ui.swingBase) ui.swingBase.value = gb.swingSub;
-        if (ui.humanizeSlider) ui.humanizeSlider.value = gb.humanize;
-        if (ui.drumBarsSelect) ui.drumBarsSelect.value = gb.measures;
-        if (ui.applyPresetSettings) ui.applyPresetSettings.checked = ctx.applyPresetSettings;
+        if (ui.drumVol) ui.drumVol.value = groove.volume;
+        if (ui.drumReverb) ui.drumReverb.value = groove.reverb;
+        if (ui.swingSlider) ui.swingSlider.value = groove.swing;
+        if (ui.swingBase) ui.swingBase.value = groove.swingSub;
+        if (ui.humanizeSlider) ui.humanizeSlider.value = groove.humanize;
+        if (ui.drumBarsSelect) ui.drumBarsSelect.value = groove.measures;
+        if (ui.applyPresetSettings) ui.applyPresetSettings.checked = playback.applyPresetSettings;
         
         if (savedState.midi) {
             dispatch(ACTIONS.SET_MIDI_CONFIG, {
@@ -197,7 +197,7 @@ export function hydrateState() {
             }
         }
 
-        applyTheme(ctx.theme); 
+        applyTheme(playback.theme); 
     } else { 
         applyTheme('auto'); 
         if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = true;
@@ -229,8 +229,8 @@ export function loadFromUrl(viz) {
         }
         else {
             // Fallback if UI not yet ready
-            gb.lastSmartGenre = genre;
-            gb.genreFeel = genre;
+            groove.lastSmartGenre = genre;
+            groove.genreFeel = genre;
         }
     }
     if (params.get('int')) {

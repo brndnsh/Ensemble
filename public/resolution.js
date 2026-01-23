@@ -8,7 +8,7 @@ import { getMidi } from './utils.js';
  *
  * @param {number} step - The global step where the resolution starts.
  * @param {Object} arranger - The arranger state { key, isMinor }.
- * @param {Object} enabled - Enabled tracks { bb, cb, sb, hb, gb }.
+ * @param {Object} enabled - Enabled tracks { bass, chords, soloist, harmony, groove }.
  * @returns {Array} List of note events.
  */
 export function generateResolutionNotes(step, arranger, enabled) {
@@ -36,7 +36,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
     });
 
     // 2. Bass Resolution (Very low root - Octave 2)
-    if (enabled.bb) {
+    if (enabled.bass) {
         const bassMidi = (keyPC % 12) + 24; 
         const midiVel = Math.max(1, Math.min(127, Math.round(1.0 * 127)));
         notes.push({
@@ -45,18 +45,18 @@ export function generateResolutionNotes(step, arranger, enabled) {
             velocity: 1.0, // Keep for audio engine
             midiVelocity: midiVel, // For MIDI export symmetry
             durationSteps: 16, // Full 4 beats
-            module: 'bb',
+            module: 'bass',
             step: step,
             timingOffset: 0
         });
     }
 
     // 3. Chord Resolution (Strummed Tonic Voicing)
-    if (enabled.cb) {
+    if (enabled.chords) {
         // Explicit Sustain Pedal On
         notes.push({
             midi: 0,
-            module: 'cb',
+            module: 'chords',
             step: step,
             ccEvents: [{ controller: 64, value: 127, timingOffset: 0 }]
         });
@@ -73,7 +73,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
                 velocity: vel,
                 midiVelocity: midiVel,
                 durationSteps: 16,
-                module: 'cb',
+                module: 'chords',
                 step: step,
                 timingOffset: i * 0.025 // Professional slow strum
             });
@@ -81,7 +81,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
     }
 
     // 4. Soloist Resolution (Root or 5th with a curl)
-    if (enabled.sb) {
+    if (enabled.soloist) {
         const isRoot = Math.random() < 0.7;
         const soloMidi = (keyPC % 12) + (isRoot ? 72 : 79); 
         const vel = 0.8;
@@ -92,7 +92,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
             velocity: vel,
             midiVelocity: midiVel,
             durationSteps: 12,
-            module: 'sb',
+            module: 'soloist',
             step: step,
             timingOffset: 0,
             bendStartInterval: isRoot ? 0.5 : 0 // Only curl if landing on root
@@ -100,7 +100,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
     }
 
     // 5. Harmony Resolution (Clean ensemble voicing)
-    if (enabled.hb) {
+    if (enabled.harmony) {
         // Simple Root-3rd-5th voicing in higher octave
         const hbIntervals = arranger.isMinor ? [0, 3, 7] : [0, 4, 7];
         const hbPolyComp = 1 / Math.sqrt(hbIntervals.length || 1);
@@ -115,7 +115,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
                 velocity: vel,
                 midiVelocity: midiVel,
                 durationSteps: 16,
-                module: 'hb',
+                module: 'harmony',
                 step: step,
                 timingOffset: 0
             });
@@ -123,10 +123,10 @@ export function generateResolutionNotes(step, arranger, enabled) {
     }
 
     // 6. Drums Resolution (Kick + Crash)
-    if (enabled.gb) {
+    if (enabled.groove) {
         // Kick
         notes.push({
-            module: 'gb',
+            module: 'groove',
             name: 'Kick',
             velocity: 1.0,
             midiVelocity: 120,
@@ -135,7 +135,7 @@ export function generateResolutionNotes(step, arranger, enabled) {
         });
         // Crash
         notes.push({
-            module: 'gb',
+            module: 'groove',
             name: 'Crash',
             velocity: 0.9,
             midiVelocity: 115,

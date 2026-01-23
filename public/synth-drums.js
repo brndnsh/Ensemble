@@ -1,14 +1,14 @@
-import { ctx, gb } from './state.js';
+import { playback, groove } from './state.js';
 import { safeDisconnect } from './utils.js';
 
 export function killDrumNote() {
-    if (gb.lastHatGain) {
+    if (groove.lastHatGain) {
         try {
-            const g = gb.lastHatGain.gain;
-            g.cancelScheduledValues(ctx.audio.currentTime);
-            g.setTargetAtTime(0, ctx.audio.currentTime, 0.005);
+            const g = groove.lastHatGain.gain;
+            g.cancelScheduledValues(playback.audio.currentTime);
+            g.setTargetAtTime(0, playback.audio.currentTime, 0.005);
         } catch { /* ignore error */ }
-        gb.lastHatGain = null;
+        groove.lastHatGain = null;
     }
 }
 
@@ -21,7 +21,7 @@ const mixState = {
 
 export function playDrumSound(name, time, velocity = 1.0) {
     if (!name) return;
-    const now = ctx.audio.currentTime;
+    const now = playback.audio.currentTime;
     
     // --- Density Normalization Logic ---
     // Tracks hits over a rolling window to prevent dense presets from blowing out the mix.
@@ -40,22 +40,22 @@ export function playDrumSound(name, time, velocity = 1.0) {
     // Add a tiny 2ms buffer to ensure scheduling always happens slightly in the future,
     // which prevents the "immediate-start" clicks common in Firefox.
     const playTime = Math.max(time, now + 0.002);
-    const humanizeFactor = (gb.humanize || 0) / 100;
+    const humanizeFactor = (groove.humanize || 0) / 100;
     const velJitter = 1.0 + (Math.random() - 0.5) * (humanizeFactor * 0.4);
     
     // Apply the density ducking factor to the master drum volume
     const masterVol = velocity * 1.3 * velJitter * mixState.densityDuck;
     
     // --- Mix Separation: Stereo Panning ---
-    const panner = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
+    const panner = playback.audio.createStereoPanner ? playback.audio.createStereoPanner() : playback.audio.createGain();
     let panValue = 0;
     if (['HiHat', 'Open', 'Crash', 'Shaker', 'Agogo', 'Perc', 'Guiro', 'Clave'].includes(name)) {
         panValue = 0.2; // Right
     } else if (name.includes('Tom') || name.includes('Conga') || name.includes('Bongo')) {
         panValue = (Math.random() * 2 - 1) * 0.1; // Slight spread
     }
-    if (ctx.audio.createStereoPanner) panner.pan.setValueAtTime(panValue, playTime);
-    panner.connect(ctx.drumsGain);
+    if (playback.audio.createStereoPanner) panner.pan.setValueAtTime(panValue, playTime);
+    panner.connect(playback.drumsGain);
 
     // Round-robin variation (±1.5%)
     const rr = (amt = 0.03) => 1 + (Math.random() - 0.5) * amt;
@@ -64,8 +64,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const vol = masterVol * rr();
         
         // 1. Beater Snap (High-frequency transient)
-        const beater = ctx.audio.createOscillator();
-        const beaterGain = ctx.audio.createGain();
+        const beater = playback.audio.createOscillator();
+        const beaterGain = playback.audio.createGain();
         beaterGain.gain.value = 0;
         beaterGain.gain.setValueAtTime(0, playTime);
         beater.type = 'sine';
@@ -75,10 +75,10 @@ export function playDrumSound(name, time, velocity = 1.0) {
         beaterGain.gain.setTargetAtTime(0, playTime + 0.005, 0.003);
 
         // 2. Head "Skin" (Mid-range noise for texture)
-        const skin = ctx.audio.createBufferSource();
-        skin.buffer = gb.audioBuffers.noise;
-        const skinFilter = ctx.audio.createBiquadFilter();
-        const skinGain = ctx.audio.createGain();
+        const skin = playback.audio.createBufferSource();
+        skin.buffer = groove.audioBuffers.noise;
+        const skinFilter = playback.audio.createBiquadFilter();
+        const skinGain = playback.audio.createGain();
         skinFilter.type = 'bandpass';
         skinFilter.frequency.value = 1000;
         skinFilter.Q.value = 1.0;
@@ -88,8 +88,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
         skinGain.gain.setTargetAtTime(0, playTime + 0.01, 0.01);
 
         // 3. The "Knock" (Fast pitch-sweeping body)
-        const knock = ctx.audio.createOscillator();
-        const knockGain = ctx.audio.createGain();
+        const knock = playback.audio.createOscillator();
+        const knockGain = playback.audio.createGain();
         knockGain.gain.value = 0;
         knockGain.gain.setValueAtTime(0, playTime);
         knock.type = 'triangle'; 
@@ -100,8 +100,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
         knockGain.gain.setTargetAtTime(0, playTime + 0.015, 0.03); 
 
         // 4. The "Shell" (Static low-end resonance)
-        const shell = ctx.audio.createOscillator();
-        const shellGain = ctx.audio.createGain();
+        const shell = playback.audio.createOscillator();
+        const shellGain = playback.audio.createGain();
         shellGain.gain.value = 0;
         shellGain.gain.setValueAtTime(0, playTime);
         shell.type = 'sine';
@@ -138,8 +138,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
             // --- Sidestick (Rim Click) - 3-Layer Model ---
             
             // 1. The "Click" (Transient Impact)
-            const click = ctx.audio.createOscillator();
-            const clickGain = ctx.audio.createGain();
+            const click = playback.audio.createOscillator();
+            const clickGain = playback.audio.createGain();
             click.type = 'sine';
             click.frequency.setValueAtTime(6500 * rr(), playTime);
             
@@ -151,9 +151,9 @@ export function playDrumSound(name, time, velocity = 1.0) {
             clickGain.connect(panner);
             
             // 2. The "Body" (Woody Resonance)
-            const body = ctx.audio.createOscillator();
-            const bodyGain = ctx.audio.createGain();
-            const bodyFilter = ctx.audio.createBiquadFilter();
+            const body = playback.audio.createOscillator();
+            const bodyGain = playback.audio.createGain();
+            const bodyFilter = playback.audio.createBiquadFilter();
             
             body.type = 'triangle';
             const bodyFreq = 330 * rr();
@@ -173,10 +173,10 @@ export function playDrumSound(name, time, velocity = 1.0) {
             bodyGain.connect(panner);
             
             // 3. The "Snap" (Noise Texture)
-            const noise = ctx.audio.createBufferSource();
-            noise.buffer = gb.audioBuffers.noise;
-            const noiseFilter = ctx.audio.createBiquadFilter();
-            const noiseGain = ctx.audio.createGain();
+            const noise = playback.audio.createBufferSource();
+            noise.buffer = groove.audioBuffers.noise;
+            const noiseFilter = playback.audio.createBiquadFilter();
+            const noiseGain = playback.audio.createGain();
             
             noiseFilter.type = 'highpass';
             noiseFilter.frequency.setValueAtTime(3500, playTime);
@@ -205,9 +205,9 @@ export function playDrumSound(name, time, velocity = 1.0) {
         }
 
         // 1. The Tone (Drum head resonance)
-        const tone1 = ctx.audio.createOscillator();
-        const tone2 = ctx.audio.createOscillator();
-        const toneGain = ctx.audio.createGain();
+        const tone1 = playback.audio.createOscillator();
+        const tone2 = playback.audio.createOscillator();
+        const toneGain = playback.audio.createGain();
         toneGain.gain.value = 0;
         toneGain.gain.setValueAtTime(0, playTime);
         tone1.type = 'triangle';
@@ -222,10 +222,10 @@ export function playDrumSound(name, time, velocity = 1.0) {
         toneGain.connect(panner);
 
         // 2. The Wires (Snare rattle)
-        const noise = ctx.audio.createBufferSource();
-        noise.buffer = gb.audioBuffers.noise;
-        const noiseFilter = ctx.audio.createBiquadFilter();
-        const noiseGain = ctx.audio.createGain();
+        const noise = playback.audio.createBufferSource();
+        noise.buffer = groove.audioBuffers.noise;
+        const noiseFilter = playback.audio.createBiquadFilter();
+        const noiseGain = playback.audio.createGain();
         noiseGain.gain.value = 0;
         noiseGain.gain.setValueAtTime(0, playTime);
         noiseFilter.type = 'bandpass';
@@ -258,37 +258,37 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const vol = masterVol * (isOpen ? 0.5 : 0.7) * rr();
 
         // 1. Improved Choking Logic (Natural "Grab")
-        if (gb.lastHatGain) {
+        if (groove.lastHatGain) {
             try {
-                const g = gb.lastHatGain.gain;
+                const g = groove.lastHatGain.gain;
                 g.cancelScheduledValues(playTime);
                 g.setTargetAtTime(0, playTime, 0.005);
             } catch { /* ignore error */ }
         }
 
         // 2. Pre-render / Cache the Metallic Buffer (Lazy Load)
-        if (!gb.audioBuffers.hihatMetal) {
-            gb.audioBuffers.hihatMetal = createMetallicBuffer(ctx.audio);
+        if (!groove.audioBuffers.hihatMetal) {
+            groove.audioBuffers.hihatMetal = createMetallicBuffer(playback.audio);
         }
 
         // 3. Playback with variation
-        const source = ctx.audio.createBufferSource();
-        source.buffer = gb.audioBuffers.hihatMetal;
+        const source = playback.audio.createBufferSource();
+        source.buffer = groove.audioBuffers.hihatMetal;
         // Re-introduce the random pitch variation using playbackRate
         source.playbackRate.value = rr(0.05); 
 
         // 4. Tone Shaping
-        const bpFilter = ctx.audio.createBiquadFilter();
+        const bpFilter = playback.audio.createBiquadFilter();
         bpFilter.type = 'bandpass';
         bpFilter.frequency.setValueAtTime(10000, playTime);
         bpFilter.Q.value = 1.0;
 
-        const hpFilter = ctx.audio.createBiquadFilter();
+        const hpFilter = playback.audio.createBiquadFilter();
         hpFilter.type = 'highpass';
         hpFilter.frequency.setValueAtTime(7000, playTime);
 
         // 5. Envelope & Gain
-        const gain = ctx.audio.createGain();
+        const gain = playback.audio.createGain();
         gain.gain.value = 0;
         gain.gain.setValueAtTime(0, playTime);
         
@@ -300,7 +300,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
             gain.gain.setTargetAtTime(0, playTime + 0.005, 0.05 * rr());
         }
 
-        gb.lastHatGain = gain;
+        groove.lastHatGain = gain;
 
         // Connections: Source -> BP -> HP -> Gain -> Master
         source.connect(bpFilter);
@@ -312,7 +312,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
         source.stop(playTime + (isOpen ? 2.0 : 0.4));
 
         source.onended = () => {
-            if (gb.lastHatGain === gain) gb.lastHatGain = null;
+            if (groove.lastHatGain === gain) groove.lastHatGain = null;
             safeDisconnect([source, bpFilter, hpFilter, gain, panner]);
         };
 
@@ -324,24 +324,24 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const ratios = [2.0, 3.0, 4.16, 5.43, 6.79, 8.21];
         const baseFreq = 60 * rr();
         const oscs = ratios.map(r => {
-            const o = ctx.audio.createOscillator();
+            const o = playback.audio.createOscillator();
             o.type = 'square';
             o.frequency.setValueAtTime(baseFreq * r, playTime);
             return o;
         });
 
         // 2. The Wash
-        const noise = ctx.audio.createBufferSource();
-        noise.buffer = gb.audioBuffers.noise;
+        const noise = playback.audio.createBufferSource();
+        noise.buffer = groove.audioBuffers.noise;
 
-        const hpFilter = ctx.audio.createBiquadFilter();
+        const hpFilter = playback.audio.createBiquadFilter();
         hpFilter.type = 'highpass';
         hpFilter.frequency.value = 6000;
         hpFilter.frequency.setValueAtTime(6000, playTime);
         hpFilter.frequency.setTargetAtTime(1200, playTime, duration * 0.4);
         hpFilter.Q.value = 0.5;
 
-        const gain = ctx.audio.createGain();
+        const gain = playback.audio.createGain();
         gain.gain.value = 0;
         gain.gain.setValueAtTime(0, playTime);
         gain.gain.linearRampToValueAtTime(vol, playTime + 0.005);
@@ -374,8 +374,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const vol = masterVol * 0.7 * rr();
         
         // 1. The "Wood" (Core frequency)
-        const osc = ctx.audio.createOscillator();
-        const gain = ctx.audio.createGain();
+        const osc = playback.audio.createOscillator();
+        const gain = playback.audio.createGain();
         osc.type = 'sine';
         // Classic claves are high-pitched but have a slight "thunk"
         osc.frequency.setValueAtTime(2450 * rr(0.01), playTime);
@@ -386,10 +386,10 @@ export function playDrumSound(name, time, velocity = 1.0) {
         gain.gain.setTargetAtTime(0, playTime + 0.005, 0.008);
         
         // 2. The "Strike" (Noise transient for wood texture)
-        const strike = ctx.audio.createBufferSource();
-        strike.buffer = gb.audioBuffers.noise;
-        const strikeFilter = ctx.audio.createBiquadFilter();
-        const strikeGain = ctx.audio.createGain();
+        const strike = playback.audio.createBufferSource();
+        strike.buffer = groove.audioBuffers.noise;
+        const strikeFilter = playback.audio.createBiquadFilter();
+        const strikeGain = playback.audio.createGain();
         
         strikeFilter.type = 'highpass';
         strikeFilter.frequency.setValueAtTime(5000, playTime);
@@ -424,8 +424,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const vol = masterVol * (isSlap ? 0.85 : 0.7) * rr();
         
         // 1. The "Skin" (Tone) - Use Sine for warmth, Triangle only for slap
-        const tone = ctx.audio.createOscillator();
-        const toneGain = ctx.audio.createGain();
+        const tone = playback.audio.createOscillator();
+        const toneGain = playback.audio.createGain();
         tone.type = isSlap ? 'triangle' : 'sine';
         tone.frequency.setValueAtTime(baseFreq * rr(0.01), playTime);
         
@@ -441,10 +441,10 @@ export function playDrumSound(name, time, velocity = 1.0) {
         toneGain.connect(panner);
         
         // 2. The "Palm" (Impact transient)
-        const noise = ctx.audio.createBufferSource();
-        noise.buffer = gb.audioBuffers.noise;
-        const noiseFilter = ctx.audio.createBiquadFilter();
-        const noiseGain = ctx.audio.createGain();
+        const noise = playback.audio.createBufferSource();
+        noise.buffer = groove.audioBuffers.noise;
+        const noiseFilter = playback.audio.createBiquadFilter();
+        const noiseGain = playback.audio.createGain();
         
         // Bandpass at mid-range for the "thump"
         noiseFilter.type = 'bandpass';
@@ -472,10 +472,10 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const freq = isHigh ? 1150 : 780; // Slightly detuned from pure pitches
         
         // Refined metallic ring using resonant filters + FM-ish stack
-        const osc1 = ctx.audio.createOscillator();
-        const osc2 = ctx.audio.createOscillator();
-        const gain = ctx.audio.createGain();
-        const filter = ctx.audio.createBiquadFilter();
+        const osc1 = playback.audio.createOscillator();
+        const osc2 = playback.audio.createOscillator();
+        const gain = playback.audio.createGain();
+        const filter = playback.audio.createBiquadFilter();
         
         osc1.type = 'sine'; // Sine + Triangle for less "harsh" square sound
         osc2.type = 'triangle';
@@ -491,8 +491,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
         gain.gain.setTargetAtTime(0, playTime + 0.02, 0.12);
         
         // Add a secondary sine for low-end body
-        const body = ctx.audio.createOscillator();
-        const bodyGain = ctx.audio.createGain();
+        const body = playback.audio.createOscillator();
+        const bodyGain = playback.audio.createGain();
         body.type = 'sine';
         body.frequency.setValueAtTime(freq, playTime);
         bodyGain.gain.setValueAtTime(0, playTime);
@@ -516,16 +516,16 @@ export function playDrumSound(name, time, velocity = 1.0) {
     } else if (name === 'Guiro') {
         const vol = masterVol * 0.5 * rr();
         
-        const noise = ctx.audio.createBufferSource();
-        noise.buffer = gb.audioBuffers.noise;
+        const noise = playback.audio.createBufferSource();
+        noise.buffer = groove.audioBuffers.noise;
         noise.loop = true;
         
-        const filter = ctx.audio.createBiquadFilter();
+        const filter = playback.audio.createBiquadFilter();
         filter.type = 'bandpass';
         filter.frequency.setValueAtTime(2500, playTime);
         filter.Q.value = 1.0;
         
-        const gain = ctx.audio.createGain();
+        const gain = playback.audio.createGain();
         gain.gain.setValueAtTime(0, playTime);
         
         // Scrape effect: 4 quick pulses
@@ -547,14 +547,14 @@ export function playDrumSound(name, time, velocity = 1.0) {
     } else if (name === 'Shaker') {
         const vol = masterVol * 0.45 * rr();
         
-        const noise = ctx.audio.createBufferSource();
-        noise.buffer = gb.audioBuffers.noise;
+        const noise = playback.audio.createBufferSource();
+        noise.buffer = groove.audioBuffers.noise;
         
-        const filter = ctx.audio.createBiquadFilter();
+        const filter = playback.audio.createBiquadFilter();
         filter.type = 'highpass';
         filter.frequency.setValueAtTime(6000, playTime);
         
-        const gain = ctx.audio.createGain();
+        const gain = playback.audio.createGain();
         gain.gain.setValueAtTime(0, playTime);
         // Soft attack for shaker feel
         gain.gain.setTargetAtTime(vol, playTime, 0.01);
@@ -575,8 +575,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
         const freq = isHigh ? 180 : (isMid ? 135 : 90);
         
         // 1. The Tone (Body resonance)
-        const tone = ctx.audio.createOscillator();
-        const toneGain = ctx.audio.createGain();
+        const tone = playback.audio.createOscillator();
+        const toneGain = playback.audio.createGain();
         tone.type = 'sine';
         tone.frequency.setValueAtTime(freq * 1.2 * rr(), playTime);
         tone.frequency.exponentialRampToValueAtTime(freq, playTime + 0.05);
@@ -589,8 +589,8 @@ export function playDrumSound(name, time, velocity = 1.0) {
         toneGain.connect(panner);
         
         // 2. The "Stick" (Attack transient)
-        const stick = ctx.audio.createOscillator();
-        const stickGain = ctx.audio.createGain();
+        const stick = playback.audio.createOscillator();
+        const stickGain = playback.audio.createGain();
         stick.type = 'square';
         stick.frequency.setValueAtTime(freq * 2.5, playTime);
         stick.frequency.exponentialRampToValueAtTime(freq, playTime + 0.01);

@@ -3,7 +3,7 @@ import { getSoloistNote } from './soloist.js';
 import { getHarmonyNotes } from './harmonies.js';
 import { getAccompanimentNotes, compingState } from './accompaniment.js';
 import { generateResolutionNotes } from './resolution.js';
-import { arranger, cb, bb, sb, gb, hb, ctx } from './state.js';
+import { arranger, chords, bass, soloist, groove, harmony, playback } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getMidi, getStepInfo } from './utils.js';
 import { generateProceduralFill } from './fills.js';
@@ -150,10 +150,10 @@ function fillBuffers(currentStep, timestamp = null) {
     if (hbBufferHead < currentStep) hbBufferHead = currentStep;
     
     let head = 999999;
-    if (bb.enabled) head = Math.min(head, bbBufferHead);
-    if (sb.enabled) head = Math.min(head, sbBufferHead);
-    if (cb.enabled) head = Math.min(head, cbBufferHead);
-    if (hb.enabled) head = Math.min(head, hbBufferHead);
+    if (bass.enabled) head = Math.min(head, bbBufferHead);
+    if (soloist.enabled) head = Math.min(head, sbBufferHead);
+    if (chords.enabled) head = Math.min(head, cbBufferHead);
+    if (harmony.enabled) head = Math.min(head, hbBufferHead);
     if (head === 999999) head = currentStep;
 
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
@@ -163,17 +163,17 @@ function fillBuffers(currentStep, timestamp = null) {
         const chordData = getChordAtStep(step);
         
         // --- Bass ---
-        if (bb.enabled && step >= bbBufferHead) {
+        if (bass.enabled && step >= bbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
-                if (isBassActive(bb.style, step, stepInChord)) {
-                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, step, stepInChord);
+                if (isBassActive(bass.style, step, stepInChord)) {
+                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bass.lastFreq, bass.octave, bass.style, chordData.chordIndex, step, stepInChord);
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
                         if (!bassResult.midi) bassResult.midi = getMidi(bassResult.freq);
                         if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
-                        bb.lastFreq = bassResult.freq;
-                        notesToMain.push({ ...bassResult, step, module: 'bb' });
+                        bass.lastFreq = bassResult.freq;
+                        notesToMain.push({ ...bassResult, step, module: 'bass' });
                     }
                 }
             }
@@ -182,11 +182,11 @@ function fillBuffers(currentStep, timestamp = null) {
 
         // --- Soloist ---
         let soloResult = null;
-        if (sb.enabled && step >= sbBufferHead) {
+        if (soloist.enabled && step >= sbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord, sectionStart, sectionEnd } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
-                soloResult = getSoloistNote(chord, nextChordData?.chord, step, sb.lastFreq, sb.octave, sb.style, stepInChord, false, { sectionStart, sectionEnd });
+                soloResult = getSoloistNote(chord, nextChordData?.chord, step, soloist.lastFreq, soloist.octave, soloist.style, stepInChord, false, { sectionStart, sectionEnd });
                 
                 if (soloResult) {
                     const results = Array.isArray(soloResult) ? soloResult : [soloResult];
@@ -195,8 +195,8 @@ function fillBuffers(currentStep, timestamp = null) {
                             if (!res.midi) res.midi = getMidi(res.freq);
                             if (!res.freq) res.freq = 440 * Math.pow(2, (res.midi - 69) / 12);
                             // We only update lastFreq for the primary note (usually the first one)
-                            if (!res.isDoubleStop) sb.lastFreq = res.freq;
-                            notesToMain.push({ ...res, step, module: 'sb' });
+                            if (!res.isDoubleStop) soloist.lastFreq = res.freq;
+                            notesToMain.push({ ...res, step, module: 'soloist' });
                         }
                     });
                 }
@@ -205,7 +205,7 @@ function fillBuffers(currentStep, timestamp = null) {
         }
 
         // --- Chords ---
-        if (cb.enabled && step >= cbBufferHead) {
+        if (chords.enabled && step >= cbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
                 const stepInfo = getStepInfo(step, ts);
@@ -213,7 +213,7 @@ function fillBuffers(currentStep, timestamp = null) {
                 if (chordNotes.length > 0) {
                     chordNotes.forEach(n => {
                         const freq = 440 * Math.pow(2, (n.midi - 69) / 12);
-                        notesToMain.push({ ...n, freq, step, module: 'cb' });
+                        notesToMain.push({ ...n, freq, step, module: 'chords' });
                     });
                 }
             }
@@ -221,11 +221,11 @@ function fillBuffers(currentStep, timestamp = null) {
         }
 
         // --- Harmonies ---
-        if (hb.enabled && step >= hbBufferHead) {
+        if (harmony.enabled && step >= hbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
-                const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, step, hb.octave, hb.style, stepInChord, soloResult);
+                const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, step, harmony.octave, harmony.style, stepInChord, soloResult);
                 if (harmonyNotes.length > 0) {
                     harmonyNotes.forEach(n => {
                         if (!n.freq) n.freq = 440 * Math.pow(2, (n.midi - 69) / 12);
@@ -234,7 +234,7 @@ function fillBuffers(currentStep, timestamp = null) {
                             ...n, 
                             midi: n.midi, 
                             step, 
-                            module: 'hb',
+                            module: 'harmony',
                             slideInterval: n.slideInterval,
                             slideDuration: n.slideDuration,
                             vibrato: n.vibrato
@@ -258,14 +258,14 @@ export function handleExport(options) {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         const totalStepsOneLoop = arranger.totalSteps;
         const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
-        const loopSeconds = (totalStepsOneLoop / ts.stepsPerBeat) * (60 / ctx.bpm);
+        const loopSeconds = (totalStepsOneLoop / ts.stepsPerBeat) * (60 / playback.bpm);
         let loopCount = (loopMode === 'once') ? 1 : Math.max(1, Math.min(100, Math.ceil((targetDuration * 60) / loopSeconds)));
         const totalStepsWithoutEnding = totalStepsOneLoop * loopCount;
         const totalStepsExport = totalStepsWithoutEnding + 16; // Add one resolution measure
 
         // --- 1:1 TIMING MAP GENERATION ---
         const stepTimes = new Array(totalStepsExport + 128);
-        const secondsPerBeat = 60.0 / ctx.bpm;
+        const secondsPerBeat = 60.0 / playback.bpm;
         const sixteenthSec = 0.25 * secondsPerBeat;
         
         let accumulatedSeconds = 0;
@@ -273,9 +273,9 @@ export function handleExport(options) {
             stepTimes[i] = accumulatedSeconds;
             
             let duration = sixteenthSec;
-            if (gb.swing > 0 && ts.stepsPerBeat === 4) {
-                const shift = (sixteenthSec / 3) * (gb.swing / 100);
-                if (gb.swingSub === '16th') {
+            if (groove.swing > 0 && ts.stepsPerBeat === 4) {
+                const shift = (sixteenthSec / 3) * (groove.swing / 100);
+                if (groove.swingSub === '16th') {
                     duration += (i % 2 === 0) ? shift : -shift;
                 } else {
                     duration += ((i % 4) < 2) ? shift : -shift;
@@ -285,7 +285,7 @@ export function handleExport(options) {
         }
 
         // Helper to convert any absolute second timestamp to MIDI Pulses
-        const toPulses = (t) => Math.round(t * (ctx.bpm / 60.0) * PPQ);
+        const toPulses = (t) => Math.round(t * (playback.bpm / 60.0) * PPQ);
 
         const metaTrack = new MidiTrack();
         const chordTrack = new MidiTrack();
@@ -295,7 +295,7 @@ export function handleExport(options) {
         const drumTrack = new MidiTrack();
 
         metaTrack.setName(0, 'Ensemble Export');
-        metaTrack.setTempo(0, ctx.bpm);
+        metaTrack.setTempo(0, playback.bpm);
         metaTrack.setKeySig(0, arranger.key, arranger.isMinor);
         const [tsNum, tsDenom] = (arranger.timeSignature || '4/4').split('/').map(Number);
         metaTrack.setTimeSig(0, tsNum, tsDenom);
@@ -306,23 +306,23 @@ export function handleExport(options) {
         harmonyTrack.setName(0, 'Harmonies'); harmonyTrack.programChange(0, 3, 61); // Brass/Synth
         drumTrack.setName(0, 'Drums');
 
-        const prevStates = { cb: cb.enabled, bb: bb.enabled, sb: sb.enabled, hb: hb.enabled, gb: gb.enabled, intensity: ctx.bandIntensity, doubleStops: sb.doubleStops, sessionSteps: sb.sessionSteps };
-        cb.enabled = true; bb.enabled = true; sb.enabled = true; hb.enabled = true; gb.enabled = true;
-        sb.sessionSteps = 1000; // Bypass warm-up for export
+        const prevStates = { chords: chords.enabled, bass: bass.enabled, soloist: soloist.enabled, harmony: harmony.enabled, groove: groove.enabled, intensity: playback.bandIntensity, doubleStops: soloist.doubleStops, sessionSteps: soloist.sessionSteps };
+        chords.enabled = true; bass.enabled = true; soloist.enabled = true; harmony.enabled = true; groove.enabled = true;
+        soloist.sessionSteps = 1000; // Bypass warm-up for export
         compingState.lockedUntil = 0; compingState.lastChordIndex = -1;
-        sb.busySteps = 0; sb.isResting = false; sb.currentPhraseSteps = 0;
+        soloist.busySteps = 0; soloist.isResting = false; soloist.currentPhraseSteps = 0;
 
         // --- EXPORT CONDUCTOR ---
         const exportConductor = {
             loopCount: 0,
             formIteration: 0,
-            targetIntensity: ctx.bandIntensity,
+            targetIntensity: playback.bandIntensity,
             stepSize: 0,
             form: analyzeForm()
         };
 
         const checkWorkerTransition = (step) => {
-            if (!gb.enabled) return;
+            if (!groove.enabled) return;
             const modStep = step % totalStepsOneLoop;
             
             if (modStep === 0 && step > 0) {
@@ -345,36 +345,36 @@ export function handleExport(options) {
                 if (nextEntry.chord.sectionId !== entry.chord.sectionId || isLoopEnd) {
                     let shouldFill = true;
                     if (isLoopEnd && totalStepsOneLoop <= 64) {
-                        const freq = ctx.bandIntensity > 0.75 ? 1 : (ctx.bandIntensity > 0.4 ? 2 : 4);
+                        const freq = playback.bandIntensity > 0.75 ? 1 : (playback.bandIntensity > 0.4 ? 2 : 4);
                         shouldFill = (exportConductor.loopCount % freq === 0);
                     }
                     if (shouldFill) {
-                        gb.fillSteps = generateProceduralFill(gb.genreFeel, ctx.bandIntensity, stepsPerMeasure);
-                        gb.fillActive = true;
-                        gb.fillStartStep = step;
-                        gb.fillLength = stepsPerMeasure;
-                        gb.pendingCrash = true;
+                        groove.fillSteps = generateProceduralFill(groove.genreFeel, playback.bandIntensity, stepsPerMeasure);
+                        groove.fillActive = true;
+                        groove.fillStartStep = step;
+                        groove.fillLength = stepsPerMeasure;
+                        groove.pendingCrash = true;
                     }
                 }
             }
             
-            if (ctx.autoIntensity && modStep === 0 && exportConductor.formIteration > 0) {
+            if (playback.autoIntensity && modStep === 0 && exportConductor.formIteration > 0) {
                 const grandCycle = exportConductor.formIteration % 8;
                 let target = 0.5;
                 if (grandCycle < 3) target = 0.6;
                 else if (grandCycle < 5) target = 0.9; 
                 else target = 0.4; 
-                ctx.bandIntensity = ctx.bandIntensity + (target - ctx.bandIntensity) * 0.5;
+                playback.bandIntensity = playback.bandIntensity + (target - playback.bandIntensity) * 0.5;
             }
 
             // --- Intelligent Harmony Export Scaling ---
             // Mirror the conductor's logic: scale complexity with intensity
-            hb.complexity = Math.max(0, (ctx.bandIntensity - 0.2) * 1.25);
+            harmony.complexity = Math.max(0, (playback.bandIntensity - 0.2) * 1.25);
             
             // "Final Build" for MIDI: If we are in the last loop of the export, push for a climax
             const isLastLoop = (exportConductor.loopCount >= loopCount - 1);
             if (isLastLoop && loopCount > 1) {
-                hb.complexity = Math.max(hb.complexity, 0.85);
+                harmony.complexity = Math.max(harmony.complexity, 0.85);
             }
         };
 
@@ -426,8 +426,8 @@ export function handleExport(options) {
                     });
                 }
 
-                if (includedTracks.includes('bass') && isBassActive(bb.style, globalStep, stepInChord)) {
-                    const res = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bb.lastFreq, bb.octave, bb.style, chordData.chordIndex, globalStep, stepInChord);
+                if (includedTracks.includes('bass') && isBassActive(bass.style, globalStep, stepInChord)) {
+                    const res = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bass.lastFreq, bass.octave, bass.style, chordData.chordIndex, globalStep, stepInChord);
                     if (res && res.midi) {
                         const noteTimeS = stepTimeS + (res.timingOffset || 0);
                         const notePulse = Math.max(0, toPulses(noteTimeS));
@@ -452,13 +452,13 @@ export function handleExport(options) {
                         endTimeS += 0.02;
 
                         bassTrack.noteOff(toPulses(endTimeS), 1, res.midi);
-                        bb.lastFreq = 440 * Math.pow(2, (res.midi - 69) / 12);
+                        bass.lastFreq = 440 * Math.pow(2, (res.midi - 69) / 12);
                     }
                 }
 
                 if (includedTracks.includes('soloist')) {
                     const { sectionStart, sectionEnd } = chordData;
-                    const soloResult = getSoloistNote(chord, nextChordData?.chord, globalStep, sb.lastFreq, sb.octave, sb.style, stepInChord, false, { sectionStart, sectionEnd });
+                    const soloResult = getSoloistNote(chord, nextChordData?.chord, globalStep, soloist.lastFreq, soloist.octave, soloist.style, stepInChord, false, { sectionStart, sectionEnd });
                     if (soloResult) {
                         const results = Array.isArray(soloResult) ? soloResult : [soloResult];
                         const polyphonyComp = 1 / Math.sqrt(Math.max(1, results.length));
@@ -492,14 +492,14 @@ export function handleExport(options) {
                                 endTimeS += 0.015;
 
                                 soloistTrack.noteOff(toPulses(endTimeS), 2, res.midi);
-                                if (!res.isDoubleStop) sb.lastFreq = 440 * Math.pow(2, (res.midi - 69) / 12);
+                                if (!res.isDoubleStop) soloist.lastFreq = 440 * Math.pow(2, (res.midi - 69) / 12);
                             }
                         });
                     }
                 }
 
                 if (includedTracks.includes('harmonies')) {
-                    const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, globalStep, hb.octave, hb.style, stepInChord);
+                    const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, globalStep, harmony.octave, harmony.style, stepInChord);
                     const polyphonyComp = 1 / Math.sqrt(Math.max(1, harmonyNotes.length));
 
                     harmonyNotes.forEach(n => {
@@ -523,10 +523,10 @@ export function handleExport(options) {
 
             if (includedTracks.includes('drums')) {
                 let pocketOffset = 0;
-                if (gb.genreFeel === 'Neo-Soul' || gb.genreFeel === 'Hip Hop') pocketOffset += 0.015;
+                if (groove.genreFeel === 'Neo-Soul' || groove.genreFeel === 'Hip Hop') pocketOffset += 0.015;
 
-                if (ctx.bandIntensity > 0.75) pocketOffset -= 0.008; 
-                else if (ctx.bandIntensity < 0.3) pocketOffset += 0.010;
+                if (playback.bandIntensity > 0.75) pocketOffset -= 0.008; 
+                else if (playback.bandIntensity < 0.3) pocketOffset += 0.010;
 
                 const drumTimeS = stepTimeS + pocketOffset;
                 const drumPulse = Math.max(0, toPulses(drumTimeS));
@@ -541,12 +541,12 @@ export function handleExport(options) {
 
                 let fillPlayed = false;
 
-                if (gb.fillActive) {
-                    const fillStep = globalStep - gb.fillStartStep;
+                if (groove.fillActive) {
+                    const fillStep = globalStep - groove.fillStartStep;
                     
-                    if (fillStep >= 0 && fillStep < gb.fillLength) {
-                        if (ctx.bandIntensity >= 0.5 || fillStep >= (gb.fillLength / 2)) {
-                            const fillNotes = gb.fillSteps[fillStep];
+                    if (fillStep >= 0 && fillStep < groove.fillLength) {
+                        if (playback.bandIntensity >= 0.5 || fillStep >= (groove.fillLength / 2)) {
+                            const fillNotes = groove.fillSteps[fillStep];
                             if (fillNotes && fillNotes.length > 0) {
                                 fillNotes.forEach(n => {
                                     const midi = drumMap[n.name];
@@ -561,19 +561,19 @@ export function handleExport(options) {
                                 fillPlayed = true; 
                             }
                         }
-                    } else if (fillStep === gb.fillLength) {
-                        gb.fillActive = false;
-                        if (gb.pendingCrash) {
+                    } else if (fillStep === groove.fillLength) {
+                        groove.fillActive = false;
+                        if (groove.pendingCrash) {
                             drumTrack.noteOn(drumPulse, 9, drumMap['Crash'], 110);
                             drumTrack.noteOff(toPulses(drumTimeS + secondsPerBeat), 9, drumMap['Crash']);
-                            gb.pendingCrash = false;
+                            groove.pendingCrash = false;
                         }
                     }
                 }
 
                 if (!fillPlayed) {
-                    gb.instruments.forEach(inst => {
-                        const val = inst.steps[globalStep % (gb.measures * stepsPerMeasure)];
+                    groove.instruments.forEach(inst => {
+                        const val = inst.steps[globalStep % (groove.measures * stepsPerMeasure)];
                         if (val > 0 && !inst.muted) {
                             const midi = drumMap[inst.name];
                             if (midi) {
@@ -595,21 +595,21 @@ export function handleExport(options) {
         const resTimeS = stepTimes[resolutionStep];
 
         const resolutionNotes = generateResolutionNotes(resolutionStep, arranger, { 
-            bb: includedTracks.includes('bass'), 
-            cb: includedTracks.includes('chords'), 
-            sb: includedTracks.includes('soloist'), 
-            hb: includedTracks.includes('harmonies'),
-            gb: includedTracks.includes('drums') 
+            bass: includedTracks.includes('bass'), 
+            chords: includedTracks.includes('chords'), 
+            soloist: includedTracks.includes('soloist'), 
+            harmony: includedTracks.includes('harmonies'),
+            groove: includedTracks.includes('drums') 
         });
 
         resolutionNotes.forEach(n => {
             let track;
             let channel = 0;
-            if (n.module === 'bb') { track = bassTrack; channel = 1; }
-            else if (n.module === 'cb') { track = chordTrack; channel = 0; }
-            else if (n.module === 'sb') { track = soloistTrack; channel = 2; }
-            else if (n.module === 'hb') { track = harmonyTrack; channel = 3; }
-            else if (n.module === 'gb') { track = drumTrack; channel = 9; }
+            if (n.module === 'bass') { track = bassTrack; channel = 1; }
+            else if (n.module === 'chords') { track = chordTrack; channel = 0; }
+            else if (n.module === 'soloist') { track = soloistTrack; channel = 2; }
+            else if (n.module === 'harmony') { track = harmonyTrack; channel = 3; }
+            else if (n.module === 'groove') { track = drumTrack; channel = 9; }
             
             if (!track) return;
 
@@ -623,19 +623,19 @@ export function handleExport(options) {
             }
 
             if (n.midi > 0) {
-                 if (n.module === 'sb' && n.bendStartInterval) {
+                 if (n.module === 'soloist' && n.bendStartInterval) {
                      track.pitchBend(notePulse, channel, Math.round(-(n.bendStartInterval / 2) * 8192));
                  }
                  
                  track.noteOn(notePulse, channel, n.midi, n.midiVelocity || 90);
 
-                 if (n.module === 'sb' && n.bendStartInterval) {
+                 if (n.module === 'soloist' && n.bendStartInterval) {
                      track.pitchBend(toPulses(resTimeS + sixteenthSec), channel, 0);
                  }
                  
                  const durationS = (n.durationSteps || 1) * sixteenthSec;
                  track.noteOff(toPulses(resTimeS + offsetS + durationS), channel, n.midi);
-            } else if (n.module === 'gb' && n.name) {
+            } else if (n.module === 'groove' && n.name) {
                 const drumMap = { 
                     'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46, 'Crash': 49,
                     'Clave': 75, 'Conga': 63, 'Bongo': 60, 'Perc': 67, 'Shaker': 82, 'Guiro': 74,
@@ -666,7 +666,7 @@ export function handleExport(options) {
         });
         metaTrack.endOfTrack(finalPulse);
 
-        cb.enabled = prevStates.cb; bb.enabled = prevStates.bb; sb.enabled = prevStates.sb; hb.enabled = prevStates.hb; gb.enabled = prevStates.gb; ctx.bandIntensity = prevStates.intensity; sb.doubleStops = prevStates.doubleStops; sb.sessionSteps = prevStates.sessionSteps;
+        chords.enabled = prevStates.chords; bass.enabled = prevStates.bass; soloist.enabled = prevStates.soloist; harmony.enabled = prevStates.harmony; groove.enabled = prevStates.groove; playback.bandIntensity = prevStates.intensity; soloist.doubleStops = prevStates.doubleStops; soloist.sessionSteps = prevStates.sessionSteps;
 
         const header = new Uint8Array([...writeString('MThd'), ...writeInt32(6), ...writeInt16(1), ...writeInt16(finalTrackList.length), ...writeInt16(PPQ)]);
         const trackChunks = finalTrackList.map(t => t.compile());
@@ -691,61 +691,61 @@ if (typeof self !== 'undefined') {
                 case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
                 case 'syncState':
                     if (data.arranger) { Object.assign(arranger, data.arranger); arranger.totalSteps = data.arranger.totalSteps; arranger.stepMap = data.arranger.stepMap; arranger.sectionMap = data.arranger.sectionMap; }
-                    if (data.cb) {
-                        Object.assign(cb, data.cb);
-                        if (data.cb.rhythmicMask !== undefined) cb.rhythmicMask = data.cb.rhythmicMask;
+                    if (data.chords) {
+                        Object.assign(chords, data.chords);
+                        if (data.chords.rhythmicMask !== undefined) chords.rhythmicMask = data.chords.rhythmicMask;
                     }
-                    if (data.bb) Object.assign(bb, data.bb);
-                    if (data.sb) Object.assign(sb, data.sb);
-                    if (data.hb) {
-                        Object.assign(hb, data.hb);
-                        if (data.hb.rhythmicMask !== undefined) hb.rhythmicMask = data.hb.rhythmicMask;
-                        if (data.hb.pocketOffset !== undefined) hb.pocketOffset = data.hb.pocketOffset;
+                    if (data.bass) Object.assign(bass, data.bass);
+                    if (data.soloist) Object.assign(soloist, data.soloist);
+                    if (data.harmony) {
+                        Object.assign(harmony, data.harmony);
+                        if (data.harmony.rhythmicMask !== undefined) harmony.rhythmicMask = data.harmony.rhythmicMask;
+                        if (data.harmony.pocketOffset !== undefined) harmony.pocketOffset = data.harmony.pocketOffset;
                     }
-                    if (data.gb) {
-                        Object.assign(gb, data.gb);
-                        if (data.gb.instruments) { data.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
-                        if (data.gb.snareMask !== undefined) gb.snareMask = data.gb.snareMask;
+                    if (data.groove) {
+                        Object.assign(groove, data.groove);
+                        if (data.groove.instruments) { data.groove.instruments.forEach(di => { const inst = groove.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
+                        if (data.groove.snareMask !== undefined) groove.snareMask = data.groove.snareMask;
                     }
-                    if (data.ctx) Object.assign(ctx, data.ctx);
+                    if (data.playback) Object.assign(playback, data.playback);
                     break;
                 case 'requestBuffer': 
-                    if (ctx.workerLogging) console.log(`[Worker] requestBuffer: step=${data.step}, currentHeads=[bb:${bbBufferHead}, sb:${sbBufferHead}, cb:${cbBufferHead}]`);
+                    if (playback.workerLogging) console.log(`[Worker] requestBuffer: step=${data.step}, currentHeads=[bass:${bbBufferHead}, soloist:${sbBufferHead}, chords:${cbBufferHead}]`);
                     fillBuffers(data.step, timestamp); 
                     break;
                 case 'flush':
-                    if (ctx.workerLogging) console.log(`[Worker] flush: step=${data.step}`);
+                    if (playback.workerLogging) console.log(`[Worker] flush: step=${data.step}`);
                     // Sync first if data is provided to ensure correct style/genre
                     if (data.syncData) {
                         const syncData = data.syncData;
                         if (syncData.arranger) { Object.assign(arranger, syncData.arranger); arranger.totalSteps = syncData.arranger.totalSteps; arranger.stepMap = syncData.arranger.stepMap; arranger.sectionMap = syncData.arranger.sectionMap; }
-                        if (syncData.cb) {
-                            Object.assign(cb, syncData.cb);
-                            if (syncData.cb.rhythmicMask !== undefined) cb.rhythmicMask = syncData.cb.rhythmicMask;
+                        if (syncData.chords) {
+                            Object.assign(chords, syncData.chords);
+                            if (syncData.chords.rhythmicMask !== undefined) chords.rhythmicMask = syncData.chords.rhythmicMask;
                         }
-                        if (syncData.bb) Object.assign(bb, syncData.bb);
-                        if (syncData.sb) Object.assign(sb, syncData.sb);
-                        if (syncData.hb) {
-                            Object.assign(hb, syncData.hb);
-                            if (syncData.hb.rhythmicMask !== undefined) hb.rhythmicMask = syncData.hb.rhythmicMask;
-                            if (syncData.hb.pocketOffset !== undefined) hb.pocketOffset = syncData.hb.pocketOffset;
+                        if (syncData.bass) Object.assign(bass, syncData.bass);
+                        if (syncData.soloist) Object.assign(soloist, syncData.soloist);
+                        if (syncData.harmony) {
+                            Object.assign(harmony, syncData.harmony);
+                            if (syncData.harmony.rhythmicMask !== undefined) harmony.rhythmicMask = syncData.harmony.rhythmicMask;
+                            if (syncData.harmony.pocketOffset !== undefined) harmony.pocketOffset = syncData.harmony.pocketOffset;
                         }
-                        if (syncData.gb) {
-                            Object.assign(gb, syncData.gb);
-                            if (syncData.gb.instruments) { syncData.gb.instruments.forEach(di => { const inst = gb.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
-                            if (syncData.gb.snareMask !== undefined) gb.snareMask = syncData.gb.snareMask;
+                        if (syncData.groove) {
+                            Object.assign(groove, syncData.groove);
+                            if (syncData.groove.instruments) { syncData.groove.instruments.forEach(di => { const inst = groove.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
+                            if (syncData.groove.snareMask !== undefined) groove.snareMask = syncData.groove.snareMask;
                         }
-                        if (syncData.ctx) Object.assign(ctx, syncData.ctx);
+                        if (syncData.playback) Object.assign(playback, syncData.playback);
                     }
                     
                     bbBufferHead = data.step; sbBufferHead = data.step; cbBufferHead = data.step; hbBufferHead = data.step;
-                    sb.isResting = false; sb.busySteps = 0; sb.currentPhraseSteps = 0;
-                    sb.sessionSteps = 0;
-                    sb.deviceBuffer = [];
-                    bb.busySteps = 0;
-                    sb.motifBuffer = []; sb.hookBuffer = []; sb.isReplayingMotif = false;
-                    hb.motifBuffer = [];
-                    hb.lastMidis = [];
+                    soloist.isResting = false; soloist.busySteps = 0; soloist.currentPhraseSteps = 0;
+                    soloist.sessionSteps = 0;
+                    soloist.deviceBuffer = [];
+                    bass.busySteps = 0;
+                    soloist.motifBuffer = []; soloist.hookBuffer = []; soloist.isReplayingMotif = false;
+                    harmony.motifBuffer = [];
+                    harmony.lastMidis = [];
                     
                     // Reset accompaniment memory
                     compingState.lastChordIndex = -1;
@@ -771,28 +771,28 @@ if (typeof self !== 'undefined') {
 }
 
 export function handleResolution(step, timestamp = null) {
-    const notesToMain = generateResolutionNotes(step, arranger, { bb: bb.enabled, cb: cb.enabled, sb: sb.enabled, hb: hb.enabled, gb: gb.enabled });
+    const notesToMain = generateResolutionNotes(step, arranger, { bass: bass.enabled, chords: chords.enabled, soloist: soloist.enabled, harmony: harmony.enabled, groove: groove.enabled });
     postMessage({ type: 'notes', notes: notesToMain, timestamp });
 }
 
 function handlePrime(steps) {
-    if (!sb.enabled || arranger.totalSteps === 0) return;
+    if (!soloist.enabled || arranger.totalSteps === 0) return;
     
     // Default to 2 full loops of the progression to establish firm musical context
     const stepsToPrime = steps || (arranger.totalSteps * 2);
     
-    if (ctx.workerLogging) {
+    if (playback.workerLogging) {
         console.log(`[Worker] Priming engine for ${stepsToPrime} steps...`);
     }
 
     // Reset soloist state for priming
-    sb.isResting = false;
-    sb.busySteps = 0;
-    bb.busySteps = 0;
-    sb.currentPhraseSteps = 0;
-    sb.motifBuffer = [];
-    sb.hookBuffer = [];
-    sb.isReplayingMotif = false;
+    soloist.isResting = false;
+    soloist.busySteps = 0;
+    bass.busySteps = 0;
+    soloist.currentPhraseSteps = 0;
+    soloist.motifBuffer = [];
+    soloist.hookBuffer = [];
+    soloist.isReplayingMotif = false;
 
     const start = performance.now();
 
@@ -807,24 +807,24 @@ function handlePrime(steps) {
             const nextChordData = getChordAtStep(s + 4);
             const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
 
-            // 1. Prime Bass (if enabled) to update bb.lastFreq
-            if (bb.enabled) {
-                if (isBassActive(bb.style, s, stepInChord)) {
-                    const centerMidi = bb.octave;
+            // 1. Prime Bass (if enabled) to update bass.lastFreq
+            if (bass.enabled) {
+                if (isBassActive(bass.style, s, stepInChord)) {
+                    const centerMidi = bass.octave;
                     const bassResult = getBassNote(
                         chord, 
                         nextChordData?.chord, 
                         stepInChord / ts.stepsPerBeat, 
-                        bb.lastFreq, 
+                        bass.lastFreq, 
                         centerMidi, 
-                        bb.style, 
+                        bass.style, 
                         chordData.chordIndex, 
                         s, 
                         stepInChord
                     );
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
                          if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
-                         bb.lastFreq = bassResult.freq;
+                         bass.lastFreq = bassResult.freq;
                     }
                 }
             }
@@ -832,15 +832,15 @@ function handlePrime(steps) {
             // 2. Prime Soloist
             const { sectionStart, sectionEnd } = chordData;
             // Manually increment sessionSteps for priming logic
-            sb.sessionSteps = (sb.sessionSteps || 0) + 1;
+            soloist.sessionSteps = (soloist.sessionSteps || 0) + 1;
             
             const soloResult = getSoloistNote(
                 chord, 
                 nextChordData?.chord, 
                 s, 
-                sb.lastFreq, 
-                sb.octave, 
-                sb.style, 
+                soloist.lastFreq, 
+                soloist.octave, 
+                soloist.style, 
                 stepInChord,
                 true,
                 { sectionStart, sectionEnd }
@@ -851,7 +851,7 @@ function handlePrime(steps) {
                 results.forEach(res => {
                     if (res.freq || res.midi) {
                          if (!res.freq) res.freq = 440 * Math.pow(2, (res.midi - 69) / 12);
-                         if (!res.isDoubleStop) sb.lastFreq = res.freq;
+                         if (!res.isDoubleStop) soloist.lastFreq = res.freq;
                     }
                 });
             }
@@ -859,12 +859,12 @@ function handlePrime(steps) {
     }
     
     const elapsed = performance.now() - start;
-    if (ctx.workerLogging) {
+    if (playback.workerLogging) {
         console.log(`[Worker] Priming complete in ${elapsed.toFixed(2)}ms`);
     }
 
     // Reset physical and session state for the REAL start at Step 0
-    sb.busySteps = 0;
-    bb.busySteps = 0;
-    sb.sessionSteps = 0;
+    soloist.busySteps = 0;
+    bass.busySteps = 0;
+    soloist.sessionSteps = 0;
 }

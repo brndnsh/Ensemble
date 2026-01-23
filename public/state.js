@@ -40,7 +40,7 @@
  * @property {number|null} suspendTimeout - ID of the timeout for audio context suspension.
  * @property {number} conductorVelocity - Dynamic velocity modifier (0.0-1.0) applied by Conductor.
  */
-export const ctx = {
+export const playback = {
     audio: null,
     masterGain: null,
     saturator: null,
@@ -158,7 +158,7 @@ export const arranger = {
  * @property {number} rhythmicMask - 16-bit mask of the current comping pattern.
  * @property {string} activeTab - Currently active UI tab ('classic' or 'smart').
  */
-export const cb = {
+export const chords = {
     enabled: true,
     style: 'smart',
     volume: 0.5,
@@ -207,7 +207,7 @@ export const cb = {
  * @property {number} snareMask - 16-bit mask of the current snare pattern.
  * @property {boolean} pendingCrash - Whether a crash cymbal is queued for the next downbeat.
  */
-export const gb = {
+export const groove = {
     enabled: true,
     instruments: [
         { name: 'Kick',  symbol: '🥁', steps: new Array(128).fill(0), muted: false },
@@ -265,7 +265,7 @@ export const gb = {
  * @property {string} activeTab - Currently active UI tab.
  * @property {number|null} lastBassGain - Last velocity/gain value for dynamic continuity.
  */
-export const bb = {
+export const bass = {
     enabled: true,
     volume: 0.45,
     reverb: 0.05,
@@ -312,7 +312,7 @@ export const bb = {
  * @property {Array<Object>} deviceBuffer - Buffer for multi-step melodic devices.
  * @property {string} activeTab - Currently active UI tab.
  */
-export const sb = {
+export const soloist = {
     enabled: false,
     volume: 0.5,
     reverb: 0.6,
@@ -357,7 +357,7 @@ export const sb = {
  * @property {number} rhythmicMask - 16-bit mask of the current rhythmic motif (16th notes).
  * @property {string} activeTab - Currently active UI tab.
  */
-export const hb = {
+export const harmony = {
     enabled: false,
     volume: 0.4,
     reverb: 0.4,
@@ -432,10 +432,27 @@ export const storage = {
     }
 };
 
+// --- Legacy Exports (Backward Compatibility) ---
+export const ctx = playback;
+export const cb = chords;
+export const gb = groove;
+export const bb = bass;
+export const sb = soloist;
+export const hb = harmony;
+
 // --- Event Bus / State Manager ---
 
 const listeners = new Set();
-const stateMap = { ctx, cb, bb, sb, gb, hb, arranger, vizState, midi };
+// Map both old and new keys for compatibility
+const stateMap = { 
+    ctx: playback, playback,
+    cb: chords, chords,
+    bb: bass, bass,
+    sb: soloist, soloist,
+    gb: groove, groove,
+    hb: harmony, harmony,
+    arranger, vizState, midi 
+};
 
 /**
  * Dispatch a state change action.
@@ -450,32 +467,32 @@ export function dispatch(action, payload) {
             break;
         // --- Global / Conductor ---
         case ACTIONS.SET_BAND_INTENSITY:
-            ctx.bandIntensity = Math.max(0, Math.min(1, payload));
+            playback.bandIntensity = Math.max(0, Math.min(1, payload));
             break;
         case ACTIONS.SET_PARAM:
             if (stateMap[payload.module]) stateMap[payload.module][payload.param] = payload.value;
             break;
         case ACTIONS.SET_COMPLEXITY:
-            ctx.complexity = Math.max(0, Math.min(1, payload));
+            playback.complexity = Math.max(0, Math.min(1, payload));
             break;
         case ACTIONS.SET_AUTO_INTENSITY:
-            ctx.autoIntensity = !!payload;
+            playback.autoIntensity = !!payload;
             break;
         case ACTIONS.SET_DOUBLE_STOPS:
-            sb.doubleStops = !!payload;
+            soloist.doubleStops = !!payload;
             break;
         case ACTIONS.RESET_SESSION:
-            sb.sessionSteps = 0;
+            soloist.sessionSteps = 0;
             break;
         case ACTIONS.SET_SESSION_STEPS:
-            sb.sessionSteps = payload;
+            soloist.sessionSteps = payload;
             break;
         case ACTIONS.UPDATE_CONDUCTOR_DECISION: 
             // Composite update from Conductor
-            if (payload.density) cb.density = payload.density;
-            if (payload.velocity) ctx.conductorVelocity = payload.velocity;
-            if (payload.hookProb) sb.hookRetentionProb = payload.hookProb;
-            if (payload.intent) Object.assign(ctx.intent, payload.intent);
+            if (payload.density) chords.density = payload.density;
+            if (payload.velocity) playback.conductorVelocity = payload.velocity;
+            if (payload.hookProb) soloist.hookRetentionProb = payload.hookProb;
+            if (payload.intent) Object.assign(playback.intent, payload.intent);
             break;
 
         // --- Instrument Settings ---
@@ -484,7 +501,7 @@ export function dispatch(action, payload) {
             if (stateMap[payload.module]) stateMap[payload.module].style = payload.style;
             break;
         case ACTIONS.SET_DENSITY:
-            cb.density = payload;
+            chords.density = payload;
             break;
         case ACTIONS.SET_VOLUME:
             // payload: { module: 'cb', value: 0.5 }
@@ -499,43 +516,43 @@ export function dispatch(action, payload) {
         
         // --- Groove / Drums ---
         case ACTIONS.SET_SWING:
-            gb.swing = payload;
+            groove.swing = payload;
             break;
         case ACTIONS.SET_SWING_SUB:
-            gb.swingSub = payload;
+            groove.swingSub = payload;
             break;
         case ACTIONS.SET_HUMANIZE:
-            gb.humanize = payload;
+            groove.humanize = payload;
             break;
         case ACTIONS.SET_FOLLOW_PLAYBACK:
-            gb.followPlayback = payload;
+            groove.followPlayback = payload;
             break;
         case ACTIONS.SET_LARS_MODE:
-            gb.larsMode = !!payload;
+            groove.larsMode = !!payload;
             break;
         case ACTIONS.SET_LARS_INTENSITY:
-            gb.larsIntensity = Math.max(0, Math.min(1, payload));
+            groove.larsIntensity = Math.max(0, Math.min(1, payload));
             break;
         case ACTIONS.SET_GENRE_FEEL:
             // payload: { feel: 'Rock', swing: 0, sub: '8th', drum: '...', ... }
-            if (ctx.isPlaying) {
-                gb.pendingGenreFeel = payload;
+            if (playback.isPlaying) {
+                groove.pendingGenreFeel = payload;
             } else {
-                gb.genreFeel = payload.feel;
-                if (payload.swing !== undefined) gb.swing = payload.swing;
-                if (payload.sub !== undefined) gb.swingSub = payload.sub;
-                gb.pendingGenreFeel = null;
+                groove.genreFeel = payload.feel;
+                if (payload.swing !== undefined) groove.swing = payload.swing;
+                if (payload.sub !== undefined) groove.swingSub = payload.sub;
+                groove.pendingGenreFeel = null;
             }
             break;
         case ACTIONS.TRIGGER_FILL:
-            gb.fillSteps = payload.steps;
-            gb.fillActive = true;
-            gb.fillStartStep = payload.startStep;
-            gb.fillLength = payload.length;
-            gb.pendingCrash = !!payload.crash;
+            groove.fillSteps = payload.steps;
+            groove.fillActive = true;
+            groove.fillStartStep = payload.startStep;
+            groove.fillLength = payload.length;
+            groove.pendingCrash = !!payload.crash;
             break;
         case ACTIONS.UPDATE_HB:
-            Object.assign(hb, payload);
+            Object.assign(harmony, payload);
             break;
         case ACTIONS.SET_ACTIVE_TAB:
             // payload: { module: 'cb', tab: 'smart' }
@@ -544,32 +561,32 @@ export function dispatch(action, payload) {
         
         // --- Options ---
         case ACTIONS.SET_METRONOME:
-            ctx.metronome = payload;
+            playback.metronome = payload;
             break;
         case ACTIONS.SET_PRESET_SETTINGS_MODE:
-            ctx.applyPresetSettings = payload;
+            playback.applyPresetSettings = payload;
             break;
         case ACTIONS.SET_PIANO_ROOTS:
-            cb.pianoRoots = payload;
+            chords.pianoRoots = payload;
             break;
         case ACTIONS.SET_NOTATION:
             arranger.notation = payload;
             break;
         case ACTIONS.SET_SESSION_TIMER:
-            ctx.sessionTimer = payload;
+            playback.sessionTimer = payload;
             break;
         case ACTIONS.SET_STOP_AT_END:
-            ctx.stopAtEnd = payload;
+            playback.stopAtEnd = payload;
             break;
         case ACTIONS.SET_ENDING_PENDING:
-            ctx.isEndingPending = payload;
+            playback.isEndingPending = payload;
             break;
         case ACTIONS.TRIGGER_EMERGENCY_LOOKAHEAD:
-            if (ctx.scheduleAheadTime < 0.4) {
-                ctx.scheduleAheadTime *= 2.0;
-                console.warn(`[Performance] Emergency Lookahead Triggered: ${ctx.scheduleAheadTime}s`);
+            if (playback.scheduleAheadTime < 0.4) {
+                playback.scheduleAheadTime *= 2.0;
+                console.warn(`[Performance] Emergency Lookahead Triggered: ${playback.scheduleAheadTime}s`);
                 setTimeout(() => {
-                    ctx.scheduleAheadTime = 0.2;
+                    playback.scheduleAheadTime = 0.2;
                     console.log("[Performance] Lookahead reset to normal.");
                 }, 10000); // Reset after 10s of stability
             }

@@ -1,31 +1,31 @@
-import { ctx, sb } from './state.js';
+import { playback, soloist } from './state.js';
 import { safeDisconnect } from './utils.js';
 
 export function killSoloistNote() {
-    if (sb.activeVoices && sb.activeVoices.length > 0) {
-        sb.activeVoices.forEach(voice => {
+    if (soloist.activeVoices && soloist.activeVoices.length > 0) {
+        soloist.activeVoices.forEach(voice => {
             try {
                 // Cancel gain AND frequency ramps to prevent pitch artifacts
-                voice.gain.gain.cancelScheduledValues(ctx.audio.currentTime);
-                voice.gain.gain.setTargetAtTime(0, ctx.audio.currentTime, 0.01);
+                voice.gain.gain.cancelScheduledValues(playback.audio.currentTime);
+                voice.gain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.01);
                 
                 if (voice.oscs) {
                     voice.oscs.forEach(osc => {
                         try {
-                            osc.frequency.cancelScheduledValues(ctx.audio.currentTime);
+                            osc.frequency.cancelScheduledValues(playback.audio.currentTime);
                         } catch { /* ignore */ }
                     });
                 }
             } catch { /* ignore error */ }
         });
-        sb.activeVoices = [];
+        soloist.activeVoices = [];
     }
 }
 
 export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval = 0, style = 'scalar') {
     if (!Number.isFinite(freq)) return;
     
-    const now = ctx.audio.currentTime;
+    const now = playback.audio.currentTime;
     const playTime = Math.max(time, now);
 
     // --- Voice Management (Duophonic Limit) ---
@@ -33,32 +33,32 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     // If a double stop (2 notes) starts, any previous notes are killed.
     // If a single note starts and 2 are ringing, the oldest is killed.
     
-    if (!sb.activeVoices) sb.activeVoices = [];
+    if (!soloist.activeVoices) soloist.activeVoices = [];
     
     // clean up voices that have finished their release (roughly duration + 0.5s)
-    sb.activeVoices = sb.activeVoices.filter(v => (v.time + v.duration + 0.5) > playTime);
+    soloist.activeVoices = soloist.activeVoices.filter(v => (v.time + v.duration + 0.5) > playTime);
 
     // Intensity-driven Volume Scaling:
     // At high intensity, the soloist gets a significant gain boost to stay on top of the busy mix.
-    const intensity = ctx.bandIntensity;
+    const intensity = playback.bandIntensity;
     const intensityGain = 0.5 + (intensity * 0.9); // 0.5x to 1.4x scaling (Expanded from 0.85-1.15)
 
     const randomizedVol = vol * intensityGain * (0.95 + Math.random() * 0.1);
-    const gain = ctx.audio.createGain();
+    const gain = playback.audio.createGain();
     gain.gain.value = 0;
     gain.gain.setValueAtTime(0, playTime);
 
     // Dynamic Voice Limit: 1 for Pure Monophonic, 2 for Double Stops
-    const VOICE_LIMIT = sb.doubleStops ? 2 : 1;
+    const VOICE_LIMIT = soloist.doubleStops ? 2 : 1;
 
     // If we are starting a note at a NEW time, and we already have voices,
     // we might need to steal one to keep the limit correct.
-    const isNewGesture = sb.activeVoices.length > 0 && Math.abs(playTime - sb.activeVoices[sb.activeVoices.length-1].time) > 0.001;
+    const isNewGesture = soloist.activeVoices.length > 0 && Math.abs(playTime - soloist.activeVoices[soloist.activeVoices.length-1].time) > 0.001;
     
-    if (isNewGesture || sb.activeVoices.length >= VOICE_LIMIT) {
-        const voicesToKill = isNewGesture ? sb.activeVoices.length : (sb.activeVoices.length - VOICE_LIMIT + 1);
+    if (isNewGesture || soloist.activeVoices.length >= VOICE_LIMIT) {
+        const voicesToKill = isNewGesture ? soloist.activeVoices.length : (soloist.activeVoices.length - VOICE_LIMIT + 1);
         for (let i = 0; i < voicesToKill; i++) {
-            const oldest = sb.activeVoices.shift();
+            const oldest = soloist.activeVoices.shift();
             if (oldest) {
                 try {
                     oldest.gain.gain.cancelScheduledValues(playTime);
@@ -75,18 +75,18 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
         }
     }
 
-    const pan = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
-    if (ctx.audio.createStereoPanner) pan.pan.setValueAtTime((Math.random() * 2 - 1) * 0.05, playTime);
+    const pan = playback.audio.createStereoPanner ? playback.audio.createStereoPanner() : playback.audio.createGain();
+    if (playback.audio.createStereoPanner) pan.pan.setValueAtTime((Math.random() * 2 - 1) * 0.05, playTime);
 
     // Primary Osc: Mixed Saw/Tri for a richer tone
-    const osc1 = ctx.audio.createOscillator();
+    const osc1 = playback.audio.createOscillator();
     osc1.type = 'sawtooth'; 
     
-    const osc2 = ctx.audio.createOscillator();
+    const osc2 = playback.audio.createOscillator();
     osc2.type = 'triangle';
     osc2.detune.setValueAtTime(style === 'shred' ? 12 : 6, playTime);
 
-    sb.activeVoices.push({ gain, time: playTime, duration, oscs: [osc1, osc2] });
+    soloist.activeVoices.push({ gain, time: playTime, duration, oscs: [osc1, osc2] });
 
     // Pitch Envelope
     if (bendStartInterval !== 0) {
@@ -113,7 +113,7 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     }
 
     // Style-specific Vibrato
-    const vibrato = ctx.audio.createOscillator();
+    const vibrato = playback.audio.createOscillator();
     let vibSpeed = 5.5;
     let depthFactor = 0.005;
     
@@ -138,7 +138,7 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     }
     
     vibrato.frequency.setValueAtTime(vibSpeed, playTime); 
-    const vibGain = ctx.audio.createGain();
+    const vibGain = playback.audio.createGain();
     
     const isLongNote = duration > 0.4;
     const vibDelay = (style === 'minimal' ? 0.4 : (style === 'shred' ? 0.05 : 0.15)) + (Math.random() * 0.1);
@@ -155,7 +155,7 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     vibGain.connect(osc2.frequency);
 
     // Resonant Filter
-    const filter = ctx.audio.createBiquadFilter();
+    const filter = playback.audio.createBiquadFilter();
     filter.type = 'lowpass';
     
     // Timbre-Intensity Mapping: Brighter at high intensity/velocity
@@ -186,7 +186,7 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     osc2.connect(filter);
     filter.connect(gain);
     gain.connect(pan);
-    pan.connect(ctx.soloistGain);
+    pan.connect(playback.soloistGain);
 
     // Smart Vibrato Logic
     // Only apply vibrato if note is long enough to warrant it

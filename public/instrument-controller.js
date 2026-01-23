@@ -1,4 +1,4 @@
-import { gb, arranger, ctx, cb, bb, sb, hb, vizState } from './state.js';
+import { groove, arranger, playback, chords, bass, soloist, harmony, vizState } from './state.js';
 import { ui, renderGrid, renderMeasurePagination, renderGridState, showToast, renderSections, renderChordVisualizer, initTabs } from './ui.js';
 import { DRUM_PRESETS } from './presets.js';
 import { saveCurrentState } from './persistence.js';
@@ -16,15 +16,15 @@ export function setInstrumentControllerRefs(scheduler, viz) {
 }
 
 export function switchMeasure(idx, skipScroll = false) {
-    if (gb.currentMeasure === idx) return;
-    gb.currentMeasure = idx;
+    if (groove.currentMeasure === idx) return;
+    groove.currentMeasure = idx;
     renderMeasurePagination(switchMeasure);
     renderGrid(skipScroll);
 }
 
 export function updateMeasures(val) {
-    gb.measures = parseInt(val);
-    if (gb.currentMeasure >= gb.measures) gb.currentMeasure = 0;
+    groove.measures = parseInt(val);
+    if (groove.currentMeasure >= groove.measures) groove.currentMeasure = 0;
     renderMeasurePagination(switchMeasure);
     renderGrid();
     saveCurrentState();
@@ -35,14 +35,14 @@ export function loadDrumPreset(name) {
     if (p[arranger.timeSignature]) {
         p = { ...p, ...p[arranger.timeSignature] };
     }
-    gb.lastDrumPreset = name;
-    gb.measures = p.measures || 1; 
-    gb.currentMeasure = 0;
-    ui.drumBarsSelect.value = String(gb.measures);
+    groove.lastDrumPreset = name;
+    groove.measures = p.measures || 1; 
+    groove.currentMeasure = 0;
+    ui.drumBarsSelect.value = String(groove.measures);
     
-    if (p.swing !== undefined) { gb.swing = p.swing; ui.swingSlider.value = p.swing; }
-    if (p.sub) { gb.swingSub = p.sub; ui.swingBase.value = p.sub; }
-    gb.instruments.forEach(inst => {
+    if (p.swing !== undefined) { groove.swing = p.swing; ui.swingSlider.value = p.swing; }
+    if (p.sub) { groove.swingSub = p.sub; ui.swingBase.value = p.sub; }
+    groove.instruments.forEach(inst => {
         const spm = getStepsPerMeasure(arranger.timeSignature);
         const pattern = p[inst.name] || new Array(spm).fill(0);
         inst.steps.fill(0);
@@ -54,23 +54,23 @@ export function loadDrumPreset(name) {
 
 export function cloneMeasure() {
     const spm = getStepsPerMeasure(arranger.timeSignature);
-    const sourceOffset = gb.currentMeasure * spm;
-    gb.instruments.forEach(inst => {
+    const sourceOffset = groove.currentMeasure * spm;
+    groove.instruments.forEach(inst => {
         const pattern = inst.steps.slice(sourceOffset, sourceOffset + spm);
-        for (let m = 0; m < gb.measures; m++) {
-            if (m === gb.currentMeasure) continue;
+        for (let m = 0; m < groove.measures; m++) {
+            if (m === groove.currentMeasure) continue;
             const targetOffset = m * spm;
             for (let i = 0; i < spm; i++) {
                 inst.steps[targetOffset + i] = pattern[i];
             }
         }
     });
-    showToast(`Measure ${gb.currentMeasure + 1} copied to all`);
+    showToast(`Measure ${groove.currentMeasure + 1} copied to all`);
     renderGridState();
 }
 
 export function clearDrumPresetHighlight() {
-    gb.lastDrumPreset = null;
+    groove.lastDrumPreset = null;
     document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
 }
 
@@ -94,10 +94,10 @@ export function handleTap(setBpmRef) {
 
 export function flushBuffers(primeSteps = 0) {
     // 1. Clear local buffers
-    bb.buffer.clear();
-    sb.buffer.clear();
-    cb.buffer.clear();
-    hb.buffer.clear();
+    bass.buffer.clear();
+    soloist.buffer.clear();
+    chords.buffer.clear();
+    harmony.buffer.clear();
     
     // 2. Kill current sounds and buses
     killAllPianoNotes();
@@ -121,47 +121,47 @@ export function flushBuffers(primeSteps = 0) {
             isMinor: arranger.isMinor,
             timeSignature: arranger.timeSignature
         },
-        cb: { style: cb.style, octave: cb.octave, density: cb.density, enabled: cb.enabled, volume: cb.volume },
-        bb: { style: bb.style, octave: bb.octave, enabled: bb.enabled, lastFreq: bb.lastFreq, volume: bb.volume },
-        sb: { style: sb.style, octave: sb.octave, enabled: sb.enabled, lastFreq: sb.lastFreq, volume: sb.volume, doubleStops: sb.doubleStops, sessionSteps: sb.sessionSteps },
-        hb: { style: hb.style, octave: hb.octave, enabled: hb.enabled, volume: hb.volume, complexity: hb.complexity },
-        gb: { 
-            genreFeel: gb.genreFeel, 
-            enabled: gb.enabled, 
-            volume: gb.volume,
-            measures: gb.measures,
-            swing: gb.swing,
-            swingSub: gb.swingSub,
-            instruments: gb.instruments.map(i => ({ name: i.name, steps: [...i.steps], muted: i.muted }))
+        chords: { style: chords.style, octave: chords.octave, density: chords.density, enabled: chords.enabled, volume: chords.volume },
+        bass: { style: bass.style, octave: bass.octave, enabled: bass.enabled, lastFreq: bass.lastFreq, volume: bass.volume },
+        soloist: { style: soloist.style, octave: soloist.octave, enabled: soloist.enabled, lastFreq: soloist.lastFreq, volume: soloist.volume, doubleStops: soloist.doubleStops, sessionSteps: soloist.sessionSteps },
+        harmony: { style: harmony.style, octave: harmony.octave, enabled: harmony.enabled, volume: harmony.volume, complexity: harmony.complexity },
+        groove: { 
+            genreFeel: groove.genreFeel, 
+            enabled: groove.enabled, 
+            volume: groove.volume,
+            measures: groove.measures,
+            swing: groove.swing,
+            swingSub: groove.swingSub,
+            instruments: groove.instruments.map(i => ({ name: i.name, steps: [...i.steps], muted: i.muted }))
         },
-        ctx: { bpm: ctx.bpm, bandIntensity: ctx.bandIntensity, complexity: ctx.complexity, autoIntensity: ctx.autoIntensity }
+        playback: { bpm: playback.bpm, bandIntensity: playback.bandIntensity, complexity: playback.complexity, autoIntensity: playback.autoIntensity }
     };
 
     // 4. Trigger a BUNDLED worker flush
-    flushWorker(ctx.step, syncData, primeSteps);
+    flushWorker(playback.step, syncData, primeSteps);
     restoreGains();
 }
 
 export function flushBuffer(type, primeSteps = 0) {
     if (type === 'bass' || type === 'all') {
-        if (bb.lastPlayedFreq !== null) bb.lastFreq = bb.lastPlayedFreq;
-        bb.buffer.clear();
+        if (bass.lastPlayedFreq !== null) bass.lastFreq = bass.lastPlayedFreq;
+        bass.buffer.clear();
         killBassNote();
         killBassBus();
     }
     if (type === 'soloist' || type === 'all') {
-        if (sb.lastPlayedFreq !== null) sb.lastFreq = sb.lastPlayedFreq;
-        sb.buffer.clear();
+        if (soloist.lastPlayedFreq !== null) soloist.lastFreq = soloist.lastPlayedFreq;
+        soloist.buffer.clear();
         killSoloistNote();
         killSoloistBus();
     }
     if (type === 'chord' || type === 'all') {
-        cb.buffer.clear();
+        chords.buffer.clear();
         killAllPianoNotes();
         killChordBus();
     }
     if (type === 'harmony' || type === 'all') {
-        hb.buffer.clear();
+        harmony.buffer.clear();
         killHarmonyNote();
         killHarmonyBus();
     }
@@ -172,18 +172,18 @@ export function flushBuffer(type, primeSteps = 0) {
     
     // Solo flush (usually from UI toggles)
     if (type !== 'none') {
-        flushWorker(ctx.step, null, primeSteps);
+        flushWorker(playback.step, null, primeSteps);
     }
     restoreGains();
 }
 
 export function getPowerConfig() {
     return {
-        chord: { state: cb, els: [ui.chordPowerBtn, ui.chordPowerBtnDesktop] },
-        groove: { state: gb, els: [ui.groovePowerBtn, ui.groovePowerBtnDesktop], cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
-        bass: { state: bb, els: [ui.bassPowerBtn, ui.bassPowerBtnDesktop] },
-        soloist: { state: sb, els: [ui.soloistPowerBtn, ui.soloistPowerBtnDesktop] },
-        harmony: { state: hb, els: [ui.harmonyPowerBtn, ui.harmonyPowerBtnDesktop] },
+        chord: { state: chords, els: [ui.chordPowerBtn, ui.chordPowerBtnDesktop] },
+        groove: { state: groove, els: [ui.groovePowerBtn, ui.groovePowerBtnDesktop], cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
+        bass: { state: bass, els: [ui.bassPowerBtn, ui.bassPowerBtnDesktop] },
+        soloist: { state: soloist, els: [ui.soloistPowerBtn, ui.soloistPowerBtnDesktop] },
+        harmony: { state: harmony, els: [ui.harmonyPowerBtn, ui.harmonyPowerBtnDesktop] },
         viz: { 
             state: vizState, 
             els: [ui.vizPowerBtn], 
@@ -245,47 +245,47 @@ export function togglePower(type) {
 }
 
 export function resetToDefaults() {
-    ctx.bpm = 100;
+    playback.bpm = 100;
     arranger.notation = 'roman';
     arranger.key = 'C';
     arranger.timeSignature = '4/4';
     applyTheme('auto');
     arranger.sections.forEach(s => s.color = '#3b82f6');
     
-    cb.volume = 0.5;
-    cb.reverb = 0.3;
-    cb.instrument = 'Clean';
-    cb.octave = 65;
-    cb.density = 'standard';
-    cb.pianoRoots = false;
-    cb.activeTab = 'smart';
+    chords.volume = 0.5;
+    chords.reverb = 0.3;
+    chords.instrument = 'Clean';
+    chords.octave = 65;
+    chords.density = 'standard';
+    chords.pianoRoots = false;
+    chords.activeTab = 'smart';
     
-    bb.volume = 0.45;
-    bb.reverb = 0.05;
-    bb.octave = 38;
-    bb.style = 'smart';
-    bb.activeTab = 'smart';
+    bass.volume = 0.45;
+    bass.reverb = 0.05;
+    bass.octave = 38;
+    bass.style = 'smart';
+    bass.activeTab = 'smart';
     
-    sb.volume = 0.5;
-    sb.reverb = 0.6;
-    sb.octave = 72;
-    sb.style = 'smart';
-    sb.activeTab = 'smart';
-    sb.doubleStops = false;
+    soloist.volume = 0.5;
+    soloist.reverb = 0.6;
+    soloist.octave = 72;
+    soloist.style = 'smart';
+    soloist.activeTab = 'smart';
+    soloist.doubleStops = false;
     
-    hb.volume = 0.4;
-    hb.reverb = 0.4;
-    hb.octave = 60;
-    hb.style = 'smart';
-    hb.complexity = 0.5;
-    hb.activeTab = 'smart';
+    harmony.volume = 0.4;
+    harmony.reverb = 0.4;
+    harmony.octave = 60;
+    harmony.style = 'smart';
+    harmony.complexity = 0.5;
+    harmony.activeTab = 'smart';
     
-    gb.volume = 0.5;
-    gb.reverb = 0.2;
-    gb.swing = 0;
-    gb.swingSub = '8th';
-    gb.genreFeel = 'Rock';
-    gb.activeTab = 'smart';
+    groove.volume = 0.5;
+    groove.reverb = 0.2;
+    groove.swing = 0;
+    groove.swingSub = '8th';
+    groove.genreFeel = 'Rock';
+    groove.activeTab = 'smart';
 
     ui.bpmInput.value = 100;
     ui.keySelect.value = 'C';
@@ -311,17 +311,17 @@ export function resetToDefaults() {
     ui.metronome.checked = false;
     ui.visualFlash.checked = false;
     ui.hapticCheck.checked = false;
-    if (ctx.audio) {
-        const time = ctx.audio.currentTime;
+    if (playback.audio) {
+        const time = playback.audio.currentTime;
         const rampTime = time + 0.04;
         
         const resetNodes = [
-            { node: ctx.masterGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.master },
-            { node: ctx.chordsGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.chords },
-            { node: ctx.bassGain, target: 0.45 * MIXER_GAIN_MULTIPLIERS.bass },
-            { node: ctx.soloistGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.soloist },
-            { node: ctx.harmoniesGain, target: 0.4 * MIXER_GAIN_MULTIPLIERS.harmonies },
-            { node: ctx.drumsGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.drums }
+            { node: playback.masterGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.master },
+            { node: playback.chordsGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.chords },
+            { node: playback.bassGain, target: 0.45 * MIXER_GAIN_MULTIPLIERS.bass },
+            { node: playback.soloistGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.soloist },
+            { node: playback.harmoniesGain, target: 0.4 * MIXER_GAIN_MULTIPLIERS.harmonies },
+            { node: playback.drumsGain, target: 0.5 * MIXER_GAIN_MULTIPLIERS.drums }
         ];
 
         resetNodes.forEach(rn => {
@@ -332,10 +332,10 @@ export function resetToDefaults() {
         });
     }
 
-    ctx.bandIntensity = 0.5;
-    ctx.complexity = 0.3;
-    ctx.autoIntensity = true;
-    ctx.conductorVelocity = 1.0;
+    playback.bandIntensity = 0.5;
+    playback.complexity = 0.3;
+    playback.autoIntensity = true;
+    playback.conductorVelocity = 1.0;
     if (ui.intensitySlider) {
         ui.intensitySlider.value = 50;
         if (ui.intensityValue) ui.intensityValue.textContent = '50%';
@@ -355,7 +355,7 @@ export function resetToDefaults() {
     syncWorker();
     flushBuffers();
     
-    gb.instruments.forEach(inst => {
+    groove.instruments.forEach(inst => {
         inst.steps = new Array(128).fill(0);
         inst.muted = false;
     });
@@ -364,7 +364,7 @@ export function resetToDefaults() {
     initTabs();
 
     document.querySelectorAll('.genre-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.genre === gb.genreFeel);
+        btn.classList.toggle('active', btn.dataset.genre === groove.genreFeel);
     });
 
     saveCurrentState();

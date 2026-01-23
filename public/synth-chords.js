@@ -1,4 +1,4 @@
-import { ctx, gb } from './state.js';
+import { playback, groove } from './state.js';
 import { safeDisconnect } from './utils.js';
 
 /**
@@ -43,15 +43,15 @@ let pianoWave = null;
  * Updates the sustain pedal state, precisely scheduled.
  */
 export function updateSustain(active, time = null) {
-    const scheduleTime = time !== null ? time : (ctx.audio?.currentTime || 0);
-    ctx.sustainActive = active;
+    const scheduleTime = time !== null ? time : (playback.audio?.currentTime || 0);
+    playback.sustainActive = active;
     
-    if (!active && ctx.heldNotes) {
+    if (!active && playback.heldNotes) {
         // Release all held notes
-        ctx.heldNotes.forEach((note) => {
+        playback.heldNotes.forEach((note) => {
             note.stop(scheduleTime);
         });
-        ctx.heldNotes.clear();
+        playback.heldNotes.clear();
     }
 }
 
@@ -59,16 +59,16 @@ export function updateSustain(active, time = null) {
  * Forcefully kills all ringing piano notes (panic button).
  */
 export function killAllPianoNotes() {
-    const now = ctx.audio?.currentTime || 0;
-    if (ctx.heldNotes) {
-        ctx.heldNotes.forEach(note => {
+    const now = playback.audio?.currentTime || 0;
+    if (playback.heldNotes) {
+        playback.heldNotes.forEach(note => {
             if (typeof note.stop === 'function') {
                 note.stop(now, true);
             }
         });
-        ctx.heldNotes.clear();
+        playback.heldNotes.clear();
     }
-    ctx.sustainActive = false;
+    playback.sustainActive = false;
 }
 
 /**
@@ -92,19 +92,19 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
     const polyphonyComp = 1 / Math.sqrt(Math.max(1, numVoices));
     const finalVol = vol * polyphonyComp;
 
-    // Ensure heldNotes exists on ctx
-    if (!ctx.heldNotes) ctx.heldNotes = new Set();
+    // Ensure heldNotes exists on playback
+    if (!playback.heldNotes) playback.heldNotes = new Set();
     
     try {
         // Fallback safety for legacy instruments
         if (instrument !== 'Piano' && instrument !== 'Warm') instrument = 'Piano';
         
         const preset = INSTRUMENT_PRESETS[instrument] || INSTRUMENT_PRESETS['Piano'];
-        const now = ctx.audio.currentTime;
+        const now = playback.audio.currentTime;
         const baseTime = Math.max(time, now);
         
         const isPiano = instrument === 'Piano';
-        if (isPiano && !pianoWave) pianoWave = createPianoWave(ctx.audio);
+        if (isPiano && !pianoWave) pianoWave = createPianoWave(playback.audio);
 
         // 1. The "Strum" Offset
         const staggerMult = muted ? 0.4 : 1.0;
@@ -112,17 +112,17 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         const startTime = baseTime + stagger;
         
         // Intensity-aware brightness mapping (Wide Range for Alternative Loop)
-        const intensity = ctx.bandIntensity;
+        const intensity = playback.bandIntensity;
         const intensityShift = (intensity - 0.5) * 2400; // Expanded from 1200
         const intensityDepthMult = 0.5 + (intensity * 2.5); // 0.5x to 3.0x depth (Expanded from 0.5-2.0)
         const velocityCutoff = Math.max(100, (preset.filterBase + intensityShift) + (finalVol * preset.filterDepth * intensityDepthMult));
         
         // --- Component A: The Hammer Strike ---
         if (isPiano && !muted) {
-            const strike = ctx.audio.createBufferSource();
-            strike.buffer = gb.audioBuffers.noise;
-            const strikeFilter = ctx.audio.createBiquadFilter();
-            const strikeGain = ctx.audio.createGain();
+            const strike = playback.audio.createBufferSource();
+            strike.buffer = groove.audioBuffers.noise;
+            const strikeFilter = playback.audio.createBiquadFilter();
+            const strikeGain = playback.audio.createGain();
             
             strikeFilter.type = 'bandpass';
             strikeFilter.frequency.setValueAtTime(1200 + (finalVol * 800), startTime);
@@ -134,16 +134,16 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
             
             strike.connect(strikeFilter);
             strikeFilter.connect(strikeGain);
-            strikeGain.connect(ctx.chordsGain);
+            strikeGain.connect(playback.chordsGain);
             strike.start(startTime);
             strike.stop(startTime + 0.1);
             strike.onended = () => safeDisconnect([strike, strikeFilter, strikeGain]);
         }
 
         // --- Component B: The Harmonic Body ---
-        const osc = ctx.audio.createOscillator();
-        const mainGain = ctx.audio.createGain();
-        const filter = ctx.audio.createBiquadFilter();
+        const osc = playback.audio.createOscillator();
+        const mainGain = playback.audio.createGain();
+        const filter = playback.audio.createBiquadFilter();
         
         if (isPiano) {
             osc.setPeriodicWave(pianoWave);
@@ -170,13 +170,13 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
             try { osc.stop(t + 0.5); } catch { /* ignore already stopped */ }
         };
 
-        if (ctx.sustainActive && !muted) {
+        if (playback.sustainActive && !muted) {
             const noteRef = { stop: stopNote };
-            ctx.heldNotes.add(noteRef);
-            if (ctx.heldNotes.size > 64) {
-                const firstNote = ctx.heldNotes.values().next().value;
+            playback.heldNotes.add(noteRef);
+            if (playback.heldNotes.size > 64) {
+                const firstNote = playback.heldNotes.values().next().value;
                 firstNote.stop(now);
-                ctx.heldNotes.delete(firstNote);
+                playback.heldNotes.delete(firstNote);
             }
         } else {
             const actualDuration = muted ? 0.015 : duration;
@@ -189,7 +189,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         // --- Intensity-driven Crunch (>= 0.8) ---
         let lastNode = filter;
         if (intensity >= 0.8 && !muted) {
-            const shaper = ctx.audio.createWaveShaper();
+            const shaper = playback.audio.createWaveShaper();
             const n_samples = 44100;
             const curve = new Float32Array(n_samples);
             const drive = 1.0 + (intensity - 0.8) * 10.0; // 1.0 to 3.0
@@ -206,21 +206,21 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         lastNode.connect(mainGain);
 
         // --- Mix Separation: HPF & Panning ---
-        const hpf = ctx.audio.createBiquadFilter();
+        const hpf = playback.audio.createBiquadFilter();
         hpf.type = 'highpass';
         hpf.frequency.setValueAtTime(150, startTime);
         
-        const panner = ctx.audio.createStereoPanner ? ctx.audio.createStereoPanner() : ctx.audio.createGain();
-        if (ctx.audio.createStereoPanner) {
+        const panner = playback.audio.createStereoPanner ? playback.audio.createStereoPanner() : playback.audio.createGain();
+        if (playback.audio.createStereoPanner) {
             panner.pan.setValueAtTime(-0.2, startTime); // Slight Left
         }
 
         mainGain.connect(hpf);
         hpf.connect(panner);
-        panner.connect(ctx.chordsGain);
+        panner.connect(playback.chordsGain);
 
         osc.start(startTime);
-        if (!ctx.sustainActive || muted) {
+        if (!playback.sustainActive || muted) {
             osc.stop(startTime + (muted ? 0.1 : duration + 1.0));
         }
 
@@ -237,11 +237,11 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
 export function playChordScratch(time, vol = 0.1) {
     try {
         const randomizedVol = vol * (0.8 + Math.random() * 0.4);
-        const gain = ctx.audio.createGain();
-        const filter = ctx.audio.createBiquadFilter();
-        const noise = ctx.audio.createBufferSource();
+        const gain = playback.audio.createGain();
+        const filter = playback.audio.createBiquadFilter();
+        const noise = playback.audio.createBufferSource();
         
-        noise.buffer = gb.audioBuffers.noise;
+        noise.buffer = groove.audioBuffers.noise;
         filter.type = 'bandpass';
         const scratchFreq = 1200 + Math.random() * 400;
         filter.frequency.value = scratchFreq;
@@ -256,7 +256,7 @@ export function playChordScratch(time, vol = 0.1) {
         
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(ctx.chordsGain);
+        gain.connect(playback.chordsGain);
         
         noise.start(time);
         noise.stop(time + 0.2);
