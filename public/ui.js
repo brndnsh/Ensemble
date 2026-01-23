@@ -46,6 +46,7 @@ export const ui = {
 
     // --- Direct IDs (Extracted from usage analysis) ---
     get playBtn() { return getEl('playBtn'); },
+    get dashboardGrid() { return getEl('dashboardGrid'); },
     get sequencerGrid() { return getEl('sequencerGrid'); },
     get intensitySlider() { return getEl('intensitySlider'); },
     get intensityValue() { return getEl('intensityValue'); },
@@ -461,8 +462,12 @@ export function switchInstrumentTab(module, target) {
     });
     
     // Update Content
-    const classicTab = document.getElementById(`${panelId}-tab-classic`);
-    const smartTab = document.getElementById(`${panelId}-tab-smart`);
+    const classicId = `${panelId}-tab-classic`;
+    const smartId = `${panelId}-tab-smart`;
+    const classicTab = document.getElementById(classicId);
+    const smartTab = document.getElementById(smartId);
+    
+    console.log(`[UI] switchInstrumentTab: classicId=${classicId}, found=${!!classicTab}; smartId=${smartId}, found=${!!smartTab}`);
     
     if (classicTab && smartTab) {
         classicTab.classList.toggle('active', target === 'classic');
@@ -499,6 +504,7 @@ export function initTabs() {
     mobileTabItems.forEach(item => {
         item.onclick = () => {
             activateMobileTab(item);
+            syncWorker();
             saveCurrentState();
         };
         
@@ -508,16 +514,26 @@ export function initTabs() {
         }
     });
 
-    instrumentTabBtns.forEach(btn => {
-        btn.onclick = () => {
+    if (ui.dashboardGrid) {
+        ui.dashboardGrid.addEventListener('click', (e) => {
+            const btn = e.target.closest('.instrument-tab-btn');
+            if (!btn) return;
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
             const module = btn.dataset.module;
             const target = btn.dataset.tab;
+            console.log(`[UI] Tab Click (Delegated): module=${module}, target=${target}`);
             dispatch(ACTIONS.SET_ACTIVE_TAB, { module, tab: target });
             switchInstrumentTab(module, target);
             syncWorker();
             saveCurrentState();
-        };
-        
+        });
+    }
+
+    // Initial Sync for all buttons
+    document.querySelectorAll('.instrument-tab-btn').forEach(btn => {
         const module = btn.dataset.module;
         const stateMap = { 
             chords, bass, soloist, harmony, groove, 
