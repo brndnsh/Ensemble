@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getVisualTime } from '../../../public/engine.js';
+import { getVisualTime, _resetChromiumCheck } from '../../../public/engine.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Engine Logic & Sync', () => {
@@ -13,8 +13,7 @@ describe('Engine Logic & Sync', () => {
             currentTime: 10.0,
             outputLatency: 0.015
         };
-        // Reset global variables in engine.js is hard, 
-        // but we can simulate passing time.
+        if (_resetChromiumCheck) _resetChromiumCheck();
     });
 
     describe('getVisualTime', () => {

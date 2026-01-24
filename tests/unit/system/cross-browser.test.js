@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { initAudio, getVisualTime } from '../../../public/engine.js';
+import { initAudio, getVisualTime, _resetChromiumCheck } from '../../../public/engine.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 // Mock dependencies
@@ -56,6 +56,7 @@ describe('Cross-Browser & Hardware Heuristics', () => {
         vi.clearAllMocks();
         playback.audio = null;
         playback.isPlaying = false;
+        if (_resetChromiumCheck) _resetChromiumCheck();
     });
 
     it('should correctly initialize with a 48kHz sample rate (Mac/iOS standard)', () => {
