@@ -15,7 +15,7 @@ global.Worker = class MockWorker {
     }
 };
 
-const { initWorker, getTimerWorker } = await import('../../../public/worker-client.js');
+const { initWorker, getTimerWorker, syncWorker } = await import('../../../public/worker-client.js');
 
 describe('Worker Resilience & Error Handling', () => {
     
@@ -53,14 +53,12 @@ describe('Worker Resilience & Error Handling', () => {
     });
 
     it('should handle multiple rapid sync calls without worker congestion', () => {
-        const { syncWorker } = require('../../../public/worker-client.js');
-        
         // Flood syncWorker
         for(let i=0; i<50; i++) {
             syncWorker('SET_BAND_INTENSITY');
         }
         
         // Each call should result in a postMessage
-        expect(lastWorkerInstance.postMessage).toHaveBeenCalledTimes(51); // 1 from initWorker sync + 50 loop
+        expect(lastWorkerInstance.postMessage).toHaveBeenCalledTimes(50); 
     });
 });

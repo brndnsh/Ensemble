@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global modules
-vi.mock('../../public/state.js', () => ({
+vi.mock('../../../public/state.js', () => ({
     playback: {
         audio: {
             currentTime: 0,
@@ -59,12 +59,12 @@ vi.mock('../../public/state.js', () => ({
 }));
 
 // Mock utils
-vi.mock('../../public/utils.js', () => ({
+vi.mock('../../../public/utils.js', () => ({
     safeDisconnect: vi.fn()
 }));
 
-import { playSoloNote } from '../../public/synth-soloist.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
+import { playSoloNote } from '../../../public/synth-soloist.js';
+import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Soloist Synthesis', () => {
     beforeEach(() => {

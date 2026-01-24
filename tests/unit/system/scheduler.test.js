@@ -12,25 +12,51 @@ vi.stubGlobal('window', {
 });
 vi.stubGlobal('CustomEvent', class { constructor(type, detail) { this.type = type; this.detail = detail?.detail; } });
 
-vi.mock('../../../public/state.js', () => ({
-    arranger: { stepMap: [], sections: [] },
-    playback: { audio: { currentTime: 0 } },
-    groove: { genreFeel: 'Rock' }
+vi.mock('../../../public/state.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        arranger: { stepMap: [], sections: [], totalSteps: 0, timeSignature: '4/4', measureMap: new Map() },
+        playback: { 
+            audio: { currentTime: 0 },
+            unswungNextNoteTime: 0,
+            currentKey: '',
+            conductorVelocity: 1.0,
+            bandIntensity: 0.5,
+            drawQueue: []
+        },
+        groove: { genreFeel: 'Rock', instruments: [], humanize: 0, measures: 1 },
+        midi: { enabled: false },
+        soloist: { style: 'scalar' },
+        vizState: { enabled: false },
+        bass: { enabled: false },
+        chords: { enabled: false },
+        harmony: { enabled: false }
+    };
+});
+
+vi.mock('../../../public/ui.js', () => ({
+    ui: {
+        metronome: { checked: false },
+        visualFlash: { checked: false }
+    }
 }));
 
 import { scheduleGlobalEvent } from '../../../public/scheduler-core.js';
-import { arranger } from '../../../public/state.js';
+import { arranger, playback } from '../../../public/state.js';
 
 describe('Scheduler Core System', () => {
     
     beforeEach(() => {
         vi.clearAllMocks();
+        playback.currentKey = '';
         // Setup a simple song structure with a key change
         // Bar 1 (Step 0): Key A
         // Bar 2 (Step 16): Key B
+        arranger.totalSteps = 32;
         arranger.stepMap = [
-            { start: 0, end: 16, chord: { sectionId: 's1', key: 'A' } },
-            { start: 16, end: 32, chord: { sectionId: 's2', key: 'B' } }
+            { start: 0, end: 16, chord: { sectionId: 's1', key: 'A', freqs: [], rootMidi: 60, intervals: [0, 4, 7], beats: 4 } },
+            { start: 16, end: 32, chord: { sectionId: 's2', key: 'B', freqs: [], rootMidi: 62, intervals: [0, 4, 7], beats: 4 } }
         ];
         arranger.sections = [
             { id: 's1', key: 'A' },

@@ -10,12 +10,13 @@ describe('Audio Recovery & Platform Integrity', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Mock Audio constructor
-        global.Audio = vi.fn().mockImplementation(() => ({
-            play: vi.fn().mockResolvedValue(undefined),
-            pause: vi.fn(),
-            loop: false,
-            currentTime: 0
-        }));
+        global.Audio = vi.fn().mockImplementation(function() {
+            this.play = vi.fn().mockResolvedValue(undefined);
+            this.pause = vi.fn();
+            this.loop = false;
+            this.currentTime = 0;
+            return this;
+        });
     });
 
     it('should initialize a silent audio element for background playback', () => {
