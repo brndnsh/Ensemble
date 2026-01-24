@@ -1,5 +1,5 @@
 import { playback, groove } from './state.js';
-import { safeDisconnect, clampFreq } from './utils.js';
+import { safeDisconnect } from './utils.js';
 
 /**
  * Instrument definitions for the chord engine.
@@ -96,11 +96,6 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
     if (!playback.heldNotes) playback.heldNotes = new Set();
     
     try {
-        if (playback.highFidelity) {
-            playHiFiNote(freq, time, duration, vol, index, instrument, muted, numVoices);
-            return;
-        }
-
         // Fallback safety for legacy instruments
         if (instrument !== 'Piano' && instrument !== 'Warm') instrument = 'Piano';
         
@@ -232,144 +227,6 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         osc.onended = () => safeDisconnect([osc, filter, mainGain]);
 
     } catch (err) { console.error("playNote error:", err); }
-}
-
-/**
- * HIGH FIDELITY Chord Engine
- * Features: FM Electric Piano, Lush Pads, Stereo Spread
- */
-function playHiFiNote(freq, time, duration, vol, index, instrument, muted, numVoices) {
-    const ctx = playback.audio;
-    const now = ctx.currentTime;
-    const startTime = Math.max(time, now);
-    const activeNodes = [];
-
-    // Normalize Volume
-    const polyphonyComp = 1 / Math.sqrt(Math.max(1, numVoices));
-    const finalVol = vol * polyphonyComp;
-
-    // Stagger (Strum)
-    const stagger = index * (0.005 + Math.random() * 0.010) * (muted ? 0.4 : 1.0);
-    const noteStart = startTime + stagger;
-
-    // Master Note Gain
-    const mainGain = ctx.createGain();
-    mainGain.gain.setValueAtTime(0, noteStart);
-
-    // Stereo Spread (Random pan per note)
-    const panner = ctx.createStereoPanner();
-    panner.pan.setValueAtTime((Math.random() * 1.0 - 0.5), noteStart);
-
-    mainGain.connect(panner);
-    if (playback.chordsGain) panner.connect(playback.chordsGain);
-    activeNodes.push(mainGain, panner);
-
-    // Instrument Logic
-    if (instrument === 'Piano') {
-        // FM Electric Piano (Rhodes-ish)
-        // Carrier: Sine
-        // Modulator: Sine (Ratio 1:1 or 1:14 for tines)
-
-        const carrier = ctx.createOscillator();
-        carrier.type = 'sine';
-        carrier.frequency.setValueAtTime(freq, noteStart);
-
-        const modulator = ctx.createOscillator();
-        modulator.type = 'sine';
-        modulator.frequency.setValueAtTime(freq * 14.0, noteStart); // High harmonic "tine"
-
-        const modGain = ctx.createGain();
-        // Tine decay is fast
-        const modDepth = freq * (0.2 + finalVol * 0.5);
-        modGain.gain.setValueAtTime(modDepth, noteStart);
-        modGain.gain.exponentialRampToValueAtTime(0.01, noteStart + 0.1);
-
-        modulator.connect(modGain);
-        modGain.connect(carrier.frequency);
-
-        // Body (Fundamentals)
-        const sub = ctx.createOscillator();
-        sub.type = 'triangle';
-        sub.frequency.setValueAtTime(freq, noteStart);
-
-        // Routing
-        carrier.connect(mainGain);
-        sub.connect(mainGain);
-
-        activeNodes.push(carrier, modulator, modGain, sub);
-
-        // Envelopes
-        mainGain.gain.setTargetAtTime(finalVol, noteStart, 0.005); // Fast attack
-
-        const stopTime = noteStart + (muted ? 0.1 : duration + 1.0);
-
-        // Sustain Logic
-        if (playback.sustainActive && !muted) {
-            playback.heldNotes.add({ stop: (t) => mainGain.gain.setTargetAtTime(0, t, 0.1) });
-        } else {
-            mainGain.gain.setTargetAtTime(0, noteStart + (muted ? 0.05 : duration), 0.1);
-        }
-
-        carrier.start(noteStart);
-        modulator.start(noteStart);
-        sub.start(noteStart);
-
-        carrier.stop(stopTime);
-        modulator.stop(stopTime);
-        sub.stop(stopTime);
-
-    } else {
-        // Lush Pad (Warm)
-        const osc1 = ctx.createOscillator();
-        osc1.type = 'sawtooth';
-        osc1.frequency.setValueAtTime(freq, noteStart);
-
-        const osc2 = ctx.createOscillator();
-        osc2.type = 'sawtooth';
-        osc2.frequency.setValueAtTime(freq, noteStart);
-        osc2.detune.setValueAtTime(12, noteStart); // Detune cents
-
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        const cutoff = freq * 3 * (1 + playback.bandIntensity);
-        filter.frequency.setValueAtTime(clampFreq(cutoff), noteStart);
-        filter.Q.value = 1.0;
-
-        // Slow LFO on filter
-        const lfo = ctx.createOscillator();
-        lfo.frequency.value = 0.5;
-        const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 200;
-        lfo.connect(lfoGain);
-        lfoGain.connect(filter.frequency);
-
-        osc1.connect(filter);
-        osc2.connect(filter);
-        filter.connect(mainGain);
-
-        activeNodes.push(osc1, osc2, filter, lfo, lfoGain);
-
-        // Soft Attack
-        mainGain.gain.linearRampToValueAtTime(finalVol * 0.6, noteStart + 0.3);
-
-        if (playback.sustainActive) {
-            playback.heldNotes.add({ stop: (t) => mainGain.gain.setTargetAtTime(0, t, 0.5) });
-        } else {
-            mainGain.gain.setTargetAtTime(0, noteStart + duration, 0.5);
-        }
-
-        const stopTime = noteStart + duration + 2.0;
-        osc1.start(noteStart);
-        osc2.start(noteStart);
-        lfo.start(noteStart);
-
-        osc1.stop(stopTime);
-        osc2.stop(stopTime);
-        lfo.stop(stopTime);
-    }
-
-    // Cleanup trigger
-    activeNodes.find(n => n instanceof OscillatorNode).onended = () => safeDisconnect(activeNodes);
 }
 
 /**

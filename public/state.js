@@ -91,8 +91,7 @@ export const playback = {
     suspendTimeout: null,
     conductorVelocity: 1.0,
     masterLimiter: null,
-    masterVolume: 0.4,
-    highFidelity: false
+    masterVolume: 0.4
 };
 
 /**
@@ -562,9 +561,6 @@ export function dispatch(action, payload) {
             break;
         
         // --- Options ---
-        case ACTIONS.SET_HIGH_FIDELITY:
-            playback.highFidelity = payload;
-            break;
         case ACTIONS.SET_METRONOME:
             playback.metronome = payload;
             break;

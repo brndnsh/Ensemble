@@ -15,7 +15,6 @@ export function saveCurrentState() {
         lastChordPreset: arranger.lastChordPreset,
         theme: playback.theme,
         bpm: playback.bpm,
-        highFidelity: playback.highFidelity,
         metronome: playback.metronome,
         applyPresetSettings: playback.applyPresetSettings,
         sessionTimer: playback.sessionTimer,
