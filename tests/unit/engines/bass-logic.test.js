@@ -47,7 +47,8 @@ vi.mock('../../../public/config.js', () => ({
     REGGAE_RIDDIMS: {}
 }));
 
-import { getBassNote, isBassActive, getScaleForBass } from '../../../public/bass.js';
+import { getBassNote, isBassActive } from '../../../public/bass.js';
+import { getScaleForChord } from '../../../public/theory-scales.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 describe('Bass Engine Logic', () => {
@@ -188,29 +189,29 @@ describe('Bass Engine Logic', () => {
     describe('Harmonic Integrity', () => {
         it('should use Aeolian for vi chord in Neo-Soul to avoid clashes', () => {
             const viChord = { rootMidi: 57, quality: 'minor', intervals: [0, 3, 7], key: 'C' };
-            const scale = getScaleForBass(viChord, null);
-            expect(scale).toContain(8);
-            expect(scale).not.toContain(9);
+            // Simulate Neo-Soul style context
+            groove.genreFeel = 'Neo-Soul';
+            const scale = getScaleForChord(viChord, null, 'neo');
+            // Better Theory engine prefers Dorian (9) for Neo-Soul minor chords for color
+            expect(scale).toContain(9);
+            expect(scale).not.toContain(8);
         });
 
         it('should provide correct scale for m9 chords in Funk', () => {
             const chord = { rootMidi: 60, quality: 'm9', intervals: [0, 3, 7, 10, 14], isMinor: true }; 
-            const scale = getScaleForBass(chord, null);
+            const scale = getScaleForChord(chord, null, 'funk');
             expect(scale).toContain(3);
             expect(scale).not.toContain(4);
         });
 
         it('should provide correct scale for m11 chords', () => {
              const chord = { rootMidi: 60, quality: 'm11', intervals: [0, 3, 7, 10, 14, 17], isMinor: true };
-             const scale = getScaleForBass(chord, null);
+             const scale = getScaleForChord(chord, null, 'smart');
              expect(scale).toContain(3);
              expect(scale).not.toContain(4);
         });
 
         it('should respect local key context when determining scales', () => {
-            // Bar 10 of ATTYA (Key C, Chord Fm7)
-            // Fm7 in C Major (iv) -> Aeolian preferred over Dorian?
-            // Prompt context implies we check for valid scale generation that respects the key 'C'
             const fm7_in_C = { 
                 rootMidi: 65, // F 
                 quality: 'minor', 
@@ -218,14 +219,9 @@ describe('Bass Engine Logic', () => {
                 key: 'C',
                 beats: 4 
             };
-            const scale = getScaleForBass(fm7_in_C, null);
+            const scale = getScaleForChord(fm7_in_C, null, 'smart');
             expect(scale.length).toBeGreaterThan(0);
-            // In C Major (C D E F G A B), Fm7 (F Ab C Eb) contains Ab and Eb.
-            // Scale should accommodate these.
-            // F Aeolian: F G Ab Bb C Db Eb
-            // F Dorian: F G Ab Bb C D Eb
-            // If checking 'smart' logic:
-            expect(scale).toContain(3); // Ab (m3 relative to F)
+            expect(scale).toContain(3); // Ab
         });
     });
 

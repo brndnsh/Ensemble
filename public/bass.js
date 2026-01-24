@@ -1,6 +1,7 @@
 import { getFrequency, getMidi } from './utils.js';
 import { playback, groove, bass, soloist, arranger } from './state.js';
 import { TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
+import { getScaleForChord } from './theory-scales.js';
 
 /**
  * BASS ENGINE - Procedural Line Generation
@@ -12,24 +13,7 @@ import { TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
  * 4. Select pitches with voice-leading constraints.
  */
 
-export function getScaleForBass(chord) {
-    if (!chord) return [0, 2, 4, 5, 7, 9, 11]; // Default Major
-    if (chord.quality === 'aug') return [0, 2, 4, 6, 8, 10]; // Whole Tone
-    if (chord.quality === 'augmaj7') return [0, 2, 4, 6, 8, 9, 11]; // Lydian Augmented
-    if (chord.quality === 'dim') return [0, 2, 3, 5, 6, 8, 9];
-    if (chord.quality === 'halfdim') return [0, 1, 3, 5, 6, 8, 10];
-
-    const isMinor = chord.quality.startsWith('m') && !chord.quality.startsWith('maj');
-    const isDominant = chord.is7th && !isMinor;
-    
-    if (isMinor) {
-        // Neo-soul context for minor chords (Dorian)
-        if (groove.genreFeel === 'Neo-Soul') return [0, 2, 3, 5, 7, 9, 10];
-        return [0, 2, 3, 5, 7, 8, 10]; // Natural Minor
-    }
-    if (isDominant || groove.genreFeel === 'Reggae') return [0, 2, 4, 5, 7, 9, 10]; // Mixolydian
-    return [0, 2, 4, 5, 7, 9, 11]; // Major
-}
+// (Old getScaleForBass removed, using imported version)
 
 export function isBassActive(style, step, stepInChord) {
     if (style === 'smart') {
@@ -198,7 +182,10 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
 
     const beatIndex = beatInMeasure;
     const intBeat = Math.floor(beatIndex);
-    const scale = getScaleForBass(chord);
+
+    // --- SCALE RETRIEVAL (Refactored) ---
+    const scale = getScaleForChord(chord, nextChord, style);
+
     const beatsInChord = Math.round(chord.beats);
     const velocity = (intBeat % 2 === 1) ? 1.15 : 1.0;
 
@@ -373,7 +360,7 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
             
             // Riffing on beats 3 and 4 (high intensity)
             if (intensity > 0.7 && beatInMeasure >= 2) {
-                 const scale = getScaleForBass(chord);
+                 // scale already retrieved
                  if (Math.random() < 0.3) {
                      const idx = Math.floor(Math.random() * 3); // Root, 2nd, b3
                      const riffNote = normalizeToRange(baseRoot + scale[idx]);

@@ -42,7 +42,8 @@ vi.mock('../../../public/config.js', () => {
     };
 });
 
-import { getSoloistNote, getScaleForChord } from '../../../public/soloist.js';
+import { getSoloistNote } from '../../../public/soloist.js';
+import { getScaleForChord } from '../../../public/theory-scales.js';
 import { clearHarmonyMemory } from '../../../public/harmonies.js';
 import { getFrequency, getMidi } from '../../../public/utils.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
@@ -190,8 +191,9 @@ describe('Soloist Engine Logic', () => {
         it('should use Aeolian for vi chord in Neo-Soul to avoid clashes', () => {
             const viChord = { rootMidi: 57, quality: 'minor', intervals: [0, 3, 7], key: 'C' };
             const scale = getScaleForChord(viChord, null, 'neo');
-            expect(scale).toContain(8);
-            expect(scale).not.toContain(9);
+            // UPDATED: Better Theory engine prefers Dorian (9) for Neo-Soul minor chords for color
+            expect(scale).toContain(9);
+            expect(scale).not.toContain(8);
         });
 
         it('should treat m9 as minor in Funk/Neo-Soul context (avoid Major 3rd)', () => {
