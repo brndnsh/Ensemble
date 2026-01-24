@@ -16,6 +16,8 @@ let bbBufferHead = 0;
 let sbBufferHead = 0;
 let cbBufferHead = 0;
 let hbBufferHead = 0;
+let lastChordIndex = 0;
+let lastSectionIndex = 0;
 const LOOKAHEAD = 64;
 
 // --- EXPORT HELPERS ---
@@ -111,24 +113,42 @@ class MidiTrack {
 
 // --- LOGIC ---
 
-function getChordAtStep(step) {
+export function getChordAtStep(step) {
     if (arranger.totalSteps === 0) return null;
     const targetStep = step % arranger.totalSteps;
     
     let sectionData = null;
     if (arranger.sectionMap) {
-        for (let i = 0; i < arranger.sectionMap.length; i++) {
+        let startI = 0;
+        if (lastSectionIndex < arranger.sectionMap.length) {
+            const cached = arranger.sectionMap[lastSectionIndex];
+            if (targetStep >= cached.start) {
+                startI = lastSectionIndex;
+            }
+        }
+        for (let i = startI; i < arranger.sectionMap.length; i++) {
             const s = arranger.sectionMap[i];
             if (targetStep >= s.start && targetStep < s.end) {
                 sectionData = s;
+                lastSectionIndex = i;
                 break;
             }
+            if (s.start > targetStep) break;
         }
     }
 
-    for (let i = 0; i < arranger.stepMap.length; i++) {
+    let startI = 0;
+    if (lastChordIndex < arranger.stepMap.length) {
+        const cached = arranger.stepMap[lastChordIndex];
+        if (targetStep >= cached.start) {
+            startI = lastChordIndex;
+        }
+    }
+
+    for (let i = startI; i < arranger.stepMap.length; i++) {
         const entry = arranger.stepMap[i];
         if (targetStep >= entry.start && targetStep < entry.end) {
+            lastChordIndex = i;
             return { 
                 chord: entry.chord, 
                 stepInChord: targetStep - entry.start, 
@@ -137,6 +157,7 @@ function getChordAtStep(step) {
                 sectionEnd: sectionData?.end || arranger.totalSteps
             };
         }
+        if (entry.start > targetStep) break;
     }
     return null;
 }
@@ -690,7 +711,14 @@ if (typeof self !== 'undefined') {
                 case 'start': if (!timerID) { timerID = setInterval(() => { postMessage({ type: 'tick' }); }, interval); } break;
                 case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
                 case 'syncState':
-                    if (data.arranger) { Object.assign(arranger, data.arranger); arranger.totalSteps = data.arranger.totalSteps; arranger.stepMap = data.arranger.stepMap; arranger.sectionMap = data.arranger.sectionMap; }
+                    if (data.arranger) {
+                        Object.assign(arranger, data.arranger);
+                        arranger.totalSteps = data.arranger.totalSteps;
+                        arranger.stepMap = data.arranger.stepMap;
+                        arranger.sectionMap = data.arranger.sectionMap;
+                        lastChordIndex = 0;
+                        lastSectionIndex = 0;
+                    }
                     if (data.chords) {
                         Object.assign(chords, data.chords);
                         if (data.chords.rhythmicMask !== undefined) chords.rhythmicMask = data.chords.rhythmicMask;
@@ -718,7 +746,14 @@ if (typeof self !== 'undefined') {
                     // Sync first if data is provided to ensure correct style/genre
                     if (data.syncData) {
                         const syncData = data.syncData;
-                        if (syncData.arranger) { Object.assign(arranger, syncData.arranger); arranger.totalSteps = syncData.arranger.totalSteps; arranger.stepMap = syncData.arranger.stepMap; arranger.sectionMap = syncData.arranger.sectionMap; }
+                        if (syncData.arranger) {
+                            Object.assign(arranger, syncData.arranger);
+                            arranger.totalSteps = syncData.arranger.totalSteps;
+                            arranger.stepMap = syncData.arranger.stepMap;
+                            arranger.sectionMap = syncData.arranger.sectionMap;
+                            lastChordIndex = 0;
+                            lastSectionIndex = 0;
+                        }
                         if (syncData.chords) {
                             Object.assign(chords, syncData.chords);
                             if (syncData.chords.rhythmicMask !== undefined) chords.rhythmicMask = syncData.chords.rhythmicMask;
