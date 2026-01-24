@@ -178,7 +178,7 @@ export function setupUIHandlers(refs) {
         });
 
         // Reactive UI update for intensity (replaces polling)
-        subscribe((action, payload) => {
+        subscribe((action) => {
             if (action === ACTIONS.SET_BAND_INTENSITY) {
                 const val = Math.round(playback.bandIntensity * 100);
                 // Avoid redundant updates if the value matches (prevents UI fighting during drag)

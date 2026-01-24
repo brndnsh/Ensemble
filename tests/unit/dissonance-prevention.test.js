@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { getScaleForChord } from '../../public/soloist.js';
 import { arranger, soloist, groove } from '../../public/state.js';
 
-describe('Dissonance Reproduction', () => {
+describe('Dissonance Prevention', () => {
     beforeEach(() => {
         arranger.key = 'C';
         arranger.isMinor = false;

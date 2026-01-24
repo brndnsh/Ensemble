@@ -1,11 +1,10 @@
-/* eslint-disable */
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
-import { getFormattedChordNames, getChordDetails } from '../../public/chords.js';
+import { getFormattedChordNames } from '../../public/chords.js';
 
-describe('Chord Display Bug Reproduction and Verification', () => {
+describe('Chord Formatting Verification', () => {
     
-    it('reproduces im9 rendering issue', () => {
+    it('correctly formats im9 rendering', () => {
         // "im9"
         const quality = 'm9';
         const is7th = true;
@@ -15,21 +14,17 @@ describe('Chord Display Bug Reproduction and Verification', () => {
         
         const formatted = getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality, is7th);
         
-        console.log('im9 formatted:', formatted.roman.root + formatted.roman.suffix);
-        
         expect(formatted.roman.root).toBe('i');
         expect(formatted.roman.suffix).toBe('9');
         expect(formatted.roman.suffix).not.toContain('7');
     });
 
-    it('reproduces IV13 rendering issue', () => {
+    it('correctly formats IV13 rendering', () => {
         // "IV13"
         const quality = '13';
         const is7th = true;
         
         const formatted = getFormattedChordNames("F", "4", "IV", quality, is7th);
-        
-        console.log('IV13 formatted:', formatted.roman.root + formatted.roman.suffix);
 
         expect(formatted.roman.root).toBe('IV');
         expect(formatted.roman.suffix).toBe('13');
@@ -51,8 +46,6 @@ describe('Chord Display Bug Reproduction and Verification', () => {
 
         cases.forEach(({ rootBase, quality, is7th, expectedRoot, expectedSuffix }) => {
             const formatted = getFormattedChordNames("C", "1", rootBase, quality, is7th);
-            const actual = formatted.roman.root + formatted.roman.suffix;
-            console.log(`${rootBase}${quality} formatted: ${actual}`);
             expect(formatted.roman.root).toBe(expectedRoot);
             expect(formatted.roman.suffix).toBe(expectedSuffix);
         });
