@@ -300,7 +300,7 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     } else if (style === 'plucks') {
         // "Bubble" envelope
         filter.frequency.setValueAtTime(clampFreq(freq * 8), playTime);
-        filter.frequency.exponentialRampToValueAtTime(clampFreq(freq * 1.5), playTime + 0.15); // Fast snap
+        filter.frequency.exponentialRampToValueAtTime(clampFreq(freq * 1.5), playTime + 0.1); // Fast snap (Reduced from 0.15)
         filter.Q.setValueAtTime(5 + (intensity * 5), playTime); // High resonance
     } else if (style === 'counter') {
         // Expressive swell
@@ -322,7 +322,10 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     const isFastAttack = style === 'stabs' || style === 'plucks' || style === 'organ';
     const baseAttack = isFastAttack ? 0.01 : 0.2;
     const attack = Math.max(0.005, baseAttack - (finalVol * 0.15));
-    const release = (style === 'stabs' || style === 'plucks') ? 0.1 : 0.5;
+    // Refined release: Plucks need to be super tight (0.02), Stabs (0.1), Pads (0.5)
+    let release = 0.5;
+    if (style === 'stabs') release = 0.1;
+    if (style === 'plucks') release = 0.02;
     
     const detuneMult = 1.0 + (finalVol * 0.5);
     osc2.detune.setValueAtTime((style === 'stabs' ? 12 : 8) * detuneMult, playTime);
