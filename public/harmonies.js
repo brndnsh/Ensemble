@@ -20,9 +20,115 @@ export function clearHarmonyMemory() {
     harmony.lastMidis = [];
     lastPlayedStep = -1;
     soloist.motifBuffer = [];
-    soloist.motifRoot = undefined;
-    soloist.motifReplayCount = 0;
     soloist.isReplayingMotif = false;
+}
+
+/**
+ * Extracts 3rds and 7ths (Guide Tones) from a set of intervals.
+ * Critical for "supportive" harmony that defines quality without clutter.
+ */
+export function getGuideTones(intervals) {
+    return intervals.filter(i => {
+        const iMod = i % 12;
+        return iMod === 3 || iMod === 4 || iMod === 10 || iMod === 11;
+    });
+}
+
+/**
+ * Filters intervals to remove high extensions (9, 11, 13) to avoid clashing with soloist.
+ */
+export function getSafeVoicings(intervals) {
+    return intervals.filter(i => {
+         const iMod = i % 12;
+         // Allow Root(0), 5th(7), 3rds(3/4), 7ths(10/11), 6ths(9)
+         // Exclude b9(1), 9(2), 11(5), #11(6), b13(8) unless they are essentially 3/7
+         return [0, 7, 3, 4, 10, 11, 9].includes(iMod);
+    });
+}
+
+/**
+ * Generates a procedural rhythmic pattern based on genre feel.
+ * Values indicate intensity threshold: 1=Always, 2=Medium(>0.4), 3=High(>0.7)
+ * @param {string} feel - The genre feel
+ * @param {number} seed - Random seed
+ * @returns {number[]} 16-step pattern
+ */
+export function generateCompingPattern(feel, seed) {
+    const pattern = new Array(16).fill(0);
+    const pseudoRandom = () => {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+    };
+
+    // LEGACY PATTERNS (Restored for regression prevention)
+    const LEGACY_PATTERNS = {
+        'Bossa Nova': [[1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0]],
+        'Disco': [[0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1], [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]],
+        'Rock': [[1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0]],
+        'Metal': [[1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]],
+        'Reggae': [[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]],
+        'Country': [[1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]],
+        'Acoustic': [[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]],
+        'Hip Hop': [[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]]
+    };
+
+    if (LEGACY_PATTERNS[feel]) {
+        const templates = LEGACY_PATTERNS[feel];
+        // Use seed to pick a variation deterministically
+        const idx = Math.floor(pseudoRandom() * templates.length);
+        const t = templates[idx];
+        // Legacy patterns are binary (0/1).
+        // We map 1 -> 1 (Always play) for backward compatibility consistency.
+        return t.map(x => x);
+    }
+
+    if (feel === 'Jazz') {
+        // Charleston variations
+        if (pseudoRandom() < 0.6) {
+            pattern[0] = 1; // Base
+            // And-of-2 (Step 6) is standard Charleston
+            if (pseudoRandom() < 0.7) pattern[6] = 1;
+
+            // High intensity anticipation (And-of-4 / Step 14)
+            if (pseudoRandom() < 0.5) pattern[14] = 3;
+        } else {
+            // "Red Garland" sparse (Beat 2, And-of-3)
+            pattern[4] = 1;
+            if (pseudoRandom() < 0.7) pattern[10] = 1;
+        }
+
+        // Random ghost hits for flavor at mid/high intensity
+        const ghosts = [3, 9, 13];
+        ghosts.forEach(g => {
+            if (pseudoRandom() < 0.3) pattern[g] = 2;
+        });
+
+    } else if (feel === 'Funk') {
+        // The "One"
+        pattern[0] = 1;
+
+        // Syncopated 16ths (e/a)
+        const syncopations = [3, 6, 9, 12, 14];
+        syncopations.forEach(s => {
+            const r = pseudoRandom();
+            if (r < 0.4) pattern[s] = 1;      // Base groove
+            else if (r < 0.7) pattern[s] = 2; // Mid intensity add
+            else pattern[s] = 3;              // High intensity busy
+        });
+
+    } else if (feel === 'Neo-Soul') {
+        // Dragged, sparse
+        if (pseudoRandom() < 0.6) pattern[0] = 1;
+        if (pseudoRandom() < 0.5) pattern[7] = 1; // Syncopated (before beat 3)
+        pattern[15] = 3; // Pickup at high intensity
+    } else {
+        // Default / Pop
+        pattern[0] = 1;
+        pattern[6] = 2;  // And of 2 (Mid)
+        pattern[12] = 3; // Beat 4 (High)
+    }
+
+    return pattern;
 }
 
 /**
@@ -30,37 +136,23 @@ export function clearHarmonyMemory() {
  */
 export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInChord, soloistResult = null) {
     if (!chord) return [];
-    
+
     // Destructure state here to avoid ReferenceError during evaluation
     const { playback, groove, chords, harmony, soloist, arranger } = State;
 
-    // Internal Style Config (Inlined for TDZ safety)
+    // Internal Style Config
     const STYLE_CONFIG = {
-        horns: { density: 2, rhythmicStyle: 'stabs', timingJitter: 0.005, velocity: 0.85, octaveOffset: 0, padProb: 0.2 },
-        strings: { density: 2, rhythmicStyle: 'pads', timingJitter: 0.02, velocity: 0.6, octaveOffset: 0, padProb: 0.9 },
-        organ: { density: 3, rhythmicStyle: 'stabs', timingJitter: 0.015, velocity: 0.85, octaveOffset: 0, padProb: 0.4 },
-        plucks: { density: 2, rhythmicStyle: 'stabs', timingJitter: 0.002, velocity: 0.7, octaveOffset: 24, padProb: 0 },
-        counter: { density: 1, rhythmicStyle: 'pads', timingJitter: 0.03, velocity: 0.75, octaveOffset: -12, padProb: 0.1 },
-        smart: { density: 2, rhythmicStyle: 'auto', timingJitter: 0.008, velocity: 0.75, octaveOffset: 0, padProb: 0.5 }
-    };
-
-    const RHYTHMIC_PATTERNS = {
-        'Funk': [[1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0]],
-        'Jazz': [[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
-        'Pop': [[1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]],
-        'Neo-Soul': [[0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0]],
-        'Bossa Nova': [[1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0]],
-        'Disco': [[0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1], [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0]],
-        'Rock': [[1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0]],
-        'Metal': [[1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]],
-        'Reggae': [[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]],
-        'Country': [[1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]],
-        'Acoustic': [[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]],
-        'Hip Hop': [[0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]]
+        horns: { density: 2, rhythmicStyle: 'stabs', timingJitter: 0.005, velocity: 0.85, octaveOffset: 0 },
+        strings: { density: 2, rhythmicStyle: 'pads', timingJitter: 0.02, velocity: 0.6, octaveOffset: 0 },
+        organ: { density: 3, rhythmicStyle: 'stabs', timingJitter: 0.015, velocity: 0.85, octaveOffset: 0 },
+        plucks: { density: 2, rhythmicStyle: 'stabs', timingJitter: 0.002, velocity: 0.7, octaveOffset: 24 },
+        counter: { density: 1, rhythmicStyle: 'pads', timingJitter: 0.03, velocity: 0.75, octaveOffset: -12 },
+        smart: { density: 2, rhythmicStyle: 'auto', timingJitter: 0.008, velocity: 0.75, octaveOffset: 0 }
     };
 
     if (playback.bandIntensity < 0.22) return [];
     const isChordStart = stepInChord === 0;
+    // Don't play if we just played a note and soloist is active (avoid stepping on toes)
     if (lastPlayedStep !== -1 && step === lastPlayedStep + 1 && soloistResult) return [];
 
     const notes = [];
@@ -70,218 +162,178 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     const sectionId = chord.sectionId || 'default';
     const feel = groove.genreFeel;
     
+    // 1. Determine Style
     let activeStyle = style;
     if (style === 'smart') {
         if (feel === 'Blues') activeStyle = 'organ';
-        else if (feel === 'Jazz' || feel === 'Bossa Nova') activeStyle = 'counter';
+        else if (feel === 'Jazz' || feel === 'Bossa Nova') activeStyle = 'strings';
         else if (feel === 'Disco' || feel === 'Hip Hop') activeStyle = 'plucks';
         else if (feel === 'Funk' || feel === 'Metal') activeStyle = 'horns';
         else activeStyle = 'strings';
     }
 
+    // Override for Comping in Jazz/Funk (User Request 1: Comping vs Pads)
+    if ((feel === 'Jazz' || feel === 'Funk') && activeStyle === 'strings') {
+        activeStyle = 'organ';
+    }
+
     const config = STYLE_CONFIG[activeStyle] || STYLE_CONFIG.smart;
     let rhythmicStyle = config.rhythmicStyle;
+
     if (rhythmicStyle === 'auto') {
         const isPadGenre = (feel === 'Rock' || feel === 'Acoustic' || feel === 'Neo-Soul');
         rhythmicStyle = isPadGenre ? 'pads' : 'stabs';
     }
 
-    const isSoloistBusy = soloist.enabled && !soloist.isResting && soloist.notesInPhrase > 2;
-    if (isSoloistBusy) rhythmicStyle = 'pads';
+    if (feel === 'Jazz' || feel === 'Funk') rhythmicStyle = 'stabs';
 
+    // 2. Determine Intervals (Note Selection)
+    let intervals = chord.intervals || [0, 4, 7];
+    const isSoloistBusy = soloist.enabled && !soloist.isResting;
+
+    if (isSoloistBusy) {
+        intervals = getSafeVoicings(intervals);
+        // Thin out if very busy
+        if (soloist.notesInPhrase > 3 || harmony.complexity < 0.4) {
+             const guides = getGuideTones(intervals);
+             if (guides.length > 0) intervals = [0, ...guides];
+             else intervals = [0, 7];
+        }
+    } else {
+        if (harmony.complexity < 0.4 || playback.bandIntensity < 0.4) {
+            const guides = getGuideTones(intervals);
+            if (guides.length > 0) intervals = guides;
+        }
+    }
+
+    // 3. Procedural Pattern Generation
     if (!motifCache.has(sectionId)) {
-        const genrePatterns = RHYTHMIC_PATTERNS[feel] || RHYTHMIC_PATTERNS['Pop'];
         let hash = 0;
         for (let i = 0; i < sectionId.length; i++) { hash = ((hash << 5) - hash) + sectionId.charCodeAt(i); hash |= 0; }
         const seed = Math.abs(hash);
-        const patternIdx = seed % genrePatterns.length;
-        const pattern = [...(genrePatterns[patternIdx] || genrePatterns[0])];
-        const responseSeed = Math.abs(((seed << 13) | (seed >> 19)) ^ 0x55555555);
-        const motionSeed = Math.abs(((seed << 17) | (seed >> 15)) ^ 0xAAAAAAAA);
 
-        const isRhythmic = ['Funk', 'Reggae', 'Disco', 'Jazz'].includes(feel);
-        if (isRhythmic) {
-            for (let i = 0; i < 16; i++) {
-                const snareHit = (groove.snareMask >> i) & 1;
-                const chordHit = (chords.rhythmicMask >> i) & 1;
-                if (snareHit && playback.bandIntensity > 0.6 && Math.random() < 0.4) pattern[i] = 1;
-                if (chordHit && pattern[i] === 1 && Math.random() < 0.7) pattern[i] = 0;
-            }
-        }
+        // Generate and cache the base pattern structure (independent of intensity)
+        const pattern = generateCompingPattern(feel, seed);
 
+        // Calculate a broad rhythmic mask for UI/Consistency based on "Base" hits only
         let rhythmicMask = 0;
-        for (let i = 0; i < 16; i++) { if (pattern[i] === 1) rhythmicMask |= (1 << i); }
+        for (let i = 0; i < 16; i++) { if (pattern[i] > 0) rhythmicMask |= (1 << i); }
 
         motifCache.set(sectionId, {
-            patternIdx: patternIdx,
-            intervals: [0, 4, 7],
-            responseMask: responseSeed & 0xFFFF,
-            motionMask: motionSeed & 0xFFFF,
-            rhythmicMask: rhythmicMask,
-            pattern: pattern
+            seed,
+            rhythmicMask,
+            pattern
         });
     }
+
     const motif = motifCache.get(sectionId);
     if (harmony.rhythmicMask !== motif.rhythmicMask) harmony.rhythmicMask = motif.rhythmicMask;
 
+    // 4. Decision: Should we play?
     let shouldPlay = false;
     let durationSteps = 1;
     let isLatched = false;
-    let isMovement = false;
 
-    if (groove.enabled && groove.fillActive && step % 4 === 0) {
-        const fillStep = step - groove.fillStartStep;
-        if (fillStep < groove.fillLength) { shouldPlay = true; durationSteps = 4; isMovement = true; }
-    }
-
-    if (soloist.enabled && soloist.isReplayingMotif && playback.bandIntensity > 0.4 && soloistResult) {
-        const stepInCell = step % 4;
-        const isStrongStep = stepInCell === 0 || (stepInCell === 2 && playback.bandIntensity > 0.7);
-        const hasSoloNote = Array.isArray(soloistResult) ? soloistResult.length > 0 : !!soloistResult;
-        if (hasSoloNote && isStrongStep) { shouldPlay = true; durationSteps = 2; isLatched = true; }
-    }
-
-    if (!shouldPlay && soloist.enabled && soloist.isResting) {
-        const baseProb = feel === 'Jazz' ? 0.45 : (feel === 'Funk' || feel === 'Disco' ? 0.35 : 0.2);
-        const responseProb = baseProb * harmony.complexity; 
-        const isResponseStep = [6, 7, 10, 14].includes(measureStep);
-        const bit = (motif.responseMask >> (measureStep % 16)) & 1;
-        if (isResponseStep && bit && (measureStep / 16) < responseProb + 0.2) { shouldPlay = true; durationSteps = 2; isMovement = true; }
-    }
-
-    if (!shouldPlay && rhythmicStyle === 'pads') {
-        let motionProb = (playback.bandIntensity - 0.3) * 0.6;
-        if (activeStyle === 'counter') motionProb = 0.8;
-        const isMotionStep = (measureStep === 8 || measureStep === 12);
-        const bit = (motif.motionMask >> (measureStep % 16)) & 1;
-        const isCounterMove = activeStyle === 'counter' && (measureStep % 4 === 0);
-        if ((isMotionStep && bit && (measureStep / 16) < motionProb + 0.1) || isCounterMove) {
-            shouldPlay = true; durationSteps = 4; isMovement = true;
+    // -- Pads Logic --
+    if (rhythmicStyle === 'pads') {
+        if (isChordStart || measureStep === 0) {
+             shouldPlay = true;
+             durationSteps = Math.min(stepsPerMeasure, chord.beats * ts.stepsPerBeat);
+        }
+        if (stepInChord === 0 && !shouldPlay) {
+             shouldPlay = true;
+             durationSteps = Math.min(stepsPerMeasure - measureStep, chord.beats * ts.stepsPerBeat);
         }
     }
+    // -- Comping / Stabs Logic --
+    else {
+        const val = motif.pattern[measureStep];
+        if (val > 0) {
+            // Dynamic check based on intensity thresholds
+            // 1: Base (Always, if global intensity > 0.2)
+            // 2: Medium (Global > 0.4)
+            // 3: High (Global > 0.7)
+            const needed = (val === 1) ? 0.0 : (val === 2 ? 0.4 : 0.7);
 
-    let isAnticipating = false;
-    const isJazzy = feel === 'Jazz' || style === 'horns' || activeStyle === 'counter';
-    if (!shouldPlay && nextChord && measureStep === stepsPerMeasure - 1) {
-        const anticipationProb = (isJazzy ? 0.3 : 0.1) * harmony.complexity * playback.bandIntensity;
-        if (Math.random() < anticipationProb) { shouldPlay = true; durationSteps = 2; isAnticipating = true; }
-    }
-
-    let isApproach = false;
-    if (!shouldPlay && nextChord && measureStep === stepsPerMeasure - 1 && rhythmicStyle !== 'pads') {
-        const approachProb = (isJazzy ? 0.5 : 0.15) * harmony.complexity;
-        if (Math.random() < approachProb) { shouldPlay = true; durationSteps = 1; isApproach = true; }
-    }
-
-    if (!shouldPlay) {
-        if (rhythmicStyle === 'pads') {
-            if (stepInChord === 0 || measureStep === 0) {
+            if (playback.bandIntensity >= needed) {
                 shouldPlay = true;
-                durationSteps = Math.min(stepsPerMeasure, chord.beats * ts.stepsPerBeat);
+                durationSteps = 2;
             }
-        } else {
-            const pattern = motif.pattern;
-            if (pattern && pattern[measureStep] === 1) { shouldPlay = true; durationSteps = 2; }
+        }
+
+        // Call and Response
+        if (!shouldPlay && soloist.enabled && soloist.isResting && soloist.notesInPhrase > 0) {
+            if (Math.random() < 0.3 * harmony.complexity) {
+                shouldPlay = true;
+                durationSteps = 2;
+            }
         }
     }
 
     if (!shouldPlay) return [];
 
-    const targetChord = isAnticipating ? nextChord : chord;
-    const rootMidi = targetChord.rootMidi;
-    const baseDensity = config.density || 2;
-    let density = Math.max(1, Math.floor(baseDensity * (0.4 + playback.bandIntensity * 0.3 + harmony.complexity * 0.3)));
-    if (isLatched) density = Math.max(density, 1 + Math.min(1, Math.floor(soloist.sessionSteps / 64)));
+    // 5. Generate Notes
+    const rootMidi = chord.rootMidi;
+    let finalIntervals = [...intervals];
 
-    let intervals = [0, 4, 7]; 
-    if (isApproach && nextChord) {
-        const nextRoot = nextChord.rootMidi % 12;
-        const targetPC = Math.random() > 0.3 ? nextRoot : (nextRoot + 7) % 12;
-        const approachPC = (targetPC + (Math.random() > 0.5 ? 1 : 11)) % 12;
-        intervals = [(approachPC - (rootMidi % 12) + 12) % 12];
-        density = 1;
-    } else if (isMovement) {
-        density = Math.min(density, 2);
-        intervals = [targetChord.intervals?.[1] || 4];
-    } else {
-        intervals = targetChord.intervals || [0, 4, 7];
-    }
+    let polyphony = Math.floor(1 + playback.bandIntensity * 3 * harmony.complexity);
+    if (activeStyle === 'organ' || activeStyle === 'strings') polyphony = Math.max(2, polyphony);
+    if (polyphony > finalIntervals.length) polyphony = finalIntervals.length;
+    if (polyphony < 1) polyphony = 1;
 
-    const isDisco = feel === 'Disco';
-    if (isDisco && playback.bandIntensity > 0.7) density = Math.max(density, 2);
-    
-    const cycleMeasure = Math.floor(step / stepsPerMeasure) % 4;
-    const liftShift = isDisco ? (cycleMeasure * 2) : 0;
-    if (isDisco && playback.bandIntensity > 0.6 && rhythmicStyle === 'stabs' && !isLatched) intervals = [intervals[0], intervals[0] + 12];
-
-    // Apply density to intervals (Strict limit)
-    if (intervals.length > density) {
-        intervals = intervals.slice(0, density);
+    if (finalIntervals.length > polyphony) {
+        const guides = getGuideTones(finalIntervals);
+        const nonGuides = finalIntervals.filter(i => !guides.includes(i));
+        const selected = [...guides];
+        let needed = polyphony - selected.length;
+        if (needed < 0) {
+             finalIntervals = guides.slice(0, polyphony);
+        } else {
+             finalIntervals = [...guides, ...nonGuides.slice(0, needed)];
+        }
     }
 
     const rangeMin = activeStyle === 'organ' ? 54 : 50;
-    const currentMidis = getBestInversion(rootMidi, intervals, harmony.lastMidis, stepInChord === 0, octave, rangeMin, 79, activeStyle);    
-    const soloistMidi = soloist.enabled ? getMidi(soloist.lastFreq) : 0;
-    let finalOctaveShift = 0;
-    if ((isChordStart || measureStep === 0) && soloistMidi > 0 && currentMidis.some(m => Math.abs(m - soloistMidi) < 7)) {
-        if (currentMidis[0] > 48) finalOctaveShift = -12;
-    }
+    const currentMidis = getBestInversion(rootMidi, finalIntervals, harmony.lastMidis, stepInChord === 0, octave, rangeMin, 79, activeStyle);
 
     if (currentMidis.length > 0) lastPlayedStep = step;
     const polyphonyComp = 1 / Math.sqrt(currentMidis.length || 1);
     
-    if (rhythmicStyle === 'stabs') {
-        if (durationSteps > 1 && durationSteps < 4) durationSteps = 2;
-        else if (durationSteps >= 4) durationSteps = 4;
-    }
-
     const pocketOffset = harmony.pocketOffset || 0;
     const styleOffset = config.octaveOffset || 0;
     const finalMidisForMemory = [];
-    const tones = targetChord.intervals || [0, 4, 7];
 
     for (let i = 0; i < currentMidis.length; i++) {
         const midi = currentMidis[i];
-        let finalMidi = midi + liftShift + finalOctaveShift + styleOffset;
-        if (!isApproach) {
-            const pc = (finalMidi % 12 + 12) % 12;
-            const relPC = (pc - (rootMidi % 12) + 12) % 12;
-            let inChord = (relPC === 2 || relPC === 9);
-            if (!inChord) { for (let t = 0; t < tones.length; t++) { if (tones[t] === relPC) { inChord = true; break; } } }
-            if (!inChord) {
-                let nearestRel = tones[0]; let minDelta = 12;
-                for (let t = 0; t < tones.length; t++) {
-                    const delta = Math.abs(tones[t] - relPC);
-                    if (delta < minDelta) { minDelta = delta; nearestRel = tones[t]; }
-                }
-                finalMidi += (nearestRel - relPC);
-            }
-        }
+        let finalMidi = midi + styleOffset;
         
-        const lastMidi = (harmony.lastMidis || [])[i] || (harmony.lastMidis || [])[0];
         const intensity = playback.bandIntensity;
         let slideInterval = 0, slideDuration = 0, vibrato = { rate: 0, depth: 0 };
 
-        if (feel === 'Neo-Soul') {
-            if (lastMidi && Math.abs(finalMidi - lastMidi) < 5 && Math.abs(finalMidi - lastMidi) > 0 && Math.random() < intensity) {
-                slideInterval = lastMidi - finalMidi; slideDuration = 0.1 + (intensity * 0.1);
-            }
-            if (durationSteps >= 4 && intensity > 0.4) vibrato = { rate: 3.5, depth: 5 + (intensity * 5) };
-        } else if (feel === 'Jazz' || feel === 'Blues') {
-            if (Math.random() < (0.2 + harmony.complexity * 0.3)) { slideInterval = -1; slideDuration = 0.05 + (intensity * 0.03); }
-            if (durationSteps >= 4 && intensity > 0.5) vibrato = { rate: 5.0, depth: 5 + (intensity * 10) };
+        if (feel === 'Neo-Soul' && Math.random() < 0.3) {
+             slideInterval = (Math.random() > 0.5 ? -1 : -2);
+             slideDuration = 0.1;
         }
 
-        const baseVol = config.velocity * (0.5 + intensity * 0.9) * (0.8 + Math.random() * 0.2);
+        if (activeStyle === 'strings' && durationSteps > 4) {
+             vibrato = { rate: 5.0, depth: 10 * intensity };
+        }
+
+        const baseVol = config.velocity * (0.6 + intensity * 0.4);
         const stagger = (i - (currentMidis.length - 1) / 2) * 0.005;
         let finalOffset = pocketOffset + stagger + (Math.random() * config.timingJitter);
-        if ((isAnticipating || isApproach) && finalOffset > 0) finalOffset = -0.005 - (Math.random() * 0.010); 
 
         notes.push({
-            midi: finalMidi, velocity: baseVol * (isLatched ? 1.05 : 1.0) * polyphonyComp,
-            durationSteps: Math.max(0.1, durationSteps + (Math.random() - 0.5) * 0.1),
-            timingOffset: finalOffset, style: activeStyle, isLatched: isLatched, isChordStart: true, 
-            killFade: isApproach ? 0.005 : 0.05, slideInterval, slideDuration, vibrato
+            midi: finalMidi,
+            velocity: baseVol * polyphonyComp,
+            durationSteps: Math.max(0.1, durationSteps),
+            timingOffset: finalOffset,
+            style: activeStyle,
+            isLatched: isLatched,
+            isChordStart: true,
+            slideInterval,
+            slideDuration,
+            vibrato
         });
         finalMidisForMemory.push(finalMidi);
     }
