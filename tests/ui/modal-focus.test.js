@@ -2,9 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ui } from '../../public/ui.js';
 import { setupUIHandlers } from '../../public/ui-controller.js';
-import * as State from '../../public/state.js';
 
 // Mock State
 vi.mock('../../public/state.js', () => ({
