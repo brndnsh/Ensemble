@@ -23,7 +23,7 @@ export function togglePlay(viz) {
     const activeViz = viz || playback.viz;
     if (playback.isPlaying) {
         playback.isPlaying = false;
-        ui.playBtn.textContent = 'START';
+        ui.playBtnText.textContent = 'START';
         ui.playBtn.classList.remove('playing');
         stopWorker();
         lockAudio();
@@ -63,7 +63,7 @@ export function togglePlay(viz) {
         
         unlockAudio();
         restoreGains();
-        ui.playBtn.textContent = 'STOP';
+        ui.playBtnText.textContent = 'STOP';
         ui.playBtn.classList.add('playing');
         const startTime = playback.audio.currentTime + 0.1;
         playback.nextNoteTime = startTime;

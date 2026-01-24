@@ -7,7 +7,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const setupMinimalDOM = () => {
     document.body.innerHTML = `
         <div id="app">
-            <button id="playBtn">START</button>
+            <button id="playBtn">
+                <span id="playBtnText">START</span>
+                <span id="playBtnTimer"></span>
+            </button>
             <button id="addSectionBtn">Add Section</button>
             <div id="sectionList"></div>
             <div id="chordVisualizer"></div>

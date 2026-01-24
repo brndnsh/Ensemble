@@ -47,7 +47,8 @@ export const ui = {
 
     // --- Direct IDs (Extracted from usage analysis) ---
     get playBtn() { return getEl('playBtn'); },
-    get sessionTimerDisplay() { return getEl('sessionTimerDisplay'); },
+    get playBtnText() { return getEl('playBtnText'); },
+    get playBtnTimer() { return getEl('playBtnTimer'); },
     get dashboardGrid() { return getEl('dashboardGrid'); },
     get sequencerGrid() { return getEl('sequencerGrid'); },
     get intensitySlider() { return getEl('intensitySlider'); },

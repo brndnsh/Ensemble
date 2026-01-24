@@ -1,0 +1,31 @@
+# AI Agent Protocols for Ensemble
+
+This document outlines mandatory protocols for AI agents (Jules, Gemini, etc.) working on the Ensemble codebase. Strict adherence is required to maintain system stability and test integrity.
+
+## 1. Refactoring & File Movements
+**Context:** Recent refactors caused widespread `TypeError` failures because test imports were not updated when functions moved from `soloist.js` to `theory-scales.js`.
+
+*   **Global Search is Mandatory:** Before moving a function or constant, you MUST search the **entire** codebase (including `tests/` and `scripts/`) for usages.
+    *   *Command:* `grep -r "functionName" .`
+*   **Update Imports Immediately:** Do not rely on IDE auto-imports. Manually verify and update import paths in all consuming files.
+*   **Verify Exports:** Ensure the function is properly exported from its new location and that there are no circular dependency issues.
+
+## 2. Testing Mandates
+**Context:** Logic changes (e.g., Music Theory improvements) were committed without updating the corresponding test expectations, leading to "false positive" failures where the code was correct but the test was outdated.
+
+*   **Run Tests BEFORE Committing:** Always run `npm test` after your changes.
+    *   If tests fail, **diagnose** whether the Code is broken or the Test is outdated.
+*   **Logic Changes require Test Updates:** If you intentionally improve logic (e.g., "Use Lydian instead of Major for Jazz"), you **MUST** update the test expectations to reflect this new behavior.
+    *   *Do not* leave tests failing.
+    *   *Do not* revert correct logic to satisfy an outdated test. Update the test.
+*   **New Features need New Tests:** If adding a new style (e.g., `Country`), add a specific test case for it (e.g., in `genre-expansion.test.js`) to verify unique behaviors.
+
+## 3. Musical Logic & Hardcoding
+**Context:** Some tests failed because they expected hardcoded integer arrays (e.g., `[0, 2, 4, 5, 7, 9, 11]`) that didn't account for context-aware changes (like `bandIntensity` or `genreFeel`).
+
+*   **Avoid Fragile Assertions:** When possible, test for *properties* (e.g., "contains a minor 3rd") rather than exact array equality, unless verifying a specific strict algorithm.
+*   **Respect "Smart" Context:** Remember that functions like `getScaleForChord` behave differently based on `groove.genreFeel`. Ensure your test setup mocks this state correctly.
+
+## 4. Final Verification
+*   **Linting:** Run `npm run lint` to catch unused imports or variables introduced during refactoring.
+*   **Build:** Ensure the project builds/transpiles if applicable.

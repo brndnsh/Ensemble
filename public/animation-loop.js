@@ -74,29 +74,29 @@ export function draw(viz) {
     }
 
     // --- Session Timer Display Update ---
-    if (playback.isPlaying && playback.sessionTimer > 0 && ui.sessionTimerDisplay) {
+    if (playback.isPlaying && playback.sessionTimer > 0 && ui.playBtnTimer) {
         const elapsedMins = (performance.now() - playback.sessionStartTime) / 60000;
         const remainingMins = playback.sessionTimer - elapsedMins;
 
         if (remainingMins <= 0) {
-            ui.sessionTimerDisplay.style.display = 'none';
+            ui.playBtnTimer.style.display = 'none';
         } else {
-            ui.sessionTimerDisplay.style.display = 'flex';
+            ui.playBtnTimer.style.display = 'block';
 
             const totalSeconds = Math.max(0, Math.ceil(remainingMins * 60));
             const m = Math.floor(totalSeconds / 60);
             const s = totalSeconds % 60;
-            ui.sessionTimerDisplay.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+            ui.playBtnTimer.textContent = `${m}:${s.toString().padStart(2, '0')}`;
 
             if (totalSeconds <= 30) {
-                ui.sessionTimerDisplay.classList.add('warning');
+                ui.playBtnTimer.classList.add('warning');
             } else {
-                ui.sessionTimerDisplay.classList.remove('warning');
+                ui.playBtnTimer.classList.remove('warning');
             }
         }
-    } else if (ui.sessionTimerDisplay) {
-        ui.sessionTimerDisplay.style.display = 'none';
-        ui.sessionTimerDisplay.classList.remove('warning');
+    } else if (ui.playBtnTimer) {
+        ui.playBtnTimer.style.display = 'none';
+        ui.playBtnTimer.classList.remove('warning');
     }
 
     requestAnimationFrame(() => draw(viz));
