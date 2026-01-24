@@ -19,6 +19,7 @@ export function hydrateState() {
         playback.bandIntensity = savedState.bandIntensity !== undefined ? savedState.bandIntensity : 0.5; 
         playback.complexity = savedState.complexity !== undefined ? savedState.complexity : 0.3; 
         playback.autoIntensity = savedState.autoIntensity !== undefined ? savedState.autoIntensity : true; 
+        playback.highFidelity = savedState.highFidelity || false;
         playback.metronome = savedState.metronome || false; 
         playback.sessionTimer = savedState.sessionTimer !== undefined ? savedState.sessionTimer : 5;
         playback.stopAtEnd = false;
@@ -133,7 +134,8 @@ export function hydrateState() {
         document.querySelectorAll('.genre-btn').forEach(btn => { 
             btn.classList.toggle('active', btn.dataset.genre === groove.lastSmartGenre); 
         });
-        ui.notationSelect.value = arranger.notation; 
+        if (ui.notationSelect) ui.notationSelect.value = arranger.notation;
+        if (ui.highFidelityCheck) ui.highFidelityCheck.checked = playback.highFidelity;
         ui.densitySelect.value = chords.density; 
     if (ui.chordVol) ui.chordVol.value = chords.volume;
     if (ui.pianoRootsCheck) ui.pianoRootsCheck.checked = chords.pianoRoots;

@@ -575,6 +575,15 @@ export function setupUIHandlers(refs) {
         }
     });
 
+    if (ui.highFidelityCheck) {
+        ui.highFidelityCheck.addEventListener('change', e => {
+            dispatch(ACTIONS.SET_HIGH_FIDELITY, e.target.checked);
+            flushBuffers(); // Clear buffers so next note uses new engine
+            showToast(e.target.checked ? "High Fidelity Audio Enabled" : "High Fidelity Audio Disabled");
+            saveCurrentState();
+        });
+    }
+
     ui.densitySelect.addEventListener('change', e => { 
         dispatch(ACTIONS.SET_DENSITY, e.target.value); 
         validateAndAnalyze(); 

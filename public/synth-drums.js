@@ -46,6 +46,11 @@ export function playDrumSound(name, time, velocity = 1.0) {
     // Apply the density ducking factor to the master drum volume
     const masterVol = velocity * 1.3 * velJitter * mixState.densityDuck;
     
+    if (playback.highFidelity) {
+        playHiFiDrumSound(name, playTime, masterVol, groove);
+        return;
+    }
+
     // --- Mix Separation: Stereo Panning ---
     const panner = playback.audio.createStereoPanner ? playback.audio.createStereoPanner() : playback.audio.createGain();
     let panValue = 0;
@@ -638,4 +643,189 @@ function createMetallicBuffer(audioCtx) {
         data[i] = sample / ratios.length; // Normalize
     }
     return buffer;
+}
+
+/**
+ * HIGH FIDELITY Drum Engine
+ */
+function playHiFiDrumSound(name, time, vol, grooveState) {
+    const ctx = playback.audio;
+    const activeNodes = [];
+
+    // Panning Setup
+    const panner = ctx.createStereoPanner();
+    let panPos = 0;
+    if (['HiHat', 'Open', 'Shaker', 'Clave'].includes(name)) panPos = 0.25;
+    if (name === 'Crash') panPos = 0.1;
+    if (name.includes('Tom')) panPos = (Math.random() * 0.4 - 0.2);
+    panner.pan.setValueAtTime(panPos, time);
+    panner.connect(playback.drumsGain);
+    activeNodes.push(panner);
+
+    if (name === 'Kick') {
+        // 1. Attack Click (High Pass Noise)
+        const click = ctx.createBufferSource();
+        click.buffer = grooveState.audioBuffers.noise;
+        const clickFilter = ctx.createBiquadFilter();
+        clickFilter.type = 'highpass';
+        clickFilter.frequency.value = 4000;
+        const clickGain = ctx.createGain();
+        clickGain.gain.setValueAtTime(vol * 0.3, time);
+        clickGain.gain.exponentialRampToValueAtTime(0.01, time + 0.01);
+
+        click.connect(clickFilter);
+        clickFilter.connect(clickGain);
+        clickGain.connect(panner);
+
+        // 2. Punch (Fast Pitch Sweep)
+        const punch = ctx.createOscillator();
+        punch.frequency.setValueAtTime(150, time);
+        punch.frequency.exponentialRampToValueAtTime(50, time + 0.1);
+        const punchGain = ctx.createGain();
+        punchGain.gain.setValueAtTime(vol, time);
+        punchGain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+
+        punch.connect(punchGain);
+        punchGain.connect(panner);
+
+        // 3. Sub Body (Sustain)
+        const sub = ctx.createOscillator();
+        sub.type = 'sine';
+        sub.frequency.setValueAtTime(50, time);
+        const subGain = ctx.createGain();
+        subGain.gain.setValueAtTime(vol * 0.8, time);
+        subGain.gain.exponentialRampToValueAtTime(0.01, time + 0.4); // Longer boom
+
+        sub.connect(subGain);
+        subGain.connect(panner);
+
+        click.start(time);
+        punch.start(time);
+        sub.start(time);
+
+        activeNodes.push(click, clickFilter, clickGain, punch, punchGain, sub, subGain);
+
+        sub.stop(time + 0.5);
+        sub.onended = () => safeDisconnect(activeNodes);
+
+    } else if (name === 'Snare' || name === 'Sidestick') {
+        const isSidestick = name === 'Sidestick';
+
+        if (isSidestick) {
+            // Hi-Fi Rimshot: Sharp Transient + Wooden Body
+            const osc = ctx.createOscillator();
+            osc.frequency.setValueAtTime(800, time);
+            osc.frequency.exponentialRampToValueAtTime(400, time + 0.05);
+            const oscGain = ctx.createGain();
+            oscGain.gain.setValueAtTime(vol, time);
+            oscGain.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
+
+            osc.connect(oscGain);
+            oscGain.connect(panner);
+
+            osc.start(time);
+            osc.stop(time + 0.1);
+            osc.onended = () => safeDisconnect([osc, oscGain, panner]);
+            return;
+        }
+
+        // Snare:
+        // 1. Tonal Body (Triangle with pitch drop)
+        const tone = ctx.createOscillator();
+        tone.type = 'triangle';
+        tone.frequency.setValueAtTime(250, time);
+        tone.frequency.exponentialRampToValueAtTime(180, time + 0.1);
+        const toneGain = ctx.createGain();
+        toneGain.gain.setValueAtTime(vol * 0.6, time);
+        toneGain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
+
+        tone.connect(toneGain);
+        toneGain.connect(panner);
+
+        // 2. Wires (Bandpassed Noise)
+        const noise = ctx.createBufferSource();
+        noise.buffer = grooveState.audioBuffers.noise;
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.value = 2000;
+        noiseFilter.Q.value = 0.5; // Wide
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(vol * 0.8, time);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.25);
+
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(panner);
+
+        tone.start(time);
+        noise.start(time);
+        tone.stop(time + 0.3);
+        noise.stop(time + 0.3);
+
+        tone.onended = () => safeDisconnect([tone, toneGain, noise, noiseFilter, noiseGain, panner]);
+
+    } else if (name === 'HiHat' || name === 'Open') {
+        // FM Metallic Noise
+        // Modulator -> Carrier -> Filter -> Gain
+
+        // Use existing metallic buffer logic but process differently
+        if (!grooveState.audioBuffers.hihatMetal) {
+            grooveState.audioBuffers.hihatMetal = createMetallicBuffer(ctx);
+        }
+
+        const source = ctx.createBufferSource();
+        source.buffer = grooveState.audioBuffers.hihatMetal;
+        source.playbackRate.value = 1.0 + (Math.random() * 0.1); // Jitter
+
+        // Highpass for crispness
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 8000;
+
+        const gain = ctx.createGain();
+        const decay = name === 'Open' ? 0.3 : 0.05;
+
+        gain.gain.setValueAtTime(vol * 0.8, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + decay);
+
+        source.connect(hp);
+        hp.connect(gain);
+        gain.connect(panner);
+
+        source.start(time);
+        source.stop(time + decay + 0.1);
+
+        // Choke Logic
+        if (grooveState.lastHatGain) {
+            grooveState.lastHatGain.gain.cancelScheduledValues(time);
+            grooveState.lastHatGain.gain.setTargetAtTime(0, time, 0.005);
+        }
+        grooveState.lastHatGain = gain;
+
+        source.onended = () => {
+            if (grooveState.lastHatGain === gain) grooveState.lastHatGain = null;
+            safeDisconnect([source, hp, gain, panner]);
+        };
+
+    } else {
+        // Fallback for Toms/Perc/etc (use Lo-Fi but route through Hi-Fi panner)
+        // Actually, let's just implement a generic tom/perc generator here
+        const freq = name.includes('Low') ? 80 : (name.includes('High') ? 200 : 130);
+
+        const osc = ctx.createOscillator();
+        osc.frequency.setValueAtTime(freq * 1.5, time);
+        osc.frequency.exponentialRampToValueAtTime(freq, time + 0.1);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(vol, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+
+        osc.connect(gain);
+        gain.connect(panner);
+
+        osc.start(time);
+        osc.stop(time + 0.3);
+
+        osc.onended = () => safeDisconnect([osc, gain, panner]);
+    }
 }

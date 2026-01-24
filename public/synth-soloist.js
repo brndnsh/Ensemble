@@ -75,6 +75,11 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
         }
     }
 
+    if (playback.highFidelity) {
+        playHiFiSoloNote(freq, playTime, duration, randomizedVol, bendStartInterval, style, soloist.activeVoices);
+        return;
+    }
+
     const pan = playback.audio.createStereoPanner ? playback.audio.createStereoPanner() : playback.audio.createGain();
     if (playback.audio.createStereoPanner) pan.pan.setValueAtTime((Math.random() * 2 - 1) * 0.05, playTime);
 
@@ -203,4 +208,169 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     osc2.stop(stopTime);
 
     osc1.onended = () => safeDisconnect([pan, gain, filter, osc1, osc2, vibrato, vibGain]);
+}
+
+/**
+ * HIGH FIDELITY Soloist Engine
+ * Features: FM Synthesis (Bell/Keys), Distortion (Shred), Ping-Pong Delay
+ */
+function playHiFiSoloNote(freq, time, duration, vol, bendStartInterval, style, voiceList) {
+    const ctx = playback.audio;
+    const activeNodes = [];
+
+    // 1. Output Chain
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0, time);
+
+    // Panning (slight random movement)
+    const panner = ctx.createStereoPanner();
+    panner.pan.setValueAtTime((Math.random() * 0.4 - 0.2), time);
+
+    masterGain.connect(panner);
+    if (playback.soloistGain) panner.connect(playback.soloistGain);
+
+    activeNodes.push(masterGain, panner);
+
+    // 2. Synthesis Architecture
+    // 'Shred' / 'Rock' / 'Blues' -> Sawtooth + Distortion
+    // 'Neo' / 'Bossa' -> FM (Sine Mod -> Triangle Carrier)
+
+    const isDistorted = style === 'shred' || style === 'metal' || style === 'rock';
+    const isFM = style === 'neo' || style === 'bossa' || style === 'minimal';
+
+    // Carrier
+    const carrier = ctx.createOscillator();
+    const osc2 = ctx.createOscillator(); // Layer 2 (Octave or Detune)
+
+    if (isDistorted) {
+        carrier.type = 'sawtooth';
+        osc2.type = 'square';
+        osc2.detune.setValueAtTime(7, time);
+    } else if (isFM) {
+        carrier.type = 'triangle';
+        osc2.type = 'sine'; // Sub-octave support
+    } else {
+        carrier.type = 'sawtooth'; // Country/Jazz/Bird
+        osc2.type = 'triangle';
+    }
+
+    // Pitch Bending
+    const applyPitch = (osc) => {
+        if (bendStartInterval !== 0) {
+            const startFreq = freq * Math.pow(2, -bendStartInterval / 12);
+            osc.frequency.setValueAtTime(startFreq, time);
+            osc.frequency.exponentialRampToValueAtTime(freq, time + 0.1); // Fast snap
+        } else {
+            // Portamento-ish glide for smooth lines
+            osc.frequency.setValueAtTime(freq, time);
+        }
+    };
+    applyPitch(carrier);
+    applyPitch(osc2);
+
+    activeNodes.push(carrier, osc2);
+
+    // FM Logic (for Neo/Bossa bells)
+    let modulator = null;
+    let modGain = null;
+    if (isFM) {
+        modulator = ctx.createOscillator();
+        modulator.type = 'sine';
+        modulator.frequency.setValueAtTime(freq * 2.0, time); // 2:1 Ratio
+
+        modGain = ctx.createGain();
+        modGain.gain.setValueAtTime(freq * 0.5, time); // Modulation Index
+        modGain.gain.exponentialRampToValueAtTime(0.01, time + 0.5); // Pluck decay
+
+        modulator.connect(modGain);
+        modGain.connect(carrier.frequency);
+
+        activeNodes.push(modulator, modGain);
+        modulator.start(time);
+        modulator.stop(time + duration + 1.0);
+    }
+
+    // Filter
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    const cutoff = isDistorted ? freq * 6 : freq * 3;
+    filter.frequency.setValueAtTime(cutoff, time);
+    filter.Q.value = isDistorted ? 2.0 : 1.0;
+
+    activeNodes.push(filter);
+
+    // Distortion / WaveShaper
+    let shaper = null;
+    if (isDistorted) {
+        shaper = ctx.createWaveShaper();
+        shaper.curve = (function() {
+            const n = 44100;
+            const curve = new Float32Array(n);
+            const deg = Math.PI / 180;
+            const amount = 50; // Drive amount
+            for (let i = 0; i < n; ++i) {
+                const x = (i * 2) / n - 1;
+                curve[i] = (3 + amount) * x * 20 * deg / (Math.PI + amount * Math.abs(x));
+            }
+            return curve;
+        })();
+        shaper.oversample = '2x';
+        activeNodes.push(shaper);
+    }
+
+    // Delay / Echo (Feedback)
+    // Only for slower, spacious styles to avoid mud
+    let delay = null, delayGain = null;
+    if (style === 'minimal' || style === 'shred') {
+        delay = ctx.createDelay();
+        delay.delayTime.value = 0.25; // 16th note-ish at 120bpm
+        delayGain = ctx.createGain();
+        delayGain.gain.value = 0.3;
+
+        // Simple feedback loop: Master -> Delay -> Gain -> Master
+        // Warning: Direct feedback loops need careful connection order or they mute in WebAudio.
+        // Safer to just go One-Shot Echo: Source -> Delay -> Gain -> Master
+    }
+
+    // Routing
+    carrier.connect(filter);
+    osc2.connect(filter);
+
+    if (shaper) {
+        filter.connect(shaper);
+        shaper.connect(masterGain);
+    } else {
+        filter.connect(masterGain);
+    }
+
+    if (delay) {
+        // Parallel processing for echo
+        const echoSend = ctx.createGain();
+        echoSend.gain.value = 0.3;
+        if (shaper) shaper.connect(echoSend);
+        else filter.connect(echoSend);
+
+        echoSend.connect(delay);
+        delay.connect(masterGain); // Mix back in
+        activeNodes.push(delay, echoSend);
+    }
+
+    // Envelopes
+    const attack = isFM ? 0.005 : 0.02;
+    masterGain.gain.linearRampToValueAtTime(vol, time + attack);
+
+    const releaseTime = duration * 1.2;
+    masterGain.gain.setTargetAtTime(0, time + duration * 0.9, 0.1);
+
+    // Register voice
+    voiceList.push({ gain: masterGain, time, duration, oscs: [carrier, osc2] });
+
+    carrier.start(time);
+    osc2.start(time);
+
+    const stopTime = time + releaseTime + 1.0;
+    carrier.stop(stopTime);
+    osc2.stop(stopTime);
+
+    carrier.onended = () => safeDisconnect(activeNodes);
 }
