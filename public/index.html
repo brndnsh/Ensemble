@@ -610,9 +610,9 @@
                         </label>
                         <div id="sessionTimerDurationContainer" style="display: flex; align-items: center; gap: 0.5rem; opacity: 0.5; pointer-events: none; transition: all 0.2s ease;">
                              <div id="sessionTimerStepper" class="stepper-control" style="display: flex; align-items: center; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
-                                <button id="sessionTimerDec" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">-</button>
+                                <button id="sessionTimerDec" aria-label="Decrease Session Timer" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">-</button>
                                 <input type="number" id="sessionTimerInput" value="5" min="1" max="20" readonly style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;">
-                                <button id="sessionTimerInc" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
+                                <button id="sessionTimerInc" aria-label="Increase Session Timer" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
                              </div>
                              <style>
                                 #sessionTimerInput::-webkit-outer-spin-button,
@@ -845,9 +845,9 @@
                     </label>
                     <div id="exportDurationContainer" style="margin-left: 1.8rem; opacity: 0.5; pointer-events: none; transition: opacity 0.2s;">
                          <div id="exportDurationStepper" class="stepper-control" style="display: flex; align-items: center; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; width: fit-content;">
-                            <button id="exportDurationDec" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">-</button>
+                            <button id="exportDurationDec" aria-label="Decrease Duration" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">-</button>
                             <input type="number" id="exportDurationInput" value="3" min="1" max="20" readonly style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;">
-                            <button id="exportDurationInc" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
+                            <button id="exportDurationInc" aria-label="Increase Duration" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
                          </div>
                     </div>
                 </div>
@@ -879,7 +879,7 @@
                 <button id="addSectionBtn" class="primary-btn footer-main-btn" title="Add Section">
                     <span>➕ Add Section</span>
                 </button>
-                <button id="arrangerActionTrigger" class="action-trigger-btn" title="Arranger Actions" style="justify-content: center; padding: 0.75rem 1rem;">
+                <button id="arrangerActionTrigger" aria-label="Arranger Actions Menu" class="action-trigger-btn" title="Arranger Actions" style="justify-content: center; padding: 0.75rem 1rem;">
                     <span style="font-size: 1.2rem;">⋮</span>
                 </button>
             </div>
