@@ -43,6 +43,7 @@ vi.mock('../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() } }));
 
 import { getSoloistNote, getScaleForChord } from '../../public/soloist.js';
+import { getScaleForBass } from '../../public/bass.js';
 import { validateProgression } from '../../public/chords.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { KEY_ORDER } from '../../public/config.js';
@@ -100,6 +101,11 @@ describe('Jazz Standard Test: All The Things You Are (Multi-Key)', () => {
                 // Intervals: 0, 2, 3, 5, 7, 9, 10
                 expect(scaleVi).toContain(3); 
                 expect(scaleVi).toContain(10); 
+
+                // Verify Bass Scale Compatibility
+                const bassScaleVi = getScaleForBass(progression[0], progression[1]);
+                expect(bassScaleVi).toContain(3);
+                expect(bassScaleVi).toContain(10);
 
                 // 2. V7 -> Mixolydian
                 const scaleV = getScaleForChord(progression[2], progression[3], 'bird');

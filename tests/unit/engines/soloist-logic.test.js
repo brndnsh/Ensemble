@@ -193,6 +193,36 @@ describe('Soloist Engine Logic', () => {
             expect(scale).toContain(8);
             expect(scale).not.toContain(9);
         });
+
+        it('should treat m9 as minor in Funk/Neo-Soul context (avoid Major 3rd)', () => {
+            const m9Chord = { rootMidi: 60, quality: 'm9', intervals: [0, 3, 7, 10, 14], isMinor: true };
+            const scale = getScaleForChord(m9Chord, null, 'funk');
+            expect(scale).toContain(3); // Minor 3rd
+            expect(scale).not.toContain(4); // No Major 3rd
+        });
+
+        it('should treat m11 as minor in Neo-Soul context', () => {
+            const m11Chord = { rootMidi: 60, quality: 'm11', intervals: [0, 3, 7, 10, 14, 17], isMinor: true };
+            const scale = getScaleForChord(m11Chord, null, 'neo');
+            expect(scale).toContain(3);
+            expect(scale).toContain(10);
+            expect(scale).not.toContain(4);
+        });
+        
+        it('should treat IV13 as Dominant (Mixolydian) in Funk', () => {
+             const IV13 = { rootMidi: 65, quality: '13', intervals: [0, 4, 7, 10, 14, 21], isMinor: false }; // F13
+             const scale = getScaleForChord(IV13, null, 'funk');
+             expect(scale).toContain(4); // Major 3rd
+             expect(scale).toContain(10); // Minor 7th
+             expect(scale).toContain(9); // 13th (Major 6th)
+        });
+
+        it('should correctly handle m6 chords (Dorian/Melodic Minor)', () => {
+             const m6Chord = { rootMidi: 60, quality: 'm6', intervals: [0, 3, 7, 9], isMinor: true };
+             const scale = getScaleForChord(m6Chord, null, 'bird');
+             expect(scale).toContain(3);
+             expect(scale).toContain(9);
+        });
     });
 
     describe('Neo-Soul Phrasing Logic', () => {

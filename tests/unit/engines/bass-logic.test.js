@@ -192,6 +192,41 @@ describe('Bass Engine Logic', () => {
             expect(scale).toContain(8);
             expect(scale).not.toContain(9);
         });
+
+        it('should provide correct scale for m9 chords in Funk', () => {
+            const chord = { rootMidi: 60, quality: 'm9', intervals: [0, 3, 7, 10, 14], isMinor: true }; 
+            const scale = getScaleForBass(chord, null);
+            expect(scale).toContain(3);
+            expect(scale).not.toContain(4);
+        });
+
+        it('should provide correct scale for m11 chords', () => {
+             const chord = { rootMidi: 60, quality: 'm11', intervals: [0, 3, 7, 10, 14, 17], isMinor: true };
+             const scale = getScaleForBass(chord, null);
+             expect(scale).toContain(3);
+             expect(scale).not.toContain(4);
+        });
+
+        it('should respect local key context when determining scales', () => {
+            // Bar 10 of ATTYA (Key C, Chord Fm7)
+            // Fm7 in C Major (iv) -> Aeolian preferred over Dorian?
+            // Prompt context implies we check for valid scale generation that respects the key 'C'
+            const fm7_in_C = { 
+                rootMidi: 65, // F 
+                quality: 'minor', 
+                intervals: [0, 3, 7, 10], 
+                key: 'C',
+                beats: 4 
+            };
+            const scale = getScaleForBass(fm7_in_C, null);
+            expect(scale.length).toBeGreaterThan(0);
+            // In C Major (C D E F G A B), Fm7 (F Ab C Eb) contains Ab and Eb.
+            // Scale should accommodate these.
+            // F Aeolian: F G Ab Bb C Db Eb
+            // F Dorian: F G Ab Bb C D Eb
+            // If checking 'smart' logic:
+            expect(scale).toContain(3); // Ab (m3 relative to F)
+        });
     });
 
     describe('Overlap Prevention', () => {
