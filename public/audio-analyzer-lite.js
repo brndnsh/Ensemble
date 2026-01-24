@@ -621,6 +621,13 @@ export class ChordAnalyzerLite {
         const minMidi = options.minMidi || 0;
         const maxMidi = options.maxMidi || 127;
 
+        // Pre-calculate window function
+        const numSteps = Math.ceil(len / step);
+        const windowValues = new Float32Array(numSteps);
+        for (let i = 0, idx = 0; i < len; i += step, idx++) {
+            windowValues[idx] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (len - 1)));
+        }
+
         // Always calculate full range (24-96) for harmonic suppression context
         this.pitchFrequencies.forEach(p => {
             // Optimization: We could skip very high notes if maxMidi is low, but for suppression we need fundamentals.
@@ -630,8 +637,8 @@ export class ChordAnalyzerLite {
             let imag = 0;
             const angleStep = (2 * Math.PI * p.freq) / sampleRate;
 
-            for (let i = 0; i < len; i += step) {
-                const window = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (len - 1)));
+            for (let i = 0, idx = 0; i < len; i += step, idx++) {
+                const window = windowValues[idx];
                 const angle = i * angleStep;
                 const sample = signal[i] * window;
                 real += sample * Math.cos(angle);
