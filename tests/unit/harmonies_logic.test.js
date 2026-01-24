@@ -23,7 +23,7 @@ vi.mock('../../public/config.js', () => ({
 }));
 
 vi.mock('../../public/utils.js', () => ({
-    getMidi: (freq) => 60,
+    getMidi: () => 60,
     clampFreq: (f) => f
 }));
 

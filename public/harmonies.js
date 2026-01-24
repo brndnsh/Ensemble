@@ -1,7 +1,6 @@
 import { getBestInversion } from './chords.js';
 import * as State from './state.js';
 import { TIME_SIGNATURES } from './config.js';
-import { getMidi } from './utils.js';
 
 /**
  * HARMONIES.JS
@@ -138,7 +137,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     if (!chord) return [];
 
     // Destructure state here to avoid ReferenceError during evaluation
-    const { playback, groove, chords, harmony, soloist, arranger } = State;
+    const { playback, groove, harmony, soloist, arranger } = State;
 
     // Internal Style Config
     const STYLE_CONFIG = {
@@ -191,6 +190,11 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     let intervals = chord.intervals || [0, 4, 7];
     const isSoloistBusy = soloist.enabled && !soloist.isResting;
 
+    // Override Rhythm for Soloist Support
+    if (isSoloistBusy) {
+        rhythmicStyle = 'pads';
+    }
+
     if (isSoloistBusy) {
         intervals = getSafeVoicings(intervals);
         // Thin out if very busy
@@ -234,38 +238,48 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     let durationSteps = 1;
     let isLatched = false;
 
-    // -- Pads Logic --
-    if (rhythmicStyle === 'pads') {
-        if (isChordStart || measureStep === 0) {
-             shouldPlay = true;
-             durationSteps = Math.min(stepsPerMeasure, chord.beats * ts.stepsPerBeat);
-        }
-        if (stepInChord === 0 && !shouldPlay) {
-             shouldPlay = true;
-             durationSteps = Math.min(stepsPerMeasure - measureStep, chord.beats * ts.stepsPerBeat);
-        }
+    // Latching Logic (Soloist Hook Reinforcement)
+    if (soloist.enabled && soloist.isReplayingMotif && soloistResult && playback.bandIntensity > 0.6) {
+        shouldPlay = true;
+        isLatched = true;
+        durationSteps = 1;
+        rhythmicStyle = 'stabs';
     }
-    // -- Comping / Stabs Logic --
-    else {
-        const val = motif.pattern[measureStep];
-        if (val > 0) {
-            // Dynamic check based on intensity thresholds
-            // 1: Base (Always, if global intensity > 0.2)
-            // 2: Medium (Global > 0.4)
-            // 3: High (Global > 0.7)
-            const needed = (val === 1) ? 0.0 : (val === 2 ? 0.4 : 0.7);
 
-            if (playback.bandIntensity >= needed) {
+    if (!isLatched) {
+        // -- Pads Logic --
+        if (rhythmicStyle === 'pads') {
+            if (isChordStart || measureStep === 0) {
                 shouldPlay = true;
-                durationSteps = 2;
+                durationSteps = Math.min(stepsPerMeasure, chord.beats * ts.stepsPerBeat);
+            }
+            if (stepInChord === 0 && !shouldPlay) {
+                shouldPlay = true;
+                durationSteps = Math.min(stepsPerMeasure - measureStep, chord.beats * ts.stepsPerBeat);
             }
         }
+        // -- Comping / Stabs Logic --
+        else {
+            const val = motif.pattern[measureStep];
+            if (val > 0) {
+                // Dynamic check based on intensity thresholds
+                // 1: Base (Always, if global intensity > 0.2)
+                // 2: Medium (Global > 0.4)
+                // 3: High (Global > 0.7)
+                const needed = (val === 1) ? 0.0 : (val === 2 ? 0.4 : 0.7);
 
-        // Call and Response
-        if (!shouldPlay && soloist.enabled && soloist.isResting && soloist.notesInPhrase > 0) {
-            if (Math.random() < 0.3 * harmony.complexity) {
-                shouldPlay = true;
-                durationSteps = 2;
+                if (playback.bandIntensity >= needed) {
+                    shouldPlay = true;
+                    durationSteps = 2;
+                }
+            }
+
+            // Call and Response
+            if (!shouldPlay && soloist.enabled && soloist.isResting && soloist.notesInPhrase > 0) {
+                if (Math.random() < 0.3 * harmony.complexity) {
+                    shouldPlay = true;
+                    durationSteps = 2;
+                }
             }
         }
     }
