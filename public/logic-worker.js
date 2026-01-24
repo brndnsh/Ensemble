@@ -621,7 +621,7 @@ export function handleExport(options) {
             soloist: includedTracks.includes('soloist'), 
             harmony: includedTracks.includes('harmonies'),
             groove: includedTracks.includes('drums') 
-        });
+        }, playback.bpm);
 
         resolutionNotes.forEach(n => {
             let track;
@@ -806,7 +806,7 @@ if (typeof self !== 'undefined') {
 }
 
 export function handleResolution(step, timestamp = null) {
-    const notesToMain = generateResolutionNotes(step, arranger, { bass: bass.enabled, chords: chords.enabled, soloist: soloist.enabled, harmony: harmony.enabled, groove: groove.enabled });
+    const notesToMain = generateResolutionNotes(step, arranger, { bass: bass.enabled, chords: chords.enabled, soloist: soloist.enabled, harmony: harmony.enabled, groove: groove.enabled }, playback.bpm);
     postMessage({ type: 'notes', notes: notesToMain, timestamp });
 }
 

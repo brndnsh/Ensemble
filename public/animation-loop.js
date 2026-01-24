@@ -1,6 +1,6 @@
 import { ACTIONS } from './types.js';
 import { playback, groove, chords, bass, soloist, harmony, vizState, dispatch, arranger } from './state.js';
-import { triggerFlash, clearActiveVisuals, updateActiveChordUI } from './ui.js';
+import { ui, triggerFlash, clearActiveVisuals, updateActiveChordUI } from './ui.js';
 import { getVisualTime } from './engine.js';
 import { getStepsPerMeasure } from './utils.js';
 import { switchMeasure } from './instrument-controller.js';
@@ -72,5 +72,32 @@ export function draw(viz) {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         viz.render(now, playback.bpm, ts.beats);
     }
+
+    // --- Session Timer Display Update ---
+    if (playback.isPlaying && playback.sessionTimer > 0 && ui.sessionTimerDisplay) {
+        const elapsedMins = (performance.now() - playback.sessionStartTime) / 60000;
+        const remainingMins = playback.sessionTimer - elapsedMins;
+
+        if (remainingMins <= 0) {
+            ui.sessionTimerDisplay.style.display = 'none';
+        } else {
+            ui.sessionTimerDisplay.style.display = 'flex';
+
+            const totalSeconds = Math.max(0, Math.ceil(remainingMins * 60));
+            const m = Math.floor(totalSeconds / 60);
+            const s = totalSeconds % 60;
+            ui.sessionTimerDisplay.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+
+            if (totalSeconds <= 30) {
+                ui.sessionTimerDisplay.classList.add('warning');
+            } else {
+                ui.sessionTimerDisplay.classList.remove('warning');
+            }
+        }
+    } else if (ui.sessionTimerDisplay) {
+        ui.sessionTimerDisplay.style.display = 'none';
+        ui.sessionTimerDisplay.classList.remove('warning');
+    }
+
     requestAnimationFrame(() => draw(viz));
 }

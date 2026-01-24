@@ -74,6 +74,7 @@ export const playback = {
     applyPresetSettings: false,
     sustainActive: false,
     sessionTimer: 5,
+    sessionStartTime: 0,
     stopAtEnd: false,
     isEndingPending: false,
     intent: {

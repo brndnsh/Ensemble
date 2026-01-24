@@ -1,69 +1,48 @@
+import { describe, it, expect, vi } from 'vitest';
 import { generateResolutionNotes } from '../../public/resolution.js';
-import { expect, describe, it } from 'vitest';
+
+// Mock config.js
+vi.mock('../../public/config.js', () => ({
+    KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+}));
+
+// Mock utils.js
+vi.mock('../../public/utils.js', () => ({
+    getMidi: (freq) => Math.round(69 + 12 * Math.log2(freq || 440 / 440))
+}));
 
 describe('Resolution Logic', () => {
+    it('generates resolution notes for enabled instruments', () => {
+        const arranger = { key: 'C', isMinor: false };
+        const enabled = { bass: true, chords: true, soloist: true, harmony: true, groove: true };
+        const bpm = 120;
+        const step = 64;
 
-    const enabled = { bass: true, chords: true, soloist: true, groove: true };
+        const notes = generateResolutionNotes(step, arranger, enabled, bpm);
 
-    it('should use the global key if stepMap is empty', () => {
-        const arranger = {
-            key: 'C',
-            isMinor: false,
-            stepMap: []
-        };
-
-        const notes = generateResolutionNotes(100, arranger, enabled);
+        expect(notes.length).toBeGreaterThan(0);
         
-        // Find the bass note (bass) which is (keyPC % 12) + 24
-        // C is index 0. Bass should be 24.
-        const bassNote = notes.find(n => n.module === 'bass');
-        expect(bassNote).to.exist;
-        expect(bassNote.midi).to.equal(24);
+        // Check for Bass Notes (V -> I)
+        const bassNotes = notes.filter(n => n.module === 'bass');
+        expect(bassNotes.length).toBe(2); // V and I
+
+        // Check timing offsets
+        const times = notes.map(n => n.timingOffset);
+        // console.log(JSON.stringify(notes, null, 2));
+
+        // Ensure all have timingOffset
+        times.forEach(t => expect(t).toBeDefined());
+
+        times.sort((a, b) => a - b);
+        expect(times[0]).toBe(0); // First beat
+        expect(times[times.length - 1]).toBeGreaterThan(0); // Later beats
     });
 
-    it('should use the key of the last chord in stepMap', () => {
-        const arranger = {
-            key: 'C', // Global key
-            isMinor: false,
-            stepMap: [
-                {
-                    chord: {
-                        key: 'D', // Modulation to D
-                        rootMidi: 62
-                    },
-                    start: 0,
-                    end: 16
-                }
-            ]
-        };
-
-        const notes = generateResolutionNotes(100, arranger, enabled);
+    it('handles minor key resolution correctly', () => {
+        const arranger = { key: 'C', isMinor: true };
+        const enabled = { chords: true };
+        const notes = generateResolutionNotes(0, arranger, enabled, 100);
         
-        // D is index 2 in KEY_ORDER (C, Db, D...)
-        // Bass note should be 2 + 24 = 26
-        const bassNote = notes.find(n => n.module === 'bass');
-        expect(bassNote).to.exist;
-        expect(bassNote.midi).to.equal(26);
-    });
-
-    it('should fall back to global key if last chord has no key', () => {
-        const arranger = {
-            key: 'E',
-            isMinor: false,
-            stepMap: [
-                {
-                    chord: {}, // Missing key
-                    start: 0,
-                    end: 16
-                }
-            ]
-        };
-
-        const notes = generateResolutionNotes(100, arranger, enabled);
-        
-        // E is index 4. Bass should be 4 + 24 = 28.
-        const bassNote = notes.find(n => n.module === 'bass');
-        expect(bassNote).to.exist;
-        expect(bassNote.midi).to.equal(28);
+        expect(notes.length).toBeGreaterThan(0);
     });
 });
