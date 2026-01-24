@@ -1,8 +1,9 @@
 /* eslint-disable */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SONG_TEMPLATES, CHORD_PRESETS } from '../../../public/presets.js';
-import { getBassNote, isBassActive, getScaleForBass } from '../../../public/bass.js';
-import { getSoloistNote, getScaleForChord } from '../../../public/soloist.js';
+import { getBassNote, isBassActive } from '../../../public/bass.js';
+import { getSoloistNote } from '../../../public/soloist.js';
+import { getScaleForChord } from '../../../public/theory-scales.js';
 import { getHarmonyNotes } from '../../../public/harmonies.js';
 import { getAccompanimentNotes } from '../../../public/accompaniment.js';
 import { validateProgression } from '../../../public/chords.js';
@@ -75,7 +76,7 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
 
                                 // Scale Check (Skip for chromatic styles)
                                 if (genre !== 'Jazz' && genre !== 'Blues' && !bassNote.muted) {
-                                    const scale = getScaleForBass(chord, null);
+                                    const scale = getScaleForChord(chord, null, 'smart');
                                     const interval = (bassNote.midi - chord.rootMidi + 120) % 12;
                                     if (!scale.includes(interval) && bassNote.bendStartInterval === 0) {
                                         // Allow for leading tones on the last beat

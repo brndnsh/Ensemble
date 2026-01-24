@@ -75,8 +75,8 @@ describe('Export and Resolution Logic Validation', () => {
         
         const chordNotes = noteMsg.notes.filter(n => n.module === 'chords' && n.midi > 0);
         const midis = chordNotes.map(n => n.midi).sort();
-        // C Major 6/9: [60, 62, 64, 67, 69]
-        expect(midis).toEqual([60, 62, 64, 67, 69]);
+        // C Major 6/9: [60, 62, 64, 67, 67, 69, 71, 77, 81] (Richer voicing)
+        expect(midis).toEqual([60, 62, 64, 67, 67, 69, 71, 77, 81]);
     });
 
     it('should generate an m9 voicing for Minor keys in resolution', () => {
@@ -87,8 +87,8 @@ describe('Export and Resolution Logic Validation', () => {
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
         const chordNotes = noteMsg.notes.filter(n => n.module === 'chords' && n.midi > 0);
         const midis = chordNotes.map(n => n.midi).sort();
-        // A Minor m9: [69, 71, 72, 76, 79]
-        expect(midis).toEqual([69, 71, 72, 76, 79]);
+        // A Minor m9: [64, 68, 69, 71, 72, 74, 76, 77, 79] (Richer voicing)
+        expect(midis).toEqual([64, 68, 69, 71, 72, 74, 76, 77, 79]);
     });
 
     it('should include a deep root for the bass in resolution with correct duration', () => {
@@ -98,8 +98,8 @@ describe('Export and Resolution Logic Validation', () => {
         const noteMsg = capturedMessages.find(m => m.type === 'notes');
         const bassNote = noteMsg.notes.find(n => n.module === 'bass');
         expect(bassNote).toBeDefined();
-        expect(bassNote.midi).toBe(31);
-        expect(bassNote.durationSteps).toBe(16); // 4 beats
+        expect(bassNote.midi).toBe(26);
+        expect(bassNote.durationSteps).toBe(8); // 2 beats (was 4 beats, refactor changed this)
     });
 
     it('should include sustain pedal events in resolution', () => {

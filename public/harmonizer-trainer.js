@@ -1,4 +1,4 @@
-import { getScaleForChord } from './soloist.js';
+import { getScaleForChord } from './theory-scales.js';
 
 /**
  * Harmonizer Trainer

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getScaleForChord } from '../../public/soloist.js';
+import { getScaleForChord } from '../../public/theory-scales.js';
 import { arranger, soloist, groove } from '../../public/state.js';
 
 describe('Dissonance Prevention', () => {

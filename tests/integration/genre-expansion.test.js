@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getAccompanimentNotes } from '../../public/accompaniment.js';
 import { getBassNote } from '../../public/bass.js';
-import { getScaleForChord } from '../../public/soloist.js';
+import { getScaleForChord } from '../../public/theory-scales.js';
 import { DRUM_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES } from '../../public/presets.js';
 import { chords, groove } from '../../public/state.js';
 

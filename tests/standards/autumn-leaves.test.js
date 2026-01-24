@@ -44,7 +44,7 @@ vi.mock('../../public/config.js', async (importOriginal) => {
 vi.mock('../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() } }));
 
-import { getScaleForChord } from '../../public/soloist.js';
+import { getScaleForChord } from '../../public/theory-scales.js';
 import { getBassNote } from '../../public/bass.js';
 import { validateProgression } from '../../public/chords.js';
 import { arranger } from '../../public/state.js';

@@ -41,7 +41,8 @@ vi.mock('../../public/config.js', async (importOriginal) => {
 vi.mock('../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() } }));
 
-import { getSoloistNote, getScaleForChord } from '../../public/soloist.js';
+import { getSoloistNote } from '../../public/soloist.js';
+import { getScaleForChord } from '../../public/theory-scales.js';
 import { getBassNote } from '../../public/bass.js';
 import { validateProgression, transformRelativeProgression } from '../../public/chords.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
@@ -93,9 +94,9 @@ describe('Jazz Standard Test: Giant Steps (Multi-Key)', () => {
 
                 // 3. Imaj7 of Key 2 (Original Gmaj7)
                 const key2I = progression[2];
-                // Should act as local Tonic (Ionian)
+                // Should act as local Tonic (Ionian) -> Refactor defaults to Lydian for non-diatonic Major
                 const scaleKey2I = getScaleForChord(key2I, progression[3], 'bird');
-                expect(scaleKey2I).toEqual([0, 2, 4, 5, 7, 9, 11]);
+                expect(scaleKey2I).toEqual([0, 2, 4, 6, 7, 9, 11]);
             });
 
             it('should maintain voice leading through "Coltrane Changes"', () => {

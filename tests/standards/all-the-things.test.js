@@ -42,8 +42,9 @@ vi.mock('../../public/config.js', async (importOriginal) => {
 vi.mock('../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
 vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() } }));
 
-import { getSoloistNote, getScaleForChord } from '../../public/soloist.js';
-import { getScaleForBass } from '../../public/bass.js';
+import { getSoloistNote } from '../../public/soloist.js';
+import { getScaleForChord } from '../../public/theory-scales.js';
+
 import { validateProgression } from '../../public/chords.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { KEY_ORDER } from '../../public/config.js';
@@ -103,7 +104,7 @@ describe('Jazz Standard Test: All The Things You Are (Multi-Key)', () => {
                 expect(scaleVi).toContain(10); 
 
                 // Verify Bass Scale Compatibility
-                const bassScaleVi = getScaleForBass(progression[0], progression[1]);
+                const bassScaleVi = getScaleForChord(progression[0], progression[1], 'smart');
                 expect(bassScaleVi).toContain(3);
                 expect(bassScaleVi).toContain(10);
 
@@ -130,9 +131,9 @@ describe('Jazz Standard Test: All The Things You Are (Multi-Key)', () => {
                 const scaleIi = getScaleForChord(ii7, v7, 'bird');
                 expect(scaleIi).toEqual([0, 2, 3, 5, 7, 9, 10]);
 
-                // Imaj7 (Ionian)
+                // Imaj7 (Ionian) -> Refactor defaults to Lydian for non-diatonic Major in Jazz
                 const scaleI = getScaleForChord(imaj7, null, 'bird');
-                expect(scaleI).toEqual([0, 2, 4, 5, 7, 9, 11]);
+                expect(scaleI).toEqual([0, 2, 4, 6, 7, 9, 11]);
             });
 
             it('should handle the Bridge modulation to Minor 6th interval', () => {

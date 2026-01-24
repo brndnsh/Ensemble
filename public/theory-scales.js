@@ -60,9 +60,13 @@ export function getScaleForChord(chord, nextChord = null, style = 'smart') {
         style = mapping[groove.genreFeel] || 'scalar';
     }
 
+    if (style === 'country') {
+        return [0, 2, 3, 4, 7, 9, 10].sort((a,b)=>a-b);
+    }
+
     const quality = chord.quality || 'major';
     const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
-    const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) &&
+    const isDominant = !isMinor && !quality.startsWith('maj') && !['dim', 'halfdim'].includes(quality) &&
                        (chord.is7th || ['9', '11', '13', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(quality) || quality.startsWith('7'));
 
     // --- SPECIAL QUALITY HANDLING ---
@@ -88,6 +92,15 @@ export function getScaleForChord(chord, nextChord = null, style = 'smart') {
 
         // Lydian Dominant (7#11)
         if (quality === '7#11') return SCALE_INTERVALS.LYDIAN_DOMINANT;
+        
+        // Backdoor Dominant (bVII7) -> Lydian Dominant
+        if (arranger.key && (style === 'bird' || style === 'bossa')) {
+           const keyRootIdx = KEY_ORDER.indexOf(arranger.key);
+           const intervalFromKey = (chord.rootMidi - keyRootIdx + 120) % 12;
+           if (intervalFromKey === 10) { // b7
+               return SCALE_INTERVALS.LYDIAN_DOMINANT;
+           }
+        }
 
         // Phrygian Dominant (7b9, 7b13)
         if (quality === '7b9' || quality === '7b13') return SCALE_INTERVALS.PHRYGIAN_DOMINANT;
@@ -129,8 +142,18 @@ export function getScaleForChord(chord, nextChord = null, style = 'smart') {
     // --- MAJOR CHORD HANDLING ---
 
     if (quality === 'major' || quality.startsWith('maj')) {
-        if (style === 'bossa') return SCALE_INTERVALS.MAJOR;
-        if (style === 'blues' || style === 'funk') return SCALE_INTERVALS.MAJOR_BLUES;
+        // if (style === 'bossa') return SCALE_INTERVALS.MAJOR; // Removed to allow Lydian fallback
+        if ((style === 'blues' || style === 'funk') && !quality.includes('maj7')) return SCALE_INTERVALS.MAJOR_BLUES;
+        
+        // V in Minor Key -> Phrygian Dominant (Dominant function even if triad)
+        if (arranger.isMinor && arranger.key) {
+             const keyRootIdx = KEY_ORDER.indexOf(arranger.key);
+             const intervalFromKey = (chord.rootMidi - keyRootIdx + 120) % 12;
+             if (intervalFromKey === 7) { // V
+                 return SCALE_INTERVALS.PHRYGIAN_DOMINANT;
+             }
+        }
+
         // Lydian is handled by Diatonic Logic (IV chord)
     }
 
@@ -157,16 +180,15 @@ export function getScaleForChord(chord, nextChord = null, style = 'smart') {
 
     // --- GENRE SPECIFIC FALLBACKS ---
 
-    if (style === 'country') {
-        return [0, 2, 3, 4, 7, 9, 10].sort((a,b)=>a-b);
-    }
-
     if (style === 'metal') {
         return isDominant ? SCALE_INTERVALS.PHRYGIAN_DOMINANT : SCALE_INTERVALS.NATURAL_MINOR;
     }
 
     // Default Fallbacks if not Diatonic
     if (isMinor) return SCALE_INTERVALS.NATURAL_MINOR;
+
+    // Jazz/Bossa prefer Lydian for non-diatonic Major chords (e.g. bIImaj7, bVImaj7)
+    if (style === 'bird' || style === 'bossa') return SCALE_INTERVALS.LYDIAN;
 
     return SCALE_INTERVALS.MAJOR;
 }
