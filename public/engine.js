@@ -16,6 +16,9 @@ export { playSoloNote, killSoloistNote };
 export { playHarmonyNote, killHarmonyNote };
 export { playDrumSound, killDrumNote };
 
+let isChromium = null;
+export function _resetChromiumCheck() { isChromium = null; }
+
 /**
  * Initializes the Web Audio context and global audio nodes.
  * Must be called in response to a user gesture.
@@ -322,7 +325,9 @@ export function getVisualTime() {
     const smoothAudioTime = audioTime + Math.min(dt, 0.1);
 
     const outputLatency = playback.audio.outputLatency || 0;
-    const isChromium = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    if (isChromium === null) {
+        isChromium = typeof navigator !== 'undefined' && /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    }
     const offset = outputLatency > 0 ? outputLatency : (isChromium ? 0.015 : 0.045);
     
     return smoothAudioTime - offset;
