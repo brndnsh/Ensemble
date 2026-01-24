@@ -446,6 +446,30 @@ export function setupUIHandlers(refs) {
     ];
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));
 
+    // --- Modal Accessibility Observer ---
+    const overlays = [
+        ui.settingsOverlay, ui.editorOverlay, ui.exportOverlay, 
+        ui.templatesOverlay, ui.analyzerOverlay
+    ];
+    
+    overlays.forEach(overlay => {
+        if (!overlay) return;
+        // Set initial state
+        overlay.setAttribute('aria-hidden', !overlay.classList.contains('active'));
+        
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const isActive = overlay.classList.contains('active');
+                    overlay.setAttribute('aria-hidden', !isActive);
+                    // When opening, we might want to ensure it's "inert" false, but we rely on visibility/display CSS for that now.
+                }
+            });
+        });
+        
+        observer.observe(overlay, { attributes: true });
+    });
+
     document.querySelectorAll('input[name="exportMode"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
              const isTime = e.target.value === 'time';

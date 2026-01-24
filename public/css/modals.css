@@ -73,12 +73,14 @@
     align-items: center;
     z-index: 1000;
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.2s ease-out;
+    transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
 }
 
 #settingsOverlay.active, #editorOverlay.active, #exportOverlay.active, #templatesOverlay.active, #analyzerOverlay.active {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
 }
 
