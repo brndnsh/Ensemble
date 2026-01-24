@@ -243,3 +243,14 @@ export function createSoftClipCurve() {
     cachedSoftClipCurve = curve;
     return curve;
 }
+
+/**
+ * Clamps a frequency value to be within the safe range for Web Audio BiquadFilters.
+ * @param {number} freq
+ * @param {number} max
+ * @returns {number}
+ */
+export function clampFreq(freq, max = 24000) {
+    // Nominal range for most browser implementations of BiquadFilter is [0, 24000]
+    return Math.min(Math.max(0, freq), max);
+}

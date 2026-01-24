@@ -1,5 +1,5 @@
 import { playback, soloist } from './state.js';
-import { safeDisconnect } from './utils.js';
+import { safeDisconnect, clampFreq } from './utils.js';
 
 export function killSoloistNote() {
     if (soloist.activeVoices && soloist.activeVoices.length > 0) {
@@ -162,9 +162,9 @@ export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval 
     const brightnessBase = 1.0 + (intensity * 1.5) + (vol * 1.5); // 1x to 4x base
     const cutoffBase = style === 'bird' ? freq * 3.5 * brightnessBase : Math.min(freq * 4 * brightnessBase, 12000);
     
-    filter.frequency.value = cutoffBase;
-    filter.frequency.setValueAtTime(cutoffBase, playTime);
-    filter.frequency.exponentialRampToValueAtTime(cutoffBase * (style === 'bird' ? 0.7 : 0.6), playTime + duration);
+    filter.frequency.value = clampFreq(cutoffBase);
+    filter.frequency.setValueAtTime(clampFreq(cutoffBase), playTime);
+    filter.frequency.exponentialRampToValueAtTime(clampFreq(cutoffBase * (style === 'bird' ? 0.7 : 0.6)), playTime + duration);
     const qVal = style === 'bird' ? 1.5 : (isLongNote ? 2 : 1);
     filter.Q.value = qVal;
     filter.Q.setValueAtTime(qVal, playTime); 

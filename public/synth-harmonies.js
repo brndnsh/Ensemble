@@ -1,5 +1,5 @@
 import { playback, harmony, groove } from './state.js';
-import { safeDisconnect } from './utils.js';
+import { safeDisconnect, clampFreq } from './utils.js';
 
 /**
  * Polyphonic Synthesizer for the Harmony Module (harmony).
@@ -294,27 +294,27 @@ export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs'
     if (style === 'stabs') {
         const qVal = (feel === 'Rock' || feel === 'Metal') ? (5 + intensity * 5) : (3 + intensity * 2);
         const startFreq = Math.min(freq * 8 * brightnessMult, 12000);
-        filter.frequency.setValueAtTime(startFreq, playTime);
-        filter.frequency.exponentialRampToValueAtTime(freq * 2 * brightnessMult, playTime + 0.1);
+        filter.frequency.setValueAtTime(clampFreq(startFreq), playTime);
+        filter.frequency.exponentialRampToValueAtTime(clampFreq(freq * 2 * brightnessMult), playTime + 0.1);
         filter.Q.setValueAtTime(qVal, playTime);
     } else if (style === 'plucks') {
         // "Bubble" envelope
-        filter.frequency.setValueAtTime(freq * 8, playTime);
-        filter.frequency.exponentialRampToValueAtTime(freq * 1.5, playTime + 0.15); // Fast snap
+        filter.frequency.setValueAtTime(clampFreq(freq * 8), playTime);
+        filter.frequency.exponentialRampToValueAtTime(clampFreq(freq * 1.5), playTime + 0.15); // Fast snap
         filter.Q.setValueAtTime(5 + (intensity * 5), playTime); // High resonance
     } else if (style === 'counter') {
         // Expressive swell
         const start = freq * 1.5;
         const peak = freq * 3.0 * brightnessMult;
-        filter.frequency.setValueAtTime(start, playTime);
-        filter.frequency.linearRampToValueAtTime(peak, playTime + duration * 0.6); // Swell
+        filter.frequency.setValueAtTime(clampFreq(start), playTime);
+        filter.frequency.linearRampToValueAtTime(clampFreq(peak), playTime + duration * 0.6); // Swell
         filter.Q.setValueAtTime(1.0, playTime);
     } else {
         // Swell for pads
         const cutoff = (feel === 'Neo-Soul') ? freq * 1.5 * brightnessMult : freq * 3 * brightnessMult;
-        filter.frequency.setValueAtTime(cutoff, playTime);
-        filter.frequency.exponentialRampToValueAtTime(cutoff * 1.2, playTime + duration * 0.5);
-        filter.frequency.exponentialRampToValueAtTime(cutoff, playTime + duration);
+        filter.frequency.setValueAtTime(clampFreq(cutoff), playTime);
+        filter.frequency.exponentialRampToValueAtTime(clampFreq(cutoff * 1.2), playTime + duration * 0.5);
+        filter.frequency.exponentialRampToValueAtTime(clampFreq(cutoff), playTime + duration);
         filter.Q.setValueAtTime(1 + intensity, playTime);
     }
 
