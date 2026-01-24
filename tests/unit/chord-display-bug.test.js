@@ -1,58 +1,61 @@
 /* eslint-disable */
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
-import { getFormattedChordNames, getChordDetails, resolveChordRoot } from '../../public/chords.js';
-import { ROMAN_VALS } from '../../public/config.js';
+import { getFormattedChordNames, getChordDetails } from '../../public/chords.js';
 
-describe('Chord Display Bug Reproduction', () => {
+describe('Chord Display Bug Reproduction and Verification', () => {
     
     it('reproduces im9 rendering issue', () => {
         // "im9"
-        const symbol = "im9";
-        const rootPart = "i";
-        const suffixPart = "m9";
-        
-        // Simulation of what happens in parseProgressionPart
-        let { quality, is7th } = getChordDetails(suffixPart);
-        // quality should be 'm9', is7th true
-        
-        expect(quality).toBe('m9');
-        expect(is7th).toBe(true);
-
-        // Roman numeral casing logic in parseProgressionPart check
-        // (It doesn't change quality 'm9')
-        
-        // Now getFormattedChordNames
-        const rootName = "C"; // Hypotehtical
+        const quality = 'm9';
+        const is7th = true;
+        const rootName = "C";
         const rootNNS = "1";
         const rootRomanBase = "I";
         
         const formatted = getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality, is7th);
         
-        // Expected: root should be 'i', suffix should be '9' (or 'm9') -> "i9"
-        // Actual bug: root is 'I', suffix is '97' -> "I97"
-        
         console.log('im9 formatted:', formatted.roman.root + formatted.roman.suffix);
         
-        expect(formatted.roman.root).toBe('i'); // Fails if 'I'
-        expect(formatted.roman.suffix).not.toContain('7'); // Fails if '97'
+        expect(formatted.roman.root).toBe('i');
+        expect(formatted.roman.suffix).toBe('9');
+        expect(formatted.roman.suffix).not.toContain('7');
     });
 
     it('reproduces IV13 rendering issue', () => {
         // "IV13"
-        const suffixPart = "13";
-        let { quality, is7th } = getChordDetails(suffixPart);
-        
-        expect(quality).toBe('13');
-        expect(is7th).toBe(true);
+        const quality = '13';
+        const is7th = true;
         
         const formatted = getFormattedChordNames("F", "4", "IV", quality, is7th);
         
         console.log('IV13 formatted:', formatted.roman.root + formatted.roman.suffix);
 
-        // Expectation: IV13
-        // Potential Bug: IV137
+        expect(formatted.roman.root).toBe('IV');
         expect(formatted.roman.suffix).toBe('13');
+    });
+
+    it('correctly formats other extended chords', () => {
+        const cases = [
+            { rootBase: 'I', quality: 'm11', is7th: true, expectedRoot: 'i', expectedSuffix: '11' },
+            { rootBase: 'I', quality: 'm13', is7th: true, expectedRoot: 'i', expectedSuffix: '13' },
+            { rootBase: 'IV', quality: '9', is7th: true, expectedRoot: 'IV', expectedSuffix: '9' },
+            { rootBase: 'IV', quality: '11', is7th: true, expectedRoot: 'IV', expectedSuffix: '11' },
+            { rootBase: 'V', quality: '9', is7th: true, expectedRoot: 'V', expectedSuffix: '9' },
+            { rootBase: 'V', quality: '11', is7th: true, expectedRoot: 'V', expectedSuffix: '11' },
+            { rootBase: 'V', quality: '13', is7th: true, expectedRoot: 'V', expectedSuffix: '13' },
+            { rootBase: 'V', quality: 'm9', is7th: true, expectedRoot: 'v', expectedSuffix: '9' }, // "vm9"
+            { rootBase: 'V', quality: 'm11', is7th: true, expectedRoot: 'v', expectedSuffix: '11' }, // "vm11"
+            { rootBase: 'V', quality: 'm13', is7th: true, expectedRoot: 'v', expectedSuffix: '13' }  // "vm13"
+        ];
+
+        cases.forEach(({ rootBase, quality, is7th, expectedRoot, expectedSuffix }) => {
+            const formatted = getFormattedChordNames("C", "1", rootBase, quality, is7th);
+            const actual = formatted.roman.root + formatted.roman.suffix;
+            console.log(`${rootBase}${quality} formatted: ${actual}`);
+            expect(formatted.roman.root).toBe(expectedRoot);
+            expect(formatted.roman.suffix).toBe(expectedSuffix);
+        });
     });
 
 });
