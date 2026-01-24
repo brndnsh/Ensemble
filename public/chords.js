@@ -797,61 +797,80 @@ export function updateProgressionCache() {
     });
     arranger.totalSteps = current;
 
-    // Build Section Map for soloist/conductor awareness
+    // Build Section Map and Measure Map efficiently using the stepMap we just built
     arranger.sectionMap = [];
+    arranger.measureMap = [];
+
+    let mapIndex = 0;
     let sectionAcc = 0;
+
     arranger.sections.forEach(section => {
-        const repeats = section.repeat || 1;
-        const tsName = section.timeSignature || arranger.timeSignature;
-        const ts = TIME_SIGNATURES[tsName] || TIME_SIGNATURES['4/4'];
-        const { chords: singleIterationChords } = parseProgressionPart(section.value, section.key || arranger.key, tsName, []);
+        const sectionStart = sectionAcc;
         let iterationSteps = 0;
-        singleIterationChords.forEach(c => {
-            iterationSteps += Math.round(c.beats * ts.stepsPerBeat);
-        });
-        const totalSectionSteps = iterationSteps * repeats;
+
+        // Efficiently consume chords from stepMap that belong to this section
+        const startMapIndex = mapIndex;
+
+        while (mapIndex < arranger.stepMap.length) {
+            const entry = arranger.stepMap[mapIndex];
+
+            // Safety check: ID must match
+            if (entry.chord.sectionId !== section.id) break;
+
+            if (mapIndex > startMapIndex) {
+                const prevEntry = arranger.stepMap[mapIndex-1];
+
+                // Robust detection of section boundaries even with shared IDs:
+                // If localIndex reset (<= prev) ...
+                if (entry.chord.localIndex <= prevEntry.chord.localIndex) {
+                    // ... it must be a new repeat (r = prev + 1).
+                    // If not, it's a new section.
+                    if (entry.chord.repeatIndex !== prevEntry.chord.repeatIndex + 1) {
+                        break;
+                    }
+                }
+            }
+
+            // Calculate iterationSteps from the first repeat only
+            if (entry.chord.repeatIndex === 0) {
+                iterationSteps += (entry.end - entry.start);
+            }
+
+            mapIndex++;
+        }
+
+        const totalSectionSteps = (mapIndex > startMapIndex) ? (arranger.stepMap[mapIndex-1].end - arranger.stepMap[startMapIndex].start) : 0;
+
         arranger.sectionMap.push({
             id: section.id,
-            start: sectionAcc,
-            end: sectionAcc + totalSectionSteps,
+            start: sectionStart,
+            end: sectionStart + totalSectionSteps,
             label: section.label
         });
         sectionAcc += totalSectionSteps;
-    });
 
-    // Build Measure Map for absolute step tracking with variable time signatures
-    arranger.measureMap = [];
-    
-    // Group chords by their "measure boundaries"
-    // This is tricky because chords might not align perfectly with measures if user enters weird beat counts.
-    // We'll iterate through sections and their repeats.
-    let stepAcc = 0;
-    arranger.sections.forEach(section => {
-        const repeats = section.repeat || 1;
-        const tsName = section.timeSignature || arranger.timeSignature;
-        const ts = TIME_SIGNATURES[tsName] || TIME_SIGNATURES['4/4'];
-        const stepsPerMeasure = Math.round(ts.beats * ts.stepsPerBeat);
-        
-        // Find chords for this section (already flattened in arranger.progression)
-        // We actually just need to know how many steps THIS section takes in one iteration.
-        const { chords: singleIterationChords } = parseProgressionPart(section.value, section.key || arranger.key, tsName, []);
-        let iterationSteps = 0;
-        singleIterationChords.forEach(c => {
-            iterationSteps += Math.round(c.beats * ts.stepsPerBeat);
-        });
+        // Build Measure Map (only if section is valid/has steps)
+        if (iterationSteps > 0) {
+            const repeats = section.repeat || 1;
+            const tsName = section.timeSignature || arranger.timeSignature;
+            const ts = TIME_SIGNATURES[tsName] || TIME_SIGNATURES['4/4'];
+            const stepsPerMeasure = Math.round(ts.beats * ts.stepsPerBeat);
 
-        for (let r = 0; r < repeats; r++) {
-            let sectionStep = 0;
-            while (sectionStep < iterationSteps) {
-                const measureEnd = Math.min(sectionStep + stepsPerMeasure, iterationSteps);
-                arranger.measureMap.push({
-                    start: stepAcc + sectionStep,
-                    end: stepAcc + measureEnd,
-                    ts: tsName
-                });
-                sectionStep += stepsPerMeasure;
+            let stepAccLocal = sectionStart;
+
+            for (let r = 0; r < repeats; r++) {
+                let sectionStep = 0;
+                while (sectionStep < iterationSteps) {
+                    const measureEnd = Math.min(sectionStep + stepsPerMeasure, iterationSteps);
+                    arranger.measureMap.push({
+                        start: stepAccLocal + sectionStep,
+                        end: stepAccLocal + measureEnd,
+                        ts: tsName
+                    });
+                    sectionStep += stepsPerMeasure;
+                }
+                stepAccLocal += iterationSteps;
             }
-            stepAcc += iterationSteps;
         }
     });
 }
