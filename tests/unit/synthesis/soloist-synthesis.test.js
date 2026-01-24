@@ -60,7 +60,8 @@ vi.mock('../../../public/state.js', () => ({
 
 // Mock utils
 vi.mock('../../../public/utils.js', () => ({
-    safeDisconnect: vi.fn()
+    safeDisconnect: vi.fn(),
+    clampFreq: vi.fn((f) => Math.min(Math.max(0, f), 24000))
 }));
 
 import { playSoloNote } from '../../../public/synth-soloist.js';

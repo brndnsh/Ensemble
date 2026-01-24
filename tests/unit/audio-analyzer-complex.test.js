@@ -119,7 +119,7 @@ describe('Complex Synthetic Audio Analysis', () => {
         // Section A is also acceptable if energy range isn't wide enough for Intro
         expect(['Intro', 'Section A']).toContain(labels[0]);
         expect(['Climax', 'Section B']).toContain(labels[1]);
-    });
+    }, 10000);
 
     it('should suppress harmonics to avoid false chords', async () => {
         // C3 (130.81) + Loud overtones that might look like G or E

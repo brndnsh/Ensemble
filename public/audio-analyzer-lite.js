@@ -189,6 +189,40 @@ export class ChordAnalyzerLite {
 
         // console.log(`[Analyzer-Lite] Processing ${beats} beats...`);
 
+        // Pre-allocate buffers for analysis loop
+        const chromaBuffer = new Float32Array(12);
+        const pitchEnergyBuffer = new Float32Array(128);
+        const step = 4; // Default step
+        const numWindowSteps = Math.ceil(samplesPerBeat / step);
+        const windowValuesBuffer = new Float32Array(numWindowSteps);
+
+        // Pre-calculate window values
+        for (let i = 0, idx = 0; i < samplesPerBeat; i += step, idx++) {
+            windowValuesBuffer[idx] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (samplesPerBeat - 1)));
+        }
+
+        const sharedBuffers = {
+            chroma: chromaBuffer,
+            pitchEnergy: pitchEnergyBuffer,
+            windowValues: windowValuesBuffer
+        };
+
+        const fullChromaOptions = {
+            minMidi: 48,
+            maxMidi: 88,
+            suppressHarmonics: false,
+            step: step,
+            buffers: sharedBuffers
+        };
+
+        const bassChromaOptions = {
+            minMidi: 24,
+            maxMidi: 42,
+            suppressHarmonics: false,
+            step: step,
+            buffers: sharedBuffers
+        };
+
         for (let b = 0; b < beats; b++) {
             if (b % 10 === 0) await yieldToMain();
 
@@ -203,11 +237,7 @@ export class ChordAnalyzerLite {
             // We raise minMidi to 48 (C3) to ignore the walking bass range for chord quality detection.
             // This prevents bass notes (E, G, A) from being interpreted as the Root of the chord.
             // We DISABLE harmonic suppression because it removes the Chord Root/5th when the Bass plays the Root!
-            let chroma = this.calculateChromagram(window, sampleRate, { 
-                minMidi: 48, 
-                maxMidi: 88,
-                suppressHarmonics: false 
-            });
+            let chroma = this.calculateChromagram(window, sampleRate, fullChromaOptions);
             if (tuningOffset !== 0) chroma = this.rotateChroma(chroma, tuningOffset);
             
             // Update Rolling Chroma (Local Key Context)
@@ -219,11 +249,7 @@ export class ChordAnalyzerLite {
             const localKey = this.identifySimpleKey(rollingChroma);
             
             // 2. Bass Chromagram (for inversions)
-            let bassChroma = this.calculateChromagram(window, sampleRate, { 
-                minMidi: 24, 
-                maxMidi: 42,
-                suppressHarmonics: false 
-            });
+            let bassChroma = this.calculateChromagram(window, sampleRate, bassChromaOptions);
             if (tuningOffset !== 0) bassChroma = this.rotateChroma(bassChroma, tuningOffset);
 
             // Identify Chord with Local Key Bias
@@ -398,6 +424,31 @@ export class ChordAnalyzerLite {
         const flux = new Float32Array(numWindows);
         let lastSpectrum = new Float32Array(12); // Use 12-bin chroma spectrum for flux
 
+        // Pre-allocate buffers for reuse in the loop
+        const chromaBuffer = new Float32Array(12);
+        const pitchEnergyBuffer = new Float32Array(128);
+        const step = 8;
+        const numWindowSteps = Math.ceil(winSize / step);
+        const windowValuesBuffer = new Float32Array(numWindowSteps);
+
+        // Pre-calculate window values for this winSize
+        for (let i = 0, idx = 0; i < winSize; i += step, idx++) {
+            windowValuesBuffer[idx] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (winSize - 1)));
+        }
+
+        const calcOptions = {
+            step: step,
+            skipSharpening: true,
+            minMidi: 48, // Focus on rhythmic range (C3 and up, ignoring walking bass)
+            maxMidi: 96,
+            suppressHarmonics: false,
+            buffers: {
+                chroma: chromaBuffer,
+                pitchEnergy: pitchEnergyBuffer,
+                windowValues: windowValuesBuffer
+            }
+        };
+
         for (let w = 0; w < numWindows; w++) {
             if (w % 500 === 0) await yieldToMain();
 
@@ -405,13 +456,7 @@ export class ChordAnalyzerLite {
             const window = signal.subarray(start, start + winSize);
             
             // Simplified Spectral Power for this window
-            const currentSpectrum = this.calculateChromagram(window, sampleRate, { 
-                step: 8, 
-                skipSharpening: true,
-                minMidi: 48, // Focus on rhythmic range (C3 and up, ignoring walking bass)
-                maxMidi: 96,
-                suppressHarmonics: false
-            });
+            const currentSpectrum = this.calculateChromagram(window, sampleRate, calcOptions);
 
             // Flux = Sum of positive changes across bins
             let sum = 0;
@@ -420,7 +465,7 @@ export class ChordAnalyzerLite {
                 if (diff > 0) sum += diff;
             }
             flux[w] = sum;
-            lastSpectrum = currentSpectrum;
+            lastSpectrum.set(currentSpectrum);
         }
 
         // Half-wave rectification and normalization of flux
@@ -614,18 +659,32 @@ export class ChordAnalyzerLite {
      * single-frequency filters with Hann windowing and Harmonic Suppression.
      */
     calculateChromagram(signal, sampleRate, options = {}) {
-        const chroma = new Float32Array(12).fill(0);
-        const pitchEnergy = new Float32Array(128).fill(0); // High-res pitch map
+        let chroma, pitchEnergy, windowValues;
+
+        if (options.buffers) {
+            chroma = options.buffers.chroma;
+            chroma.fill(0);
+            pitchEnergy = options.buffers.pitchEnergy;
+            pitchEnergy.fill(0);
+        } else {
+            chroma = new Float32Array(12).fill(0);
+            pitchEnergy = new Float32Array(128).fill(0); // High-res pitch map
+        }
+
         const len = signal.length;
         const step = options.step || 4; 
         const minMidi = options.minMidi || 0;
         const maxMidi = options.maxMidi || 127;
 
         // Pre-calculate window function
-        const numSteps = Math.ceil(len / step);
-        const windowValues = new Float32Array(numSteps);
-        for (let i = 0, idx = 0; i < len; i += step, idx++) {
-            windowValues[idx] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (len - 1)));
+        if (options.buffers && options.buffers.windowValues) {
+            windowValues = options.buffers.windowValues;
+        } else {
+            const numSteps = Math.ceil(len / step);
+            windowValues = new Float32Array(numSteps);
+            for (let i = 0, idx = 0; i < len; i += step, idx++) {
+                windowValues[idx] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (len - 1)));
+            }
         }
 
         // Always calculate full range (24-96) for harmonic suppression context
