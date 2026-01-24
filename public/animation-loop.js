@@ -49,10 +49,6 @@ export function draw(viz) {
         requestAnimationFrame(() => draw(viz));
         return;
     }
-    if (playback.autoIntensity && ui.intensitySlider) {
-        const val = Math.round(playback.bandIntensity * 100);
-        if (parseInt(ui.intensitySlider.value) !== val) { ui.intensitySlider.value = val; if (ui.intensityValue) ui.intensityValue.textContent = `${val}%`; }
-    }
     if (!playback.isPlaying && playback.drawQueue.length === 0) { playback.isDrawing = false; clearActiveVisuals(viz); return; }
     const now = getVisualTime();
     while (playback.drawQueue.length > 0 && playback.drawQueue[0].time < now - 2.0) playback.drawQueue.shift();
