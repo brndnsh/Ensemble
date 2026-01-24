@@ -14,7 +14,6 @@ import { midi as midiState } from './state.js';
 import { initPlatform, unlockAudio, lockAudio, activateWakeLock, deactivateWakeLock } from './platform.js';
 
 let isScheduling = false;
-let sessionStartTime = 0;
 let isResolutionTriggered = false;
 
 // Initialize platform-specific hacks (iOS Audio, WakeLock state)
@@ -57,7 +56,7 @@ export function togglePlay(viz) {
         isResolutionTriggered = false;
         dispatch(ACTIONS.RESET_SESSION); // Reset warm-up counters
         dispatch(ACTIONS.SET_ENDING_PENDING, false);
-        sessionStartTime = performance.now();
+        playback.sessionStartTime = performance.now();
         syncWorker(); 
         const primeSteps = (arranger.totalSteps > 0) ? arranger.totalSteps * 2 : 0;
         flushBuffers(primeSteps);
@@ -162,7 +161,7 @@ export function scheduler() {
                 
                 // --- Session Timer Check ---
                 if (playback.sessionTimer > 0 && !playback.isEndingPending) {
-                    const elapsedMins = (performance.now() - sessionStartTime) / 60000;
+                    const elapsedMins = (performance.now() - playback.sessionStartTime) / 60000;
                     if (elapsedMins >= playback.sessionTimer) {
                         dispatch(ACTIONS.SET_ENDING_PENDING, true);
                     }
