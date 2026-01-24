@@ -57,6 +57,14 @@ export function initSequencerHandlers(ui) {
             return;
         }
     });
+
+    ui.sequencerGrid.addEventListener('keydown', (e) => {
+        const target = e.target;
+        if (target.classList.contains('step') && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            target.click();
+        }
+    });
 }
 
 /**
@@ -131,6 +139,11 @@ export function renderGrid(ui, skipScroll = false) {
             step.className = 'step';
             step.dataset.instIdx = idx;
             step.dataset.stepIdx = i;
+            step.role = 'button';
+            step.tabIndex = 0;
+
+            const status = inst.steps[i] === 1 ? 'active' : (inst.steps[i] === 2 ? 'accented' : 'inactive');
+            step.setAttribute('aria-label', `${inst.name}, step ${i + 1}, ${status}`);
             
             const stepInfo = getStepInfo(i, ts);
             if (stepInfo.isGroupStart) step.classList.add('group-marker');
@@ -201,6 +214,9 @@ export function renderGridState(ui) {
         steps.forEach((step, i) => {
             step.classList.toggle('active', inst.steps[i] === 1);
             step.classList.toggle('accented', inst.steps[i] === 2);
+
+            const status = inst.steps[i] === 1 ? 'active' : (inst.steps[i] === 2 ? 'accented' : 'inactive');
+            step.setAttribute('aria-label', `${inst.name}, step ${i + 1}, ${status}`);
         });
     });
     
