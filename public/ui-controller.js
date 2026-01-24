@@ -1,6 +1,6 @@
 import { ACTIONS } from './types.js';
 import { ui, showToast, renderChordVisualizer, renderSections, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels, switchInstrumentTab } from './ui.js';
-import { playback, chords, bass, soloist, harmony, groove, arranger, dispatch } from './state.js';
+import { playback, chords, bass, soloist, harmony, groove, arranger, dispatch, subscribe } from './state.js';
 import { saveCurrentState } from './persistence.js';
 import { restoreGains, initAudio } from './engine.js';
 import { syncWorker } from './worker-client.js';
@@ -175,6 +175,18 @@ export function setupUIHandlers(refs) {
             dispatch(ACTIONS.SET_BAND_INTENSITY, val / 100);
             if (ui.intensityValue) ui.intensityValue.textContent = `${val}%`;
             applyConductor();
+        });
+
+        // Reactive UI update for intensity (replaces polling)
+        subscribe((action, payload) => {
+            if (action === ACTIONS.SET_BAND_INTENSITY) {
+                const val = Math.round(playback.bandIntensity * 100);
+                // Avoid redundant updates if the value matches (prevents UI fighting during drag)
+                if (parseInt(ui.intensitySlider.value) !== val) {
+                    ui.intensitySlider.value = val;
+                    if (ui.intensityValue) ui.intensityValue.textContent = `${val}%`;
+                }
+            }
         });
     }
 
