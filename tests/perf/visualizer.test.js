@@ -106,38 +106,32 @@ describe('UnifiedVisualizer Performance', () => {
 
         console.log(`[Optimized] getPropertyValue calls: ${getPropertyValueSpy.mock.calls.length}`);
 
-        // Should be very low (only initial resolution)
-        // 4 for chords + 3 for tracks = 7 expected
-        expect(getPropertyValueSpy.mock.calls.length).toBeLessThan(50);
-        expect(getPropertyValueSpy.mock.calls.length).toBeGreaterThan(0);
+        // With observer-based caching, render loop should have ZERO calls
+        expect(getPropertyValueSpy.mock.calls.length).toBe(0);
     });
 
-    it('re-resolves colors when theme changes', () => {
+    it('re-resolves colors when theme changes', async () => {
         visualizer = new UnifiedVisualizer('viz-container');
         visualizer.resize();
         visualizer.addTrack('bass', 'var(--blue)');
 
+        // Clear calls from init and addTrack
         getPropertyValueSpy.mockClear();
 
-        // 1. Initial Render
-        document.documentElement.setAttribute('data-theme', 'light');
-
+        // 1. Render should not trigger calls
         visualizer.render(0, 120);
-        const callsAfterFirstRender = getPropertyValueSpy.mock.calls.length;
-        // Should be 4 (chords) + 1 (bass) = 5
-        expect(callsAfterFirstRender).toBe(5);
+        expect(getPropertyValueSpy.mock.calls.length).toBe(0);
 
-        // 2. Second Render (No Change)
-        visualizer.render(0.1, 120);
-        expect(getPropertyValueSpy.mock.calls.length).toBe(callsAfterFirstRender);
-
-        // 3. Change Theme
+        // 2. Change Theme
         document.documentElement.setAttribute('data-theme', 'dark');
-        visualizer.render(0.2, 120);
 
-        // Should re-resolve
+        // Wait for MutationObserver
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Should have re-resolved
+        // 4 chords + 1 bass = 5 calls
         const callsAfterThemeChange = getPropertyValueSpy.mock.calls.length;
-        expect(callsAfterThemeChange).toBeGreaterThan(callsAfterFirstRender);
-        expect(callsAfterThemeChange).toBe(callsAfterFirstRender + 5); // Another 5 calls
+        expect(callsAfterThemeChange).toBeGreaterThan(0);
+        expect(callsAfterThemeChange).toBe(5);
     });
 });
