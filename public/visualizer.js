@@ -14,6 +14,10 @@ export class UnifiedVisualizer {
         this.registers = { chords: 60 };
         this.beatReferenceTime = null;
         
+        // Cache for theme-dependent colors
+        this.lastIsDark = null;
+        this.cachedChordColors = null;
+
         this.initDOM();
         
         // Robust resizing with ResizeObserver
@@ -130,6 +134,15 @@ export class UnifiedVisualizer {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
                       (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         
+        // Invalidate caches if theme changed
+        if (this.lastIsDark !== isDark) {
+            this.cachedChordColors = null;
+            for (const name in this.tracks) {
+                this.tracks[name].resolvedColor = null;
+            }
+            this.lastIsDark = isDark;
+        }
+
         const bgColor = isDark ? '#0f172a' : '#f8fafc';
         const keyWhite = isDark ? '#cbd5e1' : '#ffffff';
         const keyBlack = isDark ? '#1e293b' : '#1e293b';
@@ -139,12 +152,15 @@ export class UnifiedVisualizer {
         const playheadColor = isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)';
         const outlineColor = isDark ? '#000' : '#fff';
 
-        const chordColors = {
-            root: style.getPropertyValue('--blue').trim() || '#2563eb',
-            third: style.getPropertyValue('--green').trim() || '#10b981',
-            fifth: style.getPropertyValue('--orange').trim() || '#f59e0b',
-            seventh: style.getPropertyValue('--violet').trim() || '#d946ef'
-        };
+        if (!this.cachedChordColors) {
+            this.cachedChordColors = {
+                root: style.getPropertyValue('--blue').trim() || '#2563eb',
+                third: style.getPropertyValue('--green').trim() || '#10b981',
+                fifth: style.getPropertyValue('--orange').trim() || '#f59e0b',
+                seventh: style.getPropertyValue('--violet').trim() || '#d946ef'
+            };
+        }
+        const chordColors = this.cachedChordColors;
 
         const getCategory = (interval) => {
             if (interval === 0) return "root";
@@ -185,11 +201,17 @@ export class UnifiedVisualizer {
         // Active Tracks
         for (const name in this.tracks) {
             const track = this.tracks[name];
-            let color = track.color;
-            if (color.startsWith('var(')) {
-                const varName = color.slice(4, -1);
-                color = style.getPropertyValue(varName).trim() || '#3b82f6';
+
+            if (!track.resolvedColor) {
+                let color = track.color;
+                if (color.startsWith('var(')) {
+                    const varName = color.slice(4, -1);
+                    color = style.getPropertyValue(varName).trim() || '#3b82f6';
+                }
+                track.resolvedColor = color;
             }
+            const color = track.resolvedColor;
+
             for (const ev of track.history) {
                  if (ev.time <= currentTime && ev.time + (ev.duration || 0.25) >= currentTime) {
                      activeNotes.set(ev.midi, color);
@@ -339,11 +361,15 @@ export class UnifiedVisualizer {
             const baseWidth = name === 'soloist' ? 4 : 5;
             
             // Resolve track color if it's a CSS variable
-            let color = track.color;
-            if (color.startsWith('var(')) {
-                const varName = color.slice(4, -1);
-                color = style.getPropertyValue(varName).trim() || '#3b82f6';
+            if (!track.resolvedColor) {
+                let color = track.color;
+                if (color.startsWith('var(')) {
+                    const varName = color.slice(4, -1);
+                    color = style.getPropertyValue(varName).trim() || '#3b82f6';
+                }
+                track.resolvedColor = color;
             }
+            const color = track.resolvedColor;
 
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
