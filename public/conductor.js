@@ -215,10 +215,15 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
     // Trigger major transitions (fills/intensity updates) only at the start of a measure.
     // We want to trigger when the measure about to be scheduled is the LAST measure of a section or the loop.
     if (modStep % stepsPerMeasure === 0) {
-        const entry = arranger.stepMap.find(e => modStep >= e.start && modStep < e.end);
-        if (!entry) return;
-
         const measureEnd = modStep + stepsPerMeasure;
+
+        // We look at the chord at the END of the measure to see if we are transitioning.
+        // This is crucial for Jazz Blues or split-bar turnarounds where the last chord
+        // of the measure is different from the first.
+        const effectiveStep = measureEnd - 1;
+        const entry = arranger.stepMap.find(e => effectiveStep >= e.start && effectiveStep < e.end);
+
+        if (!entry) return;
         const isLoopEnd = measureEnd >= total;
         
         // Find the chord at the beginning of the NEXT section/loop iteration

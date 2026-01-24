@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { conductorState, checkSectionTransition } from '../../../public/conductor.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { ACTIONS } from '../../../public/types.js';
 
 vi.mock('../../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
@@ -13,7 +14,11 @@ vi.mock('../../../public/state.js', async (importOriginal) => {
         harmony: { enabled: false, buffer: new Map() },
         dispatch: vi.fn((action, payload) => {
             if (action === 'SET_BAND_INTENSITY') playback.bandIntensity = payload;
-        })
+        }),
+        arranger: {
+            ...actual.arranger,
+            sections: [{ id: 's1', label: 'Main' }, { id: 's2', label: 'Turnaround' }]
+        }
     };
 });
 
@@ -65,7 +70,7 @@ describe('Jazz Blues Intensity Bug', () => {
         expect(conductorState.target).not.toBe(0.5);
     });
 
-    it('should trigger intensity change for Jazz Blues (2 chords in last measure)', () => {
+    it('should trigger intensity change for Jazz Blues (2 chords in last measure) - Loop End', () => {
         // 12 bars total = 192 steps.
         // Last bar (steps 176 to 192) has two chords.
         arranger.totalSteps = 192;
@@ -100,7 +105,25 @@ describe('Jazz Blues Intensity Bug', () => {
             }
         }
         
-        // This is expected to FAIL currently because of the bug
         expect(triggered).toBe(true);
+    });
+
+    it('should detect transition when measure ends with a different section (Split Turnaround)', () => {
+        // Setup: 2 measures. 32 steps total.
+        // Measure 1 (0-16): Split. 0-8 (Main/s1), 8-16 (Turnaround/s2).
+        // Measure 2 (16-32): Main/s1.
+
+        arranger.totalSteps = 32;
+        arranger.stepMap = [
+            { start: 0, end: 8, chord: { sectionId: 's1', sectionLabel: 'Main' } },
+            { start: 8, end: 16, chord: { sectionId: 's2', sectionLabel: 'Turnaround' } },
+            { start: 16, end: 32, chord: { sectionId: 's1', sectionLabel: 'Main' } }
+        ];
+
+        // Check at step 0 (Start of Measure 1)
+        checkSectionTransition(0, 16);
+
+        // Expectation: TRIGGER_FILL should be dispatched
+        expect(dispatch).toHaveBeenCalledWith(ACTIONS.TRIGGER_FILL, expect.anything());
     });
 });
