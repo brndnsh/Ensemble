@@ -680,7 +680,8 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                 }
 
                 let intervals = getIntervals(quality, is7th, chords.density, groove.genreFeel, bass.enabled || chords.pianoRoots);
-                const pianoMin = (bass.enabled || chords.pianoRoots) ? 48 : 43;
+                // Reduce mud: if bass is active, keep piano above E3 (52)
+                const pianoMin = (bass.enabled || chords.pianoRoots) ? 52 : 43;
                 let isPivot = parsed.length === 0; 
                 let currentMidis = getBestInversion(rootMidi, intervals, lastMidis, isPivot, chords.octave, pianoMin, 84);
                 if (bassMidi !== null) {

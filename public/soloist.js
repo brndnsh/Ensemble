@@ -1,6 +1,7 @@
 import { getFrequency, getMidi } from './utils.js';
 import { playback, groove, soloist, harmony, arranger } from './state.js';
-import { TIME_SIGNATURES, KEY_ORDER } from './config.js';
+import { TIME_SIGNATURES } from './config.js';
+import { getScaleForChord } from './theory-scales.js';
 
 const CANDIDATE_WEIGHTS = new Float32Array(128);
 
@@ -121,140 +122,7 @@ const STYLE_CONFIG = {
 
 // --- Helpers ---
 
-/**
- * Determines the most appropriate musical scale for a given chord and style.
- * Uses harmonic context, tension levels, and genre-specific rules to select
- * scales like Altered, Lydian Dominant, or various Pentatonics.
- * 
- * @param {Object} chord - The current chord object.
- * @param {Object} nextChord - The upcoming chord object for resolution lookahead.
- * @param {string} style - The soloist style (e.g., 'smart', 'blues', 'bird').
- * @returns {number[]} An array of semitone intervals representing the selected scale.
- */
-export function getScaleForChord(chord, nextChord, style) {
-    if (style === 'smart') {
-        const mapping = { 
-            'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 
-            'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 
-            'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal',
-            'Reggae': 'minimal', 'Country': 'country', 'Metal': 'metal', 'Rock/Metal': 'metal'
-        };
-        style = mapping[groove.genreFeel] || 'scalar';
-    }
-
-    const quality = chord.quality;
-    const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
-    const isDominant = !isMinor && !['dim', 'halfdim'].includes(quality) && !quality.startsWith('maj') && (chord.is7th || ['9', '11', '13', '7alt', '7b9', '7#9', '7#11', '7b13'].includes(quality) || quality.startsWith('7'));
-    
-    // 1. Tension High? Altered
-    if (soloist.tension > 0.7 && isDominant) {
-        return [0, 1, 3, 4, 6, 8, 10]; // Altered
-    }
-
-    // 2. Style Specifics
-    if (style === 'country') {
-        // Country: Major Pentatonic + b3 (Blue note) passing tone, and 4
-        // Base Major Pent: 0, 2, 4, 7, 9
-        // Add 3 (b3) for bluesy slides -> actually, scale logic usually takes Semitones from root
-        // 0, 2, 3, 4, 7, 9
-        // Also Mixolydian is common (10)
-        return [0, 2, 3, 4, 7, 9, 10].sort((a,b)=>a-b);
-    }
-    if (style === 'metal') {
-        // Metal: Natural Minor / Aeolian (0, 2, 3, 5, 7, 8, 10)
-        // Or Harmonic Minor (0, 2, 3, 5, 7, 8, 11)
-        // Let's stick to Aeolian for now as safe default, maybe Harmonic if dominant
-        if (isDominant || chord.quality === 'major') return [0, 1, 4, 5, 7, 8, 10]; // Phrygian Dominant-ish for major
-        return [0, 2, 3, 5, 7, 8, 10]; // Minor
-    }
-
-    if (style === 'blues' || style === 'disco' || style === 'funk') {
-        if (chord.quality.startsWith('maj') || chord.quality === 'major') {
-             return [0, 2, 4, 5, 7, 9, 11]; 
-        }
-        const isMinorQualityLocal = ['minor', 'halfdim', 'dim', 'm9', 'm11', 'm13', 'm6'].includes(chord.quality);
-        let base = (chord.quality === 'halfdim') ? [0, 1, 3, 5, 6, 8, 10] : (isMinorQualityLocal ? [0, 2, 3, 5, 6, 7, 10] : [0, 2, 3, 4, 5, 6, 7, 9, 10]);
-        if ((style === 'blues' || style === 'funk') && !isMinorQualityLocal) { if (!base.includes(4)) base.push(4); if (!base.includes(9)) base.push(9); }
-        if (soloist.tension > 0.7) base.push(11);
-        return base.sort((a,b)=>a-b);
-    }
-    
-    if (style === 'neo' || style === 'bird') {
-        const keyRootIdx = KEY_ORDER.indexOf(arranger.key || 'C');
-        const relativeRoot = (chord.rootMidi - keyRootIdx + 120) % 12;
-        if (chord.quality.startsWith('maj') || chord.quality === 'major') {
-            if (relativeRoot === 0 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; 
-            if (relativeRoot === 5 && !arranger.isMinor) return [0, 2, 4, 5, 7, 9, 11]; // Ionian for Bb
-            return [0, 2, 4, 5, 7, 9, 11]; 
-        }
-        if (chord.quality === 'minor' || ['m9', 'm11', 'm13', 'm6'].includes(chord.quality)) {
-            if (relativeRoot === 9 && !arranger.isMinor) return [0, 2, 3, 5, 7, 8, 10];
-            return [0, 2, 3, 5, 7, 9, 10]; 
-        }
-    }
-
-    if (style === 'bossa' && (chord.quality.startsWith('maj') || chord.quality === 'major')) {
-        return [0, 2, 4, 6, 7, 9, 11]; 
-    }
-
-    // 3. Chord Quality Switch
-    switch (chord.quality) {
-        case 'dim': return [0, 2, 3, 5, 6, 8, 9, 11];
-        case 'halfdim': return [0, 1, 3, 5, 6, 8, 10];
-        case 'aug': return [0, 2, 4, 6, 8, 10];
-        case 'augmaj7': return [0, 2, 4, 6, 8, 9, 11];
-        case 'm9': case 'm11': case 'm13': case 'm6': return [0, 2, 3, 5, 7, 9, 10]; 
-        case 'sus4': return [0, 2, 5, 7, 9, 10]; 
-        case '7alt': return [0, 1, 3, 4, 6, 8, 10];
-        case '7#9': return (style === 'funk' || groove.genreFeel === 'Funk') ? [0, 1, 3, 4, 5, 7, 8, 10] : [0, 1, 3, 4, 6, 8, 10];
-        case '7b9': case '7b13': return [0, 1, 4, 5, 7, 8, 10];
-        case '7#11': return [0, 2, 4, 6, 7, 9, 10]; 
-        case '9': case '13': return [0, 2, 4, 5, 7, 9, 10];
-    }
-
-    // 4. Resolution Logic
-    const isMinorQuality = (q) => (q.startsWith('m') && !q.startsWith('maj')) || q.includes('minor') || q.includes('dim') || q.includes('halfdim');
-    if (chord.quality === '7' && nextChord) {
-        const resolvingDownFifth = ((nextChord.rootMidi - chord.rootMidi + 120) % 12 === 5);
-        if (resolvingDownFifth) {
-            if (isMinorQuality(nextChord.quality)) return [0, 1, 4, 5, 7, 8, 10]; 
-            return [0, 2, 4, 5, 7, 9, 10]; 
-        }
-    }
-
-    if (chord.quality === 'minor' || chord.quality.startsWith('m')) {
-        const isActuallyMinor = chord.quality.startsWith('m') && !chord.quality.startsWith('maj');
-        if (isActuallyMinor) {
-            if (style === 'bird' || groove.genreFeel === 'Jazz' || style === 'neo' || groove.genreFeel === 'Neo-Soul' || groove.genreFeel === 'Funk' || style === 'bossa' || groove.genreFeel === 'Bossa Nova') {
-                return [0, 2, 3, 5, 7, 9, 10]; 
-            }
-        }
-    }
-
-    if (isDominant || chord.quality === 'major') {
-        const kRootIdx = KEY_ORDER.indexOf(chord.key || arranger.key);
-        const relRoot = (chord.rootMidi - kRootIdx + 120) % 12;
-        if (arranger.isMinor && relRoot === 7) return [0, 1, 4, 5, 7, 8, 10];
-        if (isDominant) {
-            if (relRoot === 2 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10]; 
-            if (relRoot === 10 && !arranger.isMinor) return [0, 2, 4, 6, 7, 9, 10];
-            return [0, 2, 4, 5, 7, 9, 10]; 
-        }
-    }
-
-    // 5. Diatonic Fallback
-    const keyRootIdx = KEY_ORDER.indexOf(chord.key || arranger.key);
-    const keyIntervals = arranger.isMinor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11]; 
-    const keyNotes = keyIntervals.map(i => (keyRootIdx + i) % 12);
-    const chordRoot = chord.rootMidi % 12;
-    const chordTones = chord.intervals.map(i => (chordRoot + i) % 12);
-    if (chordTones.every(note => keyNotes.includes(note))) {
-        return keyNotes.map(note => (note - chordRoot + 12) % 12).sort((a, b) => a - b);
-    }
-    if (chord.quality === 'minor' || (chord.quality.startsWith('m') && !chord.quality.startsWith('maj'))) return [0, 2, 3, 5, 7, 8, 10]; 
-    // If it explicitly has a b7, treat as Mixolydian. Otherwise default to Ionian (safer for Pop/Rock).
-    return chord.intervals.includes(10) ? [0, 2, 4, 5, 7, 9, 10] : [0, 2, 4, 5, 7, 9, 11];
-}
+// (Old getScaleForChord removed, using imported version)
 
 // --- Main Generator ---
 
@@ -520,6 +388,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         targetChord = nextChord;
     }
 
+    // --- SCALE RETRIEVAL (Refactored) ---
     const scaleIntervals = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
     const rootMidi = targetChord.rootMidi;
     const scaleTones = scaleIntervals.map(i => rootMidi + i);

@@ -307,7 +307,8 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         }
     }
 
-    const rangeMin = activeStyle === 'organ' ? 54 : 50;
+    // Increased minimums to avoid bass mud (MIDI 57 = A3, MIDI 53 = F3)
+    const rangeMin = activeStyle === 'organ' ? 57 : 53;
     const currentMidis = getBestInversion(rootMidi, finalIntervals, harmony.lastMidis, stepInChord === 0, octave, rangeMin, 79, activeStyle);
 
     if (currentMidis.length > 0) lastPlayedStep = step;
@@ -320,6 +321,9 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     for (let i = 0; i < currentMidis.length; i++) {
         const midi = currentMidis[i];
         let finalMidi = midi + styleOffset;
+
+        // Safety Filter: Hard cut below G3 (55) for most styles to prevent muddy collisions with bass
+        if (finalMidi < 55 && activeStyle !== 'counter' && activeStyle !== 'plucks') continue;
         
         const intensity = playback.bandIntensity;
         let slideInterval = 0, slideDuration = 0, vibrato = { rate: 0, depth: 0 };
