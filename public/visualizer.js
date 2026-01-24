@@ -13,8 +13,22 @@ export class UnifiedVisualizer {
         this.pianoRollWidth = 50;
         this.registers = { chords: 60 };
         this.beatReferenceTime = null;
+        this.themeCache = {};
         
         this.initDOM();
+        this.updateThemeCache();
+
+        // Observe theme changes
+        this.themeObserver = new MutationObserver((mutations) => {
+             if (mutations.some(m => m.type === 'attributes' && m.attributeName === 'data-theme')) {
+                 this.updateThemeCache();
+             }
+        });
+        this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+        this.themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        this.themeListener = () => this.updateThemeCache();
+        this.themeMediaQuery.addEventListener('change', this.themeListener);
         
         // Robust resizing with ResizeObserver
         this.resizeObserver = new ResizeObserver(entries => {
@@ -23,6 +37,50 @@ export class UnifiedVisualizer {
             }
         });
         this.resizeObserver.observe(this.container);
+    }
+
+    updateThemeCache() {
+        const style = getComputedStyle(document.documentElement);
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+                      (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+        this.themeCache = {
+            bgColor: isDark ? '#0f172a' : '#f8fafc',
+            keyWhite: isDark ? '#cbd5e1' : '#ffffff',
+            keyBlack: isDark ? '#1e293b' : '#1e293b',
+            keySeparator: isDark ? '#334155' : '#e2e8f0',
+            gridColorMeasure: isDark ? 'rgba(56, 189, 248, 0.4)' : 'rgba(2, 132, 199, 0.3)',
+            gridColorBeat: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            playheadColor: isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+            outlineColor: isDark ? '#000' : '#fff',
+            labelColor: isDark ? '#64748b' : '#94a3b8',
+            guideLineBlack: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)',
+            guideLineWhite: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)',
+            separatorColor: isDark ? '#334155' : '#cbd5e1',
+            chordColors: {
+                root: style.getPropertyValue('--blue').trim() || '#2563eb',
+                third: style.getPropertyValue('--green').trim() || '#10b981',
+                fifth: style.getPropertyValue('--orange').trim() || '#f59e0b',
+                seventh: style.getPropertyValue('--violet').trim() || '#d946ef'
+            }
+        };
+
+        // Update track colors
+        for (const name in this.tracks) {
+            this.resolveTrackColor(name, style);
+        }
+    }
+
+    resolveTrackColor(name, style = null) {
+        if (!this.tracks[name]) return;
+        const track = this.tracks[name];
+        if (track.color.startsWith('var(')) {
+             if (!style) style = getComputedStyle(document.documentElement);
+             const varName = track.color.slice(4, -1);
+             track.resolvedColor = style.getPropertyValue(varName).trim() || '#3b82f6';
+        } else {
+            track.resolvedColor = track.color;
+        }
     }
 
     initDOM() {
@@ -70,6 +128,7 @@ export class UnifiedVisualizer {
             history: [],
             label
         };
+        this.resolveTrackColor(name);
         if (!this.registers[name]) this.registers[name] = 60;
     }
 
@@ -125,26 +184,13 @@ export class UnifiedVisualizer {
         const minTime = currentTime - this.windowSize;
         const yScale = h / this.visualRange;
 
-        // Resolve theme-aware colors
-        const style = getComputedStyle(document.documentElement);
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
-                      (document.documentElement.getAttribute('data-theme') === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        
-        const bgColor = isDark ? '#0f172a' : '#f8fafc';
-        const keyWhite = isDark ? '#cbd5e1' : '#ffffff';
-        const keyBlack = isDark ? '#1e293b' : '#1e293b';
-        const keySeparator = isDark ? '#334155' : '#e2e8f0';
-        const gridColorMeasure = isDark ? 'rgba(56, 189, 248, 0.4)' : 'rgba(2, 132, 199, 0.3)';
-        const gridColorBeat = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
-        const playheadColor = isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)';
-        const outlineColor = isDark ? '#000' : '#fff';
-
-        const chordColors = {
-            root: style.getPropertyValue('--blue').trim() || '#2563eb',
-            third: style.getPropertyValue('--green').trim() || '#10b981',
-            fifth: style.getPropertyValue('--orange').trim() || '#f59e0b',
-            seventh: style.getPropertyValue('--violet').trim() || '#d946ef'
-        };
+        // Use cached theme-aware colors
+        const {
+            bgColor, keyWhite, keyBlack, keySeparator,
+            gridColorMeasure, gridColorBeat, playheadColor,
+            outlineColor, labelColor, guideLineBlack, guideLineWhite,
+            separatorColor, chordColors
+        } = this.themeCache;
 
         const getCategory = (interval) => {
             if (interval === 0) return "root";
@@ -185,11 +231,7 @@ export class UnifiedVisualizer {
         // Active Tracks
         for (const name in this.tracks) {
             const track = this.tracks[name];
-            let color = track.color;
-            if (color.startsWith('var(')) {
-                const varName = color.slice(4, -1);
-                color = style.getPropertyValue(varName).trim() || '#3b82f6';
-            }
+            let color = track.resolvedColor || track.color;
             for (const ev of track.history) {
                  if (ev.time <= currentTime && ev.time + (ev.duration || 0.25) >= currentTime) {
                      activeNotes.set(ev.midi, color);
@@ -229,7 +271,7 @@ export class UnifiedVisualizer {
 
             // Draw Label for C
             if (noteInOctave === 0) {
-                ctx.fillStyle = isDark ? '#64748b' : '#94a3b8';
+                ctx.fillStyle = labelColor;
                 if (activeNotes.has(m)) ctx.fillStyle = '#fff'; // Contrast for active
                 ctx.font = '10px sans-serif';
                 ctx.textAlign = 'right';
@@ -239,7 +281,7 @@ export class UnifiedVisualizer {
             }
 
             // Draw horizontal pitch guide lines across the graph
-            ctx.strokeStyle = isBlack ? (isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)') : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)');
+            ctx.strokeStyle = isBlack ? guideLineBlack : guideLineWhite;
             ctx.beginPath();
             ctx.moveTo(this.pianoRollWidth, y);
             ctx.lineTo(w, y);
@@ -247,7 +289,7 @@ export class UnifiedVisualizer {
         }
 
         // Separator line between keys and graph
-        ctx.strokeStyle = isDark ? '#334155' : '#cbd5e1';
+        ctx.strokeStyle = separatorColor;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(this.pianoRollWidth, 0);
@@ -339,11 +381,7 @@ export class UnifiedVisualizer {
             const baseWidth = name === 'soloist' ? 4 : 5;
             
             // Resolve track color if it's a CSS variable
-            let color = track.color;
-            if (color.startsWith('var(')) {
-                const varName = color.slice(4, -1);
-                color = style.getPropertyValue(varName).trim() || '#3b82f6';
-            }
+            let color = track.resolvedColor || track.color;
 
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -442,6 +480,15 @@ export class UnifiedVisualizer {
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
+        }
+        if (this.themeObserver) {
+            this.themeObserver.disconnect();
+            this.themeObserver = null;
+        }
+        if (this.themeMediaQuery && this.themeListener) {
+            this.themeMediaQuery.removeEventListener('change', this.themeListener);
+            this.themeMediaQuery = null;
+            this.themeListener = null;
         }
         if (this.canvas && this.canvas.parentNode) {
             this.canvas.parentNode.removeChild(this.canvas);
