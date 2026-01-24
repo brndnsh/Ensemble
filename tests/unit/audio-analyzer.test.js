@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ChordAnalyzerLite } from '../../public/audio-analyzer-lite.js';
+import { extractForm } from '../../public/form-extractor.js';
 
-/**
- * Mock AudioBuffer since we are in a Node/Vitest environment
- */
 class MockAudioBuffer {
     constructor({ length, sampleRate }) {
         this.length = length;
@@ -14,55 +12,225 @@ class MockAudioBuffer {
     getChannelData() { return this.data; }
 }
 
-describe('Audio Analyzer Accuracy (Synthetic Ear)', () => {
+describe('Audio Analyzer (Consolidated)', () => {
     const analyzer = new ChordAnalyzerLite();
     const sampleRate = 44100;
 
+    const getFreq = (note) => {
+        const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+        const name = note.slice(0, -1);
+        const octave = parseInt(note.slice(-1));
+        const index = notes.indexOf(name);
+        return 440 * Math.pow(2, (index + (octave - 4) * 12 - 9) / 12);
+    };
+
+    const addTone = (data, freq, start, end, vol = 0.3) => {
+        const startIdx = Math.floor(start * sampleRate);
+        const endIdx = Math.floor(end * sampleRate);
+        for (let i = startIdx; i < endIdx; i++) {
+            if (i >= data.length) break;
+            const t = i / sampleRate;
+            // Envelope for smoother onset/offset
+            const envelope = Math.min(1, (t - start) * 50) * Math.min(1, (end - t) * 50);
+            data[i] += Math.sin(2 * Math.PI * freq * t) * vol * envelope;
+        }
+    };
+
+    const addChord = (data, root, type, start, end, vol = 0.3) => {
+        const intervals = {
+            'maj': [0, 4, 7],
+            'm': [0, 3, 7],
+            '7': [0, 4, 7, 10],
+        };
+        const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+        const rootIdx = notes.indexOf(root);
+
+        // Add root in bass
+        addTone(data, getFreq(root + '2'), start, end, vol * 1.5);
+
+        // Add triad
+        intervals[type].forEach(interval => {
+            const freq = getFreq(notes[(rootIdx + interval) % 12] + '4');
+            addTone(data, freq, start, end, vol);
+        });
+    };
+
+    // Helper for simple tests
     const createChordBuffer = (noteFreqs, duration = 4.0) => {
         const buffer = new MockAudioBuffer({ length: duration * sampleRate, sampleRate });
         const data = buffer.getChannelData(0);
         
         noteFreqs.forEach(freq => {
-            for (let i = 0; i < data.length; i++) {
-                // Add sine wave for each note
-                data[i] += Math.sin(2 * Math.PI * freq * (i / sampleRate)) * 0.3;
-            }
+            // Use addTone logic but manually (sine wave without envelope for simple tests consistency?
+            // Or use addTone? addTone has envelope. Simple tests used raw sine.
+            // Let's use raw sine to match exact original simple behavior if possible, or addTone if robust.
+            // addTone is better.
+            addTone(data, freq, 0, duration, 0.3);
         });
         return buffer;
     };
 
-    it('should identify a perfect C Major triad', async () => {
-        // C4 (261.63), E4 (329.63), G4 (392.00)
-        const buffer = createChordBuffer([261.63, 329.63, 392.00]);
-        const { results } = await analyzer.analyze(buffer, { bpm: 60 });
-        expect(results[0].chord).toBe('C');
+    describe('Basic Triad Identification', () => {
+        it('should identify a perfect C Major triad', async () => {
+            // C4 (261.63), E4 (329.63), G4 (392.00)
+            const buffer = createChordBuffer([261.63, 329.63, 392.00]);
+            const { results } = await analyzer.analyze(buffer, { bpm: 60 });
+            expect(results[0].chord).toBe('C');
+        });
+
+        it('should identify an A Minor triad', async () => {
+            // A3 (220.00), C4 (261.63), E4 (329.63)
+            const buffer = createChordBuffer([220.00, 261.63, 329.63]);
+            const { results } = await analyzer.analyze(buffer, { bpm: 60 });
+            expect(results[0].chord).toMatch(/^Am(\/E)?$/);
+        });
+
+        it('should identify a G Dominant 7th', async () => {
+            // G3 (196.00), B3 (246.94), D4 (293.66), F4 (349.23)
+            const buffer = createChordBuffer([196.00, 246.94, 293.66, 349.23]);
+            const { results } = await analyzer.analyze(buffer, { bpm: 60 });
+            expect(results[0].chord).toBe('G7');
+        });
+
+        it('should ignore high-frequency melody noise', async () => {
+            // C Major triad + high-pitched "vocal" noise (A6 @ 1760Hz)
+            const buffer = createChordBuffer([261.63, 329.63, 392.00, 1760.00]);
+            const { results } = await analyzer.analyze(buffer, { bpm: 60 });
+            expect(results[0].chord).toBe('C');
+        });
+
+        it('should handle silence as Rest', async () => {
+            const buffer = new MockAudioBuffer({ length: 1 * sampleRate, sampleRate });
+            const { results } = await analyzer.analyze(buffer, { bpm: 60 });
+            expect(results[0].chord).toBe('Rest');
+        });
     });
 
-    it('should identify an A Minor triad', async () => {
-        // A3 (220.00), C4 (261.63), E4 (329.63)
-        const buffer = createChordBuffer([220.00, 261.63, 329.63]);
-        const { results } = await analyzer.analyze(buffer, { bpm: 60 });
-        expect(results[0].chord).toMatch(/^Am(\/E)?$/);
-    });
+    describe('Complex Scenarios', () => {
+        it('should analyze a 12-bar blues with accurate BPM and chords', async () => {
+            const bpm = 120;
+            const beatLen = 60 / bpm;
+            const measureLen = beatLen * 4;
+            const totalLen = measureLen * 12;
 
-    it('should identify a G Dominant 7th', async () => {
-        // G3 (196.00), B3 (246.94), D4 (293.66), F4 (349.23)
-        const buffer = createChordBuffer([196.00, 246.94, 293.66, 349.23]);
-        const { results } = await analyzer.analyze(buffer, { bpm: 60 });
-        expect(results[0].chord).toBe('G7');
-    });
+            const buffer = new MockAudioBuffer({ length: totalLen * sampleRate, sampleRate });
+            const data = buffer.getChannelData(0);
 
-    it('should ignore high-frequency melody noise', async () => {
-        // C Major triad + high-pitched "vocal" noise (A6 @ 1760Hz)
-        const buffer = createChordBuffer([261.63, 329.63, 392.00, 1760.00]);
-        const { results } = await analyzer.analyze(buffer, { bpm: 60 });
-        // Frequencies weighted away from highs should still result in C
-        expect(results[0].chord).toBe('C');
-    });
+            const progression = [
+                'C', 'C', 'C', 'C',
+                'F', 'F', 'C', 'C',
+                'G', 'F', 'C', 'G'
+            ];
 
-    it('should handle silence as Rest', async () => {
-        const buffer = new MockAudioBuffer({ length: 1 * sampleRate, sampleRate });
-        const { results } = await analyzer.analyze(buffer, { bpm: 60 });
-        expect(results[0].chord).toBe('Rest');
+            progression.forEach((root, i) => {
+                addChord(data, root, 'maj', i * measureLen, (i + 1) * measureLen);
+                // Stronger "drums" for Spectral Flux
+                for (let b = 0; b < 4; b++) {
+                    addTone(data, 50, (i * 4 + b) * beatLen, (i * 4 + b) * beatLen + 0.1, 0.9);
+                }
+            });
+
+            // Use a slight startTime to skip any alignment transients
+            const analysis = await analyzer.analyze(buffer, { startTime: 0.1 });
+
+            expect(analysis.bpm).toBeGreaterThan(110);
+            expect(analysis.bpm).toBeLessThan(130);
+
+            const chords = analysis.results;
+            const detectedChords = chords.map(r => r.chord.replace('7', ''));
+            expect(detectedChords).toContain('C');
+            expect(detectedChords).toContain('F');
+            expect(detectedChords).toContain('G');
+        });
+
+        it('should identify song sections based on energy', async () => {
+            const beatLen = 0.5;
+            const measureLen = beatLen * 4;
+            const buffer = new MockAudioBuffer({ length: 64 * beatLen * sampleRate, sampleRate });
+            const data = buffer.getChannelData(0);
+
+            const pattern = ['C', 'F', 'C', 'G'];
+
+            // Verse: Quiet
+            for (let m = 0; m < 8; m++) {
+                const root = pattern[m % 4];
+                addChord(data, root, 'maj', m * measureLen, (m + 1) * measureLen, 0.1);
+            }
+            // Chorus: Loud
+            for (let m = 8; m < 16; m++) {
+                const root = pattern[m % 4];
+                addChord(data, root, 'maj', m * measureLen, (m + 1) * measureLen, 0.9);
+            }
+
+            const analysis = await analyzer.analyze(buffer, { bpm: 120 });
+            const sections = extractForm(analysis.results, 4);
+
+            expect(sections.length).toBeGreaterThanOrEqual(2);
+            const labels = sections.map(s => s.label);
+            expect(labels[0]).not.toBe(labels[1]);
+        }, 10000);
+
+        it('should suppress harmonics to avoid false chords', async () => {
+            // C3 (130.81) + Loud overtones that might look like G or E
+            const buffer = new MockAudioBuffer({ length: 1 * sampleRate, sampleRate });
+            const data = buffer.getChannelData(0);
+            const baseFreq = 130.81;
+
+            for (let i = 0; i < data.length; i++) {
+                const t = i / sampleRate;
+                data[i] += Math.sin(2 * Math.PI * baseFreq * t) * 0.5; // Fundamental
+                data[i] += Math.sin(2 * Math.PI * baseFreq * 2 * t) * 0.4; // 2nd (Octave)
+                data[i] += Math.sin(2 * Math.PI * baseFreq * 3 * t) * 0.3; // 3rd (G)
+            }
+
+            const { results } = await analyzer.analyze(buffer, { bpm: 120 });
+            expect(results[0].chord).toMatch(/^C/);
+        });
+
+        it('should robustly identify C7 blues even with chromatic walking bass', async () => {
+            const bpm = 120;
+            const beatLen = 60 / bpm;
+            const measureLen = beatLen * 4;
+
+            const buffer = new MockAudioBuffer({ length: measureLen * 4 * sampleRate, sampleRate });
+            const data = buffer.getChannelData(0);
+
+            // Sustained C7 Chord
+            for (let m = 0; m < 4; m++) {
+                addTone(data, getFreq('C3'), m * measureLen, (m + 1) * measureLen, 0.3);
+                addTone(data, getFreq('E4'), m * measureLen, (m + 1) * measureLen, 0.3);
+                addTone(data, getFreq('G4'), m * measureLen, (m + 1) * measureLen, 0.3);
+                addTone(data, getFreq('Bb4'), m * measureLen, (m + 1) * measureLen, 0.3);
+            }
+
+            // Walking Bass
+            // Measure 1
+            addTone(data, getFreq('C2'), 0 * beatLen, 1 * beatLen, 0.6);
+            addTone(data, getFreq('E2'), 1 * beatLen, 2 * beatLen, 0.6);
+            addTone(data, getFreq('G2'), 2 * beatLen, 3 * beatLen, 0.6);
+            addTone(data, getFreq('A2'), 3 * beatLen, 4 * beatLen, 0.6);
+
+            // Measure 2
+            addTone(data, getFreq('C2'), 4 * beatLen, 5 * beatLen, 0.6);
+            addTone(data, getFreq('D2'), 5 * beatLen, 6 * beatLen, 0.6);
+            addTone(data, getFreq('Eb2'), 6 * beatLen, 7 * beatLen, 0.6);
+            addTone(data, getFreq('E2'), 7 * beatLen, 8 * beatLen, 0.6);
+
+            // Measure 3
+            addTone(data, getFreq('C2'), 8 * beatLen, 9 * beatLen, 0.6);
+            addTone(data, getFreq('G2'), 9 * beatLen, 10 * beatLen, 0.6);
+            addTone(data, getFreq('Bb2'), 10 * beatLen, 11 * beatLen, 0.6);
+            addTone(data, getFreq('C3'), 11 * beatLen, 12 * beatLen, 0.6);
+
+            const analysis = await analyzer.analyze(buffer, { bpm: 120 });
+            const globalKey = analyzer.identifyGlobalKey(analyzer.calculateChromagram(data, sampleRate, { minMidi: 36, maxMidi: 84 }));
+
+            expect(analyzer.notes[globalKey.root]).toBe('C');
+
+            const detectedChords = analysis.results.map(r => r.chord);
+            const nonC = detectedChords.filter(c => !c.startsWith('C'));
+            expect(nonC.length).toBe(0);
+            expect(detectedChords.length).toBeGreaterThan(0);
+        });
     });
 });

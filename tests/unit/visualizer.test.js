@@ -41,11 +41,14 @@ describe('UnifiedVisualizer', () => {
         canvas.getContext = vi.fn(() => mockCtx);
         mockCanvas = canvas;
 
-        // Mock ResizeObserver as a Class
+        // Mock ResizeObserver with proper spies
         vi.stubGlobal('ResizeObserver', class {
-            observe() {}
-            unobserve() {}
-            disconnect() {}
+            constructor(callback) {
+                this.callback = callback;
+                this.observe = vi.fn();
+                this.unobserve = vi.fn();
+                this.disconnect = vi.fn();
+            }
         });
 
         // Use a safer way to mock createElement to avoid recursion
@@ -130,5 +133,25 @@ describe('UnifiedVisualizer', () => {
         expect(visualizer.tracks['bass'].history.length).toBe(0);
         expect(visualizer.chordEvents.length).toBe(0);
         expect(mockCtx.clearRect).toHaveBeenCalled();
+    });
+
+    describe('Lifecycle', () => {
+        it('should remove canvas and info layer on destroy', () => {
+            // We can check if `mockCanvas` is removed from `document.body` (or container)
+            // Container is 'viz-container'.
+            const container = document.getElementById('viz-container');
+            expect(container.contains(mockCanvas)).toBe(true);
+
+            visualizer.destroy();
+
+            expect(container.contains(mockCanvas)).toBe(false);
+            expect(container.querySelector('div')).toBeNull(); // Info layer should be gone
+        });
+
+        it('should disconnect ResizeObserver on destroy', () => {
+            const disconnectSpy = vi.spyOn(visualizer.resizeObserver, 'disconnect');
+            visualizer.destroy();
+            expect(disconnectSpy).toHaveBeenCalled();
+        });
     });
 });

@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../../public/state.js', () => ({
     harmony: { 
         enabled: true, volume: 0.4, complexity: 0.5, octave: 60, style: 'smart',
-        motifBuffer: [], rhythmicMask: 0
+        motifBuffer: [], rhythmicMask: 0, lastMidis: []
     },
     chords: { enabled: true, octave: 60, density: 'standard', rhythmicMask: 0 },
     bass: { enabled: true, octave: 36 },
@@ -29,13 +29,29 @@ vi.mock('../../../public/config.js', () => ({
     }
 }));
 
-import { getHarmonyNotes, clearHarmonyMemory } from '../../../public/harmonies.js';
+// Mock utils (some tests need these mocked values for determinism, but we'll try to rely on defaults or spy)
+// The original file mocked utils, but the target file didn't.
+// We will stick to the target file's style unless necessary.
+
+// Mock chords.js to spy on getBestInversion
+vi.mock('../../../public/chords.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        getBestInversion: vi.fn((...args) => actual.getBestInversion(...args)),
+    };
+});
+
+import { getHarmonyNotes, clearHarmonyMemory, getGuideTones, getSafeVoicings, generateCompingPattern } from '../../../public/harmonies.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { getBestInversion } from '../../../public/chords.js';
+import * as State from '../../../public/state.js'; // Alias for compatibility with copied tests
 
 describe('Harmony Engine Logic', () => {
     const chordC = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major', beats: 4, sectionId: 'A' };
 
     beforeEach(() => {
+        vi.clearAllMocks();
         clearHarmonyMemory();
         groove.genreFeel = 'Funk';
         harmony.style = 'smart';
@@ -44,6 +60,125 @@ describe('Harmony Engine Logic', () => {
         soloist.enabled = true;
         soloist.isResting = true;
         soloist.notesInPhrase = 0;
+
+        // Reset state values that might be modified
+        State.playback.bandIntensity = 0.5;
+        State.groove.genreFeel = 'Funk';
+        State.soloist.enabled = true;
+        State.harmony.complexity = 0.5;
+    });
+
+    // Helper to check intervals requested from chords.js
+    function getLastRequestedIntervals() {
+        if (getBestInversion.mock.calls.length === 0) return null;
+        return getBestInversion.mock.calls[getBestInversion.mock.calls.length - 1][1];
+    }
+
+    describe('Guide Tones & Safe Voicings', () => {
+        it('should extract guide tones correctly', () => {
+            const intervals = [0, 4, 7, 10, 14]; // Root, 3rd, 5th, b7, 9
+            const guides = getGuideTones(intervals);
+            // 3rd (4) and b7 (10) are guide tones
+            expect(guides).toContain(4);
+            expect(guides).toContain(10);
+            expect(guides).not.toContain(0);
+            expect(guides).not.toContain(7);
+            expect(guides).not.toContain(14);
+        });
+
+        it('should remove dangerous extensions in getSafeVoicings', () => {
+            const unsafe = [0, 4, 7, 10, 13, 14, 18]; // 13, 9, #11
+            const safe = getSafeVoicings(unsafe);
+            // 13 (1) -> b9? No, 13%12 = 1. b9. Unsafe.
+            // 14 (2) -> 9. Unsafe in safe mode.
+            // 18 (6) -> #11. Unsafe.
+            // Safe should only be 0, 4, 7, 10
+            expect(safe).toContain(0);
+            expect(safe).toContain(4);
+            expect(safe).toContain(7);
+            expect(safe).toContain(10);
+            expect(safe).not.toContain(13);
+            expect(safe).not.toContain(14);
+        });
+
+        it('should use guide tones at low complexity/intensity', () => {
+            State.playback.bandIntensity = 0.3;
+            State.harmony.complexity = 0.3;
+            State.groove.genreFeel = 'Pop'; // Ensure activeStyle resolves to 'strings' for min polyphony 2
+            const chord = { rootMidi: 60, intervals: [0, 4, 7, 10, 14], sectionId: 's1', beats: 4 };
+
+            getHarmonyNotes(chord, null, 0, 60, 'smart', 0);
+
+            const requested = getLastRequestedIntervals();
+            // Should prefer 4 and 10
+            expect(requested).toContain(4);
+            expect(requested).toContain(10);
+            // Should NOT have 14 (9th) or 0/7 if strictly guide tones are favored
+            expect(requested).not.toContain(14);
+        });
+
+        it('should restrict to safe voicings when soloist is active', () => {
+            State.playback.bandIntensity = 0.8;
+            State.soloist.enabled = true;
+            State.soloist.isResting = false;
+            State.soloist.notesInPhrase = 5; // Busy
+
+            const chord = { rootMidi: 60, intervals: [0, 4, 7, 14, 18], sectionId: 's1', beats: 4 }; // 9, #11
+
+            getHarmonyNotes(chord, null, 0, 60, 'smart', 0);
+
+            const requested = getLastRequestedIntervals();
+            expect(requested).not.toContain(14); // 9th
+            expect(requested).not.toContain(18); // #11
+            expect(requested).toContain(0);
+        });
+    });
+
+    describe('Rhythmic Comping', () => {
+        it('should generate patterns for Jazz', () => {
+            const pattern = generateCompingPattern('Jazz', 12345);
+            expect(pattern.length).toBe(16);
+            expect(pattern.reduce((a,b) => a+b, 0)).toBeGreaterThan(0);
+        });
+
+        it('should generate patterns for Funk', () => {
+            const pattern = generateCompingPattern('Funk', 12345);
+            expect(pattern[0]).toBe(1);
+            const hasDynamics = pattern.some(v => v > 1);
+            expect(hasDynamics).toBe(true);
+        });
+
+        it('should return legacy pattern for Reggae', () => {
+             const pattern = generateCompingPattern('Reggae', 12345);
+             expect(pattern[4]).toBe(1);
+             expect(pattern[12]).toBe(1);
+             expect(pattern[0]).toBe(0);
+        });
+    });
+
+    describe('Dynamic Intensity', () => {
+        it('should play more notes at higher intensity for Funk', () => {
+             const chord = { rootMidi: 60, intervals: [0, 4, 7], sectionId: 'funk-test', beats: 4 };
+             State.groove.genreFeel = 'Funk';
+
+             // 1. Low Intensity -> Fewer notes
+             State.playback.bandIntensity = 0.2;
+             let lowIntNotesCount = 0;
+             for(let i=0; i<16; i++) {
+                 const n = getHarmonyNotes(chord, null, i, 60, 'smart', i);
+                 if (n.length > 0) lowIntNotesCount++;
+             }
+
+             // 2. High Intensity -> More notes
+             State.playback.bandIntensity = 0.9;
+             let highIntNotesCount = 0;
+             for(let i=0; i<16; i++) {
+                 const n = getHarmonyNotes(chord, null, i, 60, 'smart', i);
+                 if (n.length > 0) highIntNotesCount++;
+             }
+
+             expect(highIntNotesCount).toBeGreaterThanOrEqual(lowIntNotesCount);
+        });
     });
 
     describe('Core Generation', () => {
@@ -72,11 +207,10 @@ describe('Harmony Engine Logic', () => {
         });
     });
 
-    describe('Soloist Awareness', () => {
+    describe('Soloist Awareness (Integration)', () => {
         it('should play stabs when soloist is resting', () => {
             soloist.isResting = true;
             groove.genreFeel = 'Funk';
-            // Find a step that is a hit in Funk but NOT a downbeat (to distinguish from pads)
             let stabFound = false;
             for (let s = 1; s < 16; s++) {
                 const res = getHarmonyNotes(chordC, null, s, 60, 'smart', s);
@@ -96,13 +230,12 @@ describe('Harmony Engine Logic', () => {
             expect(res.length).toBeGreaterThan(0);
             expect(res[0].durationSteps).toBeGreaterThanOrEqual(4); // Pad duration
             
-            // Should NOT play on offbeats where stabs usually are
             const offbeatRes = getHarmonyNotes(chordC, null, 3, 60, 'smart', 3);
             expect(offbeatRes.length).toBe(0);
         });
     });
 
-    describe('Genre-Specific Rhythms', () => {
+    describe('Genre-Specific Rhythms (Integration)', () => {
         it('should use Jazz rhythms in Jazz genre', () => {
             groove.genreFeel = 'Jazz';
             soloist.isResting = true;
@@ -142,7 +275,7 @@ describe('Harmony Engine Logic', () => {
         it('should reinforce (latch onto) the soloist hook at high intensity', () => {
             soloist.enabled = true;
             soloist.isReplayingMotif = true;
-            soloist.sessionSteps = 128; // 8 bars into the jam
+            soloist.sessionSteps = 128;
             playback.bandIntensity = 0.8;
 
             const chord = { rootMidi: 60, symbol: 'Cmaj7', quality: 'major7', beats: 4, sectionId: 'A' };
@@ -152,10 +285,7 @@ describe('Harmony Engine Logic', () => {
             
             expect(notes.length).toBeGreaterThan(0);
             expect(notes[0].isLatched).toBe(true);
-            // Build-up logic: at 128 steps, density should be boosted
             expect(notes.length).toBeGreaterThanOrEqual(2);
-            // Normalized velocity: base * latchMult * polyphonyComp
-            // With density >= 2, velocity will be lower than raw boost.
             expect(notes[0].velocity).toBeGreaterThan(0.35);
         });
     });
