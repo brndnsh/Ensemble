@@ -83,6 +83,7 @@ export const ui = {
     get soloistDoubleStops() { return getEl('soloistDoubleStops'); },
     get complexitySlider() { return getEl('complexitySlider'); },
     get complexityValue() { return getEl('complexityValue'); },
+    get highFidelityCheck() { return getEl('highFidelityCheck'); },
     get themeSelect() { return getEl('themeSelect'); },
     get flashOverlay() { return getEl('flashOverlay'); },
     get sectionList() { return getEl('sectionList'); },
