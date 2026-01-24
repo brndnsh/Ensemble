@@ -1126,6 +1126,20 @@ export function setupAnalyzerHandlers() {
             let buffer = new Float32Array(0);
             const targetSamples = Math.floor(liveAudioCtx.sampleRate * 1.0); // 1.0s window
 
+            // Pre-allocate buffers for reuse to avoid GC
+            const step = 8;
+            const numSteps = Math.ceil(targetSamples / step);
+            const reusableBuffers = {
+                chroma: new Float32Array(12),
+                pitchEnergy: new Float32Array(128),
+                windowValues: new Float32Array(numSteps)
+            };
+
+            // Pre-calculate window values
+            for (let i = 0, idx = 0; i < targetSamples; i += step, idx++) {
+                reusableBuffers.windowValues[idx] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (targetSamples - 1)));
+            }
+
             processor.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0);
                 const newBuffer = new Float32Array(buffer.length + input.length);
@@ -1139,31 +1153,27 @@ export function setupAnalyzerHandlers() {
                     buffer = buffer.slice(-Math.floor(targetSamples / 2));
 
                     if (mode === 'melody') {
-                        // Melody Live Mode
-                        // We use the same extractMelody logic but on a tiny window
-                        // Just hacking extracting a "beat" which is the whole window
-                        // Use calculateChromagram or just check pitch
-                        // For simplicity, let's look for strongest pitch in buffer
-                        
-                        // We need a dummy pulse for extractMelody, or just call internal pitch logic
-                        // Let's use analyzer.pitchFrequencies manual check to be fast
-                        
+                        // Melody Live Mode: Use optimized analyzer with reusable buffers
                         const rms = Math.sqrt(analysisBuffer.reduce((s, x) => s + x * x, 0) / analysisBuffer.length);
+
                         if (rms > 0.02) {
-                             // Simplified pitch detection
-                             let maxE = 0; let bestMidi = -1;
-                             analyzer.pitchFrequencies.forEach(p => {
-                                 if (p.midi < 48 || p.midi > 84) return;
-                                 let real=0, imag=0;
-                                 const angleStep = (2 * Math.PI * p.freq) / liveAudioCtx.sampleRate;
-                                 for(let i=0; i<analysisBuffer.length; i+=8) { // heavier decimation
-                                     const v = analysisBuffer[i];
-                                     real += v * Math.cos(i*angleStep);
-                                     imag += v * Math.sin(i*angleStep);
-                                 }
-                                 const e = real*real + imag*imag;
-                                 if (e > maxE) { maxE=e; bestMidi=p.midi; }
+                             analyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
+                                 step,
+                                 buffers: reusableBuffers,
+                                 minMidi: 48,
+                                 maxMidi: 84
                              });
+
+                             // Find strongest pitch in vocal range (48-84)
+                             let maxE = 0;
+                             let bestMidi = -1;
+                             for(let m = 48; m <= 84; m++) {
+                                 const e = reusableBuffers.pitchEnergy[m];
+                                 if (e > maxE) {
+                                     maxE = e;
+                                     bestMidi = m;
+                                 }
+                             }
                              
                              if (bestMidi > 0) {
                                  // Single note harmonization
