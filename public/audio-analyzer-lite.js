@@ -689,8 +689,10 @@ export class ChordAnalyzerLite {
 
         // Always calculate full range (24-96) for harmonic suppression context
         this.pitchFrequencies.forEach(p => {
-            // Optimization: We could skip very high notes if maxMidi is low, but for suppression we need fundamentals.
-            // Let's just calculate all configured frequencies (24-96) to be safe.
+            // Optimization: Skip frequencies outside desired range if suppression is disabled
+            if (!options.suppressHarmonics && (p.midi < minMidi || p.midi > maxMidi)) {
+                return;
+            }
             
             let real = 0;
             let imag = 0;
