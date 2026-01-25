@@ -337,6 +337,7 @@ export function setupUIHandlers(refs) {
         [document.getElementById('analyzeAudioBtn'), 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
+            if (window.resetAnalyzer) window.resetAnalyzer();
             document.getElementById('analyzerOverlay').classList.add('active');
         }],
         [ui.randomizeBtn, 'click', () => {
