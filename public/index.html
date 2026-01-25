@@ -690,51 +690,51 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Chords Ch.</label>
-                                <input type="number" id="midiChordsChannel" min="1" max="16" value="1" style="width: 100%;">
+                                <input type="number" id="midiChordsChannel" min="1" max="16" value="1" style="width: 100%;" aria-label="Chords Channel">
                             </div>
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
-                                <input type="number" id="midiChordsOctave" min="-2" max="2" value="0" style="width: 100%;">
+                                <input type="number" id="midiChordsOctave" min="-2" max="2" value="0" style="width: 100%;" aria-label="Chords Octave Offset">
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Bass Ch.</label>
-                                <input type="number" id="midiBassChannel" min="1" max="16" value="2" style="width: 100%;">
+                                <input type="number" id="midiBassChannel" min="1" max="16" value="2" style="width: 100%;" aria-label="Bass Channel">
                             </div>
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
-                                <input type="number" id="midiBassOctave" min="-2" max="2" value="0" style="width: 100%;">
+                                <input type="number" id="midiBassOctave" min="-2" max="2" value="0" style="width: 100%;" aria-label="Bass Octave Offset">
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Soloist Ch.</label>
-                                <input type="number" id="midiSoloistChannel" min="1" max="16" value="3" style="width: 100%;">
+                                <input type="number" id="midiSoloistChannel" min="1" max="16" value="3" style="width: 100%;" aria-label="Soloist Channel">
                             </div>
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
-                                <input type="number" id="midiSoloistOctave" min="-2" max="2" value="0" style="width: 100%;">
+                                <input type="number" id="midiSoloistOctave" min="-2" max="2" value="0" style="width: 100%;" aria-label="Soloist Octave Offset">
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Harmony Ch.</label>
-                                <input type="number" id="midiHarmonyChannel" min="1" max="16" value="4" style="width: 100%;">
+                                <input type="number" id="midiHarmonyChannel" min="1" max="16" value="4" style="width: 100%;" aria-label="Harmony Channel">
                             </div>
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
-                                <input type="number" id="midiHarmonyOctave" min="-2" max="2" value="0" style="width: 100%;">
+                                <input type="number" id="midiHarmonyOctave" min="-2" max="2" value="0" style="width: 100%;" aria-label="Harmony Octave Offset">
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Drums Ch.</label>
-                                <input type="number" id="midiDrumsChannel" min="1" max="16" value="10" style="width: 100%;">
+                                <input type="number" id="midiDrumsChannel" min="1" max="16" value="10" style="width: 100%;" aria-label="Drums Channel">
                             </div>
                             <div>
                                 <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Oct.</label>
-                                <input type="number" id="midiDrumsOctave" min="-2" max="2" value="0" style="width: 100%;">
+                                <input type="number" id="midiDrumsOctave" min="-2" max="2" value="0" style="width: 100%;" aria-label="Drums Octave Offset">
                             </div>
                         </div>
                     </div>
@@ -744,7 +744,7 @@
                             <span>Latency Offset</span>
                             <span id="midiLatencyValue" style="color: var(--accent-color);">0ms</span>
                         </label>
-                        <input type="range" id="midiLatencySlider" min="-100" max="100" step="1" value="0" style="width: 100%;">
+                        <input type="range" id="midiLatencySlider" min="-100" max="100" step="1" value="0" style="width: 100%;" aria-label="MIDI Latency Offset">
                     </div>
 
                     <div style="margin-bottom: 1rem;">
@@ -752,7 +752,7 @@
                             <span>Velocity Sensitivity</span>
                             <span id="midiVelocityValue" style="color: var(--accent-color);">1.0</span>
                         </label>
-                        <input type="range" id="midiVelocitySlider" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%;">
+                        <input type="range" id="midiVelocitySlider" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%;" aria-label="MIDI Velocity Sensitivity">
                     </div>
                 </div>
             </div>
