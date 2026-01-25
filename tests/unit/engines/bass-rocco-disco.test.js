@@ -110,28 +110,7 @@ describe('Bass Engine - Rocco & Disco', () => {
         });
 
         it('should handle range clamping correctly for octaves', () => {
-            // Force a very high root so +12 is out of range
-            const chordHigh = { rootMidi: 60, intervals: [0], quality: 'maj', beats: 4 }; // C4
-
-            // If baseRoot is normalized to 60 (might be pulled down by safeCenterMidi though)
-            // Let's force safeCenterMidi high to trick normalization, but absMax is hardcoded in bass.js (60)
-
-            // If we use chordC (48) but with a center that makes it pick 48.
-            // absMax is 60.
-            // 48 + 12 = 60. Allowed.
-
-            // Try F3 (53). Octave 65 -> disallowed.
-            const chordF = { rootMidi: 53, intervals: [0], quality: 'maj', beats: 4 };
-
-            // Note: getBassNote recalculates baseRoot.
-            // We need to ensure baseRoot comes out as 53.
-            // If safeCenter is 36 (Disco), normalize(53) -> |53-36|=17. |41-36|=5. |29-36|=7.
-            // It will pick 41 (F2).
-
-            // We can't easily force baseRoot to be high without changing code/mocks of state.
-            // But we verified logic manually.
-            // Let's just verify the standard octave behavior works.
-
+            // Verify standard octave behavior works.
             const result = getBassNote(chordC, null, 0.5, null, 36, 'disco', 0, 2, 2);
             expect(result.midi).toBe(48);
         });
