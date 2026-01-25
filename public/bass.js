@@ -117,7 +117,8 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
     
     // --- Genre-Specific Register Offsets ---
     if (style === 'dub' || groove.genreFeel === 'Reggae') safeCenterMidi = 32;
-    else if (style === 'disco' || groove.genreFeel === 'Disco') safeCenterMidi = 45;
+    else if (style === 'disco' || groove.genreFeel === 'Disco') safeCenterMidi = 36; // Lowered to allow octaves
+    else if (style === 'rocco') safeCenterMidi = 38; // Rocco lives on the low E/A strings
     else if (style === 'neo' || groove.genreFeel === 'Neo-Soul') safeCenterMidi = 36; // Keep it deep
 
     // Shift center up as intensity builds (max +7 semitones)
@@ -125,7 +126,7 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
 
     const prevMidi = getMidi(prevFreq);
 
-    const absMin = 28, absMax = 55; // Common bass range (E1 to G3)
+    const absMin = 28, absMax = 60; // Common bass range (E1 to C4) - Increased to 60 for Disco octaves
 
     const clampAndNormalize = (midi) => {
         if (!Number.isFinite(midi)) return safeCenterMidi;
@@ -436,6 +437,87 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         if (!isSoloistBusy && Math.random() < 0.15) {
              return result(getFrequency(prevMidi || baseRoot), 0.25, 0.35, true);
         }
+        return null;
+    }
+
+    // --- ROCCO STYLE (Machine-Gun 16ths) ---
+    if (style === 'rocco') {
+        const stepInBeat = stepInChord % 4;
+        // Rocco Prestia style: Staccato 16th notes, mostly Root, heavily muted (ghosts).
+        // Driving, percussive, disciplined.
+
+        // 1. The "One" is always strong.
+        if (stepInChord === 0) return result(getFrequency(baseRoot), 0.7, 1.2);
+
+        // 2. Downbeats of 2, 3, 4
+        if (stepInBeat === 0) {
+            // Almost always play the root, tight.
+            return result(getFrequency(baseRoot), 0.7, 1.15);
+        }
+
+        // 3. The "And" (8th notes) - Often Root or Octave or 5th
+        if (stepInBeat === 2) {
+            // 60% chance of playing
+            if (Math.random() < 0.4 + (intensity * 0.4)) {
+                // Occasional octave jump or 5th for flavor, but mostly root
+                let note = baseRoot;
+                const rnd = Math.random();
+                if (rnd < 0.15) note += 12; // Octave pop
+                else if (rnd < 0.25) note += 7; // 5th
+
+                // Manual clamping to preserve interval direction where possible
+                if (note > absMax) note -= 12;
+                if (note < absMin) note += 12;
+                if (note > absMax || note < absMin) note = baseRoot;
+
+                return result(getFrequency(note), 0.7, 1.1);
+            }
+            // If not playing a tone, play a ghost note
+            return result(getFrequency(baseRoot), 0.6, 0.7, true);
+        }
+
+        // 4. The "e" and "a" (16th notes) - The chug engine
+        if (stepInBeat === 1 || stepInBeat === 3) {
+            // High probability of ghost notes to propel groove
+            // Probability increases with intensity, but base is high (Rocco is busy)
+            const ghostProb = 0.6 + (intensity * 0.3);
+
+            if (Math.random() < ghostProb) {
+                // Mostly muted/ghosts
+                // At very high intensity, some might become short staccato tones
+                const isTone = (intensity > 0.8 && Math.random() < 0.3);
+                return result(getFrequency(baseRoot), 0.5, isTone ? 0.9 : 0.6, !isTone);
+            }
+        }
+        return null;
+    }
+
+    // --- DISCO STYLE (Octaves) ---
+    if (style === 'disco') {
+        const stepInBeat = stepInChord % 4;
+
+        // 1. Downbeats (1, 2, 3, 4) -> Root
+        if (stepInBeat === 0) {
+            return result(getFrequency(baseRoot), 0.9, 1.2);
+        }
+
+        // 2. Upbeats (&) -> Octave
+        if (stepInBeat === 2) {
+            let note = baseRoot + 12;
+            // Preservative clamping
+            if (note > absMax) note = baseRoot - 12;
+            if (note < absMin) note = baseRoot;
+
+            return result(getFrequency(note), 0.9, 1.15);
+        }
+
+        // 3. 16ths -> Occasional ghost skips at high intensity
+        if ((stepInBeat === 1 || stepInBeat === 3) && intensity > 0.6) {
+            if (Math.random() < (intensity - 0.5)) {
+                return result(getFrequency(baseRoot), 0.5, 0.7, true);
+            }
+        }
+
         return null;
     }
 
