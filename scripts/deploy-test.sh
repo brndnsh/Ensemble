@@ -34,6 +34,7 @@ echo "🎨 Bundling CSS..."
 echo "📄 Copying static assets..."
 cp public/index.html dist/index.html
 cp public/manual.html dist/manual.html
+cp public/manual-theme.js dist/manual-theme.js
 cp public/manifest.json dist/manifest.json
 cp public/icon.svg dist/icon.svg
 cp public/icon-192.png dist/icon-192.png
@@ -51,7 +52,7 @@ sed -i "s/styles.css/styles.$REV.css/" dist/manual.html
 echo "🔧 Updating Service Worker..."
 sed -i "s#/\* CACHE_NAME_PLACEHOLDER \*/#ensemble-test-$REV#" dist/sw.js
 
-ASSETS_LIST="'./', './index.html', './manual.html', './main.$REV.js', './logic-worker.$REV.js', './styles.$REV.css', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './audio-analyzer-lite.js'"
+ASSETS_LIST="'./', './index.html', './manual.html', './manual-theme.js', './main.$REV.js', './logic-worker.$REV.js', './styles.$REV.css', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './audio-analyzer-lite.js'"
 sed -i "s#/\* ASSETS_PLACEHOLDER \*/#$ASSETS_LIST#" dist/sw.js
 
 # 8. Deploy to TEST server
