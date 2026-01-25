@@ -114,14 +114,13 @@ export function addSection() {
 }
 
 export function transposeKey(delta, updateRelKeyButton) {
-    if (!ui.keySelect) {
-        console.warn("[Arranger] ui.keySelect not found in transposeKey");
-        return;
-    }
-    let currentIndex = KEY_ORDER.indexOf(normalizeKey(ui.keySelect.value));
+    // Use arranger.key as the source of truth, fallback to UI if somehow missing
+    const currentKeyName = arranger.key || (ui.keySelect ? ui.keySelect.value : 'C');
+    let currentIndex = KEY_ORDER.indexOf(normalizeKey(currentKeyName));
     const newKey = KEY_ORDER[(currentIndex + delta + 12) % 12];
-    ui.keySelect.value = newKey;
+
     arranger.key = newKey;
+    if (ui.keySelect) ui.keySelect.value = newKey;
     
     const isMusicalNotation = (part) => {
         return part.match(/^(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i) || 
@@ -148,6 +147,14 @@ export function transposeKey(delta, updateRelKeyButton) {
             return part;
         });
         section.value = transposed.join('');
+
+        // Also transpose explicit section key if present
+        if (section.key) {
+            const secKeyIndex = KEY_ORDER.indexOf(normalizeKey(section.key));
+            if (secKeyIndex !== -1) {
+                section.key = KEY_ORDER[(secKeyIndex + delta + 12) % 12];
+            }
+        }
     });
     
     arranger.isDirty = true;
@@ -175,6 +182,14 @@ export function switchToRelativeKey(updateRelKeyButton) {
     pushHistory();
     arranger.sections.forEach(section => {
         section.value = transformRelativeProgression(section.value, shift);
+
+        // Also transpose explicit section key if present
+        if (section.key) {
+            const secKeyIndex = KEY_ORDER.indexOf(normalizeKey(section.key));
+            if (secKeyIndex !== -1) {
+                section.key = KEY_ORDER[(secKeyIndex + shift + 12) % 12];
+            }
+        }
     });
     
     arranger.isDirty = true;
