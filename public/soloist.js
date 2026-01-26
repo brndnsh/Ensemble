@@ -275,12 +275,19 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             const isStale = (soloist.motifReplayCount || 0) > 3;
 
             let distinctPitchesCount = 0;
+            let pitchRange = 0;
             if (soloist.motifBuffer && soloist.motifBuffer.length > 0) {
-                const distinctPitches = new Set(soloist.motifBuffer.map(n => Array.isArray(n) ? n[0].midi : n.midi));
-                distinctPitchesCount = distinctPitches.size;
+                const pitches = soloist.motifBuffer.map(n => Array.isArray(n) ? n[0].midi : n.midi);
+                const distinct = new Set(pitches);
+                distinctPitchesCount = distinct.size;
+                pitchRange = Math.max(...pitches) - Math.min(...pitches);
             }
 
-            if (soloist.motifBuffer && soloist.motifBuffer.length > 0 && distinctPitchesCount > 1 && Math.random() < config.motifProb && !isSignificantShift && !isStale) {
+            // Quality Control: A motif is "interesting" if it has > 2 distinct notes OR covers a range > 2 semitones.
+            // This prevents replaying single notes or boring minor-2nd trills.
+            const isInteresting = distinctPitchesCount > 2 || pitchRange > 2;
+
+            if (soloist.motifBuffer && soloist.motifBuffer.length > 0 && isInteresting && Math.random() < config.motifProb && !isSignificantShift && !isStale) {
                 soloist.isReplayingMotif = true;
                 soloist.motifReplayIndex = 0;
                 soloist.motifReplayCount = (soloist.motifReplayCount || 0) + 1;
@@ -426,6 +433,14 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     let totalWeight = 0;
     const lastInterval = soloist.lastInterval || 0; 
     const isResolvingSkip = Math.abs(lastInterval) > 4;
+    
+    // Stagnation Detection: If we've played > 6 notes with small intervals (< 3), force a move.
+    if (Math.abs(lastInterval) < 3) {
+        soloist.stagnationCount = (soloist.stagnationCount || 0) + 1;
+    } else {
+        soloist.stagnationCount = 0;
+    }
+    const isStagnant = soloist.stagnationCount > 6;
 
     for (let m = minMidi; m <= maxMidi; m++) {
         CANDIDATE_WEIGHTS[m] = 0; 
@@ -441,6 +456,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             const isOppositeDir = (lastInterval > 0 && currentInterval < 0) || (lastInterval < 0 && currentInterval > 0);
             if (isOppositeDir && dist > 0 && dist <= 2) weight += 5000; 
             else if (!isOppositeDir && dist > 2) weight -= 1000; 
+        }
+        
+        // Break Stagnation
+        if (isStagnant && dist < 4) {
+            weight -= 500; // Force a jump of at least a Major 3rd
         }
 
         if (config.targetExtensions && config.targetExtensions.includes(interval)) weight += 12;
