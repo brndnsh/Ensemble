@@ -104,10 +104,21 @@ const STYLE_CONFIG = {
 };
 
 /**
- * Generates a soloist note for a specific step.
- * Overhauled to resolve intensity-induced stagnation and "sticky notes".
+ * Generates a soloist note (or notes for double stops) for a specific step.
+ * Implements phrasing logic, rhythmic cell selection, melodic contour resolution, 
+ * and probabilistic melodic devices (runs, enclosures, flurry).
+ * 
+ * @param {Object} currentChord - The chord active at the current step.
+ * @param {Object} nextChord - The upcoming chord for anticipation logic.
+ * @param {number} step - The global step counter.
+ * @param {number|null} prevFreq - The frequency of the previously generated note.
+ * @param {number} octave - The base MIDI octave for the soloist.
+ * @param {string} style - The soloing style ID.
+ * @param {number} stepInChord - The relative step index within the current chord.
+ * @param {boolean} [isPriming=false] - Whether the engine is in a context-building priming phase.
+ * @returns {Object|Object[]|null} A note object, an array of note objects (for double stops), or null if resting.
  */
-export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, style, stepInChord, isPriming, sectionInfo) {
+export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, style, stepInChord, isPriming) {
     if (!currentChord) return null;
     
     let activeStyle = style;
@@ -169,11 +180,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     }
     
     // --- 2. Phrasing & History Analysis ---
-    const totalSteps = arranger.totalSteps || 1;
-    const loopStep = step % totalSteps;
-    const stepsUntilSectionEnd = (sectionInfo) ? (sectionInfo.sectionEnd - loopStep) : 1000;
-    const isSectionEnding = stepsUntilSectionEnd > 0 && stepsUntilSectionEnd <= stepsPerMeasure;
-
     if (typeof soloist.currentPhraseSteps === 'undefined' || (step === 0 && !soloist.isResting)) {
         soloist.currentPhraseSteps = 0; soloist.notesInPhrase = 0; soloist.qaState = 'Question'; soloist.isResting = true; return null; 
     }
@@ -486,4 +492,3 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     return finalizeNote(finalResult);
 }
 
-function distFromCenter(m, center) { return Math.abs(m - center); }
