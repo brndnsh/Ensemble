@@ -1,5 +1,4 @@
-import { playback, dispatch } from './state.js';
-import { ACTIONS } from './types.js';
+import { playback } from './state.js';
 import { initAudio, restoreGains, killAllNotes } from './engine.js';
 
 /**
@@ -78,7 +77,6 @@ class AudioHealthMonitor {
             this.analyser.getFloatTimeDomainData(this.dataBuffer);
             
             let hasNaN = false;
-            let hasSilence = true;
             
             for (let i = 0; i < this.dataBuffer.length; i++) {
                 const val = this.dataBuffer[i];
@@ -86,16 +84,12 @@ class AudioHealthMonitor {
                     hasNaN = true;
                     break;
                 }
-                if (Math.abs(val) > 0.0001) hasSilence = false;
             }
 
             if (hasNaN) {
                 console.error("[AudioWatchdog] DSP CORRUPTION DETECTED (NaN/Infinity). Static detected.");
                 this.triggerDSPReset();
             }
-            
-            // Optional: Silence detection can be tricky if the music is supposed to be quiet.
-            // We'll skip strict silence checks for now to avoid false positives during pauses.
         }
     }
 
@@ -110,7 +104,7 @@ class AudioHealthMonitor {
             try {
                 playback.masterGain.disconnect();
                 playback.masterGain.gain.value = 0;
-            } catch(e) {/* ignore */}
+            } catch { /* ignore */ }
         }
 
         // 2. Kill all note scheduling
@@ -133,8 +127,8 @@ class AudioHealthMonitor {
                 console.log("[AudioWatchdog] DSP Reset Complete. Audio should be clean.");
                 this.isRecovering = false;
             });
-        } catch (e) {
-            console.error("[AudioWatchdog] DSP Reset Failed:", e);
+        } catch {
+            console.error("[AudioWatchdog] DSP Reset Failed");
             this.isRecovering = false;
         }
     }
