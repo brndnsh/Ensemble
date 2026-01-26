@@ -1007,17 +1007,105 @@ export function setupAnalyzerHandlers() {
                 ui.analyzerProgressBar.style.width = '80%';
                 
                 const key = arranger.key || 'C';
-                const progression = harmonizer.generateProgression(melodyLine, key, 0.6);
+                const options = harmonizer.generateOptions(melodyLine, key);
                 
-                // Wrap in structure
-                detectedChords = [{
-                     label: 'Harmonized Melody',
-                     value: progression,
-                     repeat: 1,
-                     startBeat: 0,
-                     endBeat: melodyLine.length,
-                     isLoop: false
-                }];
+                ui.analyzerProgressBar.style.width = '100%';
+                ui.analyzerProcessing.style.display = 'none';
+                ui.analyzerResults.style.display = 'block';
+
+                const container = ui.suggestedSectionsContainer;
+                container.innerHTML = '<h4>Harmonization Options</h4>';
+
+                const renderOptionContent = (opt, targetContainer) => {
+                    targetContainer.innerHTML = '';
+
+                    const desc = document.createElement('p');
+                    desc.className = 'harmony-desc';
+                    desc.textContent = opt.description;
+                    targetContainer.appendChild(desc);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'harmony-grid';
+
+                    const detailsPanel = document.createElement('div');
+                    detailsPanel.className = 'harmony-details-panel';
+                    detailsPanel.innerHTML = '<span class="text-muted">Tap a chord to see why it was chosen.</span>';
+
+                    opt.chords.forEach((c, i) => {
+                        const cell = document.createElement('button'); // Button for accessibility
+                        cell.className = 'harmony-cell';
+                        cell.setAttribute('aria-label', `Measure ${i+1}: ${c.roman} ${c.quality}`);
+                        cell.innerHTML = `
+                            <div class="hc-roman">${formatUnicodeSymbols(c.roman)}</div>
+                            <div class="hc-quality">${c.quality}</div>
+                        `;
+
+                        cell.onclick = (e) => {
+                            // Highlight selection
+                            targetContainer.querySelectorAll('.harmony-cell').forEach(el => el.classList.remove('selected'));
+                            cell.classList.add('selected');
+
+                            // Show details
+                            if (c.reasons && c.reasons.length > 0) {
+                                detailsPanel.innerHTML = `
+                                    <strong>Measure ${i+1}: ${formatUnicodeSymbols(c.roman)}</strong>
+                                    <ul class="reason-list">
+                                        ${c.reasons.map(r => `<li>${r}</li>`).join('')}
+                                    </ul>
+                                `;
+                            } else {
+                                detailsPanel.innerHTML = `<strong>Measure ${i+1}:</strong> <span class="text-muted">No specific notes.</span>`;
+                            }
+                        };
+
+                        grid.appendChild(cell);
+                    });
+
+                    targetContainer.appendChild(grid);
+                    targetContainer.appendChild(detailsPanel);
+                };
+
+                // Helper to set the active selection
+                const setActiveOption = (opt) => {
+                    detectedChords = [{
+                         label: `Harmonized Melody (${opt.type})`,
+                         value: opt.progression,
+                         repeat: 1,
+                         startBeat: 0,
+                         endBeat: melodyLine.length,
+                         isLoop: false
+                    }];
+                };
+
+                // Render Tabs
+                const tabContainer = document.createElement('div');
+                tabContainer.className = 'harmony-tabs';
+
+                const contentContainer = document.createElement('div');
+                contentContainer.className = 'harmony-content';
+
+                options.forEach((opt, idx) => {
+                    const tab = document.createElement('button');
+                    tab.className = `harmony-tab-btn ${idx === 0 ? 'active' : ''}`;
+                    tab.textContent = opt.type;
+
+                    tab.onclick = () => {
+                        document.querySelectorAll('.harmony-tab-btn').forEach(b => b.classList.remove('active'));
+                        tab.classList.add('active');
+                        renderOptionContent(opt, contentContainer);
+                        setActiveOption(opt);
+                    };
+                    tabContainer.appendChild(tab);
+                });
+
+                container.appendChild(tabContainer);
+                container.appendChild(contentContainer);
+
+                // Initial render
+                if (options.length > 0) {
+                    renderOptionContent(options[0], contentContainer);
+                    setActiveOption(options[0]);
+                }
 
             } else {
                 // Chord Mode
@@ -1030,11 +1118,49 @@ export function setupAnalyzerHandlers() {
                     }
                 });
                 detectedChords = extractForm(analysis.results, analysis.beatsPerMeasure);
+
+                ui.analyzerProgressBar.style.width = '100%';
+                ui.analyzerProcessing.style.display = 'none';
+                ui.analyzerResults.style.display = 'block';
+
+                const container = ui.suggestedSectionsContainer;
+                container.innerHTML = '<h4>Suggested Structure</h4>';
+
+                detectedChords.forEach(s => {
+                    const item = document.createElement('div');
+                    item.className = 'suggested-section-item';
+                    if (s.isLoop) item.classList.add('is-loop');
+
+                    const loopBadge = s.isLoop ? '<span class="loop-badge" title="Good Loop Candidate">∞</span>' : '';
+
+                    item.innerHTML = `
+                        <div class="ss-header">
+                            <strong>${s.label}</strong>
+                            <span class="ss-repeat">x${s.repeat}</span>
+                            ${loopBadge}
+                        </div>
+                        <div class="ss-value">${formatUnicodeSymbols(s.value)}</div>
+                    `;
+
+                    item.onclick = () => {
+                        const secondsPerBeat = 60 / bpm;
+                        const startT = (s.startBeat || 0) * secondsPerBeat;
+                        const endT = (s.endBeat || (currentAudioBuffer.duration / secondsPerBeat)) * secondsPerBeat;
+
+                        ui.analyzerStartInput.value = startT.toFixed(3);
+                        ui.analyzerEndInput.value = endT.toFixed(3);
+
+                        const event = new Event('input');
+                        ui.analyzerStartInput.dispatchEvent(event);
+                        ui.analyzerEndInput.dispatchEvent(event);
+
+                        document.querySelectorAll('.suggested-section-item').forEach(el => el.classList.remove('selected'));
+                        item.classList.add('selected');
+                    };
+
+                    container.appendChild(item);
+                });
             }
-            
-            ui.analyzerProgressBar.style.width = '100%';
-            ui.analyzerProcessing.style.display = 'none';
-            ui.analyzerResults.style.display = 'block';
             
             // Render BPM Candidates (Only useful for Detection, but harmless for Melody)
             if (ui.bpmChips && pulse.candidates) {
@@ -1047,44 +1173,6 @@ export function setupAnalyzerHandlers() {
                     ui.bpmChips.appendChild(chip);
                 });
             }
-
-            const container = ui.suggestedSectionsContainer;
-            container.innerHTML = '<h4>Suggested Structure</h4>';
-            
-            detectedChords.forEach(s => {
-                const item = document.createElement('div');
-                item.className = 'suggested-section-item';
-                if (s.isLoop) item.classList.add('is-loop');
-                
-                const loopBadge = s.isLoop ? '<span class="loop-badge" title="Good Loop Candidate">∞</span>' : '';
-                
-                item.innerHTML = `
-                    <div class="ss-header">
-                        <strong>${s.label}</strong>
-                        <span class="ss-repeat">x${s.repeat}</span>
-                        ${loopBadge}
-                    </div>
-                    <div class="ss-value">${formatUnicodeSymbols(s.value)}</div>
-                `;
-                
-                item.onclick = () => {
-                    const secondsPerBeat = 60 / bpm;
-                    const startT = (s.startBeat || 0) * secondsPerBeat;
-                    const endT = (s.endBeat || (currentAudioBuffer.duration / secondsPerBeat)) * secondsPerBeat; 
-                    
-                    ui.analyzerStartInput.value = startT.toFixed(3);
-                    ui.analyzerEndInput.value = endT.toFixed(3);
-                    
-                    const event = new Event('input');
-                    ui.analyzerStartInput.dispatchEvent(event);
-                    ui.analyzerEndInput.dispatchEvent(event);
-                    
-                    document.querySelectorAll('.suggested-section-item').forEach(el => el.classList.remove('selected'));
-                    item.classList.add('selected');
-                };
-                
-                container.appendChild(item);
-            });
 
             ui.analyzerSummary.textContent = mode === 'melody' 
                 ? `Harmonized melody in ${arranger.key} at ${bpm} BPM.`

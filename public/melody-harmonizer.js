@@ -3,152 +3,318 @@ import { normalizeKey } from './utils.js';
 
 /**
  * Melody Harmonizer Engine
- * Generates backing chord progressions from a monophonic melody line.
+ * Generates backing chord progressions from a monophonic melody line using Viterbi pathfinding.
  */
 export class Harmonizer {
     constructor() {
+        this.knowledgeBase = null;
+
+        // Define strategies with different weights
+        this.strategies = {
+            'Consonant': {
+                name: 'Consonant',
+                description: 'Safe, diatonic choices that strictly follow the key.',
+                weights: {
+                    diatonic: 10.0,
+                    chromaticPenalty: 25.0,
+                    melodyFit: 5.0,
+                    rootMatch: 3.0,
+                    dominantResolution: 5.0,
+                    stepwiseMotion: 2.0,
+                    commonProgression: 4.0
+                }
+            },
+            'Balanced': {
+                name: 'Balanced',
+                description: 'A mix of conventional harmony with some colorful choices.',
+                weights: {
+                    diatonic: 6.0,
+                    chromaticPenalty: 12.0,
+                    melodyFit: 8.0,
+                    rootMatch: 4.0,
+                    dominantResolution: 4.0,
+                    stepwiseMotion: 3.0,
+                    commonProgression: 3.0
+                }
+            },
+            'Complex': {
+                name: 'Complex',
+                description: 'Prioritizes melody fit and interesting color over key adherence.',
+                weights: {
+                    diatonic: 2.0,
+                    chromaticPenalty: 4.0,
+                    melodyFit: 12.0,
+                    rootMatch: 2.0,
+                    dominantResolution: 2.0,
+                    stepwiseMotion: 1.0,
+                    commonProgression: 1.0
+                }
+            }
+        };
+
         this.diatonicWeights = {
             major: { 0: 10, 2: 4, 4: 4, 5: 8, 7: 9, 9: 6, 11: 2 }, // I, ii, iii, IV, V, vi, vii
             minor: { 0: 10, 2: 3, 3: 9, 5: 6, 7: 8, 8: 7, 10: 5 }  // i, ii, III, iv, v, VI, VII
         };
-        this.knowledgeBase = null;
     }
 
-    /**
-     * Injects learned weights from the Band modules.
-     */
     setKnowledgeBase(kb) {
         this.knowledgeBase = kb;
     }
 
     /**
-     * Generates a chord progression for the given melody.
-     * @param {Array<{beat: number, midi: number, energy: number}>} melodyLine 
-     * @param {string} key - e.g. "C", "F#m"
-     * @param {number} creativity - 0.0 to 1.0 (Impacts chromaticism)
-     * @returns {string} - A pipe-separated progression string (e.g. "I | IV | V | I")
+     * Generates multiple options for harmonization.
+     * @returns {Array} Array of option objects { name, description, chords, progression }
      */
-    generateProgression(melodyLine, key, creativity = 0.5) {
-        if (!melodyLine || melodyLine.length === 0) return "I";
+    generateOptions(melodyLine, key) {
+        if (!melodyLine || melodyLine.length === 0) return [];
 
         const { rootIndex, isMinor } = this.parseKey(key);
-        const chords = [];
         const measures = Math.ceil(melodyLine.length / 4);
 
-        let lastRoot = rootIndex; // Start context as Tonic
-
+        // Pre-calculate prominent notes per measure
+        const measureNotes = [];
         for (let m = 0; m < measures; m++) {
             const measureBeats = melodyLine.slice(m * 4, (m * 4) + 4);
-            const prominentNotes = this.getProminentNotes(measureBeats);
-            
-            // If measure is silent, sustain previous or return to I
-            if (prominentNotes.length === 0) {
-                chords.push(m === 0 ? "I" : "."); 
-                continue;
-            }
-
-            const bestChord = this.findBestChord(prominentNotes, rootIndex, isMinor, lastRoot, creativity);
-            chords.push(bestChord.roman);
-            lastRoot = bestChord.absRoot;
+            measureNotes.push(this.getProminentNotes(measureBeats));
         }
 
-        return this.formatProgression(chords);
+        const options = [];
+
+        Object.entries(this.strategies).forEach(([keyName, strategy]) => {
+            const result = this.runViterbi(measureNotes, rootIndex, isMinor, strategy);
+            options.push({
+                type: strategy.name,
+                description: strategy.description,
+                chords: result,
+                progression: this.formatProgression(result.map(c => c.roman))
+            });
+        });
+
+        return options;
+    }
+
+    /**
+     * Backward compatibility wrapper
+     */
+    generateProgression(melodyLine, key, creativity = 0.5) {
+        const options = this.generateOptions(melodyLine, key);
+
+        if (options.length === 0) return "I";
+
+        // Map creativity 0.0-1.0 to the 3 options roughly
+        if (creativity < 0.35) return options[0].progression;
+        if (creativity > 0.65) return options[2].progression;
+        return options[1].progression;
     }
 
     parseKey(key) {
         const normKey = normalizeKey(key);
         const isMinor = key.includes('m') && !key.includes('maj');
-        // Strip 'm' for lookup
         const rootName = normKey.replace('m', '');
         const rootIndex = KEY_ORDER.indexOf(rootName);
         return { rootIndex: rootIndex === -1 ? 0 : rootIndex, isMinor };
     }
 
     getProminentNotes(beats) {
-        // Collect notes with decent energy
-        // Weight: Downbeat (beat 0) = 2x, Beat 2 = 1.5x
         const counts = {};
         beats.forEach((b, idx) => {
             if (b.midi && b.energy > 0) {
                 const pc = Math.round(b.midi) % 12;
-                const weight = (idx === 0 ? 2.0 : (idx === 2 ? 1.5 : 1.0)) * b.energy;
+                // Stronger weight for downbeats
+                const weight = (idx === 0 ? 2.5 : (idx === 2 ? 1.5 : 1.0)) * b.energy;
                 counts[pc] = (counts[pc] || 0) + weight;
             }
         });
         
-        // Return sorted list of {pc, weight}
         return Object.entries(counts)
             .map(([pc, weight]) => ({ pc: parseInt(pc), weight }))
             .sort((a, b) => b.weight - a.weight);
     }
 
-    findBestChord(notes, keyRoot, isMinor, prevRoot, creativity) {
-        // We will score 12 chromatic roots for best fit
-        let bestScore = -Infinity;
-        let bestRoot = 0;
-        let bestQuality = isMinor ? 'minor' : 'major';
+    /**
+     * Viterbi Algorithm implementation
+     */
+    runViterbi(measureNotes, keyRoot, isMinor, strategy) {
+        const T = measureNotes.length;
+        if (T === 0) return [];
 
-        for (let i = 0; i < 12; i++) {
-            const candidateRoot = (keyRoot + i) % 12;
-            let score = 0;
+        // States: 12 roots * 2 qualities (0=Major, 1=Minor)
+        // Encoded as: rootIndex * 2 + qualityIndex
+        const numStates = 24;
 
-            // 1. Diatonic Check
-            // Calculate interval from key root
-            const distFromKey = (candidateRoot - keyRoot + 12) % 12;
-            const diatonicMap = isMinor ? this.diatonicWeights.minor : this.diatonicWeights.major;
-            const diatonicWeight = diatonicMap[distFromKey];
+        // DP Tables
+        // V[t][state] = max score ending at state at time t
+        const V = Array(T).fill(null).map(() => new Float32Array(numStates).fill(-Infinity));
+        const path = Array(T).fill(null).map(() => new Int16Array(numStates).fill(0));
+        // Store reasoning for the best path to this state
+        const reasons = Array(T).fill(null).map(() => Array(numStates).fill(null));
+
+        // Initialize t=0
+        for (let s = 0; s < numStates; s++) {
+            const { root, quality } = this.decodeState(s);
+            const emit = this.calculateEmission(measureNotes[0], root, quality, keyRoot, isMinor, strategy);
+
+            // Start bias: Prefer Tonic (I or i)
+            let startBias = 0;
+            if (root === keyRoot) startBias = 5.0; // Tonic bonus
             
-            if (diatonicWeight !== undefined) score += diatonicWeight;
-            else score -= (1.0 - creativity) * 20; // Heavy penalty for chromatic unless creative
+            V[0][s] = emit.score + startBias;
+            reasons[0][s] = emit.reasons;
+        }
 
-            // Determine likely quality (Simplification: Diatonic quality)
-            let quality = 'major';
-            if (isMinor) {
-                // Minor key qualities: i(m), ii(dim), III(M), iv(m), v(m/M), VI(M), VII(M)
-                if ([0, 2, 5, 7].includes(distFromKey)) quality = 'minor'; 
-            } else {
-                // Major key qualities: I, ii, iii, IV, V, vi, vii(dim)
-                if ([2, 4, 9, 11].includes(distFromKey)) quality = 'minor';
-            }
+        // Iterate time steps
+        for (let t = 1; t < T; t++) {
+            for (let s = 0; s < numStates; s++) {
+                const { root, quality } = this.decodeState(s);
+                const emit = this.calculateEmission(measureNotes[t], root, quality, keyRoot, isMinor, strategy);
 
-            // 2. Melody Fit
-            // Does the candidate chord contain the melody notes?
-            const chordTones = this.getChordTones(candidateRoot, quality);
-            notes.forEach(note => {
-                if (chordTones.includes(note.pc)) {
-                    score += note.weight * 5; // Strong match
-                    if (note.pc === candidateRoot) score += 2; // Root match bonus
-                } else {
-                    score -= note.weight * 2; // Clash penalty
-                }
+                let maxScore = -Infinity;
+                let bestPrev = -1;
+                let bestTransReason = "";
 
-                // 2b. Band Logic Match (The "Trained" part)
-                if (this.knowledgeBase && this.knowledgeBase[quality]) {
-                    const relativeMelodyPC = (note.pc - candidateRoot + 12) % 12;
-                    const bandPreference = this.knowledgeBase[quality][relativeMelodyPC];
-                    if (bandPreference > 0) {
-                        score += (bandPreference * note.weight * 4); // Boost chords the band 'knows' how to play over
+                // Check all previous states
+                for (let prevS = 0; prevS < numStates; prevS++) {
+                    const { root: prevRoot } = this.decodeState(prevS);
+                    const trans = this.calculateTransition(prevRoot, root, strategy);
+
+                    const score = V[t-1][prevS] + trans.score + emit.score;
+
+                    if (score > maxScore) {
+                        maxScore = score;
+                        bestPrev = prevS;
+                        bestTransReason = trans.reason;
                     }
                 }
-            });
 
-            // 3. Voice Leading (Circle of Fifths / Stepwise)
-            const motion = (candidateRoot - prevRoot + 12) % 12;
-            if (motion === 5 || motion === 7) score += 4; // Dominant/Subdominant motion
-            if (motion === 1 || motion === 11 || motion === 2 || motion === 10) score += 2; // Stepwise
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestRoot = candidateRoot;
-                bestQuality = quality;
+                V[t][s] = maxScore;
+                path[t][s] = bestPrev;
+                reasons[t][s] = [...emit.reasons];
+                if (bestTransReason) reasons[t][s].push(bestTransReason);
             }
         }
 
-        return this.convertRootToRoman(bestRoot, bestQuality, keyRoot);
+        // Backtrack
+        let bestFinalScore = -Infinity;
+        let bestFinalState = -1;
+
+        for (let s = 0; s < numStates; s++) {
+            // End bias: Prefer resolving to Tonic or Dominant
+            const { root } = this.decodeState(s);
+            let endBias = 0;
+            if (root === keyRoot) endBias = 3.0;
+
+            if (V[T-1][s] + endBias > bestFinalScore) {
+                bestFinalScore = V[T-1][s] + endBias;
+                bestFinalState = s;
+            }
+        }
+
+        const resultPath = [];
+        let currState = bestFinalState;
+
+        for (let t = T - 1; t >= 0; t--) {
+            const { root, quality } = this.decodeState(currState);
+            const romanInfo = this.convertRootToRoman(root, quality, keyRoot);
+
+            resultPath.unshift({
+                roman: romanInfo.roman,
+                absRoot: root,
+                quality: quality,
+                reasons: reasons[t][currState] || []
+            });
+
+            currState = path[t][currState];
+        }
+
+        return resultPath;
+    }
+
+    decodeState(s) {
+        return {
+            root: Math.floor(s / 2),
+            quality: s % 2 === 0 ? 'major' : 'minor'
+        };
+    }
+
+    calculateEmission(notes, root, quality, keyRoot, isMinor, strategy) {
+        let score = 0;
+        const reasons = [];
+        const w = strategy.weights;
+
+        // 1. Diatonic Check
+        const distFromKey = (root - keyRoot + 12) % 12;
+        const diatonicMap = isMinor ? this.diatonicWeights.minor : this.diatonicWeights.major;
+        const diatonicVal = diatonicMap[distFromKey];
+
+        if (diatonicVal !== undefined) {
+            score += (diatonicVal / 10) * w.diatonic;
+            // reasons.push(`Diatonic (${distFromKey})`); // Too spammy
+        } else {
+            score -= w.chromaticPenalty;
+        }
+
+        // 2. Melody Fit
+        const chordTones = this.getChordTones(root, quality);
+        let fitScore = 0;
+        let matchedNotes = [];
+
+        notes.forEach(note => {
+            if (chordTones.includes(note.pc)) {
+                const boost = note.weight * w.melodyFit;
+                fitScore += boost;
+                if (note.pc === root) {
+                    fitScore += w.rootMatch;
+                    matchedNotes.push(this.getNoteName(note.pc));
+                } else if (matchedNotes.length < 2) {
+                     matchedNotes.push(this.getNoteName(note.pc));
+                }
+            } else {
+                // Clash penalty
+                score -= note.weight * 2.0;
+            }
+
+            // Band Knowledge (if available)
+            if (this.knowledgeBase && this.knowledgeBase[quality]) {
+                const relativeMelodyPC = (note.pc - root + 12) % 12;
+                const bandPreference = this.knowledgeBase[quality][relativeMelodyPC];
+                if (bandPreference > 0) {
+                    score += (bandPreference * note.weight * 2.0);
+                }
+            }
+        });
+
+        score += fitScore;
+        if (fitScore > 2.0) {
+            reasons.push(`Melody matches ${matchedNotes.join(',')}`);
+        }
+
+        return { score, reasons };
+    }
+
+    calculateTransition(prevRoot, currRoot, strategy) {
+        let score = 0;
+        let reason = "";
+        const w = strategy.weights;
+        const motion = (currRoot - prevRoot + 12) % 12;
+
+        if (motion === 0) {
+            // Static
+            score -= 1.0;
+        } else if (motion === 5) {
+            score += w.dominantResolution; // V -> I motion (descending 5th / ascending 4th)
+            reason = "Circle of 5ths resolution";
+        } else if (motion === 7) {
+            score += w.commonProgression; // IV -> I motion (ascending 5th)
+        } else if (motion === 1 || motion === 2 || motion === 10 || motion === 11) {
+            score += w.stepwiseMotion;
+            reason = "Stepwise motion";
+        }
+
+        return { score, reason };
     }
 
     getChordTones(root, quality) {
-        // Triad only for basic matching
         const third = (quality === 'minor') ? 3 : 4;
         return [
             root, 
@@ -157,25 +323,24 @@ export class Harmonizer {
         ];
     }
 
+    getNoteName(midi) {
+        const names = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+        return names[midi % 12];
+    }
+
     convertRootToRoman(absRoot, quality, keyRoot) {
-        // Calculate interval from key root
         const interval = (absRoot - keyRoot + 12) % 12;
         let roman = INTERVAL_TO_ROMAN[interval] || 'I';
-        
-        // Handle minor naming convention (lowercase)
-        if (quality === 'minor') {
-            roman = roman.toLowerCase();
-        }
-        
+        if (quality === 'minor') roman = roman.toLowerCase();
         return { roman, absRoot };
     }
 
     formatProgression(chords) {
-        // Post-processing: If we have "I | . | . | IV", fill in the dots
-        for (let i = 1; i < chords.length; i++) {
-            if (chords[i] === '.') chords[i] = chords[i-1];
+        // Post-processing: If "I | . | . | IV", fill in
+        const res = [...chords];
+        for (let i = 1; i < res.length; i++) {
+            if (res[i] === '.') res[i] = res[i-1];
         }
-
-        return chords.join(" | ");
+        return res.join(" | ");
     }
 }
