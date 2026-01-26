@@ -5,24 +5,9 @@ import { getScaleForChord } from './theory-scales.js';
 
 const CANDIDATE_WEIGHTS = new Float32Array(128);
 
-/**
- * SOLOIST.JS
- * 
- * Refactored implementation focusing on "Expressive Musicality".
- * Features:
- * - Phrasing & Humanization ("Breath" Logic)
- * - Motif Retention & Variation (Smart Transposition)
- * - Harmonic Context (Beat Strength & Tension Cycles)
- * - Dynamic Arcs (Storytelling Velocity)
- * - Blue Note Curls (Soulful Articulation)
- * - Melodic Contour Resolution (Skip-Step Rule)
- */
-
-// --- Constants ---
-
 const RHYTHMIC_CELLS = [
-    [1, 0, 1, 0], // 0: 8ths
-    [1, 1, 1, 1], // 1: 16ths
+    [1, 1, 1, 1], // 0: 16ths
+    [1, 0, 1, 0], // 1: 8ths
     [1, 0, 0, 0], // 2: Quarter
     [1, 1, 1, 0], // 3: Gallop
     [1, 0, 1, 1], // 4: Reverse gallop
@@ -103,15 +88,13 @@ const STYLE_CONFIG = {
         motifProb: 0.5, hookProb: 0.25
     },
     country: {
-        // Chicken pickin': Lots of 16ths, double stops, staccato
         restBase: 0.2, restGrowth: 0.1, cells: [1, 3, 4, 12, 14], registerSoar: 8,
         tensionScale: 0.5, timingJitter: 4, maxNotesPerPhrase: 12,
-        doubleStopProb: 0.4, anticipationProb: 0.2, targetExtensions: [2, 4, 9, 11], // 6th is big in country
+        doubleStopProb: 0.4, anticipationProb: 0.2, targetExtensions: [2, 4, 9, 11],
         deviceProb: 0.35, allowedDevices: ['guitarDouble', 'slide', 'run'],
         motifProb: 0.4, hookProb: 0.2
     },
     metal: {
-        // Shred / Neo-classical: Continuous runs, tapping arpeggios
         restBase: 0.1, restGrowth: 0.05, cells: [1, 3, 0], registerSoar: 14,
         tensionScale: 0.4, timingJitter: 2, maxNotesPerPhrase: 32,
         doubleStopProb: 0.05, anticipationProb: 0.05, targetExtensions: [2, 7],
@@ -120,27 +103,9 @@ const STYLE_CONFIG = {
     }
 };
 
-// --- Helpers ---
-
-// (Old getScaleForChord removed, using imported version)
-
-// --- Main Generator ---
-
 /**
- * Generates a soloist note (or notes for double stops) for a specific step.
- * Implements phrasing logic, rhythmic cell selection, melodic contour resolution, 
- * and probabilistic melodic devices (runs, enclosures, flurry).
- * 
- * @param {Object} currentChord - The chord active at the current step.
- * @param {Object} nextChord - The upcoming chord for anticipation logic.
- * @param {number} step - The global step counter.
- * @param {number|null} prevFreq - The frequency of the previously generated note.
- * @param {number} octave - The base MIDI octave for the soloist.
- * @param {string} style - The soloing style ID.
- * @param {number} stepInChord - The relative step index within the current chord.
- * @param {boolean} [isPriming=false] - Whether the engine is in a context-building priming phase.
- * @param {Object} [sectionInfo] - Structural context including sectionStart and sectionEnd.
- * @returns {Object|Object[]|null} A note object, an array of note objects (for double stops), or null if resting.
+ * Generates a soloist note for a specific step.
+ * Overhauled to resolve intensity-induced stagnation and "sticky notes".
  */
 export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, style, stepInChord, isPriming, sectionInfo) {
     if (!currentChord) return null;
@@ -157,42 +122,53 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const measureStep = step % stepsPerMeasure;
     const stepInBeat = measureStep % stepsPerBeat;
     const intensity = playback.bandIntensity || 0.5;
-    
-    // --- Dynamic Register Control ---
-    // Start low (E3-E4) and open up upwards as intensity builds.
-    // Low Intensity (< 0.4): Center around 56 (G#3)
-    // High Intensity (> 0.8): Center around 70 (Bb4)
-    const centerMidi = 54 + (intensity * 18); 
-    const MIN_GUITAR_MIDI = 48; // C3 (Deep)
-    const MAX_GUITAR_MIDI = 58 + (intensity * 30); // Dynamic Ceiling! Cimb from Bb4 to F6
+
+    // --- Dynamic Register Control & Soar Lift ---
+    // registerSoar adds extra melodic "lift" at high intensity to prevent sticking.
+    const soarValue = config.registerSoar || 8;
+    const soarOffset = (intensity > 0.5) ? (intensity - 0.5) * soarValue : 0;
+    const centerMidi = 54 + (intensity * 18) + soarOffset; 
+    const MIN_GUITAR_MIDI = 48; // C3
+    const MAX_GUITAR_MIDI = 58 + (intensity * 30); // Dynamic Ceiling
 
     if (!isPriming) soloist.sessionSteps = (soloist.sessionSteps || 0) + 1;
-    
-    // --- Session Maturity Logic ---
     const maturityFactor = Math.min(1.0, (soloist.sessionSteps || 0) / 1024);
     const warmupFactor = isPriming ? 1.0 : Math.min(1.0, soloist.sessionSteps / (stepsPerMeasure * 2));
     const effectiveIntensity = Math.min(1.0, intensity + (maturityFactor * 0.25));
 
+    /**
+     * Internal helper to finalize a note, updating history and session tracking.
+     */
+    const finalizeNote = (res) => {
+        if (!res) return null;
+        const primary = Array.isArray(res) ? res[0] : res;
+        
+        // Update Global Pitch History
+        if (soloist.pitchHistory) {
+            soloist.pitchHistory.push(primary.midi);
+            if (soloist.pitchHistory.length > 128) soloist.pitchHistory.shift();
+        }
+        
+        // Update session tracking for continuity
+        if (!primary.isDoubleStop) soloist.lastFreq = getFrequency(primary.midi);
+        soloist.notesInPhrase++;
+        soloist.currentPhraseSteps++; // Ensure phrase progression
+        
+        return res;
+    };
+
     // --- 1. Busy/Device Handling ---
     if (soloist.deviceBuffer && soloist.deviceBuffer.length > 0) {
-        // console.log('Busy Device');
         const devNote = soloist.deviceBuffer.shift();
         const primaryNote = Array.isArray(devNote) ? devNote[0] : devNote;
         soloist.busySteps = (primaryNote.durationSteps || 1) - 1;
-        soloist.notesInPhrase++;
-        if (!primaryNote.isDoubleStop) soloist.lastFreq = getFrequency(primaryNote.midi);
-        return devNote;
+        return finalizeNote(devNote);
     }
     if (soloist.busySteps > 0) { 
-        // console.log('Busy Steps:', soloist.busySteps);
         soloist.busySteps--; return null; 
     }
     
-    const cycleStep = step % (stepsPerMeasure * 4);
-    const measureIndex = Math.floor(cycleStep / stepsPerMeasure);
-    soloist.tension = Math.max(0, Math.min(1, (measureIndex / 4) * (0.5 + intensity * 0.5)));
-
-    // --- 2. Phrasing & Rest Logic ---
+    // --- 2. Phrasing & History Analysis ---
     const totalSteps = arranger.totalSteps || 1;
     const loopStep = step % totalSteps;
     const stepsUntilSectionEnd = (sectionInfo) ? (sectionInfo.sectionEnd - loopStep) : 1000;
@@ -202,75 +178,41 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         soloist.currentPhraseSteps = 0; soloist.notesInPhrase = 0; soloist.qaState = 'Question'; soloist.isResting = true; return null; 
     }
     
-    const phraseBars = soloist.currentPhraseSteps / stepsPerMeasure;
-    // Base rest probability scales inversely with intensity.
-    // Low Intensity = HIGH rest probability.
-    let restProb = (config.restBase * (3.0 - effectiveIntensity * 2.0)) + (phraseBars * config.restGrowth);
-    
-    // Low Intensity Override: Force more space
-    if (intensity < 0.35) restProb += 0.3;
-
-    // --- NEW: Structural Awareness (Section Ends) ---
-    // If a section is ending, we want to either wrap up a phrase or prepare to rest.
-    if (isSectionEnding) {
-        const progress = 1.0 - (stepsUntilSectionEnd / stepsPerMeasure); // 0.0 at start of last measure, 1.0 at end
-        
-        if (!soloist.isResting) {
-            // If we are currently playing, increase rest probability as we approach the end
-            // so we don't play right across the boundary awkwardly (unless high intensity)
-            if (progress > 0.5 && effectiveIntensity < 0.8) {
-                restProb += (progress * 0.5);
-            }
-            
-            // If we are VERY close to the end, forced rest or resolution
-            if (stepsUntilSectionEnd <= 2 && effectiveIntensity < 0.9) {
-                restProb = 1.0;
-            }
-        } else {
-            // If we are resting, maybe wait for the new section to start 
-            // unless we want to "lead in" (anticipate)
-            if (stepsUntilSectionEnd > 2) {
-                restProb += 0.2; // Stay resting a bit longer
-            }
+    const historyCounts = {};
+    const pcCounts = new Array(12).fill(0);
+    const historyLen = soloist.pitchHistory ? soloist.pitchHistory.length : 0;
+    if (historyLen > 0) {
+        for (const p of soloist.pitchHistory) {
+            historyCounts[p] = (historyCounts[p] || 0) + 1;
+            pcCounts[(p % 12 + 12) % 12]++;
         }
     }
 
-    // --- NEW: Phrase Interlocking ---
-    // Professional ensemble phrasing: soloist breathes when backgrounds are active.
+    const phraseBars = soloist.currentPhraseSteps / stepsPerMeasure;
+    let restProb = (config.restBase * (3.0 - effectiveIntensity * 2.0)) + (phraseBars * config.restGrowth);
+    restProb += (1.0 - warmupFactor) * 0.4; // Conservative start
+    if (intensity < 0.35) restProb += 0.3;
+
+    // Phrase interlocking
     if (harmony.enabled && harmony.rhythmicMask > 0) {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         const measureStep = step % (ts.beats * ts.stepsPerBeat);
         const hasHarmonyHit = (harmony.rhythmicMask >> measureStep) & 1;
-        
-        if (hasHarmonyHit && !soloist.isResting) {
-            // Background is busy, nudge soloist to rest
-            restProb += (0.2 * harmony.complexity);
-        }
+        if (hasHarmonyHit && !soloist.isResting) restProb += (0.2 * harmony.complexity);
     }
-
-    // Maturity reduces rest probability slightly (more talkative)
     restProb = Math.max(0.05, restProb - (maturityFactor * 0.15));
-    
-    restProb += (1.0 - warmupFactor) * 0.4;
     if (soloist.notesInPhrase >= config.maxNotesPerPhrase) restProb += 0.4;
     
     if (soloist.isResting) {
-        // Only start a new phrase if:
-        // 1. Intensity allows it (Low intensity = lower chance to start)
-        const startProb = 0.4 + (intensity * 0.5); // 0.4 to 0.9
-        
+        const startProb = 0.4 + (effectiveIntensity * 0.5);
         if (Math.random() < startProb) { 
             soloist.isResting = false; soloist.currentPhraseSteps = 0; soloist.notesInPhrase = 0;
             soloist.qaState = soloist.qaState === 'Question' ? 'Answer' : 'Question';
             
-            // Motif Replay Decision:
-            // Flush motif if the chord has changed significantly since it was recorded
+            // Motif Decision
             const currentRoot = currentChord.rootMidi % 12;
             const motifRoot = soloist.motifRoot !== undefined ? soloist.motifRoot : currentRoot;
             const rootDiff = Math.abs(currentRoot - motifRoot);
-            
-            // If the chord has moved significantly (more than a 4th), 
-            // or if we've replayed it too many times, flush it.
             const isSignificantShift = rootDiff > 0 && rootDiff !== 5 && rootDiff !== 7;
             const isStale = (soloist.motifReplayCount || 0) > 3;
 
@@ -282,9 +224,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
                 distinctPitchesCount = distinct.size;
                 pitchRange = Math.max(...pitches) - Math.min(...pitches);
             }
-
-            // Quality Control: A motif is "interesting" if it has > 2 distinct notes OR covers a range > 2 semitones.
-            // This prevents replaying single notes or boring minor-2nd trills.
             const isInteresting = distinctPitchesCount > 2 || pitchRange > 2;
 
             if (soloist.motifBuffer && soloist.motifBuffer.length > 0 && isInteresting && Math.random() < config.motifProb && !isSignificantShift && !isStale) {
@@ -299,35 +238,20 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             }
         } else return null;
     }
-    if (!soloist.isResting && soloist.currentPhraseSteps > 4 && Math.random() < restProb) {
-        soloist.isResting = true; soloist.currentPhraseSteps = 0; return null;
-    }
-    soloist.currentPhraseSteps++;
-
-    // --- Global Pitch History Analysis ---
-    // Prevent "Magnet Notes" (like Common Tones) from dominating the session.
-    const historyCounts = {};
-    const historyLen = soloist.pitchHistory ? soloist.pitchHistory.length : 0;
-    if (historyLen > 0) {
-        for (const p of soloist.pitchHistory) {
-            historyCounts[p] = (historyCounts[p] || 0) + 1;
+        if (!soloist.isResting && soloist.currentPhraseSteps > 4 && Math.random() < restProb) {
+            soloist.isResting = true; soloist.currentPhraseSteps = 0; return null;
         }
-    }
-
-    // --- 3. Motif/Hook Replay ---
+    
+        // --- 3. Motif Replay ---
     if (soloist.isReplayingMotif) {
         const motifNote = soloist.motifBuffer[soloist.motifReplayIndex];
-        
-        // Anti-Stagnation Check for Replay
-        // If the note we are about to replay is already dominating history (>40%), ABORT.
         if (motifNote && historyLen > 12) {
             const primaryMidi = Array.isArray(motifNote) ? motifNote[0].midi : motifNote.midi;
             const count = historyCounts[primaryMidi] || 0;
-            if ((count / historyLen) > 0.4) {
-                // Abort!
+            const pcCount = pcCounts[primaryMidi % 12] || 0;
+            if ((count / historyLen) > 0.35 || (pcCount / historyLen) > 0.45) {
                 soloist.isReplayingMotif = false;
                 soloist.motifBuffer = [];
-                soloist.motifReplayIndex = 0;
             }
         }
 
@@ -336,238 +260,147 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             if (soloist.motifReplayIndex >= soloist.motifBuffer.length) soloist.isReplayingMotif = false;
             
             if (motifNote) {
-                // Smart Transposition: ...
-            const currentRoot = currentChord.rootMidi % 12;
-            const motifRoot = soloist.motifRoot !== undefined ? soloist.motifRoot : currentRoot;
-            const shift = (currentRoot - motifRoot + 12) % 12;
-            const octaveShift = shift > 6 ? -12 : (shift < -6 ? 12 : 0);
-            
-            let res = motifNote;
-            if (Array.isArray(motifNote)) {
-                res = motifNote.map(n => ({
-                    ...n,
-                    midi: n.midi + shift + octaveShift
-                }));
-                if (!soloist.doubleStops) res = res.find(n => !n.isDoubleStop) || res[0];
-            } else {
-                res = { ...motifNote, midi: motifNote.midi + shift + octaveShift };
-            }
-            
-            const primary = Array.isArray(res) ? res[0] : res;
-            
-            // Final validation: ensure transposed note is actually in the current scale
-            // If not, nudge it to the nearest scale tone.
-            const scaleIntervals = getScaleForChord(currentChord, null, style);
-            const resPC = (primary.midi % 12 + 12) % 12;
-            const relPC = (resPC - currentRoot + 12) % 12;
-            
-            if (!scaleIntervals.includes(relPC)) {
-                const nearest = scaleIntervals.reduce((prev, curr) => Math.abs(curr - relPC) < Math.abs(prev - relPC) ? curr : prev);
-                const nudge = nearest - relPC;
-                if (Array.isArray(res)) {
-                    res = res.map(n => ({ 
-                        ...n, 
-                        midi: n.midi + nudge,
-                        bendStartInterval: (n.bendStartInterval || 0) + nudge
-                    }));
+                const currentRoot = currentChord.rootMidi % 12;
+                const motifRoot = soloist.motifRoot !== undefined ? soloist.motifRoot : currentRoot;
+                const shift = (currentRoot - motifRoot + 12) % 12;
+                const octaveShift = shift > 6 ? -12 : (shift < -6 ? 12 : 0);
+                
+                let res = motifNote;
+                if (Array.isArray(motifNote)) {
+                    res = motifNote.map(n => ({ ...n, midi: n.midi + shift + octaveShift }));
                 } else {
-                    res.midi += nudge;
-                    res.bendStartInterval = (res.bendStartInterval || 0) + nudge;
+                    res = { ...motifNote, midi: motifNote.midi + shift + octaveShift };
                 }
-            }
+                
+                const primary = Array.isArray(res) ? res[0] : res;
+                const scaleIntervals = getScaleForChord(currentChord, null, style);
+                const relPC = (primary.midi - currentChord.rootMidi + 120) % 12;
+                
+                if (!scaleIntervals.includes(relPC)) {
+                    const nearest = scaleIntervals.reduce((prev, curr) => Math.abs(curr - relPC) < Math.abs(prev - relPC) ? curr : prev);
+                    const nudge = nearest - relPC;
+                    if (Array.isArray(res)) res = res.map(n => ({ ...n, midi: n.midi + nudge, bendStartInterval: 0 }));
+                    else {
+                        res.midi += nudge;
+                        res.bendStartInterval = 0;
+                    }
+                }
 
-            soloist.busySteps = (primary.durationSteps || 1) - 1;
-            soloist.notesInPhrase++;
-            return res;
+                soloist.busySteps = (primary.durationSteps || 1) - 1;
+                return finalizeNote(res);
+            }
         }
-    }
     }
 
     // --- 4. Rhythmic Density ---
     if (stepInBeat === 0) {
         let pool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
-        
-        // --- NEW: Complexity-driven Cell Expansion ---
-        // At high complexity, allow denser cells even if not in the base config
-        if (playback.complexity > 0.7 && !config.cells.includes(1)) {
-            // Allow 16th note runs for everyone at high complexity
-            pool.push(RHYTHMIC_CELLS[1]);
-        }
-
-        // --- NEW: Low Intensity Restriction ---
-        if (intensity < 0.4) {
-             // Force simple rhythms (Quarter notes, Half notes)
-             pool = pool.filter(c => c[1] === 0 && c[3] === 0); // No 16ths
-             if (pool.length === 0) pool = [RHYTHMIC_CELLS[2], RHYTHMIC_CELLS[11]]; // Quarters/Halves
-        }
-
-        // --- NEW: Ensemble Rhythmic Interaction ---
-        // If the harmony module is enabled, the soloist "listens" to its motifs.
-        if (harmony.enabled && harmony.rhythmicMask > 0 && Math.random() < (0.2 + harmony.complexity * 0.4)) {
-            const measureStep = step % 16;
-            const beatMask = (harmony.rhythmicMask >> measureStep) & 0xF;
-            
-            // Choose interaction mode: Imitate (play on same steps) or Interlock (fill gaps)
-            const isImitating = Math.random() < 0.6;
-            
-            pool = pool.map(cell => {
-                let score = 0;
-                for (let i = 0; i < 4; i++) {
-                    const hbHit = (beatMask >> i) & 1;
-                    const sbHit = cell[i];
-                    if (isImitating) {
-                        if (hbHit && sbHit) score += 2;
-                    } else {
-                        if (!hbHit && sbHit) score += 1;
-                        if (hbHit && sbHit) score -= 2;
-                    }
-                }
-                return { cell, score };
-            }).sort((a, b) => b.score - a.score)
-              .slice(0, Math.max(1, Math.floor(pool.length * 0.4)))
-              .map(item => item.cell);
-        }
-
+        if (playback.complexity > 0.7 && !config.cells.includes(1)) pool.push(RHYTHMIC_CELLS[1]);
+        if (intensity < 0.4) pool = pool.filter(c => c[1] === 0 && c[3] === 0);
         soloist.currentCell = pool[Math.floor(Math.random() * pool.length)];
     }
-    if (soloist.currentCell && soloist.currentCell[stepInBeat] === 1) {
-        /* hit */
-    } else return null;                
-    soloist.notesInPhrase++;
+    if (soloist.currentCell && soloist.currentCell[stepInBeat] === 1) { /* hit */ } else return null;
 
-    // --- 5. Pitch Selection & Anticipation ---
+    // --- 5. Pitch Selection ---
     let targetChord = currentChord;
     const isLateInChord = stepInChord >= (currentChord.beats * stepsPerBeat) - 2;
-    if (nextChord && isLateInChord && Math.random() < (config.anticipationProb || 0)) {
-        targetChord = nextChord;
-    }
+    if (nextChord && isLateInChord && Math.random() < (config.anticipationProb || 0)) targetChord = nextChord;
 
-    // --- SCALE RETRIEVAL (Refactored) ---
-    const scaleIntervals = getScaleForChord(targetChord, (targetChord === currentChord ? nextChord : null), style);
+    const scaleIntervals = getScaleForChord(targetChord, null, style);
     const rootMidi = targetChord.rootMidi;
     const scaleTones = scaleIntervals.map(i => rootMidi + i);
+    
     const chordTones = currentChord.intervals.map(i => rootMidi + i);
     
-    soloist.smoothedTension = (soloist.smoothedTension || 0) * 0.8 + (soloist.tension || 0) * 0.2;
-    
-    // Dynamic Center clamped by MAX_GUITAR_MIDI calculated at top
     const dynamicCenter = centerMidi; 
-    const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
+    const lastMidi = prevFreq ? getMidi(prevFreq) : Math.round(dynamicCenter);
     const minMidi = Math.max(MIN_GUITAR_MIDI, Math.min(dynamicCenter - 12, lastMidi - 14)); 
     const maxMidi = Math.min(MAX_GUITAR_MIDI, Math.max(dynamicCenter + 12, lastMidi + 14));
 
     let totalWeight = 0;
+    CANDIDATE_WEIGHTS.fill(0);
     const lastInterval = soloist.lastInterval || 0; 
     const isResolvingSkip = Math.abs(lastInterval) > 4;
     
-    // Stagnation Detection: If we've played > 4 notes with small intervals (< 3), force a move.
-    if (Math.abs(lastInterval) < 3) {
-        soloist.stagnationCount = (soloist.stagnationCount || 0) + 1;
-    } else {
-        soloist.stagnationCount = 0;
-    }
+    if (Math.abs(lastInterval) < 3) soloist.stagnationCount = (soloist.stagnationCount || 0) + 1;
+    else soloist.stagnationCount = 0;
     const isStagnant = soloist.stagnationCount > 4;
 
-    for (let m = minMidi; m <= maxMidi; m++) {
-        CANDIDATE_WEIGHTS[m] = 0; 
+    for (let m = Math.floor(minMidi); m <= Math.ceil(maxMidi); m++) {
+        if (m < 0 || m > 127) continue;
         const pc = (m % 12 + 12) % 12;
         const interval = (pc - (rootMidi % 12) + 12) % 12;
         let weight = 1.0;
         if (!scaleTones.some(st => (st % 12 + 12) % 12 === pc)) continue; 
 
         const dist = Math.abs(m - lastMidi);
-        const currentInterval = m - lastMidi;
 
-        // --- History Penalty ---
-        if (historyLen > 12) {
-            const count = historyCounts[m] || 0;
-            const pct = count / historyLen;
-            if (pct > 0.4) weight -= 1000; // Nuclear penalty for >40% dominance
-            else if (pct > 0.25) weight -= 300; // Strong penalty for >25% dominance
-        }
-
-        if (isResolvingSkip) {
-            const isOppositeDir = (lastInterval > 0 && currentInterval < 0) || (lastInterval < 0 && currentInterval > 0);
-            if (isOppositeDir && dist > 0 && dist <= 2) weight += 5000; 
-            else if (!isOppositeDir && dist > 2) weight -= 1000; 
-        }
-        
-        // Break Stagnation
-        if (isStagnant && dist < 4) {
-            weight -= 500; // Force a jump of at least a Major 3rd
-        }
-
-        if (config.targetExtensions && config.targetExtensions.includes(interval)) weight += 12;
-        
-        // Sweet Note Targeting (3rds and 7ths)
+        // Bonuses
+        if (isResolvingSkip && (lastInterval > 0 && m < lastMidi || lastInterval < 0 && m > lastMidi) && dist <= 2) weight += 1000;
         const isGuideTone = [3, 4, 10, 11].includes(interval);
         const isRoot = interval === 0;
-
-        if (isGuideTone) {
-            weight += (activeStyle === 'minimal' ? 60 : 15);
-        }
-
-        // Structural Resolution: Favor landing on root/guide tones at section boundaries
-        if (isSectionEnding && stepsUntilSectionEnd <= 4) {
-            if (isRoot) weight += 200;
-            if (isGuideTone) weight += 100;
-        }
-
-        if (isRoot && activeStyle === 'minimal') {
-            // Gilmour-esque: Roots are for resolution, not constant targeting.
-            // Penalize roots slightly if they aren't part of a half-step resolution
-            if (dist !== 1) weight -= 20;
-        }
-
-        if (stepInBeat === 0) {
-            if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) {
-                weight += 15; 
-                if (isGuideTone) weight += 30; // Boost guide tones on downbeats
-                if (isRoot && activeStyle === 'minimal') weight -= 10; // Favor 3rds/7ths over Root on strong beats
-            } else weight -= 15; // Penalize non-chord tones on downbeats more
-        }
-
-        if (style === 'neo' && dist === 5) weight += 100; 
+        if (isGuideTone) weight += 30;
+        if (isRoot) weight += 15;
         if (soloist.qaState === 'Answer') {
-            if (isRoot) weight += (activeStyle === 'minimal' ? 200 : 500); 
-            if (isGuideTone) weight += (activeStyle === 'minimal' ? 100 : 250); 
+            const qaBonus = (activeStyle === 'minimal' ? 100 : 250) * effectiveIntensity;
+            if (isRoot) weight += qaBonus;
+            if (isGuideTone) weight += qaBonus * 0.5;
         }
+        if (chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) weight += 20;
 
-        // Half-step resolutions between chords
-        const isChordChanging = stepInChord === 0;
-        if (isChordChanging && dist === 1 && chordTones.some(ct => (ct % 12 + 12) % 12 === pc)) {
-            weight += (activeStyle === 'minimal' ? 3000 : 500); 
-        }
-
+        // Penalties (Multiplicative)
         if (dist === 0) {
-            weight -= 400; // Increased penalty for repeats 
-            if (lastInterval === 0) weight -= 1000; // Nuclear penalty for 2nd repeat
-        } 
-        if (dist > 0 && dist <= 2) weight += (50 + (playback.bpm / 100) * 20); 
-        else if (dist >= 3 && dist <= 4) weight += 10; 
-        else if (dist >= 5 && dist <= 7) weight -= 30; 
-        else if (dist === 12) weight += 10; 
-        else if (dist > 7) weight -= 500; 
+            weight *= 0.0001; // Force a move
+            if (isStagnant) weight = 0; 
+        }
+        if (historyLen > 12) {
+            const count = historyCounts[m] || 0;
+            const pcCount = pcCounts[pc] || 0;
+            const pct = count / historyLen;
+            const pcPct = pcCount / historyLen;
+            if (pct > 0.35 || pcPct > 0.45) weight = 0; // Hard ban magnets
+            else if (pct > 0.2 || pcPct > 0.3) weight *= 0.01;
+        }
+        if (isStagnant && dist < 3) weight *= 0.01;
+        const dCenter = Math.abs(m - dynamicCenter);
+        if (dCenter > 7) weight *= Math.max(0.01, 1.0 - (dCenter - 7) * 0.1);
 
-        if (distFromCenter(m, dynamicCenter) > 7) weight -= (distFromCenter(m, dynamicCenter) - 7) * 5; 
-        
-        weight = Math.max(0.1, weight);
+        weight = Math.max(0.01, weight);
         CANDIDATE_WEIGHTS[m] = weight;
         totalWeight += weight;
     }
 
-    let randomVal = Math.random() * totalWeight;
-    let selectedMidi = lastMidi;
-    for (let m = minMidi; m <= maxMidi; m++) {
-        const w = CANDIDATE_WEIGHTS[m];
-        if (w > 0) { randomVal -= w; if (randomVal <= 0) { selectedMidi = m; break; } }
+    let selectedMidi = -1;
+    const startM = Math.floor(minMidi);
+    const endM = Math.ceil(maxMidi);
+
+    if (totalWeight > 0) {
+        let randomVal = Math.random() * totalWeight;
+        for (let m = startM; m <= endM; m++) {
+            if (m < 0 || m > 127) continue;
+            const w = CANDIDATE_WEIGHTS[m];
+            if (w > 0) { 
+                randomVal -= w; 
+                if (randomVal <= 0) { selectedMidi = m; break; } 
+            }
+        }
     }
+
+    if (selectedMidi === -1 || selectedMidi === lastMidi) {
+        const fallbacks = [];
+        for (let m = startM; m <= endM; m++) {
+            if (m < 0 || m > 127) continue;
+            const pc = (m % 12 + 12) % 12;
+            if (scaleTones.some(st => (st % 12 + 12) % 12 === pc) && m !== lastMidi) fallbacks.push(m);
+        }
+        selectedMidi = fallbacks.length > 0 ? fallbacks[Math.floor(Math.random() * fallbacks.length)] : lastMidi;
+    }
+    
     soloist.lastInterval = selectedMidi - lastMidi;
 
     // --- 6. Melodic Devices ---
-    // Only allow flashy devices if intensity allows
     const allowFlash = intensity > 0.5;
-    const deviceBaseProb = config.deviceProb * (0.5 + playback.complexity * 1.0); // Scales from 0.5x to 1.5x of base
+    const deviceBaseProb = config.deviceProb * (0.5 + playback.complexity * 1.0);
     
     if (allowFlash && stepInBeat === 0 && Math.random() < (deviceBaseProb * 0.7 * warmupFactor)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
@@ -577,121 +410,80 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             let flurry = []; let curr = selectedMidi + 3; 
             for (let i = 0; i < 4; i++) {
                 let n = curr - 1; while (!scaleIntervals.includes((n - rootMidi + 120) % 12) && n > curr - 5) n--;
-                flurry.push({ midi: n, velocity: devBaseVel * 1.05, durationSteps: 1, style });
+                flurry.push({ midi: n, velocity: devBaseVel * 1.05, durationSteps: 1, style: activeStyle });
                 curr = n;
             }
             soloist.deviceBuffer = flurry;
             const first = soloist.deviceBuffer.shift(); 
             soloist.busySteps = (first.durationSteps || 1) - 1;
-            soloist.motifBuffer.push(first);
-            return { ...first, timingOffset: 0 };
+            return finalizeNote(first);
         }
-        if (deviceType === 'run') {
-            const sz = Math.random() < 0.5 ? 1 : 2;
-            soloist.deviceBuffer = [ { midi: selectedMidi - sz, velocity: devBaseVel * 1.1, durationSteps: 1, style }, { midi: selectedMidi, velocity: devBaseVel * 1.2, durationSteps: 1, style } ];
-            const res = { midi: selectedMidi - (sz * 2), velocity: devBaseVel * 0.9, durationSteps: 1, style };
+        if (deviceType === 'run' || deviceType === 'enclosure') {
+            soloist.deviceBuffer = [ { midi: selectedMidi - 1, velocity: devBaseVel * 1.1, durationSteps: 1, style: activeStyle }, { midi: selectedMidi, velocity: devBaseVel * 1.2, durationSteps: 1, style: activeStyle } ];
+            const res = { midi: selectedMidi + (deviceType === 'run' ? -2 : 1), velocity: devBaseVel * 0.9, durationSteps: 1, style: activeStyle };
             soloist.busySteps = (res.durationSteps || 1) - 1;
-            soloist.motifBuffer.push(res);
-            return res;
-        }
-        if (deviceType === 'enclosure') {
-            soloist.deviceBuffer = [ { midi: selectedMidi - 1, velocity: devBaseVel * 1.1, durationSteps: 1, style }, { midi: selectedMidi, velocity: devBaseVel * 1.2, durationSteps: 1, style } ];
-            let above = selectedMidi + 1; for(let d=1; d<=2; d++) { if (scaleIntervals.includes((selectedMidi + d - rootMidi + 120) % 12)) { above = selectedMidi + d; break; } }
-            const res = { midi: above, velocity: devBaseVel * 1.05, durationSteps: 1, style };
-            soloist.busySteps = (res.durationSteps || 1) - 1;
-            soloist.motifBuffer.push(res);
-            return res;
+            return finalizeNote(res);
         }
         if (deviceType === 'slide') {
-            soloist.deviceBuffer = [ { midi: selectedMidi, velocity: devBaseVel * 1.15, durationSteps: 1, style } ];
-            const res = { midi: selectedMidi - 1, velocity: devBaseVel * 0.95, durationSteps: 1, style };
+            soloist.deviceBuffer = [ { midi: selectedMidi, velocity: devBaseVel * 1.15, durationSteps: 1, style: activeStyle } ];
+            const res = { midi: selectedMidi - 1, velocity: devBaseVel * 0.95, durationSteps: 1, style: activeStyle };
             soloist.busySteps = (res.durationSteps || 1) - 1;
-            soloist.motifBuffer.push(res);
-            return res;
+            return finalizeNote(res);
         }
         if ((deviceType === 'quartal' || deviceType === 'guitarDouble') && soloist.doubleStops) {
-            let dsInt = (style === 'blues' || style === 'scalar') ? 5 : 4;
-            const res = [{ midi: selectedMidi + dsInt, velocity: devBaseVel * 1.05, durationSteps: 1, style, isDoubleStop: true }, { midi: selectedMidi, velocity: devBaseVel * 1.2, durationSteps: 1, style, isDoubleStop: false }];
-            soloist.busySteps = 0; // Device notes are 1 step
-            soloist.motifBuffer.push(res);
-            return res;
+            let dsInt = (activeStyle === 'blues' || activeStyle === 'scalar') ? 5 : 4;
+            const res = [{ midi: selectedMidi + dsInt, velocity: devBaseVel * 1.05, durationSteps: 1, style: activeStyle, isDoubleStop: true }, { midi: selectedMidi, velocity: devBaseVel * 1.2, durationSteps: 1, style: activeStyle, isDoubleStop: false }];
+            soloist.busySteps = 0; 
+            return finalizeNote(res);
         }
     }
 
-    let notes = [];
-    const doubleStopChance = (config.doubleStopProb + (maturityFactor * 0.2)) * (stepInBeat === 2 ? 1.2 : 0.6) * warmupFactor;
-    if (soloist.doubleStops && Math.random() < doubleStopChance) {
+    let extraNotes = [];
+    const dsChance = (config.doubleStopProb + (maturityFactor * 0.2)) * (stepInBeat === 2 ? 1.2 : 0.6) * warmupFactor;
+    if (soloist.doubleStops && Math.random() < dsChance) {
         let dsInt = [5, 7, 9, 12][Math.floor(Math.random() * 4)];
-        notes.push({ midi: selectedMidi + dsInt, velocity: (0.5 + effectiveIntensity * 0.6) * 0.95, isDoubleStop: true });
+        extraNotes.push({ midi: selectedMidi + dsInt, velocity: (0.5 + effectiveIntensity * 0.6) * 0.95, isDoubleStop: true });
     }
-
-    // recorded for motif memory
-    soloist.lastFreq = getFrequency(selectedMidi);
 
     // --- 7. Dynamic Duration & Bending ---
     let durationSteps = 1;
     let bendStartInterval = 0;
 
-    // A. Soulful Scoops: Standard articulation based on maturity
     const isImportantStep = stepInBeat === 0 || (stepInBeat === 2 && Math.random() < 0.3);
-    
-    // Dynamic Velocity: Scale from 0.5 to 1.2 based on effectiveIntensity
     const baseVelocity = 0.5 + (effectiveIntensity * 0.7);
     const stepVelocity = isImportantStep ? baseVelocity * 1.15 : baseVelocity;
 
     if (intensity < 0.4) {
-        // Force lyrical, long notes at low intensity
         durationSteps = Math.random() < 0.6 ? 4 : 8;
     } else if (isImportantStep && (activeStyle === 'neo' || activeStyle === 'blues' || activeStyle === 'minimal' || activeStyle === 'bossa')) {
         durationSteps = Math.random() < (0.4 + maturityFactor * 0.2) ? 8 : 4;
     } else if (activeStyle === 'scalar' && stepInBeat === 0 && Math.random() < (0.15 + maturityFactor * 0.1)) {
         durationSteps = 4; 
-    } else if (activeStyle === 'neo' && Math.random() < 0.2) {
-        durationSteps = 2; 
     }
 
-    // B. Melodic Bend Resolution (New satisfying resolution trick)
-    // If we just resolved a dissonance (e.g. by a semitone) to a chord tone, 
-    // especially the root, perform an upward bend into the note.
     const pc = selectedMidi % 12;
     const isRoot = pc === (targetChord.rootMidi % 12);
     const isGuideTone = [3, 4, 10, 11].includes((pc - (targetChord.rootMidi % 12) + 12) % 12);
-    const isSatisfyingTarget = isRoot || (isGuideTone && activeStyle === 'minimal');
-
-    if (isSatisfyingTarget && Math.abs(lastMidi - selectedMidi) === 1 && Math.random() < (0.4 + intensity * 0.3)) {
-        // Bend UP into the target (start 1 or 2 semitones below)
-        bendStartInterval = -1; // 1 semitone below
-        if (Math.random() < 0.3) bendStartInterval = -2; // 2 semitone deep scoop
-    } 
-    else if (durationSteps >= 4 && Math.random() < (0.3 + maturityFactor * 0.2)) {
-        // Standard decorative scoop
+    
+    if ((isRoot || (isGuideTone && activeStyle === 'minimal')) && Math.abs(lastMidi - selectedMidi) === 1 && Math.random() < (0.4 + intensity * 0.3)) {
+        bendStartInterval = -1;
+        if (Math.random() < 0.3) bendStartInterval = -2;
+    } else if (durationSteps >= 4 && Math.random() < (0.3 + maturityFactor * 0.2)) {
         bendStartInterval = Math.random() < 0.7 ? 1 : 2;
     }
 
     const result = { midi: selectedMidi, velocity: Math.min(1.25, stepVelocity), durationSteps, bendStartInterval, ccEvents: [], timingOffset: 0, style: activeStyle, isDoubleStop: false };
-    
-    if (durationSteps > 1) {
-        soloist.busySteps = durationSteps - 1;
-    }
+    if (durationSteps > 1) soloist.busySteps = durationSteps - 1;
 
-    const finalResult = (notes.length > 0 && soloist.doubleStops) ? [...notes.map(n => ({...result, ...n})), result] : result;
+    const finalResult = (extraNotes.length > 0 && soloist.doubleStops) ? [...extraNotes.map(n => ({...result, ...n})), result] : result;
     
-    // Record for motif memory
     if (!soloist.isReplayingMotif) {
         soloist.motifBuffer.push(finalResult);
         if (soloist.motifBuffer.length > 16) soloist.motifBuffer.shift();
-        // Anchor the motif to the root it was recorded over
         soloist.motifRoot = targetChord.rootMidi % 12;
     }
 
-    // Update Global Pitch History
-    if (soloist.pitchHistory) {
-        const primary = Array.isArray(finalResult) ? finalResult[0] : finalResult;
-        soloist.pitchHistory.push(primary.midi);
-        if (soloist.pitchHistory.length > 32) soloist.pitchHistory.shift();
-    }
-
-    return finalResult;
+    return finalizeNote(finalResult);
 }
 
 function distFromCenter(m, center) { return Math.abs(m - center); }
