@@ -5,14 +5,17 @@
 }
 
 .genre-selector {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
 }
 
 .genre-btn {
-    flex: none; /* Reset flex since we're using grid now */
-    padding: 0.75rem 0.25rem; /* Slightly narrower horizontal padding for 3-col fit */
+    flex: 1 1 auto;
+    min-width: 80px;
+    max-width: 140px;
+    text-align: center;
+    padding: 0.6rem 0.4rem;
     background: var(--input-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
