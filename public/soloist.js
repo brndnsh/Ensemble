@@ -88,10 +88,10 @@ const STYLE_CONFIG = {
         motifProb: 0.5, hookProb: 0.25
     },
     country: {
-        restBase: 0.15, restGrowth: 0.08, cells: [1, 3, 4, 12, 14, 6], registerSoar: 10,
+        restBase: 0.12, restGrowth: 0.08, cells: [1, 3, 4, 12, 14, 6], registerSoar: 10,
         tensionScale: 0.5, timingJitter: 4, maxNotesPerPhrase: 16,
-        doubleStopProb: 0.45, anticipationProb: 0.2, targetExtensions: [2, 4, 9],
-        deviceProb: 0.4, allowedDevices: ['guitarDouble', 'slide', 'countryBend', 'chickenPick'],
+        doubleStopProb: 0.5, anticipationProb: 0.2, targetExtensions: [2, 4, 9],
+        deviceProb: 0.45, allowedDevices: ['guitarDouble', 'slide', 'countryBend', 'chickenPick', 'banjoRoll', 'graceSlide'],
         motifProb: 0.4, hookProb: 0.2
     },
     metal: {
@@ -345,8 +345,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         if (isResolvingSkip && (lastInterval > 0 && m < lastMidi || lastInterval < 0 && m > lastMidi) && dist <= 2) weight += 1000;
         const isGuideTone = [3, 4, 10, 11].includes(interval);
         const isRoot = interval === 0;
+        const isPentatonicColor = [2, 9].includes(interval);
+
         if (isGuideTone) weight += 30;
         if (isRoot) weight += 15;
+        if (activeStyle === 'country' && isPentatonicColor) weight += 100;
+
         if (soloist.qaState === 'Answer') {
             const qaBonus = (activeStyle === 'minimal' ? 100 : 250) * effectiveIntensity;
             if (isRoot) weight += qaBonus;
@@ -412,6 +416,28 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         const devBaseVel = 0.5 + (effectiveIntensity * 0.6);
         
+        if (deviceType === 'banjoRoll') {
+            // Arpeggiated 16th notes using chord tones + 2nd/6th
+            const root = targetChord.rootMidi;
+            const rollPitches = [0, 2, 4, 7, 9].map(i => root + 60 + i); // Use a standard octave
+            const roll = [];
+            for (let i = 0; i < 4; i++) {
+                const midi = rollPitches[i % rollPitches.length];
+                roll.push({ midi, velocity: devBaseVel * (i === 0 ? 1.1 : 0.9), durationSteps: 1, style: activeStyle });
+            }
+            soloist.deviceBuffer = roll;
+            const first = soloist.deviceBuffer.shift();
+            soloist.busySteps = 0;
+            return finalizeNote(first);
+        }
+        if (deviceType === 'graceSlide') {
+            // Half-step slide into a chord tone (usually minor 3rd to major 3rd)
+            const targetMidi = selectedMidi;
+            const res = { midi: targetMidi - 1, velocity: devBaseVel * 1.1, durationSteps: 1, style: activeStyle, bendStartInterval: 0 };
+            soloist.deviceBuffer = [{ midi: targetMidi, velocity: devBaseVel * 1.2, durationSteps: 2, style: activeStyle }];
+            soloist.busySteps = 0;
+            return finalizeNote(res);
+        }
         if (deviceType === 'countryBend' && soloist.doubleStops) {
             // Pedal Steel style: Hold one note, bend the other into a chord tone
             const topNote = selectedMidi + ([3, 4, 7].includes((selectedMidi - rootMidi + 12) % 12) ? 0 : 2);
@@ -469,6 +495,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const dsChance = (config.doubleStopProb + (maturityFactor * 0.2)) * (stepInBeat === 2 ? 1.2 : 0.6) * warmupFactor;
     if (soloist.doubleStops && Math.random() < dsChance) {
         let dsInt = [5, 7, 9, 12][Math.floor(Math.random() * 4)];
+        // Country specific: Exclusively use Sixths (8 or 9)
+        if (activeStyle === 'country') {
+            dsInt = [8, 9][Math.floor(Math.random() * 2)];
+        }
         extraNotes.push({ midi: selectedMidi + dsInt, velocity: (0.5 + effectiveIntensity * 0.6) * 0.95, isDoubleStop: true });
     }
 

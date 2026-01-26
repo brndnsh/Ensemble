@@ -44,10 +44,16 @@ describe('Country Soloist Overhaul', () => {
     });
 
     describe('Harmonic Accuracy', () => {
-        it('should use Major Blues + b7 scale for Major chords in Country style', () => {
+        it('should use pure Major Pentatonic for Major chords in Country style', () => {
             const scale = getScaleForChord(chordC, null, 'country');
-            // Expected: [0, 2, 3, 4, 7, 9, 10]
-            expect(scale).toEqual([0, 2, 3, 4, 7, 9, 10]);
+            // Expected: [0, 2, 4, 7, 9] (Major Pentatonic)
+            expect(scale).toEqual([0, 2, 4, 7, 9]);
+        });
+
+        it('should use Major Pentatonic + b3 if tension is high', () => {
+            soloist.tension = 0.8;
+            const scale = getScaleForChord(chordC, null, 'country');
+            expect(scale).toEqual([0, 2, 3, 4, 7, 9]);
         });
 
         it('should use Minor Pentatonic for Minor chords in Country style', () => {
@@ -99,9 +105,66 @@ describe('Country Soloist Overhaul', () => {
             }
             expect(triggered).toBe(true);
         });
+
+        it('should trigger banjoRoll device', () => {
+            let triggered = false;
+            for (let i = 0; i < 1000; i++) {
+                soloist.deviceBuffer = [];
+                soloist.busySteps = 0;
+                soloist.isResting = false;
+                soloist.currentPhraseSteps = 1;
+                soloist.pitchHistory = [];
+                
+                getSoloistNote(chordC, null, 16, 440, 72, 'country', 0);
+                if (soloist.deviceBuffer.length === 3) { // 4 note roll, 1 returned, 3 in buffer
+                    triggered = true;
+                    break;
+                }
+            }
+            expect(triggered).toBe(true);
+        });
+
+        it('should trigger graceSlide device', () => {
+            let triggered = false;
+            for (let i = 0; i < 1000; i++) {
+                soloist.deviceBuffer = [];
+                soloist.busySteps = 0;
+                soloist.isResting = false;
+                soloist.currentPhraseSteps = 1;
+                soloist.pitchHistory = [];
+                
+                const res = getSoloistNote(chordC, null, 16, 440, 72, 'country', 0);
+                if (res && !Array.isArray(res) && soloist.deviceBuffer.length === 1 && res.velocity >= 0.5) {
+                    triggered = true;
+                    break;
+                }
+            }
+            expect(triggered).toBe(true);
+        });
     });
 
     describe('Style Configuration', () => {
+        it('should favor sixths in double stops for country style', () => {
+            let sixths = 0;
+            let totalDS = 0;
+            for (let i = 0; i < 1000; i++) {
+                soloist.busySteps = 0;
+                soloist.isResting = false;
+                soloist.currentPhraseSteps = 1;
+                soloist.pitchHistory = [];
+                
+                const res = getSoloistNote(chordC, null, i * 4, 440, 72, 'country', 0);
+                if (Array.isArray(res)) {
+                    totalDS++;
+                    const top = res[0].midi;
+                    const bottom = res[1].midi;
+                    const diff = Math.abs(top - bottom);
+                    if (diff === 8 || diff === 9) sixths++;
+                }
+            }
+            expect(sixths / totalDS).toBeGreaterThan(0.5);
+        });
+
         it('should have high double stop probability', () => {
             let doubleStops = 0;
             let total = 0;
@@ -119,6 +182,27 @@ describe('Country Soloist Overhaul', () => {
             }
             // country doubleStopProb is 0.45.
             expect(doubleStops / total).toBeGreaterThan(0.3);
+        });
+
+        it('should favor pentatonic color tones (2, 9) in country style', () => {
+            let colorTones = 0;
+            let total = 0;
+            for (let i = 0; i < 1000; i++) {
+                soloist.busySteps = 0;
+                soloist.isResting = false;
+                soloist.currentPhraseSteps = 1;
+                soloist.pitchHistory = [];
+                
+                const res = getSoloistNote(chordC, null, i * 4, 440, 72, 'country', 0);
+                if (res) {
+                    const note = Array.isArray(res) ? res[res.length - 1] : res;
+                    const interval = (note.midi - chordC.rootMidi + 120) % 12;
+                    if (interval === 2 || interval === 9) colorTones++;
+                    total++;
+                }
+            }
+            // 2 and 9 are 2/5 of pentatonic. With bonus, should be well represented.
+            expect(colorTones / total).toBeGreaterThan(0.3);
         });
     });
 });

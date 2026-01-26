@@ -101,10 +101,11 @@ describe('Genre Expansion Integration', () => {
         
         it('should use Country scale for soloist', () => {
             const scale = getScaleForChord(mockChord, null, 'country');
-            // Country scale logic: [0, 2, 3, 4, 7, 9, 10]
-            expect(scale).toContain(3); // The blue note
+            // Country scale logic: Major Pentatonic [0, 2, 4, 7, 9]
+            expect(scale).toContain(2); 
             expect(scale).toContain(4); // Major 3rd
             expect(scale).toContain(9); // 6th
+            expect(scale).not.toContain(3); // Pure pentatonic (no blue note at default tension)
         });
     });
 

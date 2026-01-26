@@ -65,8 +65,10 @@ export function getScaleForChord(chord, nextChord = null, style = 'smart') {
         if (quality.startsWith('m') && !quality.startsWith('maj')) {
             return SCALE_INTERVALS.MINOR_PENTATONIC;
         }
-        // Classic Country: Major Pentatonic + b3 (Blue Note) + b7
-        return [0, 2, 3, 4, 7, 9, 10].sort((a,b)=>a-b);
+        // Signature Country: Pure Major Pentatonic
+        // We add 3 (blue note) only if tension is high, but default to the sweet sound.
+        if (soloist.tension > 0.7) return [0, 2, 3, 4, 7, 9].sort((a,b)=>a-b);
+        return SCALE_INTERVALS.MAJOR_PENTATONIC;
     }
 
     const quality = chord.quality || 'major';
