@@ -377,11 +377,22 @@ export class ChordAnalyzerLite {
 
                 // Simple Goertzel-like accumulation for specific frequency
                 // We decimate by 4 for speed, as we just need coarse pitch detection
+                // Optimized with trigonometric recurrence to avoid Math.cos/sin calls
+                const delta = 4 * angleStep;
+                const cosDelta = Math.cos(delta);
+                const sinDelta = Math.sin(delta);
+                let c = 1.0; // cos(0)
+                let s = 0.0; // sin(0)
+
                 for (let i = 0; i < window.length; i += 4) {
-                    const angle = i * angleStep;
                     const val = window[i];
-                    real += val * Math.cos(angle);
-                    imag += val * Math.sin(angle);
+                    real += val * c;
+                    imag += val * s;
+
+                    const nextC = c * cosDelta - s * sinDelta;
+                    const nextS = s * cosDelta + c * sinDelta;
+                    c = nextC;
+                    s = nextS;
                 }
 
                 const energy = (real * real + imag * imag);
@@ -698,12 +709,23 @@ export class ChordAnalyzerLite {
             let imag = 0;
             const angleStep = (2 * Math.PI * p.freq) / sampleRate;
 
+            // Optimization: Trigonometric recurrence
+            const delta = step * angleStep;
+            const cosDelta = Math.cos(delta);
+            const sinDelta = Math.sin(delta);
+            let c = 1.0; // cos(0)
+            let s = 0.0; // sin(0)
+
             for (let i = 0, idx = 0; i < len; i += step, idx++) {
                 const window = windowValues[idx];
-                const angle = i * angleStep;
                 const sample = signal[i] * window;
-                real += sample * Math.cos(angle);
-                imag += sample * Math.sin(angle);
+                real += sample * c;
+                imag += sample * s;
+
+                const nextC = c * cosDelta - s * sinDelta;
+                const nextS = s * cosDelta + c * sinDelta;
+                c = nextC;
+                s = nextS;
             }
 
             pitchEnergy[p.midi] = (real * real + imag * imag);
