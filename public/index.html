@@ -954,7 +954,13 @@
 
         <div id="liveListenView" class="live-listen-view" style="display: none; text-align: center; padding: 2rem 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; border: 2px solid var(--green);">
             <div class="pulse-icon">🎤</div>
-            <h2 id="liveChordDisplay" style="font-size: 4rem; margin: 1rem 0; color: var(--green); text-shadow: 0 0 20px rgba(133, 153, 0, 0.4);">---</h2>
+            <div id="liveKeyContainer" style="margin-bottom: 0.5rem; display: flex; justify-content: center; align-items: center; gap: 1rem;">
+                <span id="liveKeyLabel" style="font-size: 1.1rem; color: var(--accent-color); font-weight: bold;">Key: --</span>
+                <label style="font-size: 0.8rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                    <input type="checkbox" id="liveForceKeyCheck"> Lock Key
+                </label>
+            </div>
+            <h2 id="liveChordDisplay" style="font-size: 4rem; margin: 0.5rem 0 1rem 0; color: var(--green); text-shadow: 0 0 20px rgba(133, 153, 0, 0.4);">---</h2>
             <p id="liveStatusLabel" style="color: var(--text-muted); margin-bottom: 1.5rem;">Listening for chords...</p>
             <div class="live-history" id="liveHistoryDisplay" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; min-height: 2em;"></div>
             <button id="stopLiveListenBtn" class="primary-btn" style="background: var(--error-color); color: white; border: none; width: 100%;">Stop Listening</button>
@@ -976,6 +982,14 @@
                 </div>
             </div>
             <p id="analyzerDurationLabel" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-secondary); cursor: pointer;">
+                    <input type="checkbox" id="analyzerForceKeyCheck">
+                    <span>Use Arranger Key (<span id="analyzerCurrentKeyLabel">C</span>)</span>
+                </label>
+            </div>
+
             <button id="startAnalysisBtn" class="primary-btn" style="width: 100%;">Analyze Selection</button>
         </div>
 

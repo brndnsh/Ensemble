@@ -4,7 +4,7 @@ import { playback, chords, bass, soloist, harmony, groove, arranger, dispatch, s
 import { saveCurrentState } from './persistence.js';
 import { restoreGains, initAudio } from './engine.js';
 import { syncWorker } from './worker-client.js';
-import { generateId, formatUnicodeSymbols } from './utils.js';
+import { generateId, formatUnicodeSymbols, normalizeKey } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
 import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
 import { generateRandomProgression, mutateProgression } from './chords.js';
@@ -861,6 +861,11 @@ export function setupAnalyzerHandlers() {
         ui.analyzerFileInput.value = '';
         currentAudioBuffer = null;
         detectedChords = [];
+
+        if (ui.liveKeyLabel) ui.liveKeyLabel.textContent = "Key: --";
+        if (ui.liveForceKeyCheck) ui.liveForceKeyCheck.checked = false;
+        if (ui.analyzerCurrentKeyLabel) ui.analyzerCurrentKeyLabel.textContent = formatUnicodeSymbols(arranger.key || 'C');
+        if (ui.analyzerForceKeyCheck) ui.analyzerForceKeyCheck.checked = false;
     };
     window.resetAnalyzer = resetAnalyzer;
 
@@ -1006,7 +1011,33 @@ export function setupAnalyzerHandlers() {
                 const melodyLine = await analyzer.extractMelody(currentAudioBuffer, pulse);
                 ui.analyzerProgressBar.style.width = '80%';
                 
-                const key = arranger.key || 'C';
+                // Key Detection
+                let key = arranger.key || 'C';
+                if (ui.analyzerForceKeyCheck && !ui.analyzerForceKeyCheck.checked) {
+                    // Use the already calculated globalChroma from step 1 logic?
+                    // Wait, performAnalysis doesn't do globalChroma yet here. We need to calculate it.
+                    // We can reuse the buffers or just do a quick one.
+                    // Actually, audio-analyzer-lite calculateChromagram is fast.
+                    const signal = currentAudioBuffer.getChannelData(0);
+                    const globalChroma = analyzer.calculateChromagram(signal, currentAudioBuffer.sampleRate, {
+                         minMidi: 48, maxMidi: 84, skipSharpening: true, step: Math.max(4, Math.floor(signal.length / 500000))
+                    });
+                    const detectedKeyObj = analyzer.identifyGlobalKey(globalChroma);
+                    const rootName = analyzer.notes[detectedKeyObj.root];
+                    key = rootName + (detectedKeyObj.type === 'minor' ? 'm' : '');
+
+                    // Update Global Key
+                    if (ui.keySelect && key !== arranger.key) {
+                        ui.keySelect.value = normalizeKey(key);
+                        // If exact match not found (enharmonics), try best effort or just set arranger.key directly
+                        // But setting ui.keySelect.value triggers change event which updates state.
+                        // Let's force update state to be safe.
+                        arranger.key = key;
+                        updateKeySelectLabels();
+                        updateRelKeyButton();
+                    }
+                }
+
                 const options = harmonizer.generateOptions(melodyLine, key);
                 
                 ui.analyzerProgressBar.style.width = '100%';
@@ -1228,6 +1259,7 @@ export function setupAnalyzerHandlers() {
             ui.liveListenView.style.display = 'block';
             
             const history = [];
+            const keyHistory = []; // Buffer for key stability
             const historyEl = ui.liveHistoryDisplay;
             const chordEl = ui.liveChordDisplay;
 
@@ -1270,12 +1302,48 @@ export function setupAnalyzerHandlers() {
                         const rms = Math.sqrt(analysisBuffer.reduce((s, x) => s + x * x, 0) / analysisBuffer.length);
 
                         if (rms > 0.02) {
-                             analyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
+                             const chroma = analyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
                                  step,
                                  buffers: reusableBuffers,
                                  minMidi: 48,
                                  maxMidi: 84
                              });
+
+                             // --- Live Key Detection ---
+                             const keyRes = analyzer.identifySimpleKey(chroma); // { root, type, score }
+                             const keyStr = analyzer.notes[keyRes.root] + (keyRes.type === 'minor' ? 'm' : '');
+
+                             keyHistory.push(keyStr);
+                             if (keyHistory.length > 30) keyHistory.shift(); // ~1.5s history
+
+                             // Find consensus key
+                             const counts = {};
+                             let consensusKey = keyStr;
+                             let maxCount = 0;
+                             keyHistory.forEach(k => {
+                                 counts[k] = (counts[k] || 0) + 1;
+                                 if (counts[k] > maxCount) {
+                                     maxCount = counts[k];
+                                     consensusKey = k;
+                                 }
+                             });
+
+                             // Update UI if consensus is strong (>50% confidence)
+                             if (maxCount > keyHistory.length * 0.5) {
+                                if (ui.liveKeyLabel) ui.liveKeyLabel.textContent = `Key: ${formatUnicodeSymbols(consensusKey)}`;
+
+                                // Auto-update arranger key if not locked
+                                if (ui.liveForceKeyCheck && !ui.liveForceKeyCheck.checked && consensusKey !== arranger.key) {
+                                    // Throttle updates to avoid state thrashing?
+                                    // Actually, let's just update it. The harmonizer uses `arranger.key` in the next step.
+                                    if (playback.isPlaying) {
+                                        // Be careful during playback not to cause glitches, but this is analysis mode.
+                                    }
+                                    arranger.key = consensusKey;
+                                    // Visual feedback in main UI? Maybe too distracting.
+                                    // But user asked to override.
+                                }
+                             }
 
                              // Find strongest pitch in vocal range (48-84)
                              let maxE = 0;
@@ -1291,6 +1359,7 @@ export function setupAnalyzerHandlers() {
                              if (bestMidi > 0) {
                                  // Single note harmonization
                                  const melodyBit = [{beat: 0, midi: bestMidi, energy: 1.0}];
+                                 // Use the EFFECTIVE key (which might have just been updated)
                                  const prog = harmonizer.generateProgression(melodyBit, arranger.key || 'C', 0.5);
                                  chordEl.textContent = formatUnicodeSymbols(prog);
                              }
