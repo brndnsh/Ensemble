@@ -434,13 +434,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const lastInterval = soloist.lastInterval || 0; 
     const isResolvingSkip = Math.abs(lastInterval) > 4;
     
-    // Stagnation Detection: If we've played > 6 notes with small intervals (< 3), force a move.
+    // Stagnation Detection: If we've played > 4 notes with small intervals (< 3), force a move.
     if (Math.abs(lastInterval) < 3) {
         soloist.stagnationCount = (soloist.stagnationCount || 0) + 1;
     } else {
         soloist.stagnationCount = 0;
     }
-    const isStagnant = soloist.stagnationCount > 6;
+    const isStagnant = soloist.stagnationCount > 4;
 
     for (let m = minMidi; m <= maxMidi; m++) {
         CANDIDATE_WEIGHTS[m] = 0; 
@@ -506,8 +506,8 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         }
 
         if (dist === 0) {
-            weight -= 200; 
-            if (lastInterval === 0) weight -= 500;
+            weight -= 400; // Increased penalty for repeats 
+            if (lastInterval === 0) weight -= 1000; // Nuclear penalty for 2nd repeat
         } 
         if (dist > 0 && dist <= 2) weight += (50 + (playback.bpm / 100) * 20); 
         else if (dist >= 3 && dist <= 4) weight += 10; 
