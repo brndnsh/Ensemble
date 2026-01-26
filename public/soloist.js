@@ -442,6 +442,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     }
     const isStagnant = soloist.stagnationCount > 4;
 
+    // --- Global Pitch History Analysis ---
+    // Prevent "Magnet Notes" (like Common Tones) from dominating the session.
+    const historyCounts = {};
+    const historyLen = soloist.pitchHistory ? soloist.pitchHistory.length : 0;
+    if (historyLen > 0) {
+        for (const p of soloist.pitchHistory) {
+            historyCounts[p] = (historyCounts[p] || 0) + 1;
+        }
+    }
+
     for (let m = minMidi; m <= maxMidi; m++) {
         CANDIDATE_WEIGHTS[m] = 0; 
         const pc = (m % 12 + 12) % 12;
@@ -451,6 +461,14 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
 
         const dist = Math.abs(m - lastMidi);
         const currentInterval = m - lastMidi;
+
+        // --- History Penalty ---
+        if (historyLen > 12) {
+            const count = historyCounts[m] || 0;
+            const pct = count / historyLen;
+            if (pct > 0.4) weight -= 1000; // Nuclear penalty for >40% dominance
+            else if (pct > 0.25) weight -= 300; // Strong penalty for >25% dominance
+        }
 
         if (isResolvingSkip) {
             const isOppositeDir = (lastInterval > 0 && currentInterval < 0) || (lastInterval < 0 && currentInterval > 0);
@@ -648,6 +666,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         if (soloist.motifBuffer.length > 16) soloist.motifBuffer.shift();
         // Anchor the motif to the root it was recorded over
         soloist.motifRoot = targetChord.rootMidi % 12;
+    }
+
+    // Update Global Pitch History
+    if (soloist.pitchHistory) {
+        const primary = Array.isArray(finalResult) ? finalResult[0] : finalResult;
+        soloist.pitchHistory.push(primary.midi);
+        if (soloist.pitchHistory.length > 32) soloist.pitchHistory.shift();
     }
 
     return finalResult;

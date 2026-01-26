@@ -312,6 +312,9 @@ export const bass = {
  * @property {number} sessionSteps - Total steps elapsed since playback started.
  * @property {Array<Object>} deviceBuffer - Buffer for multi-step melodic devices.
  * @property {string} activeTab - Currently active UI tab.
+ * @property {Array<number>} pitchHistory - Rolling buffer of recent pitches for anti-stagnation.
+ * @property {number} stagnationCount - Counter for consecutive small intervals.
+ * @property {number} lastInterval - The interval between the last two notes.
  */
 export const soloist = {
     enabled: false,
@@ -342,7 +345,10 @@ export const soloist = {
     activeVoices: [], // Track active gain nodes for voice stealing (duophonic limit)
     sessionSteps: 0, // Steps elapsed since playback start for warm-up logic
     deviceBuffer: [], // Buffer for multi-step melodic devices like enclosures
-    activeTab: 'smart'
+    activeTab: 'smart',
+    pitchHistory: [],
+    stagnationCount: 0,
+    lastInterval: 0
 };
 
 /**
