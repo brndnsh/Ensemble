@@ -105,7 +105,7 @@ header {
         display: none;
     }
 
-    #settingsBtn {
+    #settingsBtn, #vizToggleBtn {
         margin-right: 0;
         padding: 0.3rem !important;
         font-size: 1.25rem !important;
@@ -233,6 +233,7 @@ button {
     height: calc(100vh - 80px);
     overflow: hidden;
     width: 100%;
+    max-width: 1600px;
     margin: 0 auto;
 }
 

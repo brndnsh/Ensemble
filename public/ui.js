@@ -29,6 +29,7 @@ export const ui = {
     get bpmLabel() { return getEl('bpm-label'); },
     get bpmControlGroup() { return getEl('bpmControlGroup'); },
     get larsIndicator() { return getEl('larsIndicator'); },
+    get vizToggleBtn() { return getEl('vizToggleBtn'); },
     get clearDrums() { return getEl('clearDrumsBtn'); },
     get masterVol() { return getEl('masterVolume'); },
     get countIn() { return getEl('countInCheck'); },

@@ -58,3 +58,10 @@
         margin-bottom: 0;
     }
 }
+
+/* Hide Visualizer by default on mobile, since we added a toggle */
+@media (max-width: 768px) {
+    #panel-visualizer {
+        display: none;
+    }
+}
