@@ -160,7 +160,7 @@ export class ChordAnalyzerLite {
         }
         
         const endSample = options.endTime ? Math.floor(options.endTime * sampleRate) : fullSignal.length;
-        const signal = fullSignal.slice(startSample, endSample);
+        const signal = fullSignal.subarray(startSample, endSample);
         
         const beats = Math.floor(signal.length / samplesPerBeat);
         
@@ -316,6 +316,9 @@ export class ChordAnalyzerLite {
             });
         }
 
+        // Cleanup large local references to assist GC
+        fullSignal = null;
+
         return {
             results: smoothed,
             bpm,
@@ -341,7 +344,7 @@ export class ChordAnalyzerLite {
         // Safety check
         if (startSample >= signal.length) return [];
         
-        const workingSignal = signal.slice(startSample);
+        const workingSignal = signal.subarray(startSample);
         const beats = Math.floor(workingSignal.length / samplesPerBeat);
         const melodyLine = [];
 
@@ -641,6 +644,9 @@ export class ChordAnalyzerLite {
                 bestPhase = p;
             }
         }
+
+        // Cleanup local references
+        lastSpectrum = null;
 
         return {
             bpm: candidates[0]?.bpm || primaryBPM,
