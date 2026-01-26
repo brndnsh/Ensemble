@@ -226,51 +226,50 @@ button {
     line-height: 1;
 }
 
-/* --- Layout --- */
-.app-main-layout {
+/* --- New Stack Layout --- */
+.app-stack-layout {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    padding: 1rem;
-    max-width: 1400px;
-    margin: 0 auto;
+    height: calc(100vh - 80px);
+    overflow: hidden;
     width: 100%;
-    min-height: calc(100vh - 80px);
+    margin: 0 auto;
 }
 
-/* Mobile Layout Reordering via display: contents */
-.layout-column {
-    display: contents;
+#section-arranger {
+    flex: 3;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 1rem;
+    display: flex;
+    gap: 1rem;
 }
 
-#panel-arranger { order: 1; }
-.mobile-tabs-nav { order: 2; }
-.instrument-panel { order: 3; }
-#panel-visualizer { order: 4; }
-
-/* --- Mobile Navigation --- */
-.mobile-tabs-nav {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    position: sticky;
-    top: 64px; /* Match mobile header height */
-    z-index: 90;
-    background: var(--bg-color);
-    padding: 0.5rem 1rem;
-    box-shadow: 0 4px 6px -2px rgba(0,0,0,0.1);
+#panel-arranger {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
-.mobile-tabs-nav .tab-item:last-child {
-    grid-column: span 2;
+#section-controls {
+    flex: 0 0 auto;
+    height: 15%;
+    padding: 0 1rem;
+    min-height: 160px; /* Ensure controls are usable */
 }
 
-@media (min-width: 601px) {
-    .mobile-tabs-nav {
-        top: 80px;
-    }
+#section-instruments {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    gap: 1px;
+    overflow-x: auto;
+    min-height: 0;
+    padding: 1rem;
+    background: var(--bg-color); /* Match background */
 }
 
+/* Shared Components */
 .library-label {
     font-size: 0.9rem;
     color: var(--text-muted);
