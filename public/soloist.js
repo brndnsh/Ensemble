@@ -169,16 +169,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     if (!isPriming) soloist.sessionSteps = (soloist.sessionSteps || 0) + 1;
     
     // --- Session Maturity Logic ---
-    // The soloist becomes more "confident" and expressive as the jam progresses (0-5 mins)
-    // 16 steps = 1 measure. 1024 steps = 64 measures (~2-3 mins).
     const maturityFactor = Math.min(1.0, (soloist.sessionSteps || 0) / 1024);
     const warmupFactor = isPriming ? 1.0 : Math.min(1.0, soloist.sessionSteps / (stepsPerMeasure * 2));
-    
-    // Effective intensity grows slightly with maturity
     const effectiveIntensity = Math.min(1.0, intensity + (maturityFactor * 0.25));
 
     // --- 1. Busy/Device Handling ---
     if (soloist.deviceBuffer && soloist.deviceBuffer.length > 0) {
+        // console.log('Busy Device');
         const devNote = soloist.deviceBuffer.shift();
         const primaryNote = Array.isArray(devNote) ? devNote[0] : devNote;
         soloist.busySteps = (primaryNote.durationSteps || 1) - 1;
@@ -186,7 +183,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         if (!primaryNote.isDoubleStop) soloist.lastFreq = getFrequency(primaryNote.midi);
         return devNote;
     }
-    if (soloist.busySteps > 0) { soloist.busySteps--; return null; }
+    if (soloist.busySteps > 0) { 
+        // console.log('Busy Steps:', soloist.busySteps);
+        soloist.busySteps--; return null; 
+    }
     
     const cycleStep = step % (stepsPerMeasure * 4);
     const measureIndex = Math.floor(cycleStep / stepsPerMeasure);
@@ -304,14 +304,39 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     }
     soloist.currentPhraseSteps++;
 
+    // --- Global Pitch History Analysis ---
+    // Prevent "Magnet Notes" (like Common Tones) from dominating the session.
+    const historyCounts = {};
+    const historyLen = soloist.pitchHistory ? soloist.pitchHistory.length : 0;
+    if (historyLen > 0) {
+        for (const p of soloist.pitchHistory) {
+            historyCounts[p] = (historyCounts[p] || 0) + 1;
+        }
+    }
+
     // --- 3. Motif/Hook Replay ---
     if (soloist.isReplayingMotif) {
-        const motifNote = soloist.motifBuffer[soloist.motifReplayIndex++];
-        if (soloist.motifReplayIndex >= soloist.motifBuffer.length) soloist.isReplayingMotif = false;
+        const motifNote = soloist.motifBuffer[soloist.motifReplayIndex];
         
-        if (motifNote) {
-            // Smart Transposition: If the chord has changed since recording,
-            // shift the motif notes to fit the new root while preserving intervals.
+        // Anti-Stagnation Check for Replay
+        // If the note we are about to replay is already dominating history (>40%), ABORT.
+        if (motifNote && historyLen > 12) {
+            const primaryMidi = Array.isArray(motifNote) ? motifNote[0].midi : motifNote.midi;
+            const count = historyCounts[primaryMidi] || 0;
+            if ((count / historyLen) > 0.4) {
+                // Abort!
+                soloist.isReplayingMotif = false;
+                soloist.motifBuffer = [];
+                soloist.motifReplayIndex = 0;
+            }
+        }
+
+        if (soloist.isReplayingMotif) {
+            soloist.motifReplayIndex++;
+            if (soloist.motifReplayIndex >= soloist.motifBuffer.length) soloist.isReplayingMotif = false;
+            
+            if (motifNote) {
+                // Smart Transposition: ...
             const currentRoot = currentChord.rootMidi % 12;
             const motifRoot = soloist.motifRoot !== undefined ? soloist.motifRoot : currentRoot;
             const shift = (currentRoot - motifRoot + 12) % 12;
@@ -355,6 +380,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             soloist.notesInPhrase++;
             return res;
         }
+    }
     }
 
     // --- 4. Rhythmic Density ---
@@ -441,16 +467,6 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         soloist.stagnationCount = 0;
     }
     const isStagnant = soloist.stagnationCount > 4;
-
-    // --- Global Pitch History Analysis ---
-    // Prevent "Magnet Notes" (like Common Tones) from dominating the session.
-    const historyCounts = {};
-    const historyLen = soloist.pitchHistory ? soloist.pitchHistory.length : 0;
-    if (historyLen > 0) {
-        for (const p of soloist.pitchHistory) {
-            historyCounts[p] = (historyCounts[p] || 0) + 1;
-        }
-    }
 
     for (let m = minMidi; m <= maxMidi; m++) {
         CANDIDATE_WEIGHTS[m] = 0; 

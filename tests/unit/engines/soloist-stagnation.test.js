@@ -32,7 +32,8 @@ vi.mock('../../../public/state.js', () => ({
         lastInterval: 0,
         stagnationCount: 0,
         deviceBuffer: [],
-        doubleStops: false
+        doubleStops: false,
+        pitchHistory: []
     },
     playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.5 },
     groove: { genreFeel: 'Rock' },
@@ -65,6 +66,7 @@ describe('Soloist Stagnation Analysis', () => {
         soloist.deviceBuffer = [];
         soloist.busySteps = 0;
         playback.bandIntensity = 0.5;
+        soloist.pitchHistory = []; // Reset history
     });
 
     it('should not get stuck in a narrow range (trill/stagnation) for more than 4 measures', () => {
@@ -108,6 +110,32 @@ describe('Soloist Stagnation Analysis', () => {
             
             // Fail if we are stagnant for more than 32 steps (2 measures)
             expect(maxRangeStagnation).toBeLessThan(32);
+        }
+    });
+
+    it('should abort motif replay if the note is dominating pitch history', () => {
+        // 1. Setup a "Magnet Note" situation
+        const magnetMidi = 69; // A4
+        soloist.pitchHistory = new Array(20).fill(magnetMidi); // 20/32 = 62% dominance
+        
+        // 2. Setup a Motif that uses this note
+        soloist.motifBuffer = [{ midi: magnetMidi, durationSteps: 4 }];
+        soloist.isReplayingMotif = true;
+        soloist.motifReplayIndex = 0;
+        
+        // 3. Call generator
+        // It should detect the magnet, ABORT replay, and generate a FRESH note
+        // The fresh note will ALSO avoid 69 because of the history penalty
+        const chord = chords[0];
+        const note = getSoloistNote(chord, null, 16, 440, 60, 'scalar', 0, false);
+        
+        // 4. Verification
+        expect(soloist.isReplayingMotif).toBe(false); // Should have aborted
+        expect(soloist.motifBuffer.length).toBeGreaterThan(0); // Should contain the NEW note
+        
+        if (note) {
+            const primary = Array.isArray(note) ? note[0] : note;
+            expect(primary.midi).not.toBe(magnetMidi); // Should pick something else
         }
     });
 });
