@@ -201,7 +201,7 @@
 
 /* Mobile Visibility Logic */
 .instrument-panel {
-    display: flex;
+    display: none; /* Hidden by default on mobile, toggled by tabs */
     animation: fadeIn 0.2s ease-out;
 }
 
@@ -326,32 +326,4 @@ h2 {
 /* Override grid gap inside menu for compactness */
 .panel-settings-menu > div {
     gap: 1.5rem !important; /* Tighter than main layout */
-}
-
-/* --- Compact Mode --- */
-.instrument-panel.compact {
-    min-width: 140px;
-    padding: 1rem;
-}
-
-.instrument-panel.compact .instrument-tabs,
-.instrument-panel.compact .presets-container,
-.instrument-panel.compact .panel-settings-menu,
-.instrument-panel.compact .instrument-tab-content,
-.instrument-panel.compact .panel-menu-btn {
-    display: none !important;
-}
-
-.compact-status {
-    display: none;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-top: 0.5rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.instrument-panel.compact .compact-status {
-    display: block;
 }

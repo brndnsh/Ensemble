@@ -400,15 +400,6 @@ export function setupUIHandlers(refs) {
                 ui.installAppBtn.style.display = 'none';
             }
         }],
-        [ui.vizToggleBtn, 'click', () => {
-             const vizPanel = document.getElementById('panel-visualizer');
-             if (vizPanel) {
-                 const isHidden = getComputedStyle(vizPanel).display === 'none';
-                 vizPanel.style.display = isHidden ? 'flex' : 'none';
-                 // Update icon state? Optional.
-                 ui.vizToggleBtn.style.opacity = isHidden ? '1' : '0.5';
-             }
-        }],
         [ui.settingsBtn, 'click', () => ui.settingsOverlay.classList.add('active')],
         [ui.closeSettings, 'click', () => ui.settingsOverlay.classList.remove('active')],
         [ui.resetSettingsBtn, 'click', () => confirm("Reset all settings?") && resetToDefaults()],
