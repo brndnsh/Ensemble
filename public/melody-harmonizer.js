@@ -81,7 +81,7 @@ export class Harmonizer {
 
         const options = [];
 
-        Object.entries(this.strategies).forEach(([keyName, strategy]) => {
+        Object.values(this.strategies).forEach(strategy => {
             const result = this.runViterbi(measureNotes, rootIndex, isMinor, strategy);
             options.push({
                 type: strategy.name,

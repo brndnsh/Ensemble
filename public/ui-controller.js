@@ -1040,7 +1040,7 @@ export function setupAnalyzerHandlers() {
                             <div class="hc-quality">${c.quality}</div>
                         `;
 
-                        cell.onclick = (e) => {
+                        cell.onclick = () => {
                             // Highlight selection
                             targetContainer.querySelectorAll('.harmony-cell').forEach(el => el.classList.remove('selected'));
                             cell.classList.add('selected');
