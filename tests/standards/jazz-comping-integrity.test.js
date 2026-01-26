@@ -81,7 +81,7 @@ describe('Jazz Comping Integrity', () => {
             beats: 4
         };
 
-        playback.bandIntensity = 0.8;
+        playback.bandIntensity = 0.7; // Just above 0.6 but below 0.75 (octave doubling)
         
         // We need to force updateRhythmicIntent to pick a hit
         compingState.currentCell[0] = 1; 

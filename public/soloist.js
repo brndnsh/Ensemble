@@ -157,10 +157,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const measureStep = step % stepsPerMeasure;
     const stepInBeat = measureStep % stepsPerBeat;
     const intensity = playback.bandIntensity || 0.5;
-    const centerMidi = 64; // Adjusted to E4 to start lower
-    const MIN_GUITAR_MIDI = 52; // E3 Floor
-    const MAX_GUITAR_MIDI = 86; // D6 Ceiling
     
+    // --- Dynamic Register Control ---
+    // Start low (E3-E4) and open up upwards as intensity builds.
+    // Low Intensity (< 0.4): Center around 56 (G#3)
+    // High Intensity (> 0.8): Center around 70 (Bb4)
+    const centerMidi = 54 + (intensity * 18); 
+    const MIN_GUITAR_MIDI = 48; // C3 (Deep)
+    const MAX_GUITAR_MIDI = 58 + (intensity * 30); // Dynamic Ceiling! Cimb from Bb4 to F6
+
     if (!isPriming) soloist.sessionSteps = (soloist.sessionSteps || 0) + 1;
     
     // --- Session Maturity Logic ---
@@ -198,8 +203,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     }
     
     const phraseBars = soloist.currentPhraseSteps / stepsPerMeasure;
-    let restProb = (config.restBase * (2.0 - effectiveIntensity * 1.5)) + (phraseBars * config.restGrowth);
+    // Base rest probability scales inversely with intensity.
+    // Low Intensity = HIGH rest probability.
+    let restProb = (config.restBase * (3.0 - effectiveIntensity * 2.0)) + (phraseBars * config.restGrowth);
     
+    // Low Intensity Override: Force more space
+    if (intensity < 0.35) restProb += 0.3;
+
     // --- NEW: Structural Awareness (Section Ends) ---
     // If a section is ending, we want to either wrap up a phrase or prepare to rest.
     if (isSectionEnding) {
@@ -245,7 +255,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     if (soloist.notesInPhrase >= config.maxNotesPerPhrase) restProb += 0.4;
     
     if (soloist.isResting) {
-        if (Math.random() < (0.4 + (intensity * 0.3))) { 
+        // Only start a new phrase if:
+        // 1. Intensity allows it (Low intensity = lower chance to start)
+        const startProb = 0.4 + (intensity * 0.5); // 0.4 to 0.9
+        
+        if (Math.random() < startProb) { 
             soloist.isResting = false; soloist.currentPhraseSteps = 0; soloist.notesInPhrase = 0;
             soloist.qaState = soloist.qaState === 'Question' ? 'Answer' : 'Question';
             
@@ -347,6 +361,13 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             pool.push(RHYTHMIC_CELLS[1]);
         }
 
+        // --- NEW: Low Intensity Restriction ---
+        if (intensity < 0.4) {
+             // Force simple rhythms (Quarter notes, Half notes)
+             pool = pool.filter(c => c[1] === 0 && c[3] === 0); // No 16ths
+             if (pool.length === 0) pool = [RHYTHMIC_CELLS[2], RHYTHMIC_CELLS[11]]; // Quarters/Halves
+        }
+
         // --- NEW: Ensemble Rhythmic Interaction ---
         // If the harmony module is enabled, the soloist "listens" to its motifs.
         if (harmony.enabled && harmony.rhythmicMask > 0 && Math.random() < (0.2 + harmony.complexity * 0.4)) {
@@ -395,7 +416,9 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const chordTones = currentChord.intervals.map(i => rootMidi + i);
     
     soloist.smoothedTension = (soloist.smoothedTension || 0) * 0.8 + (soloist.tension || 0) * 0.2;
-    const dynamicCenter = centerMidi + Math.floor(soloist.smoothedTension * config.registerSoar * (0.5 + intensity));
+    
+    // Dynamic Center clamped by MAX_GUITAR_MIDI calculated at top
+    const dynamicCenter = centerMidi; 
     const lastMidi = prevFreq ? getMidi(prevFreq) : dynamicCenter;
     const minMidi = Math.max(MIN_GUITAR_MIDI, Math.min(dynamicCenter - 12, lastMidi - 14)); 
     const maxMidi = Math.min(MAX_GUITAR_MIDI, Math.max(dynamicCenter + 12, lastMidi + 14));
@@ -488,8 +511,11 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     soloist.lastInterval = selectedMidi - lastMidi;
 
     // --- 6. Melodic Devices ---
+    // Only allow flashy devices if intensity allows
+    const allowFlash = intensity > 0.5;
     const deviceBaseProb = config.deviceProb * (0.5 + playback.complexity * 1.0); // Scales from 0.5x to 1.5x of base
-    if (stepInBeat === 0 && Math.random() < (deviceBaseProb * 0.7 * warmupFactor)) {
+    
+    if (allowFlash && stepInBeat === 0 && Math.random() < (deviceBaseProb * 0.7 * warmupFactor)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         const devBaseVel = 0.5 + (effectiveIntensity * 0.6);
         
@@ -559,7 +585,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const baseVelocity = 0.5 + (effectiveIntensity * 0.7);
     const stepVelocity = isImportantStep ? baseVelocity * 1.15 : baseVelocity;
 
-    if (isImportantStep && (activeStyle === 'neo' || activeStyle === 'blues' || activeStyle === 'minimal' || activeStyle === 'bossa')) {
+    if (intensity < 0.4) {
+        // Force lyrical, long notes at low intensity
+        durationSteps = Math.random() < 0.6 ? 4 : 8;
+    } else if (isImportantStep && (activeStyle === 'neo' || activeStyle === 'blues' || activeStyle === 'minimal' || activeStyle === 'bossa')) {
         durationSteps = Math.random() < (0.4 + maturityFactor * 0.2) ? 8 : 4;
     } else if (activeStyle === 'scalar' && stepInBeat === 0 && Math.random() < (0.15 + maturityFactor * 0.1)) {
         durationSteps = 4; 

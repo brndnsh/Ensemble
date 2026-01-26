@@ -240,8 +240,8 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
     const isSoloistBusy = soloist.busySteps > 0;
 
     const withOctaveJump = (note) => {
-        // Skip octave jumps if soloist is busy
-        if (isSoloistBusy) return note;
+        // Skip octave jumps if soloist is busy or intensity is too low
+        if (isSoloistBusy || intensity < 0.4) return note;
 
         if (Math.random() < 0.15 + (intensity * 0.15)) { // More jumps at high intensity
             const direction = Math.random() < 0.5 ? 1 : -1;
@@ -280,7 +280,9 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
     
     if ((style === 'rock' || style === 'funk') && hasKickTrigger) {
         const kickVel = (kickInst.steps[step % (groove.measures * stepsPerMeasure)] === 2) ? 1.25 : 1.15;
-        return result(getFrequency(withOctaveJump(baseRoot)), null, kickVel);
+        // Scale kick velocity by intensity
+        const dynamicKickVel = Math.max(0.8, kickVel * (0.7 + intensity * 0.3));
+        return result(getFrequency(withOctaveJump(baseRoot)), null, dynamicKickVel);
     } else if ((style === 'rock' || style === 'funk') && !hasKickTrigger && intensity < 0.4 && !isDownbeat) {
         if (isSoloistBusy) return null;
         if (Math.random() < 0.6) return null;
@@ -290,7 +292,7 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
     // --- HARMONIC RESET ---
     const isStraightStyle = ['rock', 'half', 'whole', 'arp', 'quarter', 'disco', 'neo'].includes(style);
     if (stepInChord === 0 && (isStraightStyle || style === 'funk') && groove.genreFeel !== 'Reggae') {
-        const resetVel = style === 'funk' ? 1.25 : 1.15;
+        const resetVel = style === 'funk' ? 1.25 : (1.0 + intensity * 0.25);
         return result(getFrequency(withOctaveJump(baseRoot)), null, resetVel);
     }
 
@@ -327,6 +329,9 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         const isBeat3 = (stepInMeasure % (ts.stepsPerBeat * 4) === (ts.stepsPerBeat * 2));
         
+        // Low intensity: Simplify to just Root on One?
+        if (intensity < 0.3 && !isDownbeat) return null;
+
         let note = baseRoot;
         if (isBeat3) {
             // Alternate bass
@@ -335,29 +340,31 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         }
         
         // Occasional walk-up on beat 4
-        if (stepInMeasure % ts.stepsPerBeat === 0 && Math.floor(beatInMeasure) === 3 && Math.random() < 0.4) {
+        if (stepInMeasure % ts.stepsPerBeat === 0 && Math.floor(beatInMeasure) === 3 && Math.random() < 0.4 && intensity > 0.4) {
              const nextTarget = nextChord ? nextChord.rootMidi : baseRoot;
              const approach = normalizeToRange(nextTarget - 1);
              return result(getFrequency(approach), 1, 1.1);
         }
 
-        return result(getFrequency(note), 2, 1.1); // Plucky
+        const pluckVel = 0.9 + (intensity * 0.3);
+        return result(getFrequency(note), 2, pluckVel); // Plucky
     }
 
     // --- METAL STYLE (Pedal Point / Gallop) ---
     if (style === 'metal') {
-        // Pedal point on Root usually
-        // Occasional riffing
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         const subDiv = ts.stepsPerBeat / 2;
         const isEighth = step % subDiv === 0;
         
+        // Low Intensity: Simplify to Quarter Notes (Downbeats only)
+        if (intensity < 0.35 && !isDownbeat) return null;
+
         if (isEighth) {
             const isDownbeat = (step % ts.stepsPerBeat === 0);
             const note = baseRoot; // Chug on root
             
             // Accent logic
-            const vel = isDownbeat ? 1.25 : 1.1;
+            const vel = (isDownbeat ? 1.1 : 0.9) * (0.8 + intensity * 0.4);
             
             // Riffing on beats 3 and 4 (high intensity)
             if (intensity > 0.7 && beatInMeasure >= 2) {
@@ -378,13 +385,21 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
     if (style === 'rock') {
         const dur = 0.7; 
         const isPulse = ts.pulse.includes(stepInMeasure);
-        const velocityRock = (isGroupStart || (isPulse && isDownbeat)) ? 1.25 : 1.1;
+        
+        // Low Intensity: Switch to Quarter Notes
+        if (intensity < 0.35) {
+            if (!isDownbeat) return null; // Only play on beat
+        }
+
+        const velocityRock = ((isGroupStart || (isPulse && isDownbeat)) ? 1.15 : 1.0) * (0.7 + intensity * 0.4);
         const lastBeatIndex = ts.beats - 1;
         const beat = Math.floor(stepInMeasure / ts.stepsPerBeat);
-        if (beat === lastBeatIndex && Math.random() < 0.4) {
+        
+        // Fill logic (High Intensity only)
+        if (beat === lastBeatIndex && Math.random() < 0.4 && intensity > 0.5) {
              if (stepInMeasure === (lastBeatIndex * ts.stepsPerBeat)) { 
                  const fillNote = Math.random() < 0.5 ? baseRoot + 12 : baseRoot + 7;
-                 return result(getFrequency(clampAndNormalize(withOctaveJump(fillNote))), dur, 1.15);
+                 return result(getFrequency(clampAndNormalize(withOctaveJump(fillNote))), dur, velocityRock * 1.1);
              }
         }
         return result(getFrequency(withOctaveJump(baseRoot)), dur, velocityRock);

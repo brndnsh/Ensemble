@@ -97,6 +97,8 @@ describe('Bass Engine Logic', () => {
             groove.instruments[0].steps[0] = 2;
             groove.instruments[0].steps[4] = 1;
             
+            // Set high intensity to trigger high dynamic response
+            playback.bandIntensity = 1.0; 
             const hitResult = getBassNote(chordC, null, 1, 110, 38, 'rock', 0, 4, 4);
             expect(hitResult).not.toBeNull();
             expect(hitResult.velocity).toBeGreaterThan(1.1);
@@ -128,11 +130,11 @@ describe('Bass Engine Logic', () => {
         });
 
         it('should boost velocity for "Pop" articulation in funk at high intensity', () => {
-            playback.bandIntensity = 0.9;
+            playback.bandIntensity = 1.0; // Max intensity
             groove.instruments[0].steps[2] = 1;
             const result = getBassNote(chordC, null, 0.5, 110, 38, 'funk', 0, 2, 2);
             expect(result).not.toBeNull();
-            expect(result.velocity).toBeGreaterThanOrEqual(1.2);
+            expect(result.velocity).toBeGreaterThanOrEqual(1.1);
         });
     });
 

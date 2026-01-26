@@ -647,7 +647,13 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
         if (chords.style === 'smart') {
             // Jazz Shell Lesson: If things are hot and harmony is complex, stick to shells (3 & 7)
             const isComplex = chord.quality === '7alt' || chord.quality === 'halfdim' || chord.quality === 'dim';
-            if (genre === 'Jazz' && intensity > 0.6 && isComplex) {
+            
+            // LOW INTENSITY: Gentle Shells (2 notes)
+            if (intensity < 0.4 && genre !== 'Acoustic') {
+                 if (voicing.length > 2) voicing = voicing.slice(0, 2);
+            }
+            // HIGH INTENSITY & COMPLEX: Shells to avoid mud
+            else if (genre === 'Jazz' && intensity > 0.6 && isComplex) {
                 // Find 3rd and 7th
                 const third = chord.intervals.find(i => i === 3 || i === 4);
                 const seventh = chord.intervals.find(i => i === 10 || i === 11 || i === 9 || i === 6); // 6 for dim
@@ -662,6 +668,16 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             }
 
             if (!isStructural && voicing.length > 3 && Math.random() < 0.5) voicing = voicing.slice(0, 3);
+            
+            // HIGH INTENSITY: Add Octave sparkle
+            if (intensity > 0.75 && voicing.length > 0 && Math.random() < 0.6) {
+                // Double the highest note up an octave
+                const sorted = [...voicing].sort((a,b) => getMidi(a) - getMidi(b));
+                const topMidi = getMidi(sorted[sorted.length-1]);
+                if (topMidi < 84) { // Don't go too high
+                    voicing.push(getFrequency(topMidi + 12));
+                }
+            }
             
             // Frequency Slotting: Avoid masking the bass
             if (bass.enabled && voicing.length > 0) {
@@ -698,10 +714,16 @@ export function getAccompanimentNotes(chord, step, stepInChord, measureStep, ste
             const humanShift = (Math.random() * 0.006) - 0.003;
             const humanVol = 0.95 + (Math.random() * 0.1);
             
-            let strumSpeed = 0.008;
-            if (genre === 'Acoustic') strumSpeed = 0.025; // Slower, audible strum
+            // Dynamic Strumming:
+            // Low Intensity = Slower (lazier) strum (0.02 - 0.04)
+            // High Intensity = Tighter strum (0.005 - 0.01)
+            let baseStrum = 0.008;
+            if (intensity < 0.4) baseStrum = 0.025; 
+            else if (intensity > 0.8) baseStrum = 0.005;
             
-            const stagger = (i * strumSpeed) + humanShift;
+            if (genre === 'Acoustic') baseStrum *= 1.5; // Always looser
+            
+            const stagger = (i * baseStrum) + humanShift;
             const noteCC = (i === 0) ? ccEvents : [];
 
             notes.push({
