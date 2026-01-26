@@ -2,6 +2,7 @@ import { playback, groove, chords, bass, soloist, harmony, midi } from './state.
 import { ui } from './ui.js';
 import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { createReverbImpulse, createSoftClipCurve } from './utils.js';
+import { audioWatchdog } from './audio-recovery.js';
 
 // Facade: Re-export synthesis logic from specialized modules
 import { playNote, playChordScratch, updateSustain, killAllPianoNotes, INSTRUMENT_PRESETS } from './synth-chords.js';
@@ -44,6 +45,10 @@ export function initAudio() {
         playback.masterGain.gain.setValueAtTime(0.0001, playback.audio.currentTime);
         playback.masterGain.gain.exponentialRampToValueAtTime(initMasterVol, playback.audio.currentTime + 0.04);
         
+        // Attach the Watchdog
+        audioWatchdog.attachToMaster(playback.masterGain);
+        audioWatchdog.start();
+
         playback.saturator = playback.audio.createWaveShaper();
         playback.saturator.curve = createSoftClipCurve();
         playback.saturator.oversample = '4x';
