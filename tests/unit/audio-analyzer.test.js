@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChordAnalyzerLite } from '../../public/audio-analyzer-lite.js';
 import { extractForm } from '../../public/form-extractor.js';
 
@@ -71,6 +71,10 @@ describe('Audio Analyzer (Consolidated)', () => {
     };
 
     describe('Basic Triad Identification', () => {
+        beforeEach(() => {
+            vi.spyOn(console, 'warn').mockImplementation(() => {});
+        });
+
         it('should identify a perfect C Major triad', async () => {
             // C4 (261.63), E4 (329.63), G4 (392.00)
             const buffer = createChordBuffer([261.63, 329.63, 392.00]);

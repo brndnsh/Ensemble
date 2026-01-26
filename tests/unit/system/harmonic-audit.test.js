@@ -75,10 +75,15 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
                                 if (bassNote.midi < 12 || bassNote.midi > 60) errors.push(`[${genre} @ ${intensity}] Bass Range Warning: MIDI ${bassNote.midi} at step ${step}`);
 
                                 // Scale Check (Skip for chromatic styles)
-                                if (genre !== 'Jazz' && genre !== 'Blues' && !bassNote.muted) {
+                                if (!['Jazz', 'Blues', 'Funk', 'Reggae', 'Neo-Soul'].includes(genre) && !bassNote.muted) {
                                     const scale = getScaleForChord(chord, null, 'smart');
+                                    const theoryScale = getScaleForChord(chord, null, 'theory');
                                     const interval = (bassNote.midi - chord.rootMidi + 120) % 12;
-                                    if (!scale.includes(interval) && bassNote.bendStartInterval === 0) {
+                                    
+                                    // Valid if it fits the Genre Scale OR the Chord's Theoretical Scale
+                                    const isValid = scale.includes(interval) || theoryScale.includes(interval);
+
+                                    if (!isValid && bassNote.bendStartInterval === 0) {
                                         // Allow for leading tones on the last beat
                                         const isLastBeat = (stepInChord === Math.round(chord.beats * 4) - 1);
                                         if (!isLastBeat) {
@@ -100,10 +105,14 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
                                 if (n.midi < 40 || n.midi > 110) errors.push(`[${genre} @ ${intensity}] Soloist Range Warning: MIDI ${n.midi} at step ${step}`);
                                 
                                 // Scale Check
-                                if (genre !== 'Jazz' && genre !== 'Blues' && !n.isDoubleStop) {
+                                if (!['Jazz', 'Blues', 'Funk', 'Reggae', 'Neo-Soul'].includes(genre) && !n.isDoubleStop) {
                                     const scale = getScaleForChord(chord, null, 'smart');
+                                    const theoryScale = getScaleForChord(chord, null, 'theory');
                                     const interval = (n.midi - chord.rootMidi + 120) % 12;
-                                    if (!scale.includes(interval) && n.bendStartInterval === 0) {
+                                    
+                                    const isValid = scale.includes(interval) || theoryScale.includes(interval);
+
+                                    if (!isValid && n.bendStartInterval === 0) {
                                         errors.push(`[${genre} @ ${intensity}] Soloist Out-of-Scale: ${n.midi % 12} over ${chord.absName}`);
                                     }
                                 }
@@ -129,10 +138,14 @@ describe('Harmonic Audit: Global Preset/Genre Compatibility', () => {
                             if (n.midi < 30 || n.midi > 100) errors.push(`[${genre} @ ${intensity}] Harmony Range Warning: MIDI ${n.midi} at step ${step}`);
                             
                             // Scale Check
-                            if (genre !== 'Jazz' && genre !== 'Blues') {
+                            if (!['Jazz', 'Blues', 'Funk', 'Reggae', 'Neo-Soul'].includes(genre)) {
                                 const scale = getScaleForChord(chord, null, 'smart');
+                                const theoryScale = getScaleForChord(chord, null, 'theory');
                                 const interval = (n.midi - chord.rootMidi + 120) % 12;
-                                if (!scale.includes(interval)) {
+                                
+                                const isValid = scale.includes(interval) || theoryScale.includes(interval);
+
+                                if (!isValid) {
                                     errors.push(`[${genre} @ ${intensity}] Harmony Out-of-Scale: ${n.midi % 12} over ${chord.absName}`);
                                 }
                             }

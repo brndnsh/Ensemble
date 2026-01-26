@@ -25,6 +25,7 @@ export function updateChordVis(ev) { updateActiveChordUI(ev.index); }
 
 let lastFrameTime = 0;
 let missedFrames = 0;
+let vizCrashCount = 0;
 
 export function draw(viz) {
     if (!playback.isDrawing) return;
@@ -68,9 +69,20 @@ export function draw(viz) {
         } else if (ev.type === 'flash') triggerFlash(ev.intensity);
     }
     if (viz && vizState.enabled && playback.isDrawing) {
-        viz.setRegister('bass', bass.octave); viz.setRegister('soloist', soloist.octave); viz.setRegister('chords', chords.octave); viz.setRegister('harmony', harmony.octave);
-        const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-        viz.render(now, playback.bpm, ts.beats);
+        try {
+            viz.setRegister('bass', bass.octave); viz.setRegister('soloist', soloist.octave); viz.setRegister('chords', chords.octave); viz.setRegister('harmony', harmony.octave);
+            const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+            viz.render(now, playback.bpm, ts.beats);
+            vizCrashCount = 0;
+        } catch (e) {
+            console.error("[Visualizer Error]", e);
+            vizCrashCount++;
+            if (vizCrashCount > 3) {
+                console.warn("Visualizer disabled due to repeated errors.");
+                vizState.enabled = false;
+                vizCrashCount = 0;
+            }
+        }
     }
 
     // --- Session Timer Display Update ---
