@@ -88,10 +88,10 @@ const STYLE_CONFIG = {
         motifProb: 0.5, hookProb: 0.25
     },
     country: {
-        restBase: 0.2, restGrowth: 0.1, cells: [1, 3, 4, 12, 14], registerSoar: 8,
-        tensionScale: 0.5, timingJitter: 4, maxNotesPerPhrase: 12,
-        doubleStopProb: 0.4, anticipationProb: 0.2, targetExtensions: [2, 4, 9, 11],
-        deviceProb: 0.35, allowedDevices: ['guitarDouble', 'slide', 'run'],
+        restBase: 0.15, restGrowth: 0.08, cells: [1, 3, 4, 12, 14, 6], registerSoar: 10,
+        tensionScale: 0.5, timingJitter: 4, maxNotesPerPhrase: 16,
+        doubleStopProb: 0.45, anticipationProb: 0.2, targetExtensions: [2, 4, 9],
+        deviceProb: 0.4, allowedDevices: ['guitarDouble', 'slide', 'countryBend', 'chickenPick'],
         motifProb: 0.4, hookProb: 0.2
     },
     metal: {
@@ -123,7 +123,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     
     let activeStyle = style;
     if (activeStyle === 'smart') {
-        const mapping = { 'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal', 'Reggae': 'minimal' };
+        const mapping = { 'Rock': 'scalar', 'Jazz': 'bird', 'Funk': 'funk', 'Blues': 'blues', 'Neo-Soul': 'neo', 'Disco': 'disco', 'Bossa': 'bossa', 'Bossa Nova': 'bossa', 'Afrobeat': 'funk', 'Acoustic': 'minimal', 'Reggae': 'minimal', 'Country': 'country' };
         activeStyle = mapping[groove.genreFeel] || 'scalar';
     }
     const config = STYLE_CONFIG[activeStyle] || STYLE_CONFIG.scalar;
@@ -412,6 +412,27 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         const devBaseVel = 0.5 + (effectiveIntensity * 0.6);
         
+        if (deviceType === 'countryBend' && soloist.doubleStops) {
+            // Pedal Steel style: Hold one note, bend the other into a chord tone
+            const topNote = selectedMidi + ([3, 4, 7].includes((selectedMidi - rootMidi + 12) % 12) ? 0 : 2);
+            const bottomNote = selectedMidi - 5; 
+            const res = [
+                { midi: topNote, velocity: devBaseVel * 1.2, durationSteps: 4, style: activeStyle, bendStartInterval: -1, isDoubleStop: true },
+                { midi: bottomNote, velocity: devBaseVel * 0.9, durationSteps: 4, style: activeStyle, isDoubleStop: false }
+            ];
+            soloist.busySteps = 3;
+            return finalizeNote(res);
+        }
+        if (deviceType === 'chickenPick') {
+            // Snappy, short rhythmic hits, often a double stop
+            const dsInt = Math.random() < 0.5 ? 3 : 4;
+            const res = [
+                { midi: selectedMidi + dsInt, velocity: 1.25, durationSteps: 1, style: activeStyle, isDoubleStop: true },
+                { midi: selectedMidi, velocity: 1.2, durationSteps: 1, style: activeStyle, isDoubleStop: false }
+            ];
+            soloist.busySteps = 0;
+            return finalizeNote(res);
+        }
         if (deviceType === 'birdFlurry') {
             let flurry = []; let curr = selectedMidi + 3; 
             for (let i = 0; i < 4; i++) {

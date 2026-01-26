@@ -61,6 +61,11 @@ export function getScaleForChord(chord, nextChord = null, style = 'smart') {
     }
 
     if (style === 'country') {
+        const quality = chord.quality || 'major';
+        if (quality.startsWith('m') && !quality.startsWith('maj')) {
+            return SCALE_INTERVALS.MINOR_PENTATONIC;
+        }
+        // Classic Country: Major Pentatonic + b3 (Blue Note) + b7
         return [0, 2, 3, 4, 7, 9, 10].sort((a,b)=>a-b);
     }
 
