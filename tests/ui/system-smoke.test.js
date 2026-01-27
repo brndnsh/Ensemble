@@ -148,6 +148,14 @@ const setupMinimalDOM = () => {
             <div id="bpmControlGroup"></div>
             <div id="larsIndicator"></div>
             <button id="clearDrumsBtn"></button>
+            <div id="analyzerOverlay"></div>
+            <div id="analyzerProgressBar"></div>
+            <div id="liveHistoryDisplay"></div>
+            <div id="liveChordDisplay"></div>
+            <button id="captureLiveHistoryBtn"></button>
+            <button id="stopLiveListenBtn"></button>
+            <button id="startAnalysisBtn"></button>
+            <button id="liveListenBtn"></button>
             <div id="bpm-label"></div>
         </div>
     `;

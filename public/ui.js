@@ -168,6 +168,7 @@ export const ui = {
     get liveListenView() { return getEl('liveListenView'); },
     get liveHistoryDisplay() { return getEl('liveHistoryDisplay'); },
     get liveChordDisplay() { return getEl('liveChordDisplay'); },
+    get captureLiveHistoryBtn() { return getEl('captureLiveHistoryBtn'); },
     get stopLiveListenBtn() { return getEl('stopLiveListenBtn'); },
     get startAnalysisBtn() { return getEl('startAnalysisBtn'); },
     get applyAnalysisBtn() { return getEl('applyAnalysisBtn'); },

@@ -128,11 +128,15 @@ describe('Modal Accessibility Focus', () => {
             <div id="analyzerDropZone"></div>
             <input id="analyzerFileInput">
             <button id="liveListenBtn"></button>
+            <div id="liveHistoryDisplay"></div>
+            <div id="liveChordDisplay"></div>
+            <button id="captureLiveHistoryBtn"></button>
             <button id="stopLiveListenBtn"></button>
-            <input id="analyzerStartInput">
-            <input id="analyzerEndInput">
             <button id="startAnalysisBtn"></button>
             <button id="applyAnalysisBtn"></button>
+            <input id="analyzerStartInput">
+            <input id="analyzerEndInput">
+            <div id="analyzerProgressBar"></div>
             
             <input id="midiEnableCheck" type="checkbox">
             <input id="midiMuteLocalCheck" type="checkbox">

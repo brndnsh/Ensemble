@@ -1224,6 +1224,38 @@ export function setupAnalyzerHandlers() {
     let liveAudioCtx = null;
     let liveStream = null;
     let liveAnalyzer = null;
+    let capturedChords = [];
+
+    const captureLiveHistory = () => {
+        if (capturedChords.length === 0) return;
+        
+        pushHistory();
+        
+        const progressionStr = capturedChords.join(' | ');
+        const newSection = {
+            id: generateId(),
+            label: 'Captured Live',
+            value: progressionStr,
+            repeat: 1,
+            key: '',
+            timeSignature: '',
+            seamless: false
+        };
+
+        const replaceAll = document.getElementById('analyzerReplaceCheck').checked;
+
+        if (replaceAll) {
+            arranger.sections = [newSection];
+        } else {
+            arranger.sections.push(newSection);
+        }
+
+        arranger.isDirty = true;
+        refreshArrangerUI();
+        ui.analyzerOverlay.classList.remove('active');
+        stopLiveListen();
+        showToast(`Imported ${capturedChords.length} chords.`);
+    };
 
     const startLiveListen = async () => {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1233,6 +1265,8 @@ export function setupAnalyzerHandlers() {
         }
         
         const mode = document.querySelector('input[name="analyzerMode"]:checked').value;
+        capturedChords = [];
+        ui.captureLiveHistoryBtn.style.display = 'none';
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: {
@@ -1335,14 +1369,7 @@ export function setupAnalyzerHandlers() {
 
                                 // Auto-update arranger key if not locked
                                 if (ui.liveForceKeyCheck && !ui.liveForceKeyCheck.checked && consensusKey !== arranger.key) {
-                                    // Throttle updates to avoid state thrashing?
-                                    // Actually, let's just update it. The harmonizer uses `arranger.key` in the next step.
-                                    if (playback.isPlaying) {
-                                        // Be careful during playback not to cause glitches, but this is analysis mode.
-                                    }
                                     arranger.key = consensusKey;
-                                    // Visual feedback in main UI? Maybe too distracting.
-                                    // But user asked to override.
                                 }
                              }
 
@@ -1362,7 +1389,20 @@ export function setupAnalyzerHandlers() {
                                  const melodyBit = [{beat: 0, midi: bestMidi, energy: 1.0}];
                                  // Use the EFFECTIVE key (which might have just been updated)
                                  const prog = harmonizer.generateProgression(melodyBit, arranger.key || 'C', 0.5);
-                                 chordEl.textContent = formatUnicodeSymbols(prog);
+                                 
+                                 if (prog && prog !== 'Rest') {
+                                     chordEl.textContent = formatUnicodeSymbols(prog);
+                                     if (history.length === 0 || history[history.length - 1] !== prog) {
+                                         history.push(prog);
+                                         capturedChords.push(prog);
+                                         if (history.length > 8) history.shift();
+                                         ui.captureLiveHistoryBtn.style.display = 'block';
+                                         
+                                         historyEl.innerHTML = history.map((c, i) => 
+                                             `<span class="${i === history.length - 1 ? 'current' : ''}">${formatUnicodeSymbols(c)}</span>`
+                                         ).join('');
+                                     }
+                                 }
                              }
                         }
                     } else {
@@ -1379,7 +1419,9 @@ export function setupAnalyzerHandlers() {
                             
                             if (history.length === 0 || history[history.length - 1] !== chord) {
                                 history.push(chord);
+                                capturedChords.push(chord);
                                 if (history.length > 8) history.shift();
+                                ui.captureLiveHistoryBtn.style.display = 'block';
                                 
                                 historyEl.innerHTML = history.map((c, i) => 
                                     `<span class="${i === history.length - 1 ? 'current' : ''}">${formatUnicodeSymbols(c)}</span>`
@@ -1412,10 +1454,12 @@ export function setupAnalyzerHandlers() {
         ui.analyzerDropZone.style.display = 'block';
         ui.liveListenBtn.parentElement.style.display = 'flex';
         ui.liveListenView.style.display = 'none';
+        ui.captureLiveHistoryBtn.style.display = 'none';
     };
 
     ui.liveListenBtn.addEventListener('click', startLiveListen);
     ui.stopLiveListenBtn.addEventListener('click', stopLiveListen);
+    ui.captureLiveHistoryBtn.addEventListener('click', captureLiveHistory);
 
     ui.analyzerStartInput.addEventListener('input', updateSelectionUI);
     ui.analyzerEndInput.addEventListener('input', updateSelectionUI);
