@@ -49,6 +49,10 @@ function init() {
                     if (!chords.buffer.has(n.step)) chords.buffer.set(n.step, []);
                     chords.buffer.get(n.step).push(n);
                 }
+                else if (n.module === 'groove') {
+                    if (!groove.buffer.has(n.step)) groove.buffer.set(n.step, []);
+                    groove.buffer.get(n.step).push(n);
+                }
             }); 
             if (playback.isPlaying) scheduler(); 
         });

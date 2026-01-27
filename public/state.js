@@ -242,6 +242,7 @@ export const groove = {
     pendingGenreFeel: null,
     fillActive: false,
     fillSteps: {},
+    buffer: new Map(),
     activeTab: 'smart',
     mobileTab: 'chords',
     lastHatGain: null,

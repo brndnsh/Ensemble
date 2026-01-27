@@ -104,34 +104,28 @@ function scheduleResolution(time) {
     const spb = 60.0 / effectiveBpm;
     const measureDuration = 8 * spb; // Ring out for 2 bars (approx 5-6s)
 
-    // 1. Manual Drum Resolution
-    if (groove.enabled) {
-        playDrumSound('Kick', time, 1.0);
-        playDrumSound('Crash', time, 0.9);
-    }
-
-    // 2. Schedule notes that came from the worker (Bass, Chords, Soloist)
-    // The worker-client puts these in bass.buffer, chords.buffer, soloist.buffer
-    // We manually trigger the scheduling for this specific step
+    // 1. Schedule all instruments that came from the worker (Bass, Chords, Soloist, Harmony, Groove)
+    // The worker-client puts these in track buffers.
     // Create a dummy chord data for visuals
+    const dummyChordData = { chord: { freqs: [] } };
     
-    // We use a simplified version of scheduleGlobalEvent logic
-    if (bass.enabled) scheduleBass({ chord: { freqs: [] } }, playback.step, time);
-    if (soloist.enabled) scheduleSoloist({ chord: { freqs: [] } }, playback.step, time, time);
-    if (chords.enabled) scheduleChords({ chord: { freqs: [] } }, playback.step, time);
-    if (harmony.enabled) scheduleHarmonies({ chord: { freqs: [] } }, playback.step, time);
+    if (bass.enabled) scheduleBass(dummyChordData, playback.step, time);
+    if (soloist.enabled) scheduleSoloist(dummyChordData, playback.step, time, time);
+    if (chords.enabled) scheduleChords(dummyChordData, playback.step, time);
+    if (harmony.enabled) scheduleHarmonies(dummyChordData, playback.step, time);
+    if (groove.enabled) scheduleDrumsFromBuffer(playback.step, time);
     
-    // 3. Add a final flash
+    // 2. Add a final flash
     if (ui.visualFlash.checked) {
         playback.drawQueue.push({ type: 'flash', time: time, intensity: 0.4, beat: 1 });
     }
 
-    // 4. Graceful Sustain Release (at 1.5 bars)
+    // 3. Graceful Sustain Release (at 1.5 bars)
     setTimeout(() => {
         if (playback.isPlaying) updateSustain(false);
     }, 6 * spb * 1000);
 
-    // 5. Stop playback after the full ring-out (2 bars)
+    // 4. Stop playback after the full ring-out (2 bars)
     setTimeout(() => {
         if (playback.isPlaying) togglePlay(); 
     }, measureDuration * 1000);
@@ -364,6 +358,40 @@ export function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, abs
                     sendMIDIDrum(soundName, playTime, Math.min(1.0, velocity * conductorVel), midiState.drumsOctave);
                 }
     });
+}
+
+export function scheduleDrumsFromBuffer(step, time) {
+    const notes = groove.buffer.get(step);
+    groove.buffer.delete(step);
+    
+    if (notes && notes.length > 0) {
+        const conductorVel = playback.conductorVelocity || 1.0;
+        const DRUM_VIS_PITCHES = {
+            'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46, 
+            'Ride': 51, 'Crash': 49, 'TomHi': 50, 'TomMid': 47, 'TomLow': 45,
+            'Rimshot': 37, 'Clap': 39, 'Shaker': 70, 'Cowbell': 56
+        };
+
+        notes.forEach(n => {
+            const { name, velocity, timingOffset } = n;
+            const playTime = time + (timingOffset || 0);
+            
+            playDrumSound(name, playTime, velocity * conductorVel);
+            
+            if (vizState.enabled && playback.viz) {
+                const midi = DRUM_VIS_PITCHES[name] || 36;
+                playback.drawQueue.push({ 
+                    type: 'drums_vis', 
+                    midi, 
+                    time: playTime, 
+                    velocity: velocity * conductorVel,
+                    duration: 0.1
+                });
+            }
+
+            sendMIDIDrum(name, playTime, Math.min(1.0, velocity * conductorVel), midiState.drumsOctave);
+        });
+    }
 }
 
 export function scheduleBass(chordData, step, time) {
