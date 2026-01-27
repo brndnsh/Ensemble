@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { playback, soloist, groove, arranger, dispatch } from './state.js';
+import { playback, soloist, groove, arranger, chords, bass, harmony, dispatch } from './state.js';
 import { ui, triggerFlash } from './ui.js';
 import { getSectionEnergy } from './form-analysis.js';
 import { debounceSaveState } from './persistence.js';
@@ -66,13 +66,48 @@ export function applyConductor() {
     dispatch(ACTIONS.SET_PARAM, { module: 'bass', param: 'pocketOffset', value: targetBassPocket });
 
     // --- 5. Intensity-Aware Mixing ---
-    if (playback.masterLimiter && playback.audio) {
-        // Dynamic Compression: Tighter at high intensity to glue the mix
-        const targetThreshold = -0.5 - (intensity * 1.5); // -0.5 to -2.0 dB
-        const targetRatio = 12 + (intensity * 8); // 12:1 to 20:1
+    if (playback.audio) {
+        const time = playback.audio.currentTime;
+        const ramp = 0.5;
+
+        // Master Limiter: Tighter at high intensity to glue the mix
+        if (playback.masterLimiter) {
+            const targetThreshold = -0.5 - (intensity * 1.5); // -0.5 to -2.0 dB
+            const targetRatio = 12 + (intensity * 8); // 12:1 to 20:1
+            playback.masterLimiter.threshold.setTargetAtTime(targetThreshold, time, ramp);
+            playback.masterLimiter.ratio.setTargetAtTime(targetRatio, time, ramp);
+        }
+
+        // --- Reverb-Intensity Linking ---
+        // High Intensity = Dry (0.1 - 0.3), Low Intensity = Wet (0.4 - 0.6)
+        const targetReverb = 0.6 - (intensity * 0.4); 
         
-        playback.masterLimiter.threshold.setTargetAtTime(targetThreshold, playback.audio.currentTime, 0.5);
-        playback.masterLimiter.ratio.setTargetAtTime(targetRatio, playback.audio.currentTime, 0.5);
+        const reverbNodes = [
+            { el: ui.chordReverb, state: chords, gain: 'chordsReverb' },
+            { el: ui.bassReverb, state: bass, gain: 'bassReverb' },
+            { el: ui.soloistReverb, state: soloist, gain: 'soloistReverb' },
+            { el: ui.harmonyReverb, state: harmony, gain: 'harmoniesReverb' },
+            { el: ui.drumReverb, state: groove, gain: 'drumsReverb' }
+        ];
+
+        reverbNodes.forEach(node => {
+            // Apply a slight genre-specific bias to the auto-reverb
+            let bias = 1.0;
+            if (node.gain === 'drumsReverb') bias = 0.7; // Keep drums dryer
+            else if (node.gain === 'soloistReverb') bias = 1.2; // Keep soloist wetter
+            
+            const finalReverb = Math.max(0.001, targetReverb * bias);
+            
+            // Sync UI if slider is not being touched
+            if (node.el && Math.abs(parseFloat(node.el.value) - node.state.reverb) < 0.05) {
+                node.el.value = finalReverb;
+            }
+            node.state.reverb = finalReverb;
+
+            if (playback[node.gain]) {
+                playback[node.gain].gain.setTargetAtTime(finalReverb, time, ramp);
+            }
+        });
     }
 
     debounceSaveState();

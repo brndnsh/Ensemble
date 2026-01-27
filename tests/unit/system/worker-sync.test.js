@@ -80,7 +80,7 @@ describe('Worker Synchronization Integrity', () => {
         const mockNotes = [{ midi: 60, step: 0, module: 'bass' }];
         getTimerWorker().onmessage({ data: { type: 'notes', notes: mockNotes } });
         
-        expect(onNotes).toHaveBeenCalledWith(mockNotes, undefined);
+        expect(onNotes).toHaveBeenCalledWith(mockNotes, undefined, undefined);
     });
 
     it('should trigger onTick callback when worker sends tick', () => {
@@ -106,7 +106,7 @@ describe('Worker Synchronization Integrity', () => {
             }, 100);
         });
 
-        expect(onNotes).toHaveBeenCalledWith(mockNotes, undefined);
+        expect(onNotes).toHaveBeenCalledWith(mockNotes, undefined, undefined);
     });
 
     it('should not throw if called before worker is initialized', () => {

@@ -162,7 +162,7 @@ export function getChordAtStep(step) {
     return null;
 }
 
-function fillBuffers(currentStep, timestamp = null) {
+function fillBuffers(currentStep, requestTimestamp = null, processStartTime = null) {
     const targetStep = currentStep + LOOKAHEAD;
     const notesToMain = [];
     if (bbBufferHead < currentStep) bbBufferHead = currentStep;
@@ -268,7 +268,8 @@ function fillBuffers(currentStep, timestamp = null) {
         
         head++;
     }
-    if (notesToMain.length > 0) postMessage({ type: 'notes', notes: notesToMain, timestamp });
+    const workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
+    if (notesToMain.length > 0) postMessage({ type: 'notes', notes: notesToMain, requestTimestamp, workerProcessTime });
 }
 
 export function handleExport(options) {
@@ -704,9 +705,10 @@ export function handleExport(options) {
 
 if (typeof self !== 'undefined') {
     self.onmessage = (e) => {
+        const startTime = performance.now();
         try {
             const { type, data } = e.data;
-            const timestamp = data?.timestamp || null;
+            const requestTimestamp = data?.requestTimestamp || null;
             switch (type) {
                 case 'start': if (!timerID) { timerID = setInterval(() => { postMessage({ type: 'tick' }); }, interval); } break;
                 case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
@@ -739,7 +741,7 @@ if (typeof self !== 'undefined') {
                     break;
                 case 'requestBuffer': 
                     if (playback.workerLogging) console.log(`[Worker] requestBuffer: step=${data.step}, currentHeads=[bass:${bbBufferHead}, soloist:${sbBufferHead}, chords:${cbBufferHead}]`);
-                    fillBuffers(data.step, timestamp); 
+                    fillBuffers(data.step, requestTimestamp, startTime); 
                     break;
                 case 'flush':
                     if (playback.workerLogging) console.log(`[Worker] flush: step=${data.step}`);
@@ -791,13 +793,13 @@ if (typeof self !== 'undefined') {
                         handlePrime(data.primeSteps);
                     }
 
-                    fillBuffers(data.step, timestamp);
+                    fillBuffers(data.step, requestTimestamp, startTime);
                     break;
                 case 'prime':
                     handlePrime(data);
                     break;
                 case 'resolution':
-                    handleResolution(data.step, timestamp);
+                    handleResolution(data.step, requestTimestamp, startTime);
                     break;
                 case 'export': handleExport(data); break;
             }
@@ -805,9 +807,10 @@ if (typeof self !== 'undefined') {
     };
 }
 
-export function handleResolution(step, timestamp = null) {
+export function handleResolution(step, requestTimestamp = null, processStartTime = null) {
     const notesToMain = generateResolutionNotes(step, arranger, { bass: bass.enabled, chords: chords.enabled, soloist: soloist.enabled, harmony: harmony.enabled, groove: groove.enabled }, playback.bpm);
-    postMessage({ type: 'notes', notes: notesToMain, timestamp });
+    const workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
+    postMessage({ type: 'notes', notes: notesToMain, requestTimestamp, workerProcessTime });
 }
 
 function handlePrime(steps) {

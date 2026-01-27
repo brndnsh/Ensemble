@@ -21,11 +21,11 @@ export function initWorker(onSchedulerRequest, onNotesReceived) {
     timerWorker = new Worker(workerPath, { type: 'module' });
 
     timerWorker.onmessage = (e) => {
-        const { type, notes, data, timestamp } = e.data;
+        const { type, notes, data, requestTimestamp, workerProcessTime } = e.data;
         if (type === 'tick') {
             if (typeof schedulerRequestHandler === 'function') schedulerRequestHandler();
         } else if (type === 'notes') {
-            if (typeof notesReceivedHandler === 'function') notesReceivedHandler(notes, timestamp);
+            if (typeof notesReceivedHandler === 'function') notesReceivedHandler(notes, requestTimestamp, workerProcessTime);
         } else if (type === 'error') {
             console.error("[Worker Error]", data);
         } else if (type === 'exportComplete') {
@@ -53,15 +53,15 @@ export function stopWorker() {
 }
 
 export function flushWorker(step, syncData = null, primeSteps = 0) {
-    if (timerWorker) timerWorker.postMessage({ type: 'flush', data: { step, syncData, primeSteps, timestamp: performance.now() } });
+    if (timerWorker) timerWorker.postMessage({ type: 'flush', data: { step, syncData, primeSteps, requestTimestamp: performance.now() } });
 }
 
 export function requestBuffer(step) {
-    if (timerWorker) timerWorker.postMessage({ type: 'requestBuffer', data: { step, timestamp: performance.now() } });
+    if (timerWorker) timerWorker.postMessage({ type: 'requestBuffer', data: { step, requestTimestamp: performance.now() } });
 }
 
 export function requestResolution(step) {
-    if (timerWorker) timerWorker.postMessage({ type: 'resolution', data: { step, timestamp: performance.now() } });
+    if (timerWorker) timerWorker.postMessage({ type: 'resolution', data: { step, requestTimestamp: performance.now() } });
 }
 
 export function primeWorker(steps = 32) {

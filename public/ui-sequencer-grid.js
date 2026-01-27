@@ -7,23 +7,58 @@ import { UIStore } from './ui-store.js';
 export function initSequencerHandlers(ui) {
     if (!ui.sequencerGrid) return;
 
-    ui.sequencerGrid.addEventListener('click', (e) => {
+    let isDragging = false;
+    let dragType = 0; // The target value we are painting (0, 1, or 2)
+
+    ui.sequencerGrid.addEventListener('mousedown', (e) => {
         const target = e.target;
-        
-        // 1. Handle Step Clicks
+        if (target.classList.contains('step')) {
+            isDragging = true;
+            const instIdx = parseInt(target.dataset.instIdx);
+            const stepIdx = parseInt(target.dataset.stepIdx);
+            const inst = groove.instruments[instIdx];
+            if (!inst) return;
+
+            // Toggle logic for the first click
+            if (inst.steps[stepIdx] === 0) dragType = 1;
+            else if (inst.steps[stepIdx] === 1) dragType = 2;
+            else dragType = 0;
+
+            inst.steps[stepIdx] = dragType;
+            target.classList.toggle('active', dragType === 1);
+            target.classList.toggle('accented', dragType === 2);
+            clearDrumPresetHighlight();
+        }
+    });
+
+    ui.sequencerGrid.addEventListener('mouseover', (e) => {
+        if (!isDragging) return;
+        const target = e.target;
         if (target.classList.contains('step')) {
             const instIdx = parseInt(target.dataset.instIdx);
             const stepIdx = parseInt(target.dataset.stepIdx);
             const inst = groove.instruments[instIdx];
             if (!inst) return;
 
-            if (inst.steps[stepIdx] === 0) inst.steps[stepIdx] = 1;
-            else if (inst.steps[stepIdx] === 1) inst.steps[stepIdx] = 2;
-            else inst.steps[stepIdx] = 0;
-            
-            target.classList.toggle('active', inst.steps[stepIdx] === 1);
-            target.classList.toggle('accented', inst.steps[stepIdx] === 2);
-            clearDrumPresetHighlight();
+            if (inst.steps[stepIdx] !== dragType) {
+                inst.steps[stepIdx] = dragType;
+                target.classList.toggle('active', dragType === 1);
+                target.classList.toggle('accented', dragType === 2);
+                clearDrumPresetHighlight();
+            }
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
+
+    ui.sequencerGrid.addEventListener('click', (e) => {
+        const target = e.target;
+        
+        // 1. Handle Step Clicks (Already handled by mousedown + drag, 
+        // but we keep the other click handlers for audition/mute)
+        if (target.classList.contains('step')) {
             return;
         }
 

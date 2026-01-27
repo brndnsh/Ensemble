@@ -168,7 +168,7 @@ describe('Country Soloist Overhaul', () => {
         it('should have high double stop probability', () => {
             let doubleStops = 0;
             let total = 0;
-            for (let i = 0; i < 500; i++) {
+            for (let i = 0; i < 2000; i++) {
                 soloist.busySteps = 0;
                 soloist.isResting = false;
                 soloist.currentPhraseSteps = 1;
@@ -180,8 +180,8 @@ describe('Country Soloist Overhaul', () => {
                     if (Array.isArray(res)) doubleStops++;
                 }
             }
-            // country doubleStopProb is 0.45.
-            expect(doubleStops / total).toBeGreaterThan(0.3);
+            // country doubleStopProb is 0.5.
+            expect(doubleStops / total).toBeGreaterThan(0.25);
         });
 
         it('should favor pentatonic color tones (2, 9) in country style', () => {

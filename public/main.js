@@ -27,7 +27,18 @@ window.enableWorkerLogging = (enabled) => {
 function init() {
     try {
         // --- WORKER INIT ---
-        initWorker(() => scheduler(), (notes) => { 
+        initWorker(() => scheduler(), (notes, requestTimestamp, workerProcessTime) => { 
+            // --- Latency Monitoring ---
+            if (requestTimestamp) {
+                const now = performance.now();
+                const roundTrip = now - requestTimestamp;
+                const logicLatency = roundTrip - (workerProcessTime || 0);
+                
+                if (logicLatency > 50) {
+                    console.warn(`[Performance] High Logic Latency: ${logicLatency.toFixed(1)}ms (Worker: ${workerProcessTime?.toFixed(1)}ms)`);
+                }
+            }
+
             const sbUpdatedSteps = new Set();
             notes.forEach(n => { 
                 if (n.module === 'bass') bass.buffer.set(n.step, n); 
