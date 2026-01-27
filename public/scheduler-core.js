@@ -5,13 +5,19 @@ import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playHar
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
 import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker, requestResolution } from './worker-client.js';
-import { updateAutoConductor, checkSectionTransition, updateLarsTempo, conductorState } from './conductor.js';
+import { conductorState, updateAutoConductor, updateLarsTempo, checkSectionTransition, updateBpmUI } from './conductor.js';
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
 import { loadDrumPreset, flushBuffers } from './instrument-controller.js';
 import { draw } from './animation-loop.js';
 import { sendMIDINote, sendMIDIDrum, sendMIDICC, normalizeMidiVelocity, panic, sendMIDITransport } from './midi-controller.js';
 import { midi as midiState } from './state.js';
 import { initPlatform, unlockAudio, lockAudio, activateWakeLock, deactivateWakeLock } from './platform.js';
+
+const DRUM_VIS_PITCHES = {
+    'Kick': 36, 'Snare': 38, 'HiHat': 42, 'ClosedHat': 42, 'Open': 46, 'OpenHat': 46,
+    'Ride': 51, 'Crash': 49, 'TomHi': 50, 'TomMid': 47, 'TomLow': 45,
+    'Rimshot': 37, 'Clap': 39, 'Shaker': 70, 'Cowbell': 56
+};
 
 let isScheduling = false;
 let isResolutionTriggered = false;
@@ -329,12 +335,6 @@ export function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, abs
         playback.drawQueue.push({ type: 'fill_active', time: finalTime, active: false });
     }
 
-    const DRUM_VIS_PITCHES = {
-        'Kick': 36, 'Snare': 38, 'ClosedHat': 42, 'OpenHat': 46, 
-        'Ride': 51, 'Crash': 49, 'TomHi': 50, 'TomMid': 47, 'TomLow': 45,
-        'Rimshot': 37, 'Clap': 39, 'Shaker': 70, 'Cowbell': 56
-    };
-
     groove.instruments.forEach(inst => {
         const { shouldPlay, velocity, soundName, instTimeOffset } = applyGrooveOverrides({
             step, inst, stepVal: inst.steps[step], playback, groove, isDownbeat, isQuarter, isBackbeat, isGroupStart
@@ -366,11 +366,6 @@ export function scheduleDrumsFromBuffer(step, time) {
     
     if (notes && notes.length > 0) {
         const conductorVel = playback.conductorVelocity || 1.0;
-        const DRUM_VIS_PITCHES = {
-            'Kick': 36, 'Snare': 38, 'HiHat': 42, 'Open': 46, 
-            'Ride': 51, 'Crash': 49, 'TomHi': 50, 'TomMid': 47, 'TomLow': 45,
-            'Rimshot': 37, 'Clap': 39, 'Shaker': 70, 'Cowbell': 56
-        };
 
         notes.forEach(n => {
             const { name, velocity, timingOffset } = n;
