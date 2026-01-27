@@ -268,7 +268,7 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
         
         head++;
     }
-    const workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
+    var workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
     if (notesToMain.length > 0) postMessage({ type: 'notes', notes: notesToMain, requestTimestamp, workerProcessTime });
 }
 
@@ -705,10 +705,10 @@ export function handleExport(options) {
 
 if (typeof self !== 'undefined') {
     self.onmessage = (e) => {
-        const startTime = performance.now();
+        var startTime = performance.now();
         try {
-            const { type, data } = e.data;
-            const requestTimestamp = data?.requestTimestamp || null;
+            var { type, data } = e.data;
+            var requestTimestamp = data?.requestTimestamp || null;
             switch (type) {
                 case 'start': if (!timerID) { timerID = setInterval(() => { postMessage({ type: 'tick' }); }, interval); } break;
                 case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
@@ -809,7 +809,7 @@ if (typeof self !== 'undefined') {
 
 export function handleResolution(step, requestTimestamp = null, processStartTime = null) {
     const notesToMain = generateResolutionNotes(step, arranger, { bass: bass.enabled, chords: chords.enabled, soloist: soloist.enabled, harmony: harmony.enabled, groove: groove.enabled }, playback.bpm);
-    const workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
+    var workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
     postMessage({ type: 'notes', notes: notesToMain, requestTimestamp, workerProcessTime });
 }
 
