@@ -58,6 +58,7 @@ function init() {
         viz.addTrack('bass', 'var(--success-color)'); 
         viz.addTrack('soloist', 'var(--soloist-color)');
         viz.addTrack('harmony', 'var(--violet)');
+        viz.addTrack('drums', 'var(--text-primary)');
 
         hydrateState();
         loadFromUrl(viz);

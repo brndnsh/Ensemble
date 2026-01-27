@@ -316,20 +316,34 @@ export function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, abs
         }
     }
 
+    const DRUM_VIS_PITCHES = {
+        'Kick': 36, 'Snare': 38, 'ClosedHat': 42, 'OpenHat': 46, 
+        'Ride': 51, 'Crash': 49, 'TomHi': 50, 'TomMid': 47, 'TomLow': 45,
+        'Rimshot': 37, 'Clap': 39, 'Shaker': 70, 'Cowbell': 56
+    };
+
     groove.instruments.forEach(inst => {
         const { shouldPlay, velocity, soundName, instTimeOffset } = applyGrooveOverrides({
             step, inst, stepVal: inst.steps[step], playback, groove, isDownbeat, isQuarter, isBackbeat, isGroupStart
         });
 
                 if (shouldPlay && !inst.muted) {
+                    const playTime = finalTime + instTimeOffset;
+                    playDrumSound(soundName, playTime, velocity * conductorVel);
+                    
+                    if (vizState.enabled && playback.viz) {
+                        const midi = DRUM_VIS_PITCHES[soundName] || 36;
+                        playback.drawQueue.push({ 
+                            type: 'drums_vis', 
+                            midi, 
+                            time: playTime, 
+                            velocity: velocity * conductorVel,
+                            duration: 0.1
+                        });
+                    }
 
-                    playDrumSound(soundName, finalTime + instTimeOffset, velocity * conductorVel);
-
-                    sendMIDIDrum(soundName, finalTime + instTimeOffset, Math.min(1.0, velocity * conductorVel), midiState.drumsOctave);
-
+                    sendMIDIDrum(soundName, playTime, Math.min(1.0, velocity * conductorVel), midiState.drumsOctave);
                 }
-
-        
     });
 }
 

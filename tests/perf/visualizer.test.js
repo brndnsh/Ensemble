@@ -54,6 +54,7 @@ describe('UnifiedVisualizer Performance', () => {
             lineTo: vi.fn(),
             stroke: vi.fn(),
             fill: vi.fn(),
+            closePath: vi.fn(),
             arc: vi.fn(),
             fillText: vi.fn(),
             set lineCap(v) {},

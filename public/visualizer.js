@@ -377,7 +377,32 @@ export class UnifiedVisualizer {
         // 3. Melodic Tracks
         for (const name in this.tracks) {
             const track = this.tracks[name];
-            // No longer using track-specific register for Y pos, only for metadata if needed
+            
+            // SPECIAL HANDLING: Drums
+            if (name === 'drums') {
+                ctx.fillStyle = track.resolvedColor || track.color;
+                for (const ev of track.history) {
+                    const noteEnd = ev.time + (ev.duration || 0.1);
+                    if (noteEnd < minTime) continue;
+                    if (ev.time > currentTime) break;
+
+                    const x = getX(ev.time);
+                    const y = Math.round(getY(ev.midi));
+                    const intensity = ev.velocity || 1.0;
+                    
+                    // Render drum hits as diamonds or vertical diamonds
+                    ctx.beginPath();
+                    ctx.moveTo(x, y - 6 * intensity);
+                    ctx.lineTo(x + 4 * intensity, y);
+                    ctx.lineTo(x, y + 6 * intensity);
+                    ctx.lineTo(x - 4 * intensity, y);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                continue;
+            }
+
+            // Standard Melodic Tracks (Bass, Soloist, Harmony)
             const baseWidth = name === 'soloist' ? 4 : 5;
             
             // Resolve track color if it's a CSS variable
