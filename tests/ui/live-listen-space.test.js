@@ -3,7 +3,6 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { setupUIHandlers } from '../../public/ui-controller.js';
-import { playback } from '../../public/state.js';
 
 // Mock State
 vi.mock('../../public/state.js', () => ({
