@@ -14,6 +14,7 @@ export class UnifiedVisualizer {
         this.registers = { chords: 60 };
         this.beatReferenceTime = null;
         this.themeCache = {};
+        this.isFillActive = false;
         
         this.initDOM();
         this.updateThemeCache();
@@ -58,10 +59,10 @@ export class UnifiedVisualizer {
             guideLineWhite: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)',
             separatorColor: isDark ? '#334155' : '#cbd5e1',
             chordColors: {
-                root: style.getPropertyValue('--blue').trim() || '#2563eb',
-                third: style.getPropertyValue('--green').trim() || '#10b981',
-                fifth: style.getPropertyValue('--orange').trim() || '#f59e0b',
-                seventh: style.getPropertyValue('--violet').trim() || '#d946ef'
+                root: style.getPropertyValue('--blue').trim() || '#268bd2',
+                third: style.getPropertyValue('--green').trim() || '#859900',
+                fifth: style.getPropertyValue('--orange').trim() || '#cb4b16',
+                seventh: style.getPropertyValue('--magenta').trim() || '#d33682'
             }
         };
 
@@ -316,6 +317,18 @@ export class UnifiedVisualizer {
                 ctx.lineTo(x, h);
                 ctx.stroke();
             }
+        }
+
+        // --- Fill Highlight ---
+        if (this.isFillActive) {
+            const yMin = getY(52); // Top of drum range
+            const yMax = getY(36); // Bottom of drum range
+            const fillGradient = ctx.createLinearGradient(this.pianoRollWidth, yMin, this.pianoRollWidth, yMax);
+            fillGradient.addColorStop(0, 'rgba(211, 54, 130, 0)');
+            fillGradient.addColorStop(0.5, 'rgba(211, 54, 130, 0.15)');
+            fillGradient.addColorStop(1, 'rgba(211, 54, 130, 0)');
+            ctx.fillStyle = fillGradient;
+            ctx.fillRect(this.pianoRollWidth, yMin, graphW, yMax - yMin);
         }
 
         // 2. Chords

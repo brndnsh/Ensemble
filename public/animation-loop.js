@@ -68,6 +68,8 @@ export function draw(viz) {
             if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('harmony', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
         } else if (ev.type === 'drums_vis') {
             if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('drums', { midi: ev.midi, time: ev.time, velocity: ev.velocity, duration: ev.duration });
+        } else if (ev.type === 'fill_active') {
+            if (viz && vizState.enabled && playback.isDrawing) viz.isFillActive = ev.active;
         } else if (ev.type === 'flash') triggerFlash(ev.intensity);
     }
     if (viz && vizState.enabled && playback.isDrawing) {

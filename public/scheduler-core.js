@@ -309,11 +309,30 @@ export function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, abs
             if (playback.bandIntensity >= 0.5 || fillStep >= (groove.fillLength / 2)) {
                 const notes = groove.fillSteps[fillStep];
                 if (notes && notes.length > 0) {
-                    notes.forEach(note => playDrumSound(note.name, finalTime, note.vel * conductorVel));
+                    if (vizState.enabled && playback.viz) {
+                        playback.drawQueue.push({ type: 'fill_active', time: finalTime, active: true });
+                    }
+                    notes.forEach(note => {
+                        playDrumSound(note.name, finalTime, note.vel * conductorVel);
+                        
+                        if (vizState.enabled && playback.viz) {
+                            const midi = DRUM_VIS_PITCHES[note.name] || 36;
+                            playback.drawQueue.push({ 
+                                type: 'drums_vis', 
+                                midi, 
+                                time: finalTime, 
+                                velocity: note.vel * conductorVel,
+                                duration: 0.1
+                            });
+                        }
+                    });
                     return;
                 }
             }
         }
+    } else if (vizState.enabled && playback.viz) {
+        // Ensure fill visual state is cleared when fill is not active
+        playback.drawQueue.push({ type: 'fill_active', time: finalTime, active: false });
     }
 
     const DRUM_VIS_PITCHES = {
