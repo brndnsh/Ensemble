@@ -10,6 +10,16 @@ import { UIStore } from './ui-store.js';
 import { renderChordVisualizer as internalRenderChordVisualizer } from './ui-chord-visualizer.js';
 import { renderGrid as internalRenderGrid, renderGridState as internalRenderGridState, initSequencerHandlers as internalInitSequencerHandlers } from './ui-sequencer-grid.js';
 
+// Lazy Conductor Reference to avoid circular TDZ
+let Conductor = null;
+const getConductor = async () => {
+    if (!Conductor) {
+        Conductor = await import('./conductor.js');
+        Conductor.initConductor(ui, triggerFlash);
+    }
+    return Conductor;
+};
+
 const getEl = (id) => document.getElementById(id);
 
 /**
@@ -205,16 +215,14 @@ export function showToast(msg) {
     }, 2000);
 }
 
-export function triggerFlash(intensity) {
+export function triggerFlash(intensity = 0.25) {
     if (!ui.flashOverlay) return;
     ui.flashOverlay.style.opacity = intensity;
     setTimeout(() => ui.flashOverlay.style.opacity = 0, 50);
 }
 
-// Break circular dependency
-import('./conductor.js').then(module => {
-    module.initConductor(ui, triggerFlash);
-});
+// Breaking circular dependency via UIStore injection
+UIStore.initLateBounds(null, triggerFlash);
 
 export function updateOctaveLabel(labelEl, octave, headerEl) {
     if (!labelEl) return;

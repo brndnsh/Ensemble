@@ -3,14 +3,7 @@ import { playback, soloist, groove, arranger, chords, bass, harmony, dispatch } 
 import { getSectionEnergy } from './form-analysis.js';
 import { debounceSaveState } from './persistence.js';
 import { generateProceduralFill } from './fills.js';
-
-let ui = null;
-let triggerFlash = null;
-
-export function initConductor(uiRef, flashRef) {
-    ui = uiRef;
-    triggerFlash = flashRef;
-}
+import { UIStore } from './ui-store.js';
 
 export const conductorState = { 
     target: 0.5, 
@@ -30,8 +23,9 @@ export function applyConductor() {
     if (intensity < 0.4) targetDensity = 'thin';
     else if (intensity > 0.85) targetDensity = 'rich';
     
-    if (ui && ui.densitySelect && ui.densitySelect.value !== targetDensity) {
-        ui.densitySelect.value = targetDensity;
+    const densitySelect = UIStore.get('densitySelect', '#densitySelect');
+    if (densitySelect && densitySelect.value !== targetDensity) {
+        densitySelect.value = targetDensity;
     }
 
     const targetVelocity = 0.7 + (intensity * 0.45); // 0.7x to 1.15x (Adjusted to avoid overloads)
@@ -90,11 +84,11 @@ export function applyConductor() {
         const targetReverb = 0.6 - (intensity * 0.4); 
         
         const reverbNodes = [
-            { el: ui?.chordReverb, state: chords, gain: 'chordsReverb' },
-            { el: ui?.bassReverb, state: bass, gain: 'bassReverb' },
-            { el: ui?.soloistReverb, state: soloist, gain: 'soloistReverb' },
-            { el: ui?.harmonyReverb, state: harmony, gain: 'harmoniesReverb' },
-            { el: ui?.drumReverb, state: groove, gain: 'drumsReverb' }
+            { el: UIStore.get('chordReverb', '#chordReverb'), state: chords, gain: 'chordsReverb' },
+            { el: UIStore.get('bassReverb', '#bassReverb'), state: bass, gain: 'bassReverb' },
+            { el: UIStore.get('soloistReverb', '#soloistReverb'), state: soloist, gain: 'soloistReverb' },
+            { el: UIStore.get('harmonyReverb', '#harmonyReverb'), state: harmony, gain: 'harmoniesReverb' },
+            { el: UIStore.get('drumReverb', '#drumReverb'), state: groove, gain: 'drumsReverb' }
         ];
 
         reverbNodes.forEach(node => {
@@ -138,10 +132,12 @@ export function updateAutoConductor() {
 
         
         const val = Math.round(newIntensity * 100);
-        if (ui && ui.intensitySlider) {
-            if (parseInt(ui.intensitySlider.value) !== val) {
-                ui.intensitySlider.value = val;
-                if (ui.intensityValue) ui.intensityValue.textContent = `${val}%`;
+        const slider = UIStore.get('intensitySlider', '#intensitySlider');
+        const valEl = UIStore.get('intensityValue', '#intensityValue');
+        if (slider) {
+            if (parseInt(slider.value) !== val) {
+                slider.value = val;
+                if (valEl) valEl.textContent = `${val}%`;
             }
         }
         applyConductor();
@@ -202,14 +198,18 @@ export function updateLarsTempo(currentStep) {
 }
 
 export function updateBpmUI() {
-    if (!ui || !ui.bpmInput || !ui.bpmControlGroup) return;
+    const bpmInput = UIStore.get('bpmInput', '#bpmInput');
+    const bpmControlGroup = UIStore.get('bpmControlGroup', '.control-group:has(#bpmInput)');
+    const bpmLabel = UIStore.get('bpmLabel', '#bpmLabel');
+
+    if (!bpmInput || !bpmControlGroup) return;
     
     const baseBpm = playback.bpm;
     const offset = conductorState.larsBpmOffset;
     const effectiveBpm = Math.round(baseBpm + offset);
 
     if (groove.larsMode && playback.isPlaying) {
-        ui.bpmControlGroup.classList.add('lars-active');
+        bpmControlGroup.classList.add('lars-active');
         
         // Calculate intensity of the color (0 to 1)
         // Saturate the color shift at 6 BPM offset
@@ -221,27 +221,27 @@ export function updateBpmUI() {
             const mixPercent = 20 + Math.round(intensity * 80); 
             const blendedColor = `color-mix(in srgb, var(--text-color), ${targetColor} ${mixPercent}%)`;
             
-            ui.bpmInput.style.color = blendedColor;
+            bpmInput.style.color = blendedColor;
             
-            if (ui.bpmLabel) {
+            if (bpmLabel) {
                 // On desktop (label visible), show secondary counter
                 const direction = isPushing ? '↗' : '↘';
-                ui.bpmLabel.textContent = `${effectiveBpm} ${direction}`;
-                ui.bpmLabel.style.color = blendedColor;
+                bpmLabel.textContent = `${effectiveBpm} ${direction}`;
+                bpmLabel.style.color = blendedColor;
             }
         } else {
-            ui.bpmInput.style.color = '';
-            if (ui.bpmLabel) {
-                ui.bpmLabel.textContent = 'BPM';
-                ui.bpmLabel.style.color = '';
+            bpmInput.style.color = '';
+            if (bpmLabel) {
+                bpmLabel.textContent = 'BPM';
+                bpmLabel.style.color = '';
             }
         }
     } else {
-        ui.bpmControlGroup.classList.remove('lars-active');
-        ui.bpmInput.style.color = '';
-        if (ui.bpmLabel) {
-            ui.bpmLabel.textContent = 'BPM';
-            ui.bpmLabel.style.color = '';
+        bpmControlGroup.classList.remove('lars-active');
+        bpmInput.style.color = '';
+        if (bpmLabel) {
+            bpmLabel.textContent = 'BPM';
+            bpmLabel.style.color = '';
         }
     }
 }
@@ -340,7 +340,11 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
 
                 const fillSteps = generateProceduralFill(groove.genreFeel, playback.bandIntensity, stepsPerMeasure);
                 dispatch(ACTIONS.TRIGGER_FILL, { steps: fillSteps, startStep: currentStep, length: stepsPerMeasure, crash: true });
-                if (triggerFlash) triggerFlash(0.25);
+                
+                const flashOverlay = UIStore.get('flashOverlay', '#flashOverlay');
+                if (flashOverlay && UIStore.triggerFlash) {
+                    UIStore.triggerFlash(0.25);
+                }
                 
                 if (playback.autoIntensity) {
                     conductorState.target = targetEnergy;

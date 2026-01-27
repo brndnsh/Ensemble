@@ -1,8 +1,8 @@
 import { playback, arranger } from './state.js';
-import { ui } from './ui.js';
 import { syncWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
 import { getStepsPerMeasure } from './utils.js';
+import { UIStore } from './ui-store.js';
 
 export function applyTheme(theme) {
     playback.theme = theme;
@@ -14,7 +14,9 @@ export function applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.style.colorScheme = theme;
     }
-    if (ui.themeSelect) ui.themeSelect.value = theme;
+    
+    const themeSelect = UIStore.get('themeSelect', '#themeSelect');
+    if (themeSelect) themeSelect.value = theme;
 }
 
 export function setBpm(val, viz) {
@@ -29,7 +31,11 @@ export function setBpm(val, viz) {
         const unswungNoteTimeRemaining = playback.unswungNextNoteTime - now;
         if (unswungNoteTimeRemaining > 0) playback.unswungNextNoteTime = now + (unswungNoteTimeRemaining * ratio);
     }
-    playback.bpm = newBpm; ui.bpmInput.value = newBpm;
+    playback.bpm = newBpm; 
+    
+    const bpmInput = UIStore.get('bpmInput', '#bpmInput');
+    if (bpmInput) bpmInput.value = newBpm;
+    
     syncWorker();
     saveCurrentState();
 
