@@ -1,9 +1,16 @@
 import { ACTIONS } from './types.js';
 import { playback, soloist, groove, arranger, chords, bass, harmony, dispatch } from './state.js';
-import { ui, triggerFlash } from './ui.js';
 import { getSectionEnergy } from './form-analysis.js';
 import { debounceSaveState } from './persistence.js';
 import { generateProceduralFill } from './fills.js';
+
+let ui = null;
+let triggerFlash = null;
+
+export function initConductor(uiRef, flashRef) {
+    ui = uiRef;
+    triggerFlash = flashRef;
+}
 
 export const conductorState = { 
     target: 0.5, 
@@ -23,7 +30,7 @@ export function applyConductor() {
     if (intensity < 0.4) targetDensity = 'thin';
     else if (intensity > 0.85) targetDensity = 'rich';
     
-    if (ui.densitySelect && ui.densitySelect.value !== targetDensity) {
+    if (ui && ui.densitySelect && ui.densitySelect.value !== targetDensity) {
         ui.densitySelect.value = targetDensity;
     }
 
@@ -83,11 +90,11 @@ export function applyConductor() {
         const targetReverb = 0.6 - (intensity * 0.4); 
         
         const reverbNodes = [
-            { el: ui.chordReverb, state: chords, gain: 'chordsReverb' },
-            { el: ui.bassReverb, state: bass, gain: 'bassReverb' },
-            { el: ui.soloistReverb, state: soloist, gain: 'soloistReverb' },
-            { el: ui.harmonyReverb, state: harmony, gain: 'harmoniesReverb' },
-            { el: ui.drumReverb, state: groove, gain: 'drumsReverb' }
+            { el: ui?.chordReverb, state: chords, gain: 'chordsReverb' },
+            { el: ui?.bassReverb, state: bass, gain: 'bassReverb' },
+            { el: ui?.soloistReverb, state: soloist, gain: 'soloistReverb' },
+            { el: ui?.harmonyReverb, state: harmony, gain: 'harmoniesReverb' },
+            { el: ui?.drumReverb, state: groove, gain: 'drumsReverb' }
         ];
 
         reverbNodes.forEach(node => {
@@ -131,7 +138,7 @@ export function updateAutoConductor() {
 
         
         const val = Math.round(newIntensity * 100);
-        if (ui.intensitySlider) {
+        if (ui && ui.intensitySlider) {
             if (parseInt(ui.intensitySlider.value) !== val) {
                 ui.intensitySlider.value = val;
                 if (ui.intensityValue) ui.intensityValue.textContent = `${val}%`;
@@ -195,7 +202,7 @@ export function updateLarsTempo(currentStep) {
 }
 
 export function updateBpmUI() {
-    if (!ui.bpmInput || !ui.bpmControlGroup) return;
+    if (!ui || !ui.bpmInput || !ui.bpmControlGroup) return;
     
     const baseBpm = playback.bpm;
     const offset = conductorState.larsBpmOffset;
@@ -333,7 +340,7 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
 
                 const fillSteps = generateProceduralFill(groove.genreFeel, playback.bandIntensity, stepsPerMeasure);
                 dispatch(ACTIONS.TRIGGER_FILL, { steps: fillSteps, startStep: currentStep, length: stepsPerMeasure, crash: true });
-                if (ui.visualFlash && ui.visualFlash.checked) triggerFlash(0.25);
+                if (triggerFlash) triggerFlash(0.25);
                 
                 if (playback.autoIntensity) {
                     conductorState.target = targetEnergy;

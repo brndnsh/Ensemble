@@ -211,6 +211,11 @@ export function triggerFlash(intensity) {
     setTimeout(() => ui.flashOverlay.style.opacity = 0, 50);
 }
 
+// Break circular dependency
+import('./conductor.js').then(module => {
+    module.initConductor(ui, triggerFlash);
+});
+
 export function updateOctaveLabel(labelEl, octave, headerEl) {
     if (!labelEl) return;
     const { name, octave: octNum } = midiToNote(octave);
