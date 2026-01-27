@@ -44,7 +44,7 @@ Explicitly requests the worker to fill the musical buffers for a specific step.
 {
   "type": "requestBuffer",
   "data": { "step": 128 },
-  "timestamp": 123456789.0
+  "requestTimestamp": 123456789.0
 }
 ```
 
@@ -56,9 +56,9 @@ Clears all internal buffers and primes the engine for a specific step. Used duri
   "data": {
     "step": 0,
     "syncData": { ... },
-    "primeSteps": 32
-  },
-  "timestamp": null
+    "primeSteps": 32,
+    "requestTimestamp": 123456789.0
+  }
 }
 ```
 
@@ -94,7 +94,8 @@ Returns a list of generated notes to be scheduled by the audio engine.
       "timingOffset": 0.01
     }
   ],
-  "timestamp": 123456789.0
+  "requestTimestamp": 123456789.0,
+  "workerProcessTime": 1.5
 }
 ```
 

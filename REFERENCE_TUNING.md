@@ -82,3 +82,28 @@ This document tracks specific reference recordings used to calibrate the Ensembl
     - **UI Integration:** Consolidated analysis tools into a unified "Audio Workbench" modal with a mode-toggle interface.
     - **Verification:** 743 tests passing (added unit tests for Harmonizer scoring logic and diatonic integrity).
 
+### [Date: 2026-01-26] (Pro-Level Sprint)
+- **Status:** Performance, Mixing, and Musicality Overhaul.
+- **Action:**
+    - **Performance:** Implemented high-resolution "Logic Latency" monitoring. Round-trip worker communication is now tracked, with warnings triggered if processing exceeds 50ms.
+    - **Mixing:** Automated "Intensity-Aware Mixing". Reverb sends and master compression now dynamically adapt to `bandIntensity` (see new Rules section below).
+    - **Soloist:** Enhanced phrasing to prioritize "Guide Tones" (3rds and 7ths) on the downbeat of section changes to improve musical flow during transitions.
+    - **UX:** Implemented "Painting" mode for the Drum Sequencer and a spacious 2-column settings layout for desktop.
+    - **Verification:** 724 tests passing (100% pass rate after architectural decoupling).
+
+---
+
+## Intensity-Aware Mixing Rules
+
+To maintain professional mix clarity, the engine now modulates the signal chain based on the `ctx.bandIntensity` signal (0.0 - 1.0).
+
+### Reverb (Space)
+- **Low Intensity (0.0 - 0.3):** Ambient focus. Reverb sends increased to **0.4 - 0.6** to create an "airy" and expansive atmosphere.
+- **High Intensity (0.7 - 1.0):** Clarity focus. Reverb sends automatically "dry out" to **0.1 - 0.3** to prevent mix mud during climaxes and complex drum fills.
+- **Bias:** Drums are kept 30% dryer than the average; Soloist is kept 20% wetter.
+
+### Compression (Glue)
+- **Threshold:** Scales from **-0.5dB** (low intensity) down to **-2.0dB** (high intensity) to catch peaks.
+- **Ratio:** Scales from **12:1** up to **20:1** to "glue" the band together as the energy increases.
+- **Attack/Release:** Fast attack (2ms) and medium release (500ms) to ensure punch without pumping artifacts.
+
