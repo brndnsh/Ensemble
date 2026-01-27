@@ -714,36 +714,36 @@
                         <div class="midi-ch-group">
                             <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Chords</label>
                             <div style="display: flex; gap: 0.25rem;">
-                                <input type="number" id="midiChordsChannel" min="1" max="16" value="1" style="width: 50%;" title="Channel">
-                                <input type="number" id="midiChordsOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset">
+                                <input type="number" id="midiChordsChannel" min="1" max="16" value="1" style="width: 50%;" title="Channel" aria-label="Chords Channel">
+                                <input type="number" id="midiChordsOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset" aria-label="Chords Octave Offset">
                             </div>
                         </div>
                         <div class="midi-ch-group">
                             <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Bass</label>
                             <div style="display: flex; gap: 0.25rem;">
-                                <input type="number" id="midiBassChannel" min="1" max="16" value="2" style="width: 50%;" title="Channel">
-                                <input type="number" id="midiBassOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset">
+                                <input type="number" id="midiBassChannel" min="1" max="16" value="2" style="width: 50%;" title="Channel" aria-label="Bass Channel">
+                                <input type="number" id="midiBassOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset" aria-label="Bass Octave Offset">
                             </div>
                         </div>
                         <div class="midi-ch-group">
                             <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Soloist</label>
                             <div style="display: flex; gap: 0.25rem;">
-                                <input type="number" id="midiSoloistChannel" min="1" max="16" value="3" style="width: 50%;" title="Channel">
-                                <input type="number" id="midiSoloistOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset">
+                                <input type="number" id="midiSoloistChannel" min="1" max="16" value="3" style="width: 50%;" title="Channel" aria-label="Soloist Channel">
+                                <input type="number" id="midiSoloistOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset" aria-label="Soloist Octave Offset">
                             </div>
                         </div>
                         <div class="midi-ch-group">
                             <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Harmony</label>
                             <div style="display: flex; gap: 0.25rem;">
-                                <input type="number" id="midiHarmonyChannel" min="1" max="16" value="4" style="width: 50%;" title="Channel">
-                                <input type="number" id="midiHarmonyOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset">
+                                <input type="number" id="midiHarmonyChannel" min="1" max="16" value="4" style="width: 50%;" title="Channel" aria-label="Harmony Channel">
+                                <input type="number" id="midiHarmonyOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset" aria-label="Harmony Octave Offset">
                             </div>
                         </div>
                         <div class="midi-ch-group">
                             <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">Drums</label>
                             <div style="display: flex; gap: 0.25rem;">
-                                <input type="number" id="midiDrumsChannel" min="1" max="16" value="10" style="width: 50%;" title="Channel">
-                                <input type="number" id="midiDrumsOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset">
+                                <input type="number" id="midiDrumsChannel" min="1" max="16" value="10" style="width: 50%;" title="Channel" aria-label="Drums Channel">
+                                <input type="number" id="midiDrumsOctave" min="-2" max="2" value="0" style="width: 50%;" title="Octave Offset" aria-label="Drums Octave Offset">
                             </div>
                         </div>
                     </div>
@@ -934,7 +934,7 @@
 <!-- Analyzer Overlay -->
     <div id="analyzerOverlay" class="modal-overlay">
         <div class="modal-content analyzer-modal settings-content">
-            <button class="close-modal-btn" id="closeAnalyzerBtn">✕</button>
+            <button class="close-modal-btn" id="closeAnalyzerBtn" aria-label="Close Analyzer">✕</button>
             
             <div class="analyzer-body">
                 <h3>Audio Workbench</h3>
@@ -991,11 +991,11 @@
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                 <div class="setting-item">
-                    <label class="setting-label">Start (sec)</label>
+                    <label class="setting-label" for="analyzerStartInput">Start (sec)</label>
                     <input type="number" id="analyzerStartInput" value="0" min="0" step="1" style="width: 100%;">
                 </div>
                 <div class="setting-item">
-                    <label class="setting-label">End (sec)</label>
+                    <label class="setting-label" for="analyzerEndInput">End (sec)</label>
                     <input type="number" id="analyzerEndInput" value="0" min="1" step="1" style="width: 100%;">
                 </div>
             </div>
