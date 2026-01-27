@@ -6,6 +6,7 @@ import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
 import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker, requestResolution } from './worker-client.js';
 import { conductorState, updateAutoConductor, updateLarsTempo, checkSectionTransition, updateBpmUI } from './conductor.js';
+import { UIStore } from './ui-store.js';
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
 import { loadDrumPreset, flushBuffers } from './instrument-controller.js';
 import { draw } from './animation-loop.js';
@@ -122,8 +123,9 @@ function scheduleResolution(time) {
     if (groove.enabled) scheduleDrumsFromBuffer(playback.step, time);
     
     // 2. Add a final flash
-    if (ui.visualFlash.checked) {
-        playback.drawQueue.push({ type: 'flash', time: time, intensity: 0.4, beat: 1 });
+    const visualFlashCheck = UIStore.get('visualFlash', '#visualFlashCheck');
+    if (visualFlashCheck && visualFlashCheck.checked && UIStore.triggerFlash) {
+        UIStore.triggerFlash(0.4);
     }
 
     // 3. Graceful Sustain Release (at 1.5 bars)
@@ -475,8 +477,10 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
 export function scheduleChordVisuals(chordData, t) {
     if (chordData.stepInChord === 0) {
         playback.drawQueue.push({ type: 'chord_vis', time: t, index: chordData.chordIndex, chordNotes: chordData.chord.freqs.map(f => getMidi(f)), rootMidi: chordData.chord.rootMidi, intervals: chordData.chord.intervals, duration: chordData.chord.beats * (60/playback.bpm) });
-        if (ui.visualFlash.checked) {
-            playback.drawQueue.push({ type: 'flash', time: t, intensity: 0.15, beat: 0 });
+        
+        const visualFlashCheck = UIStore.get('visualFlash', '#visualFlashCheck');
+        if (visualFlashCheck && visualFlashCheck.checked && UIStore.triggerFlash) {
+            UIStore.triggerFlash(0.1);
         }
     }
 }

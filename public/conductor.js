@@ -341,8 +341,8 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
                 const fillSteps = generateProceduralFill(groove.genreFeel, playback.bandIntensity, stepsPerMeasure);
                 dispatch(ACTIONS.TRIGGER_FILL, { steps: fillSteps, startStep: currentStep, length: stepsPerMeasure, crash: true });
                 
-                const flashOverlay = UIStore.get('flashOverlay', '#flashOverlay');
-                if (flashOverlay && UIStore.triggerFlash) {
+                const visualFlashCheck = UIStore.get('visualFlash', '#visualFlashCheck');
+                if (visualFlashCheck && visualFlashCheck.checked && UIStore.triggerFlash) {
                     UIStore.triggerFlash(0.25);
                 }
                 
