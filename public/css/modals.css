@@ -88,8 +88,8 @@
     background: var(--panel-color);
     padding: 2rem;
     border-radius: 12px;
-    width: 90%;
-    max-width: 500px;
+    width: 95%;
+    max-width: 800px;
     max-height: 85vh;
     overflow-y: auto;
     border: 1px solid var(--border-color);
@@ -97,6 +97,21 @@
     color: var(--text-color);
     display: flex;
     flex-direction: column;
+}
+
+/* Settings Grid for Desktop */
+@media (min-width: 900px) {
+    .settings-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        align-items: start;
+    }
+
+    /* Make large sections or actions span full width if needed */
+    .settings-section:last-child {
+        grid-column: span 2;
+    }
 }
 
 /* --- Editor Modal Redesign --- */
