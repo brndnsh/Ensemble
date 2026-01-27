@@ -12,7 +12,7 @@ export const UIStore = {
 
     // --- Late-bound references to break circularity ---
     conductor: null,
-    triggerFlash: null,
+    triggerFlashRef: null,
 
     /**
      * Lazy getter for DOM elements with caching.

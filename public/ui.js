@@ -10,16 +10,6 @@ import { UIStore } from './ui-store.js';
 import { renderChordVisualizer as internalRenderChordVisualizer } from './ui-chord-visualizer.js';
 import { renderGrid as internalRenderGrid, renderGridState as internalRenderGridState, initSequencerHandlers as internalInitSequencerHandlers } from './ui-sequencer-grid.js';
 
-// Lazy Conductor Reference to avoid circular TDZ
-let Conductor = null;
-const getConductor = async () => {
-    if (!Conductor) {
-        Conductor = await import('./conductor.js');
-        Conductor.initConductor(ui, triggerFlash);
-    }
-    return Conductor;
-};
-
 const getEl = (id) => document.getElementById(id);
 
 /**
