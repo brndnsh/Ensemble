@@ -37,6 +37,10 @@ class AudioHealthMonitor {
         if (!playback.audio) return;
         
         try {
+            if (typeof playback.audio.createAnalyser !== 'function') {
+                console.warn("[AudioWatchdog] createAnalyser not supported by current AudioContext.");
+                return;
+            }
             this.analyser = playback.audio.createAnalyser();
             this.analyser.fftSize = 256; // Smallest efficient size
             this.dataBuffer = new Float32Array(this.analyser.fftSize);

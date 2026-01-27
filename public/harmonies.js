@@ -325,6 +325,10 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
         // Safety Filter: Hard cut below G3 (55) for most styles to prevent muddy collisions with bass
         if (finalMidi < 55 && activeStyle !== 'counter' && activeStyle !== 'plucks') continue;
         
+        // Safety Filter: Hard cut above MIDI 100 (E7) to avoid piercing high frequencies
+        if (finalMidi > 100) finalMidi -= 12; // Shift down an octave if too high
+        if (finalMidi > 100) continue; // Skip if still too high (rare)
+        
         const intensity = playback.bandIntensity;
         let slideInterval = 0, slideDuration = 0, vibrato = { rate: 0, depth: 0 };
 

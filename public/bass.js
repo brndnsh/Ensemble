@@ -398,7 +398,10 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         // Fill logic (High Intensity only)
         if (beat === lastBeatIndex && Math.random() < 0.4 && intensity > 0.5) {
              if (stepInMeasure === (lastBeatIndex * ts.stepsPerBeat)) { 
-                 const fillNote = Math.random() < 0.5 ? baseRoot + 12 : baseRoot + 7;
+                 const hasFlat5 = chord.quality === 'dim' || chord.quality === 'halfdim';
+                 const hasSharp5 = chord.quality === 'aug' || chord.quality === 'augmaj7';
+                 const fifthOffset = hasFlat5 ? 6 : (hasSharp5 ? 8 : 7);
+                 const fillNote = Math.random() < 0.5 ? baseRoot + 12 : baseRoot + fifthOffset;
                  return result(getFrequency(clampAndNormalize(withOctaveJump(fillNote))), dur, velocityRock * 1.1);
              }
         }

@@ -244,4 +244,19 @@ describe('System Smoke Test (E2E Workflow)', () => {
         togglePlay(mockViz);
         expect(playback.isPlaying).toBe(false);
     });
+
+    it('should update the progression when a chord is edited in a section', () => {
+        addSection();
+        const sectionId = arranger.sections[0].id;
+        onSectionUpdate(sectionId, 'value', 'C | G');
+        validateProgression();
+        expect(arranger.progression[0].absName).toBe('C');
+        expect(arranger.progression[1].absName).toBe('G');
+
+        // Update the value
+        onSectionUpdate(sectionId, 'value', 'C | F');
+        validateProgression();
+        expect(arranger.progression[0].absName).toBe('C');
+        expect(arranger.progression[1].absName).toBe('F');
+    });
 });

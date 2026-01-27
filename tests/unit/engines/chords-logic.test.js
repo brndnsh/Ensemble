@@ -82,6 +82,12 @@ describe('Chords & Voicing Logic', () => {
             expect(intervals).toEqual([4, 10, 15, 20]);
         });
 
+        it('should use rootless voicings for Blues dominant chords', () => {
+            groove.genreFeel = 'Blues';
+            // Dominant 7: 3, 5, b7 [4, 7, 10]
+            expect(getIntervals('7', true, 'standard', 'Blues', true)).toEqual([4, 7, 10]);
+        });
+
         it('should use "So What" voicing for Neo-Soul minor 7', () => {
             groove.genreFeel = 'Neo-Soul';
             expect(getIntervals('minor', true, 'standard', 'Neo-Soul', true)).toEqual([5, 10, 15, 19]);

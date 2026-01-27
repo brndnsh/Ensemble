@@ -1223,6 +1223,7 @@ export function setupAnalyzerHandlers() {
     // --- Live Listen Logic ---
     let liveAudioCtx = null;
     let liveStream = null;
+    let liveAnalyzer = null;
 
     const startLiveListen = async () => {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1245,7 +1246,7 @@ export function setupAnalyzerHandlers() {
             const source = liveAudioCtx.createMediaStreamSource(stream);
             
             const { ChordAnalyzerLite } = await import('./audio-analyzer-lite.js');
-            const analyzer = new ChordAnalyzerLite();
+            liveAnalyzer = new ChordAnalyzerLite();
             
             // Only import Harmonizer if in melody mode
             let harmonizer = null;
@@ -1302,7 +1303,7 @@ export function setupAnalyzerHandlers() {
                         const rms = Math.sqrt(analysisBuffer.reduce((s, x) => s + x * x, 0) / analysisBuffer.length);
 
                         if (rms > 0.02) {
-                             const chroma = analyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
+                             const chroma = liveAnalyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
                                  step,
                                  buffers: reusableBuffers,
                                  minMidi: 48,
@@ -1310,8 +1311,8 @@ export function setupAnalyzerHandlers() {
                              });
 
                              // --- Live Key Detection ---
-                             const keyRes = analyzer.identifySimpleKey(chroma); // { root, type, score }
-                             const keyStr = analyzer.notes[keyRes.root] + (keyRes.type === 'minor' ? 'm' : '');
+                             const keyRes = liveAnalyzer.identifySimpleKey(chroma); // { root, type, score }
+                             const keyStr = liveAnalyzer.notes[keyRes.root] + (keyRes.type === 'minor' ? 'm' : '');
 
                              keyHistory.push(keyStr);
                              if (keyHistory.length > 30) keyHistory.shift(); // ~1.5s history
@@ -1366,13 +1367,13 @@ export function setupAnalyzerHandlers() {
                         }
                     } else {
                         // Chord Live Mode (Existing)
-                        const chroma = analyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
+                        const chroma = liveAnalyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
                             step: 8, // Faster for real-time
                             minMidi: 32,
                             maxMidi: 80
                         });
                         
-                        const chord = analyzer.identifyChord(chroma);
+                        const chord = liveAnalyzer.identifyChord(chroma);
                         if (chord !== 'Rest') {
                             chordEl.textContent = formatUnicodeSymbols(chord);
                             
@@ -1403,6 +1404,10 @@ export function setupAnalyzerHandlers() {
         if (liveAudioCtx) {
             liveAudioCtx.close();
             liveAudioCtx = null;
+        }
+        if (liveAnalyzer) {
+            liveAnalyzer.dispose();
+            liveAnalyzer = null;
         }
         ui.analyzerDropZone.style.display = 'block';
         ui.liveListenBtn.parentElement.style.display = 'flex';
