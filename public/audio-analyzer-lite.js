@@ -7,6 +7,25 @@
 // Helper to allow UI updates during heavy processing
 const yieldToMain = () => new Promise(r => setTimeout(r, 0));
 
+// --- Static Data (Optimization: Avoid Re-allocation) ---
+const KEY_TYPES = ['major', 'minor', 'dominant', 'bluesMaj', 'bluesMin'];
+
+const CHORD_PROFILES = {
+    'maj':  { 0: 1.6, 4: 1.4, 7: 1.1 },
+    'm':    { 0: 1.6, 3: 1.4, 7: 1.1 },
+    '7':    { 0: 1.6, 4: 1.3, 7: 1.1, 10: 1.5 },
+    'maj7': { 0: 1.6, 4: 1.3, 7: 1.1, 11: 1.2 },
+    'm7':   { 0: 1.6, 3: 1.3, 7: 1.1, 10: 1.2 },
+    '6':    { 0: 1.6, 4: 1.4, 7: 1.1, 9: 1.2 },
+    'm6':   { 0: 1.6, 3: 1.4, 7: 1.1, 9: 1.2 },
+    'sus4': { 0: 1.6, 5: 1.4, 7: 1.1 },
+    'dim':  { 0: 1.6, 3: 1.3, 6: 1.3 }
+};
+const CHORD_PROFILE_ENTRIES = Object.entries(CHORD_PROFILES);
+
+const MAJOR_DIATONIC = [0, 2, 4, 5, 7, 9, 11]; // I ii iii IV V vi vii°
+const MINOR_DIATONIC = [0, 2, 3, 5, 7, 8, 10]; // i ii° III iv v VI VII
+
 export class ChordAnalyzerLite {
     constructor() {
         /** @type {string[]} */
@@ -60,7 +79,7 @@ export class ChordAnalyzerLite {
             const rotatedChroma = this.rotateChroma(totalChroma, offset * 0.1);
             
             for (let root = 0; root < 12; root++) {
-                ['major', 'minor', 'dominant', 'bluesMaj', 'bluesMin'].forEach(type => {
+                for (const type of KEY_TYPES) {
                     let score = 0;
                     for (let i = 0; i < 12; i++) {
                         score += rotatedChroma[(root + i) % 12] * this.keyProfiles[type][i];
@@ -77,7 +96,7 @@ export class ChordAnalyzerLite {
                         bestScore = score;
                         bestKey = { root, type, tuningOffset: offset * 0.1 };
                     }
-                });
+                }
             }
         }
         return bestKey;
@@ -92,7 +111,7 @@ export class ChordAnalyzerLite {
         let bestKey = { root: 0, type: 'major' };
 
         for (let root = 0; root < 12; root++) {
-            ['major', 'minor', 'dominant', 'bluesMaj', 'bluesMin'].forEach(type => {
+            for (const type of KEY_TYPES) {
                 let score = 0;
                 for (let i = 0; i < 12; i++) {
                     score += chroma[(root + i) % 12] * this.keyProfiles[type][i];
@@ -106,7 +125,7 @@ export class ChordAnalyzerLite {
                     bestScore = score;
                     bestKey = { root, type, score };
                 }
-            });
+            }
         }
         return bestKey;
     }
@@ -800,29 +819,11 @@ export class ChordAnalyzerLite {
     }
 
     identifyChord(chroma, options = {}) {
-        // Weighted profiles: Root and 3rd are the most defining characteristics.
-        // 1.5 = Essential (Root), 1.3 = Quality (3rd), 1.0 = Supporting (5th/7th)
-        const profiles = {
-            'maj':  { 0: 1.6, 4: 1.4, 7: 1.1 },
-            'm':    { 0: 1.6, 3: 1.4, 7: 1.1 },
-            '7':    { 0: 1.6, 4: 1.3, 7: 1.1, 10: 1.5 },
-            'maj7': { 0: 1.6, 4: 1.3, 7: 1.1, 11: 1.2 },
-            'm7':   { 0: 1.6, 3: 1.3, 7: 1.1, 10: 1.2 },
-            '6':    { 0: 1.6, 4: 1.4, 7: 1.1, 9: 1.2 },
-            'm6':   { 0: 1.6, 3: 1.4, 7: 1.1, 9: 1.2 },
-            'sus4': { 0: 1.6, 5: 1.4, 7: 1.1 },
-            'dim':  { 0: 1.6, 3: 1.3, 6: 1.3 }
-        };
-
-        // Diatonic Bias: Chords in the key are much more likely.
-        const majorDiatonic = [0, 2, 4, 5, 7, 9, 11]; // I ii iii IV V vi vii°
-        const minorDiatonic = [0, 2, 3, 5, 7, 8, 10]; // i ii° III iv v VI VII
-
         let bestScore = -1;
         let bestChordData = { root: 0, type: 'maj' };
 
         for (let root = 0; root < 12; root++) {
-            for (const [type, profile] of Object.entries(profiles)) {
+            for (const [type, profile] of CHORD_PROFILE_ENTRIES) {
                 let score = 0;
                 
                 // 1. Profile Match
@@ -841,8 +842,8 @@ export class ChordAnalyzerLite {
                     const relativeRoot = (root - options.keyBias.root + 12) % 12;
                     let isDiatonic = false;
                     
-                    if (options.keyBias.type === 'major') isDiatonic = majorDiatonic.includes(relativeRoot);
-                    else if (options.keyBias.type === 'minor') isDiatonic = minorDiatonic.includes(relativeRoot);
+                    if (options.keyBias.type === 'major') isDiatonic = MAJOR_DIATONIC.includes(relativeRoot);
+                    else if (options.keyBias.type === 'minor') isDiatonic = MINOR_DIATONIC.includes(relativeRoot);
                     else if (options.keyBias.type === 'dominant') {
                         // Mixolydian: I7, II, iii, IV, v, vi, bVII
                         isDiatonic = [0, 2, 4, 5, 7, 9, 10].includes(relativeRoot);
