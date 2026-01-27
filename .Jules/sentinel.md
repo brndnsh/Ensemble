@@ -7,3 +7,8 @@
 **Vulnerability:** Default browser behavior or permissive referrer policies can leak sensitive URL parameters (like arrangement data encoded in query strings) to third-party domains via the `Referer` header.
 **Learning:** Client-side applications often store state in the URL. Explicitly setting `Referrer-Policy: strict-origin-when-cross-origin` ensures that cross-origin requests (e.g., external links) only receive the origin, protecting user data privacy.
 **Prevention:** Add `<meta name="referrer" content="strict-origin-when-cross-origin">` to all HTML entry points (`index.html`, `manual.html`) to enforce this policy at the client level.
+
+## 2026-10-27 - DOM Injection via innerHTML
+**Vulnerability:** Usage of `innerHTML` with dynamically formatted strings (like chord symbols) creates a potential XSS vector if input sanitization logic (e.g., regex checks) is bypassed or flawed in the future.
+**Learning:** Relying on input validation alone is "defense in hope". Secure-by-design requires using APIs that automatically handle escaping, such as `textContent` or `document.createElement`.
+**Prevention:** Replaced `innerHTML` usages in `ui-chord-visualizer.js` and `ui-controller.js` with safer DOM manipulation methods. Added `escapeHTML` utility for cases where HTML structure is required.
