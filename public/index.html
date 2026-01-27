@@ -975,12 +975,37 @@
                     <input type="checkbox" id="liveForceKeyCheck"> Lock Key
                 </label>
             </div>
-            <h2 id="liveChordDisplay" style="font-size: 4rem; margin: 0.5rem 0 1rem 0; color: var(--green); text-shadow: 0 0 20px rgba(133, 153, 0, 0.4);">---</h2>
-            <p id="liveStatusLabel" style="color: var(--text-muted); margin-bottom: 1.5rem;">Listening for chords...</p>
-            <div class="live-history" id="liveHistoryDisplay" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; min-height: 2em;"></div>
+
+            <h2 id="liveChordDisplay" style="font-size: 4rem; margin: 0.5rem 0 1rem 0; color: var(--green); text-shadow: 0 0 20px rgba(133, 153, 0, 0.4); min-height: 1.2em;">---</h2>
+
+            <!-- Input Controls -->
+            <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                <button id="liveAddBtn" class="primary-btn" style="background: var(--green); color: white; border: none; padding: 0.8rem 2rem; font-size: 1.1rem;">
+                    Add Chord (Space)
+                </button>
+                <label style="font-size: 0.9rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px;">
+                    <input type="checkbox" id="liveAutoAddCheck">
+                    <span>Auto-Add (Hold)</span>
+                </label>
+            </div>
+
+            <!-- Staging Area -->
+            <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Your Progression</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                         <button id="liveUndoBtn" style="font-size: 0.8rem; padding: 0.3rem 0.6rem; background: rgba(255,255,255,0.1); border: none; border-radius: 4px; color: var(--text-color); cursor: pointer;">⎌ Undo</button>
+                         <button id="liveClearBtn" style="font-size: 0.8rem; padding: 0.3rem 0.6rem; background: rgba(255,255,255,0.1); border: none; border-radius: 4px; color: var(--text-color); cursor: pointer;">🗑 Clear</button>
+                    </div>
+                </div>
+                <div id="liveStagedDisplay" style="font-family: monospace; font-size: 1.2rem; color: white; min-height: 1.5em; word-break: break-all; line-height: 1.6;">
+                    <span style="color: var(--text-muted); font-style: italic;">Start playing to build a sequence...</span>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                <button id="captureLiveHistoryBtn" class="primary-btn" style="flex: 1; background: var(--accent-color); color: white; border: none; display: none;">Capture History</button>
-                <button id="stopLiveListenBtn" class="primary-btn" style="flex: 1; background: var(--error-color); color: white; border: none;">Stop Listening</button>
+                <button id="captureLiveHistoryBtn" class="primary-btn" style="flex: 2; background: var(--accent-color); color: white; border: none; opacity: 0.5; pointer-events: none;">Import Sequence</button>
+                <button id="stopLiveListenBtn" class="primary-btn" style="flex: 1; background: var(--error-color); color: white; border: none;">Stop</button>
             </div>
         </div>
 
