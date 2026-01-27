@@ -26,6 +26,7 @@ export function updateChordVis(ev) { updateActiveChordUI(ev.index); }
 let lastFrameTime = 0;
 let missedFrames = 0;
 let vizCrashCount = 0;
+let lastTimerSeconds = -1;
 
 export function draw(viz) {
     if (!playback.isDrawing) return;
@@ -95,24 +96,36 @@ export function draw(viz) {
         const remainingMins = playback.sessionTimer - elapsedMins;
 
         if (remainingMins <= 0) {
-            ui.playBtnTimer.style.display = 'none';
+            if (ui.playBtnTimer.style.display !== 'none') {
+                ui.playBtnTimer.style.display = 'none';
+            }
         } else {
-            ui.playBtnTimer.style.display = 'block';
+            if (ui.playBtnTimer.style.display !== 'block') {
+                ui.playBtnTimer.style.display = 'block';
+            }
 
             const totalSeconds = Math.max(0, Math.ceil(remainingMins * 60));
-            const m = Math.floor(totalSeconds / 60);
-            const s = totalSeconds % 60;
-            ui.playBtnTimer.textContent = `${m}:${s.toString().padStart(2, '0')}`;
 
-            if (totalSeconds <= 30) {
-                ui.playBtnTimer.classList.add('warning');
-            } else {
-                ui.playBtnTimer.classList.remove('warning');
+            // Optimization: Only update DOM if seconds have changed
+            if (totalSeconds !== lastTimerSeconds) {
+                const m = Math.floor(totalSeconds / 60);
+                const s = totalSeconds % 60;
+                ui.playBtnTimer.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+
+                if (totalSeconds <= 30) {
+                    ui.playBtnTimer.classList.add('warning');
+                } else {
+                    ui.playBtnTimer.classList.remove('warning');
+                }
+                lastTimerSeconds = totalSeconds;
             }
         }
     } else if (ui.playBtnTimer) {
-        ui.playBtnTimer.style.display = 'none';
-        ui.playBtnTimer.classList.remove('warning');
+        if (ui.playBtnTimer.style.display !== 'none') {
+            ui.playBtnTimer.style.display = 'none';
+            ui.playBtnTimer.classList.remove('warning');
+            lastTimerSeconds = -1;
+        }
     }
 
     requestAnimationFrame(() => draw(viz));
