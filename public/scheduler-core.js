@@ -5,7 +5,7 @@ import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playHar
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
 import { requestBuffer, syncWorker, flushWorker, stopWorker, startWorker, requestResolution } from './worker-client.js';
-import { conductorState, updateAutoConductor, updateLarsTempo, checkSectionTransition, updateBpmUI } from './conductor.js';
+import { conductorState, updateAutoConductor, updateLarsTempo, checkSectionTransition } from './conductor.js';
 import { UIStore } from './ui-store.js';
 import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js';
 import { loadDrumPreset, flushBuffers } from './instrument-controller.js';

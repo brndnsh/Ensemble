@@ -1,6 +1,6 @@
 import { ACTIONS } from './types.js';
 import { playback, groove, chords, bass, soloist, harmony, vizState, dispatch, arranger } from './state.js';
-import { ui, triggerFlash, clearActiveVisuals, updateActiveChordUI } from './ui.js';
+import { ui, clearActiveVisuals, updateActiveChordUI } from './ui.js';
 import { getVisualTime } from './engine.js';
 import { getStepsPerMeasure } from './utils.js';
 import { switchMeasure } from './instrument-controller.js';
