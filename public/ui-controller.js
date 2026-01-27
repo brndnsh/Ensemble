@@ -1238,18 +1238,72 @@ export function setupAnalyzerHandlers() {
     let liveAudioCtx = null;
     let liveStream = null;
     let liveAnalyzer = null;
-    let capturedChords = [];
+
+    // New State for Live Builder
+    let stagedChords = [];
+    let currentStableChord = null;
+    let lastDetectedChord = null;
+    let stabilityCounter = 0;
+    let autoAddTimer = null;
+    const STABILITY_THRESHOLD = 3; // Frames to be considered stable
+    const AUTO_ADD_DELAY = 2000; // ms
+
+    const renderStagedChords = () => {
+        const el = document.getElementById('liveStagedDisplay');
+        const btn = document.getElementById('captureLiveHistoryBtn');
+        if (!el) return;
+
+        if (stagedChords.length === 0) {
+            el.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Start playing to build a sequence...</span>';
+            if (btn) {
+                btn.style.opacity = '0.5';
+                btn.style.pointerEvents = 'none';
+                btn.textContent = 'Import Sequence';
+            }
+        } else {
+            // Format: "C | F | G | "
+            el.textContent = stagedChords.join('');
+            if (btn) {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+                btn.textContent = `Import Sequence (${stagedChords.length} chords)`;
+            }
+        }
+
+        // Auto-scroll to end
+        el.scrollLeft = el.scrollWidth;
+    };
+
+    const addCurrentChord = () => {
+        if (!currentStableChord || currentStableChord === 'Rest') return;
+
+        // Add with pipe for measure separation
+        stagedChords.push(`${formatUnicodeSymbols(currentStableChord)} | `);
+        renderStagedChords();
+
+        // Visual Feedback on the Add Button
+        const btn = document.getElementById('liveAddBtn');
+        if (btn) {
+            const originalBg = btn.style.background;
+            btn.style.background = 'var(--accent-color)';
+            setTimeout(() => btn.style.background = originalBg, 200);
+        }
+    };
 
     const captureLiveHistory = () => {
-        if (capturedChords.length === 0) return;
+        if (stagedChords.length === 0) return;
         
         pushHistory();
         
-        const progressionStr = capturedChords.join(' | ');
+        // Join valid string (already formatted with pipes)
+        const progressionStr = stagedChords.join('').trim();
+        // Remove trailing pipe if exists
+        const cleanProgression = progressionStr.endsWith('|') ? progressionStr.slice(0, -1).trim() : progressionStr;
+
         const newSection = {
             id: generateId(),
-            label: 'Captured Live',
-            value: progressionStr,
+            label: 'Live Input',
+            value: cleanProgression,
             repeat: 1,
             key: '',
             timeSignature: '',
@@ -1268,7 +1322,7 @@ export function setupAnalyzerHandlers() {
         refreshArrangerUI();
         ui.analyzerOverlay.classList.remove('active');
         stopLiveListen();
-        showToast(`Imported ${capturedChords.length} chords.`);
+        showToast(`Imported sequence.`);
     };
 
     const startLiveListen = async () => {
@@ -1279,8 +1333,40 @@ export function setupAnalyzerHandlers() {
         }
         
         const mode = document.querySelector('input[name="analyzerMode"]:checked').value;
-        capturedChords = [];
-        ui.captureLiveHistoryBtn.style.display = 'none';
+
+        // Reset Builder State
+        stagedChords = [];
+        currentStableChord = null;
+        lastDetectedChord = null;
+        renderStagedChords();
+
+        // Setup Buttons
+        const addBtn = document.getElementById('liveAddBtn');
+        const undoBtn = document.getElementById('liveUndoBtn');
+        const clearBtn = document.getElementById('liveClearBtn');
+        const autoCheck = document.getElementById('liveAutoAddCheck');
+
+        if (addBtn) addBtn.onclick = addCurrentChord;
+        if (undoBtn) undoBtn.onclick = () => {
+            stagedChords.pop();
+            renderStagedChords();
+        };
+        if (clearBtn) clearBtn.onclick = () => {
+            stagedChords = [];
+            renderStagedChords();
+        };
+
+        // Keyboard Shortcut
+        const keyHandler = (e) => {
+            if (e.code === 'Space' && ui.analyzerOverlay.classList.contains('active')) {
+                e.preventDefault();
+                addCurrentChord();
+            }
+        };
+        window.addEventListener('keydown', keyHandler);
+
+        // Store handler to remove later
+        ui.analyzerOverlay._liveKeyHandler = keyHandler;
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: {
@@ -1296,7 +1382,6 @@ export function setupAnalyzerHandlers() {
             const { ChordAnalyzerLite } = await import('./audio-analyzer-lite.js');
             liveAnalyzer = new ChordAnalyzerLite();
             
-            // Only import Harmonizer if in melody mode
             let harmonizer = null;
             if (mode === 'melody') {
                 const { Harmonizer } = await import('./melody-harmonizer.js');
@@ -1307,10 +1392,9 @@ export function setupAnalyzerHandlers() {
             ui.liveListenBtn.parentElement.style.display = 'none';
             ui.liveListenView.style.display = 'block';
             
-            const history = [];
-            const keyHistory = []; // Buffer for key stability
-            const historyEl = ui.liveHistoryDisplay;
             const chordEl = ui.liveChordDisplay;
+            const statusEl = document.getElementById('liveStatusLabel');
+            if (statusEl) statusEl.textContent = "Play a chord...";
 
             // Process audio in 4096 sample chunks
             const processor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
@@ -1318,9 +1402,9 @@ export function setupAnalyzerHandlers() {
             processor.connect(liveAudioCtx.destination);
 
             let buffer = new Float32Array(0);
-            const targetSamples = Math.floor(liveAudioCtx.sampleRate * 1.0); // 1.0s window
+            const targetSamples = Math.floor(liveAudioCtx.sampleRate * 0.5); // 0.5s window for responsiveness
 
-            // Pre-allocate buffers for reuse to avoid GC
+            // Pre-allocate buffers
             const step = 8;
             const numSteps = Math.ceil(targetSamples / step);
             const reusableBuffers = {
@@ -1329,10 +1413,12 @@ export function setupAnalyzerHandlers() {
                 windowValues: new Float32Array(numSteps)
             };
 
-            // Pre-calculate window values
             for (let i = 0, idx = 0; i < targetSamples; i += step, idx++) {
                 reusableBuffers.windowValues[idx] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (targetSamples - 1)));
             }
+
+            // Key History
+            const keyHistory = [];
 
             processor.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0);
@@ -1343,104 +1429,87 @@ export function setupAnalyzerHandlers() {
 
                 if (buffer.length >= targetSamples) {
                     const analysisBuffer = buffer.slice(-targetSamples);
-                    // Shift buffer (keep last 50% for overlap)
-                    buffer = buffer.slice(-Math.floor(targetSamples / 2));
+                    buffer = buffer.slice(-Math.floor(targetSamples / 2)); // 50% overlap
+
+                    let detected = null;
 
                     if (mode === 'melody') {
-                        // Melody Live Mode: Use optimized analyzer with reusable buffers
-                        const rms = Math.sqrt(analysisBuffer.reduce((s, x) => s + x * x, 0) / analysisBuffer.length);
-
-                        if (rms > 0.02) {
+                        // ... Melody Logic ...
+                         const rms = Math.sqrt(analysisBuffer.reduce((s, x) => s + x * x, 0) / analysisBuffer.length);
+                         if (rms > 0.02) {
                              const chroma = liveAnalyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
-                                 step,
-                                 buffers: reusableBuffers,
-                                 minMidi: 48,
-                                 maxMidi: 84
+                                 step, buffers: reusableBuffers, minMidi: 48, maxMidi: 84
                              });
-
-                             // --- Live Key Detection ---
-                             const keyRes = liveAnalyzer.identifySimpleKey(chroma); // { root, type, score }
+                             // Key Detection Logic
+                             const keyRes = liveAnalyzer.identifySimpleKey(chroma);
                              const keyStr = liveAnalyzer.notes[keyRes.root] + (keyRes.type === 'minor' ? 'm' : '');
-
                              keyHistory.push(keyStr);
-                             if (keyHistory.length > 30) keyHistory.shift(); // ~1.5s history
-
-                             // Find consensus key
+                             if (keyHistory.length > 30) keyHistory.shift();
+                             // Consensus
                              const counts = {};
                              let consensusKey = keyStr;
                              let maxCount = 0;
-                             keyHistory.forEach(k => {
-                                 counts[k] = (counts[k] || 0) + 1;
-                                 if (counts[k] > maxCount) {
-                                     maxCount = counts[k];
-                                     consensusKey = k;
-                                 }
-                             });
-
-                             // Update UI if consensus is strong (>50% confidence)
+                             keyHistory.forEach(k => { counts[k] = (counts[k] || 0) + 1; if (counts[k] > maxCount) { maxCount = counts[k]; consensusKey = k; } });
                              if (maxCount > keyHistory.length * 0.5) {
                                 if (ui.liveKeyLabel) ui.liveKeyLabel.textContent = `Key: ${formatUnicodeSymbols(consensusKey)}`;
-
-                                // Auto-update arranger key if not locked
-                                if (ui.liveForceKeyCheck && !ui.liveForceKeyCheck.checked && consensusKey !== arranger.key) {
-                                    arranger.key = consensusKey;
-                                }
+                                if (ui.liveForceKeyCheck && !ui.liveForceKeyCheck.checked && consensusKey !== arranger.key) arranger.key = consensusKey;
                              }
-
-                             // Find strongest pitch in vocal range (48-84)
+                             // Pitch
                              let maxE = 0;
                              let bestMidi = -1;
                              for(let m = 48; m <= 84; m++) {
                                  const e = reusableBuffers.pitchEnergy[m];
-                                 if (e > maxE) {
-                                     maxE = e;
-                                     bestMidi = m;
-                                 }
+                                 if (e > maxE) { maxE = e; bestMidi = m; }
                              }
-                             
                              if (bestMidi > 0) {
-                                 // Single note harmonization
                                  const melodyBit = [{beat: 0, midi: bestMidi, energy: 1.0}];
-                                 // Use the EFFECTIVE key (which might have just been updated)
-                                 const prog = harmonizer.generateProgression(melodyBit, arranger.key || 'C', 0.5);
-                                 
-                                 if (prog && prog !== 'Rest') {
-                                     chordEl.textContent = formatUnicodeSymbols(prog);
-                                     if (history.length === 0 || history[history.length - 1] !== prog) {
-                                         history.push(prog);
-                                         capturedChords.push(prog);
-                                         if (history.length > 8) history.shift();
-                                         ui.captureLiveHistoryBtn.style.display = 'block';
-                                         
-                                         historyEl.innerHTML = history.map((c, i) => 
-                                             `<span class="${i === history.length - 1 ? 'current' : ''}">${formatUnicodeSymbols(c)}</span>`
-                                         ).join('');
-                                     }
+                                 detected = harmonizer.generateProgression(melodyBit, arranger.key || 'C', 0.5);
+                             }
+                        }
+                    } else {
+                        // Chord Logic
+                        const chroma = liveAnalyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
+                            step: 8, minMidi: 32, maxMidi: 80
+                        });
+                        detected = liveAnalyzer.identifyChord(chroma);
+                    }
+
+                    // Stability & Display Logic
+                    if (detected && detected !== 'Rest') {
+                        if (detected === lastDetectedChord) {
+                            stabilityCounter++;
+                        } else {
+                            stabilityCounter = 0;
+                            lastDetectedChord = detected;
+                        }
+
+                        if (stabilityCounter >= STABILITY_THRESHOLD) {
+                             // Stable Chord Found
+                             if (currentStableChord !== detected) {
+                                 currentStableChord = detected;
+                                 chordEl.textContent = formatUnicodeSymbols(detected);
+                                 chordEl.style.color = 'var(--accent-color)';
+
+                                 // Reset Auto-Add Timer
+                                 if (autoAddTimer) clearTimeout(autoAddTimer);
+                                 if (autoCheck && autoCheck.checked) {
+                                     // Provide visual hint that timer started?
+                                     autoAddTimer = setTimeout(() => {
+                                         addCurrentChord();
+                                         // Flash display to show added
+                                         chordEl.style.transform = 'scale(1.2)';
+                                         setTimeout(() => chordEl.style.transform = 'scale(1)', 200);
+                                     }, AUTO_ADD_DELAY);
                                  }
                              }
                         }
                     } else {
-                        // Chord Live Mode (Existing)
-                        const chroma = liveAnalyzer.calculateChromagram(analysisBuffer, liveAudioCtx.sampleRate, {
-                            step: 8, // Faster for real-time
-                            minMidi: 32,
-                            maxMidi: 80
-                        });
-                        
-                        const chord = liveAnalyzer.identifyChord(chroma);
-                        if (chord !== 'Rest') {
-                            chordEl.textContent = formatUnicodeSymbols(chord);
-                            
-                            if (history.length === 0 || history[history.length - 1] !== chord) {
-                                history.push(chord);
-                                capturedChords.push(chord);
-                                if (history.length > 8) history.shift();
-                                ui.captureLiveHistoryBtn.style.display = 'block';
-                                
-                                historyEl.innerHTML = history.map((c, i) => 
-                                    `<span class="${i === history.length - 1 ? 'current' : ''}">${formatUnicodeSymbols(c)}</span>`
-                                ).join('');
-                            }
+                        // Silence / Rest
+                        stabilityCounter = 0;
+                        lastDetectedChord = null;
+                        if (autoAddTimer) {
+                            clearTimeout(autoAddTimer);
+                            autoAddTimer = null;
                         }
                     }
                 }
@@ -1465,10 +1534,19 @@ export function setupAnalyzerHandlers() {
             liveAnalyzer.dispose();
             liveAnalyzer = null;
         }
+        if (autoAddTimer) clearTimeout(autoAddTimer);
+
+        // Remove Key Handler
+        if (ui.analyzerOverlay._liveKeyHandler) {
+            window.removeEventListener('keydown', ui.analyzerOverlay._liveKeyHandler);
+            delete ui.analyzerOverlay._liveKeyHandler;
+        }
+
         ui.analyzerDropZone.style.display = 'block';
         ui.liveListenBtn.parentElement.style.display = 'flex';
         ui.liveListenView.style.display = 'none';
-        ui.captureLiveHistoryBtn.style.display = 'none';
+
+        // Don't hide capture btn here as it's now "Import Sequence" and part of the view being hidden anyway
     };
 
     ui.liveListenBtn.addEventListener('click', startLiveListen);
