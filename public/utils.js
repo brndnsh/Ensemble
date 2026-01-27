@@ -225,6 +225,23 @@ export function formatUnicodeSymbols(str) {
 }
 
 /**
+ * Escapes unsafe HTML characters to prevent XSS.
+ * @param {string} str
+ * @returns {string}
+ */
+export function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    if (typeof str !== 'string') return String(str);
+
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
  * Ensures a velocity value is within the safe [0, 1] range for MIDI normalization.
  * Prevents overflows when compounding band intensity and conductor modifiers.
  * @param {number} vel 

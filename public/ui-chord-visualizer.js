@@ -63,10 +63,31 @@ export function renderChordVisualizer(ui) {
 
                     const notation = arranger.notation || 'roman';
                     const disp = chord.display ? chord.display[notation] : null;
-                    const html = `<span class="root">${formatUnicodeSymbols(disp.root)}</span><span class="suffix">${formatUnicodeSymbols(disp.suffix)}</span>${disp.bass ? `<span class="bass-note">/${formatUnicodeSymbols(disp.bass)}</span>` : ''}`;
+                    const dispBass = disp.bass ? `/${formatUnicodeSymbols(disp.bass)}` : '';
+                    const simpleText = `${formatUnicodeSymbols(disp.root)}${formatUnicodeSymbols(disp.suffix)}${dispBass}`;
                     
-                    if (card.innerHTML !== html) {
-                        card.innerHTML = html;
+                    // Use text comparison to avoid DOM thrashing, similar to previous innerHTML check
+                    if (card.dataset.cachedText !== simpleText) {
+                        card.dataset.cachedText = simpleText;
+                        card.textContent = ''; // Clear content safely
+
+                        const rootSpan = document.createElement('span');
+                        rootSpan.className = 'root';
+                        rootSpan.textContent = formatUnicodeSymbols(disp.root);
+                        card.appendChild(rootSpan);
+
+                        const suffixSpan = document.createElement('span');
+                        suffixSpan.className = 'suffix';
+                        suffixSpan.textContent = formatUnicodeSymbols(disp.suffix);
+                        card.appendChild(suffixSpan);
+
+                        if (disp.bass) {
+                            const bassSpan = document.createElement('span');
+                            bassSpan.className = 'bass-note';
+                            bassSpan.textContent = `/${formatUnicodeSymbols(disp.bass)}`;
+                            card.appendChild(bassSpan);
+                        }
+
                         const charCount = disp.root.length + disp.suffix.length + (disp.bass ? disp.bass.length + 1 : 0);
                         applyDynamicFontSize(card, charCount, measure.chords.length, totalMeasures, isMaximized);
                     }
@@ -144,10 +165,28 @@ export function renderChordVisualizer(ui) {
                 const disp = chord.display ? chord.display[notation] : null;
                 
                 if (disp) {
-                    card.innerHTML = `<span class="root">${formatUnicodeSymbols(disp.root)}</span><span class="suffix">${formatUnicodeSymbols(disp.suffix)}</span>`;
+                    // Safe DOM creation
+                    const rootSpan = document.createElement('span');
+                    rootSpan.className = 'root';
+                    rootSpan.textContent = formatUnicodeSymbols(disp.root);
+                    card.appendChild(rootSpan);
+
+                    const suffixSpan = document.createElement('span');
+                    suffixSpan.className = 'suffix';
+                    suffixSpan.textContent = formatUnicodeSymbols(disp.suffix);
+                    card.appendChild(suffixSpan);
+
                     if (disp.bass) {
-                        card.innerHTML += `<span class="bass-note">/${formatUnicodeSymbols(disp.bass)}</span>`;
+                        const bassSpan = document.createElement('span');
+                        bassSpan.className = 'bass-note';
+                        bassSpan.textContent = `/${formatUnicodeSymbols(disp.bass)}`;
+                        card.appendChild(bassSpan);
                     }
+
+                    // Cache text for future updates (see above loop)
+                    const dispBass = disp.bass ? `/${formatUnicodeSymbols(disp.bass)}` : '';
+                    card.dataset.cachedText = `${formatUnicodeSymbols(disp.root)}${formatUnicodeSymbols(disp.suffix)}${dispBass}`;
+
                     const charCount = disp.root.length + disp.suffix.length + (disp.bass ? disp.bass.length + 1 : 0);
                     applyDynamicFontSize(card, charCount, measure.chords.length, totalMeasures, isMaximized);
                 } else {

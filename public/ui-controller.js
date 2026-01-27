@@ -1066,10 +1066,16 @@ export function setupAnalyzerHandlers() {
                         const cell = document.createElement('button'); // Button for accessibility
                         cell.className = 'harmony-cell';
                         cell.setAttribute('aria-label', `Measure ${i+1}: ${c.roman} ${c.quality}`);
-                        cell.innerHTML = `
-                            <div class="hc-roman">${formatUnicodeSymbols(c.roman)}</div>
-                            <div class="hc-quality">${c.quality}</div>
-                        `;
+
+                        const romanDiv = document.createElement('div');
+                        romanDiv.className = 'hc-roman';
+                        romanDiv.textContent = formatUnicodeSymbols(c.roman);
+                        cell.appendChild(romanDiv);
+
+                        const qualityDiv = document.createElement('div');
+                        qualityDiv.className = 'hc-quality';
+                        qualityDiv.textContent = c.quality;
+                        cell.appendChild(qualityDiv);
 
                         cell.onclick = () => {
                             // Highlight selection
@@ -1078,12 +1084,20 @@ export function setupAnalyzerHandlers() {
 
                             // Show details
                             if (c.reasons && c.reasons.length > 0) {
-                                detailsPanel.innerHTML = `
-                                    <strong>Measure ${i+1}: ${formatUnicodeSymbols(c.roman)}</strong>
-                                    <ul class="reason-list">
-                                        ${c.reasons.map(r => `<li>${r}</li>`).join('')}
-                                    </ul>
-                                `;
+                                detailsPanel.textContent = '';
+
+                                const strong = document.createElement('strong');
+                                strong.textContent = `Measure ${i+1}: ${formatUnicodeSymbols(c.roman)}`;
+                                detailsPanel.appendChild(strong);
+
+                                const ul = document.createElement('ul');
+                                ul.className = 'reason-list';
+                                c.reasons.forEach(r => {
+                                    const li = document.createElement('li');
+                                    li.textContent = r;
+                                    ul.appendChild(li);
+                                });
+                                detailsPanel.appendChild(ul);
                             } else {
                                 detailsPanel.innerHTML = `<strong>Measure ${i+1}:</strong> <span class="text-muted">No specific notes.</span>`;
                             }
