@@ -781,7 +781,8 @@ export function setupUIHandlers(refs) {
 
     window.addEventListener('keydown', e => {
         const isTyping = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
-        if (e.key === ' ' && !isTyping) { e.preventDefault(); togglePlay(); }
+        const isAnalyzerActive = ui.analyzerOverlay && ui.analyzerOverlay.classList.contains('active');
+        if (e.key === ' ' && !isTyping && !isAnalyzerActive) { e.preventDefault(); togglePlay(); }
         if (e.key.toLowerCase() === 'e' && !isTyping && !e.metaKey && !e.ctrlKey) { e.preventDefault(); if (ui.editorOverlay.classList.contains('active')) ui.editorOverlay.classList.remove('active'); else ui.editorOverlay.classList.add('active'); }
         if (['1', '2', '3', '4'].includes(e.key) && !isTyping) { const index = parseInt(e.key) - 1; const tabItem = document.querySelectorAll('.tab-item')[index]; if (tabItem) tabItem.click(); }
         if (e.key === '[' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (groove.currentMeasure - 1 + groove.measures) % groove.measures; switchMeasure(next); }
@@ -1326,6 +1327,7 @@ export function setupAnalyzerHandlers() {
     };
 
     const startLiveListen = async () => {
+        if (liveStream) stopLiveListen();
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             showToast("Live Listen requires a Secure Context (HTTPS or localhost).");
             console.error("[LiveListen] navigator.mediaDevices is undefined. Check HTTPS/localhost.");
