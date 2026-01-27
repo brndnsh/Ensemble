@@ -11,6 +11,7 @@
  * @property {GainNode|null} drumsReverb - Reverb send for drums.
  * @property {GainNode|null} bassReverb - Reverb send for bass.
  * @property {GainNode|null} soloistReverb - Reverb send for soloist.
+ * @property {GainNode|null} harmoniesReverb - Reverb send for harmonies.
  * @property {boolean} isPlaying - Whether the sequencer is currently playing.
  * @property {number} bpm - Beats per minute (40-240).
  * @property {number} nextNoteTime - The scheduler time for the next note (swung).
@@ -55,6 +56,7 @@ export const playback = {
     bassEQ: null,
     soloistReverb: null,
     soloistGain: null,
+    harmoniesReverb: null,
     isPlaying: false,
     bpm: 100,
     nextNoteTime: 0.0,
