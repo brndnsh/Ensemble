@@ -61,6 +61,11 @@
 }
 
 /* --- Settings Overlay --- */
+/* --- Global Modal Behaviors --- */
+body.modal-open {
+    overflow: hidden;
+}
+
 .settings-overlay, .modal-overlay {
     position: fixed;
     top: 0;
@@ -71,7 +76,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 2000 !important;
+    z-index: var(--z-modal) !important;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -443,7 +448,7 @@ select, input[type="range"] {
 }
 
 .section-card.menu-active {
-    z-index: 1000;
+    z-index: var(--z-overlay);
 }
 
 .section-header {
@@ -533,13 +538,13 @@ select, input[type="range"] {
     padding: 1px 5px;
     border-radius: 3px;
     letter-spacing: 0.08em;
-    z-index: 10;
+    z-index: var(--z-controls);
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* Ensure previous card doesn't hide the connection */
 .section-card:has(+ .section-card.linked) {
-    z-index: 1;
+    z-index: var(--z-base);
 }
 
 /* Header Row Stacking */
@@ -598,7 +603,7 @@ select, input[type="range"] {
     grid-template-columns: repeat(4, 1fr);
     gap: 0.4rem;
     box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-    z-index: 200;
+    z-index: var(--z-floating);
     min-width: 180px;
 }
 

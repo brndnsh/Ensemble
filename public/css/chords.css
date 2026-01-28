@@ -113,7 +113,7 @@
 .chord-card.active {
     background: var(--accent-color);
     color: white !important;
-    z-index: 10;
+    z-index: var(--z-controls);
     box-shadow: 0 0 15px var(--accent-color);
 }
 
@@ -135,7 +135,7 @@
     width: 100%;
     height: calc(100vh - 80px);
     max-height: none !important;
-    z-index: 9999;
+    z-index: var(--z-maximized);
     background: var(--bg-color);
     padding: 1.5vh 1.5rem;
     border-radius: 0;
@@ -230,7 +230,7 @@
     background: var(--panel-color);
     padding: 1px 4px 2px 2px;
     border-bottom-right-radius: 4px;
-    z-index: 20;
+    z-index: var(--z-sidebar);
     font-weight: bold;
     opacity: 1;
     border-right: 1px solid rgba(203, 75, 22, 0.3);
@@ -247,7 +247,7 @@
     border: none;
     box-shadow: none;
     opacity: 0.6; /* Subtle enough to not block text */
-    z-index: 1; /* Below chord text if they overlap */
+    z-index: var(--z-base); /* Below chord text if they overlap */
     pointer-events: none;
 }
 
@@ -287,12 +287,12 @@
     background: var(--accent-color);
     color: white;
     border-radius: 50%;
-    z-index: 10005;
+    z-index: var(--z-maximized-header);
     font-size: 1.2rem;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
-.chord-maximized header { display: flex !important; position: fixed; top: 0; width: 100%; z-index: 10001; }
+.chord-maximized header { display: flex !important; position: fixed; top: 0; width: 100%; z-index: var(--z-maximized-header); }
 .chord-maximized .sidebar-column, 
 .chord-maximized .mobile-tabs-nav,
 .chord-maximized #panel-visualizer,

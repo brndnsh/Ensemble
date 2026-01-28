@@ -48,6 +48,24 @@
     --beat-inactive-odd: var(--base02);
     --beat-inactive-even: var(--base01);
     --beat-playing: var(--orange);
+
+    /* Z-Index Registry */
+    --z-background: -1;
+    --z-base: 1;
+    --z-step: 2;
+    --z-panel-content: 5;
+    --z-controls: 10;
+    --z-tabs: 10;
+    --z-sidebar: 20;
+    --z-panel-header: 50;
+    --z-header: 90;
+    --z-mobile-nav: 100;
+    --z-floating: 500;
+    --z-overlay: 1000;
+    --z-modal: 2000;
+    --z-toast: 3000;
+    --z-maximized: 10000;
+    --z-maximized-header: 10001;
 }
 
 [data-theme="light"] {

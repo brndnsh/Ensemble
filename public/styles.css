@@ -85,7 +85,7 @@
     border-radius: 4px;
     width: 200px;
     font-size: 0.8em;
-    z-index: 100;
+    z-index: var(--z-mobile-nav);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     text-align: left;
     margin-bottom: 8px;

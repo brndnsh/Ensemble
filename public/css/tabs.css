@@ -50,7 +50,7 @@
     padding: 0;
     margin: 0;
     position: relative;
-    z-index: 10;
+    z-index: var(--z-tabs);
 }
 
 .instrument-tab-btn {

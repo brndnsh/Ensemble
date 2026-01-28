@@ -38,7 +38,7 @@
     position: sticky;
     left: 0;
     background: var(--panel-color); /* Match or contrast with grid bg */
-    z-index: 10;
+    z-index: var(--z-controls);
     box-shadow: 4px 0 8px -2px rgba(0,0,0,0.3); /* Subtle shadow to indicate depth when scrolling */
     margin-right: 0.25rem;
 }
@@ -127,7 +127,7 @@
 .step.playing {
     outline: 2px solid var(--text-color);
     outline-offset: 1px;
-    z-index: 2;
+    z-index: var(--z-step);
 }
 
 .label-row {

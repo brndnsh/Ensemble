@@ -98,7 +98,7 @@ export class UnifiedVisualizer {
         this.infoLayer.style.cssText = `
             position: absolute; top: 10px; left: ${this.pianoRollWidth + 10}px; right: 10px;
             display: flex; justify-content: space-between;
-            pointer-events: none; z-index: 10;
+            pointer-events: none; z-index: var(--z-controls);
         `;
         this.container.appendChild(this.infoLayer);
     }
