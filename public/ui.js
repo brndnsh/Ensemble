@@ -160,6 +160,15 @@ export const ui = {
     get analyzerSelectionOverlay() { return getEl('analyzerSelectionOverlay'); },
     get analyzerDurationLabel() { return getEl('analyzerDurationLabel'); },
     get bpmChips() { return getEl('bpmChips'); },
+    
+    // --- Generate Song Modal ---
+    get generateSongOverlay() { return getEl('generateSongOverlay'); },
+    get closeGenerateSongBtn() { return getEl('closeGenerateSongBtn'); },
+    get confirmGenerateSongBtn() { return getEl('confirmGenerateSongBtn'); },
+    get genKeySelect() { return getEl('genKeySelect'); },
+    get genTimeSigSelect() { return getEl('genTimeSigSelect'); },
+    get genStructureSelect() { return getEl('genStructureSelect'); },
+
     get suggestedSectionsContainer() { return getEl('suggestedSectionsContainer'); },
     get analyzerSummary() { return getEl('analyzerSummary'); },
     get detectedBpmLabel() { return getEl('detectedBpmLabel'); },

@@ -7,7 +7,8 @@ import { syncWorker } from './worker-client.js';
 import { generateId, formatUnicodeSymbols, normalizeKey } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
 import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
-import { generateRandomProgression, mutateProgression } from './chords.js';
+import { mutateProgression } from './chords.js';
+import { generateSong } from './song-generator.js';
 import { applyTheme, setBpm } from './app-controller.js';
 import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, handleTap, resetToDefaults, togglePower } from './instrument-controller.js';
 import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey } from './arranger-controller.js';
@@ -343,18 +344,7 @@ export function setupUIHandlers(refs) {
         [ui.randomizeBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
-            pushHistory();
-            const newProg = generateRandomProgression(chords.style);
-            const targetId = arranger.lastInteractedSectionId;
-            const section = arranger.sections.find(s => s.id === targetId);
-            if (section) {
-                section.value = newProg;
-                showToast(`Randomized ${section.label}`);
-            } else {
-                arranger.sections = [{ id: generateId(), label: 'Random', value: newProg }];
-            }
-            clearChordPresetHighlight();
-            refreshArrangerUI();
+            ui.generateSongOverlay.classList.add('active');
         }],
         [ui.mutateBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
@@ -801,6 +791,62 @@ export function setupUIHandlers(refs) {
     updateGroupingUI();
     setupMIDIHandlers();
     setupAnalyzerHandlers();
+    setupGenerateSongHandlers();
+}
+
+export function setupGenerateSongHandlers() {
+    if (!ui.generateSongOverlay) return;
+
+    ui.closeGenerateSongBtn.addEventListener('click', () => {
+        ui.generateSongOverlay.classList.remove('active');
+    });
+
+    ui.generateSongOverlay.addEventListener('click', (e) => {
+        if (e.target === ui.generateSongOverlay) {
+            ui.generateSongOverlay.classList.remove('active');
+        }
+    });
+
+    ui.confirmGenerateSongBtn.addEventListener('click', () => {
+        const key = ui.genKeySelect.value;
+        const timeSignature = ui.genTimeSigSelect.value;
+        const structure = ui.genStructureSelect.value;
+
+        const newSections = generateSong({ key, timeSignature, structure });
+
+        pushHistory();
+
+        if (arranger.isDirty && arranger.sections.length > 1) {
+            if (!confirm("Replace current arrangement with generated song?")) return;
+        }
+
+        arranger.sections = newSections;
+        
+        // Update global arranger state to match the generated song's first section details
+        // (Since generateSong returns uniform key/ts for the whole song usually)
+        if (newSections.length > 0) {
+            const first = newSections[0];
+            if (first.key && first.key !== 'Random') {
+                arranger.key = first.key;
+                ui.keySelect.value = normalizeKey(first.key);
+                updateKeySelectLabels();
+                updateRelKeyButton();
+            }
+            if (first.timeSignature && first.timeSignature !== 'Random') {
+                arranger.timeSignature = first.timeSignature;
+                ui.timeSigSelect.value = first.timeSignature;
+                updateGroupingUI();
+            }
+        }
+
+        arranger.isDirty = true; // generated content is "dirty" vs a saved preset
+        clearChordPresetHighlight();
+        refreshArrangerUI();
+        validateAndAnalyze(); // Ensure playback engine is updated
+        
+        ui.generateSongOverlay.classList.remove('active');
+        showToast("Generated new song!");
+    });
 }
 
 export function setupAnalyzerHandlers() {
