@@ -10,7 +10,33 @@ import { UIStore } from './ui-store.js';
 import { renderChordVisualizer as internalRenderChordVisualizer } from './ui-chord-visualizer.js';
 import { renderGrid as internalRenderGrid, renderGridState as internalRenderGridState, initSequencerHandlers as internalInitSequencerHandlers } from './ui-sequencer-grid.js';
 
+// Import UI Fragments
+import { songGeneratorModalHtml } from './ui/fragments/modals/song-generator.js';
+import { settingsModalHtml } from './ui/fragments/modals/settings.js';
+import { exportModalHtml } from './ui/fragments/modals/export.js';
+import { editorModalHtml } from './ui/fragments/modals/editor.js';
+import { templatesModalHtml } from './ui/fragments/modals/templates.js';
+import { analyzerModalHtml } from './ui/fragments/modals/analyzer.js';
+
 const getEl = (id) => document.getElementById(id);
+
+/**
+ * Injects UI fragments into the DOM.
+ * Must be called before setting up event listeners.
+ */
+export function initializeDOM() {
+    // Inject Modals into the top of the body for correct stacking context
+    const modalFragments = [
+        songGeneratorModalHtml,
+        settingsModalHtml,
+        exportModalHtml,
+        editorModalHtml,
+        templatesModalHtml,
+        analyzerModalHtml
+    ];
+    
+    document.body.insertAdjacentHTML('afterbegin', modalFragments.join('\n'));
+}
 
 /**
  * Explicit UI Element References.
@@ -178,7 +204,6 @@ export const ui = {
     get analyzerSyncBpmCheck() { return getEl('analyzerSyncBpmCheck'); },
     get liveListenBtn() { return getEl('liveListenBtn'); },
     get liveListenView() { return getEl('liveListenView'); },
-    get liveHistoryDisplay() { return getEl('liveHistoryDisplay'); },
     get liveChordDisplay() { return getEl('liveChordDisplay'); },
     get captureLiveHistoryBtn() { return getEl('captureLiveHistoryBtn'); },
     get stopLiveListenBtn() { return getEl('stopLiveListenBtn'); },

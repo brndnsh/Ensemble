@@ -130,7 +130,6 @@ describe('Live Listen Spacebar Conflict', () => {
             <div id="analyzerDropZone"></div>
             <input id="analyzerFileInput">
             <button id="liveListenBtn"></button>
-            <div id="liveHistoryDisplay"></div>
             <div id="liveChordDisplay"></div>
             <button id="captureLiveHistoryBtn"></button>
             <button id="stopLiveListenBtn"></button>

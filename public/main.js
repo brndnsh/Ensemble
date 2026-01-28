@@ -1,5 +1,5 @@
 import { playback, chords, bass, soloist, harmony, groove, arranger, subscribe } from './state.js';
-import { renderChordVisualizer, renderGrid, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, initSequencerHandlers } from './ui.js';
+import { initializeDOM, renderChordVisualizer, renderGrid, renderSections, initTabs, renderMeasurePagination, setupPanelMenus, initSequencerHandlers } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';
 import { validateProgression } from './chords.js';
@@ -26,6 +26,9 @@ window.enableWorkerLogging = (enabled) => {
 
 function init() {
     try {
+        // --- ASSEMBLE UI ---
+        initializeDOM();
+
         // --- WORKER INIT ---
         initWorker(() => scheduler(), (notes, requestTimestamp, workerProcessTime) => { 
             // --- Latency Monitoring ---
