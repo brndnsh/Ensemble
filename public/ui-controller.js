@@ -6,7 +6,7 @@ import { restoreGains, initAudio } from './engine.js';
 import { syncWorker } from './worker-client.js';
 import { generateId, formatUnicodeSymbols, normalizeKey, escapeHTML } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
-import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
+import { TIME_SIGNATURES } from './config.js';
 import { mutateProgression } from './chords.js';
 import { generateSong } from './song-generator.js';
 import { applyTheme, setBpm } from './app-controller.js';
@@ -21,6 +21,7 @@ import { applyConductor, updateBpmUI } from './conductor.js';
 import { initMIDI, panic } from './midi-controller.js';
 import { midi as midiState } from './state.js';
 import { initTransportHandlers } from './ui-transport-controller.js';
+import { initMixerHandlers } from './ui-mixer-controller.js';
 
 export function updateStyle(type, styleId) {
     const UPDATE_STYLE_CONFIG = {
@@ -161,6 +162,7 @@ export function setupUIHandlers(refs) {
     } = refs;
 
     initTransportHandlers(refs);
+    initMixerHandlers();
 
     const openExportModal = () => {
         ui.arrangerActionMenu.classList.remove('open');
@@ -559,46 +561,6 @@ export function setupUIHandlers(refs) {
         validateAndAnalyze(); 
         flushBuffers(); 
         saveCurrentState();
-    });
-
-    const volumeNodes = [
-        { el: ui.chordVol, state: chords, gain: 'chordsGain', mult: MIXER_GAIN_MULTIPLIERS.chords },
-        { el: ui.bassVol, state: bass, gain: 'bassGain', mult: MIXER_GAIN_MULTIPLIERS.bass },
-        { el: ui.soloistVol, state: soloist, gain: 'soloistGain', mult: MIXER_GAIN_MULTIPLIERS.soloist },
-        { el: ui.harmonyVol, state: harmony, gain: 'harmoniesGain', mult: MIXER_GAIN_MULTIPLIERS.harmonies },
-        { el: ui.drumVol, state: groove, gain: 'drumsGain', mult: MIXER_GAIN_MULTIPLIERS.drums },
-        { el: ui.masterVol, state: playback, gain: 'masterGain', mult: MIXER_GAIN_MULTIPLIERS.master }
-    ];
-    volumeNodes.forEach(({ el, state, gain, mult }) => {
-        el.addEventListener('input', e => {
-            const val = parseFloat(e.target.value);
-            if (state !== playback) state.volume = val;
-            if (playback[gain]) {
-                const target = Math.max(0.0001, val * mult);
-                playback[gain].gain.setValueAtTime(playback[gain].gain.value, playback.audio.currentTime);
-                playback[gain].gain.exponentialRampToValueAtTime(target, playback.audio.currentTime + 0.04);
-            }
-        });
-        el.addEventListener('change', () => saveCurrentState());
-    });
-
-    const reverbNodes = [
-        { el: ui.chordReverb, state: chords, gain: 'chordsReverb' },
-        { el: ui.bassReverb, state: bass, gain: 'bassReverb' },
-        { el: ui.soloistReverb, state: soloist, gain: 'soloistReverb' },
-        { el: ui.harmonyReverb, state: harmony, gain: 'harmoniesReverb' },
-        { el: ui.drumReverb, state: groove, gain: 'drumsReverb' }
-    ];
-    reverbNodes.forEach(({ el, state, gain }) => {
-        el.addEventListener('input', e => {
-            state.reverb = parseFloat(e.target.value);
-            if (playback[gain]) {
-                const target = Math.max(0.0001, state.reverb);
-                playback[gain].gain.setValueAtTime(playback[gain].gain.value, playback.audio.currentTime);
-                playback[gain].gain.exponentialRampToValueAtTime(target, playback.audio.currentTime + 0.04);
-            }
-        });
-        el.addEventListener('change', () => saveCurrentState());
     });
 
     ui.humanizeSlider.addEventListener('input', e => { groove.humanize = parseInt(e.target.value); saveCurrentState(); });
