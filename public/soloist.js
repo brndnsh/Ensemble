@@ -4,6 +4,8 @@ import { TIME_SIGNATURES } from './config.js';
 import { getScaleForChord } from './theory-scales.js';
 
 const CANDIDATE_WEIGHTS = new Float32Array(128);
+const HIST_COUNTS = new Float32Array(128);
+const PC_COUNTS = new Float32Array(12);
 
 const RHYTHMIC_CELLS = [
     [1, 1, 1, 1], // 0: 16ths
@@ -184,12 +186,14 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         soloist.currentPhraseSteps = 0; soloist.notesInPhrase = 0; soloist.qaState = 'Question'; soloist.isResting = true; return null; 
     }
     
-    const historyCounts = {};
-    const pcCounts = new Array(12).fill(0);
+    HIST_COUNTS.fill(0);
+    PC_COUNTS.fill(0);
+    const historyCounts = HIST_COUNTS;
+    const pcCounts = PC_COUNTS;
     const historyLen = soloist.pitchHistory ? soloist.pitchHistory.length : 0;
     if (historyLen > 0) {
         for (const p of soloist.pitchHistory) {
-            historyCounts[p] = (historyCounts[p] || 0) + 1;
+            if (p >= 0 && p < 128) historyCounts[p]++;
             pcCounts[(p % 12 + 12) % 12]++;
         }
     }
