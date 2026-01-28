@@ -4,7 +4,7 @@ import { playback, chords, bass, soloist, harmony, groove, arranger, dispatch, s
 import { saveCurrentState } from './persistence.js';
 import { restoreGains, initAudio } from './engine.js';
 import { syncWorker } from './worker-client.js';
-import { generateId, formatUnicodeSymbols, normalizeKey } from './utils.js';
+import { generateId, formatUnicodeSymbols, normalizeKey, escapeHTML } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
 import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
 import { mutateProgression } from './chords.js';
@@ -1258,11 +1258,11 @@ export function setupAnalyzerHandlers() {
 
                     item.innerHTML = `
                         <div class="ss-header">
-                            <strong>${s.label}</strong>
-                            <span class="ss-repeat">x${s.repeat}</span>
+                            <strong>${escapeHTML(s.label)}</strong>
+                            <span class="ss-repeat">x${escapeHTML(String(s.repeat))}</span>
                             ${loopBadge}
                         </div>
-                        <div class="ss-value">${formatUnicodeSymbols(s.value)}</div>
+                        <div class="ss-value">${escapeHTML(formatUnicodeSymbols(s.value))}</div>
                     `;
 
                     item.onclick = () => {
