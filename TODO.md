@@ -182,9 +182,9 @@
 
 # UI Architecture & Scalability Audits (Future)
 
-- [ ] **Unified Modal Controller**: Refactor `ui.js` and `ui-controller.js` to replace manual modal toggling with a centralized `ModalManager`.
+- [x] **Unified Modal Controller**: Refactor `ui.js` and `ui-controller.js` to replace manual modal toggling with a centralized `ModalManager`.
     - *Goal*: Eliminate redundant `classList.add('active')` calls and centralize side-effects like background scroll-locking, focus trapping (A11y), and `aria-hidden` management.
-- [ ] **Global Z-Index Registry**: Audit and consolidate all `z-index` values into `public/css/variables.css`.
+- [x] **Global Z-Index Registry**: Audit and consolidate all `z-index` values into `public/css/variables.css`.
     - *Goal*: Replace magic numbers (1000, 2000, 99999) with semantic variables (e.g., `--z-modal-base`, `--z-modal-overlay`, `--z-toast`) to prevent visibility regressions and stacking context conflicts.
 - [ ] **HTML Componentization (Template Loader)**: Reduce the size of `index.html` (currently >1100 lines) by extracting modal structures into external templates.
     - *Goal*: Implement a lightweight `fetch`-based loader or a logic-based injection system to pull modal HTML only when needed, improving initial DOM parse time and maintainability.
