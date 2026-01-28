@@ -20,6 +20,8 @@ export const compingState = {
     lastSectionId: null
 };
 
+const STICKY_GENRES = ['Funk', 'Soul', 'Reggae', 'Neo-Soul'];
+
 /**
  * Algorithmic Pattern Generator
  * Replaces static PIANO_CELLS table to save space and increase variety.
@@ -187,8 +189,7 @@ function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
     else if (chords.style === 'power-metal') genre = 'Metal';
 
     // --- Sticky Groove Logic ---
-    const stickyGenres = ['Funk', 'Soul', 'Reggae', 'Neo-Soul'];
-    if (stickyGenres.includes(genre)) {
+    if (STICKY_GENRES.includes(genre)) {
         compingState.grooveRetentionCount++;
         
         // Only retain if we are NOT on the first bar of the groove
