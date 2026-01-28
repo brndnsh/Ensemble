@@ -5,7 +5,7 @@ import { saveCurrentState } from './persistence.js';
 import { restoreGains } from './engine.js';
 import { syncWorker } from './worker-client.js';
 import { generateId, formatUnicodeSymbols } from './utils.js';
-import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
+import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES, SMART_GENRES } from './presets.js';
 import { mutateProgression } from './chords.js';
 import { setBpm } from './app-controller.js';
 import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, resetToDefaults, togglePower } from './instrument-controller.js';
@@ -50,20 +50,6 @@ export function updateStyle(type, styleId) {
     saveCurrentState();
 }
 
-const SMART_GENRES = {
-    'Rock': { swing: 0, sub: '8th', drum: 'Basic Rock', feel: 'Rock', chord: 'smart', bass: 'rock', soloist: 'shred', harmony: 'smart' },
-    'Jazz': { swing: 60, sub: '8th', drum: 'Jazz', feel: 'Jazz', chord: 'jazz', bass: 'quarter', soloist: 'bird', harmony: 'horns' },
-    'Funk': { swing: 15, sub: '16th', drum: 'Funk', feel: 'Funk', chord: 'funk', bass: 'funk', soloist: 'blues', harmony: 'horns' },
-    'Disco': { swing: 0, sub: '16th', drum: 'Disco', feel: 'Disco', chord: 'smart', bass: 'disco', soloist: 'disco', harmony: 'smart' },
-    'Hip Hop': { swing: 25, sub: '16th', drum: 'Hip Hop', feel: 'Hip Hop', chord: 'smart', bass: 'neo', soloist: 'neo', harmony: 'smart' },
-    'Blues': { swing: 100, sub: '8th', drum: 'Blues Shuffle', feel: 'Blues', chord: 'jazz', bass: 'quarter', soloist: 'blues', harmony: 'horns' },
-    'Neo-Soul': { swing: 30, sub: '16th', drum: 'Neo-Soul', feel: 'Neo-Soul', chord: 'smart', bass: 'neo', soloist: 'neo', harmony: 'strings' },
-    'Reggae': { swing: 20, sub: '16th', drum: 'Reggae', feel: 'Reggae', chord: 'smart', bass: 'dub', soloist: 'minimal', harmony: 'smart' },
-    'Acoustic': { swing: 15, sub: '8th', drum: 'Acoustic', feel: 'Acoustic', chord: 'pad', bass: 'half', soloist: 'minimal', harmony: 'strings' },
-    'Bossa': { swing: 0, sub: '16th', drum: 'Bossa Nova', feel: 'Bossa Nova', chord: 'jazz', bass: 'bossa', soloist: 'bossa', harmony: 'strings' },
-    'Country': { swing: 55, sub: '16th', drum: 'Country (Two-Step)', feel: 'Country', chord: 'strum-country', bass: 'country', soloist: 'country', harmony: 'smart' },
-    'Metal': { swing: 0, sub: '16th', drum: 'Metal (Speed)', feel: 'Metal', chord: 'power-metal', bass: 'metal', soloist: 'metal', harmony: 'smart' }
-};
 
 export function setupPresets(refs = {}) {
     const { togglePlay } = refs;

@@ -63,7 +63,7 @@ export function initSettingsHandlers() {
     // 2. Haptic
     if (ui.haptic) {
         ui.haptic.addEventListener('change', () => {
-            dispatch(ACTIONS.SET_PARAM, { module: 'ctx', param: 'haptic', value: ui.haptic.checked });
+            dispatch(ACTIONS.SET_PARAM, { module: 'playback', param: 'haptic', value: ui.haptic.checked });
         });
     }
 
