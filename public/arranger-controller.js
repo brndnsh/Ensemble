@@ -9,7 +9,47 @@ import { generateId, normalizeKey } from './utils.js';
 import { pushHistory } from './history.js';
 import { analyzeForm } from './form-analysis.js';
 import { conductorState } from './conductor.js';
-import { KEY_ORDER } from './config.js';
+import { KEY_ORDER, TIME_SIGNATURES } from './config.js';
+
+const GROUPING_OPTIONS = {
+    '5/4': [[3, 2], [2, 3]],
+    '7/8': [[2, 2, 3], [3, 2, 2], [2, 3, 2]],
+    '7/4': [[4, 3], [3, 4]]
+};
+
+export function initArrangerHandlers() {
+    if (ui.groupingLabel) {
+        ui.groupingLabel.addEventListener('click', () => {
+            const ts = arranger.timeSignature;
+            const options = GROUPING_OPTIONS[ts];
+            if (!options) return;
+
+            const current = arranger.grouping || TIME_SIGNATURES[ts].grouping;
+            const currentIndex = options.findIndex(opt => opt.join('+') === current.join('+'));
+            const nextIndex = (currentIndex + 1) % options.length;
+            
+            arranger.grouping = options[nextIndex];
+            updateGroupingUI();
+            flushBuffers();
+            syncWorker();
+            saveCurrentState();
+        });
+    }
+}
+
+export function updateGroupingUI() {
+    if (!ui.groupingToggle || !ui.groupingLabel) return;
+    
+    const ts = arranger.timeSignature;
+    const hasOptions = GROUPING_OPTIONS[ts] !== undefined;
+    
+    ui.groupingToggle.style.display = hasOptions ? 'flex' : 'none';
+    
+    if (hasOptions) {
+        const current = arranger.grouping || TIME_SIGNATURES[ts].grouping;
+        ui.groupingLabel.textContent = current.join('+');
+    }
+}
 
 export function analyzeFormUI() {
     const form = analyzeForm();

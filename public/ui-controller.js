@@ -6,12 +6,11 @@ import { restoreGains, initAudio } from './engine.js';
 import { syncWorker } from './worker-client.js';
 import { generateId, formatUnicodeSymbols, normalizeKey, escapeHTML } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
-import { TIME_SIGNATURES } from './config.js';
 import { mutateProgression } from './chords.js';
 import { generateSong } from './song-generator.js';
 import { setBpm } from './app-controller.js';
 import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, resetToDefaults, togglePower } from './instrument-controller.js';
-import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey } from './arranger-controller.js';
+import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey, updateGroupingUI, initArrangerHandlers } from './arranger-controller.js';
 import { pushHistory, undo } from './history.js';
 import { shareProgression } from './sharing.js';
 import { triggerInstall } from './pwa.js';
@@ -163,6 +162,7 @@ export function setupUIHandlers(refs) {
     initTransportHandlers(refs);
     initMixerHandlers();
     initSettingsHandlers();
+    initArrangerHandlers();
 
     const openExportModal = () => {
         ui.arrangerActionMenu.classList.remove('open');
@@ -512,24 +512,6 @@ export function setupUIHandlers(refs) {
         validateAndAnalyze();
         saveCurrentState();
     });
-
-    if (ui.groupingLabel) {
-        ui.groupingLabel.addEventListener('click', () => {
-            const ts = arranger.timeSignature;
-            const options = GROUPING_OPTIONS[ts];
-            if (!options) return;
-
-            const current = arranger.grouping || TIME_SIGNATURES[ts].grouping;
-            const currentIndex = options.findIndex(opt => opt.join('+') === current.join('+'));
-            const nextIndex = (currentIndex + 1) % options.length;
-            
-            arranger.grouping = options[nextIndex];
-            updateGroupingUI();
-            flushBuffers();
-            syncWorker();
-            saveCurrentState();
-        });
-    }
 
     ui.notationSelect.addEventListener('change', () => {
         arranger.notation = ui.notationSelect.value;
@@ -1565,24 +1547,4 @@ export function setupAnalyzerHandlers() {
         ModalManager.close(ui.analyzerOverlay);
         showToast(`Imported ${newSections.length} sections.`);
     });
-}
-
-const GROUPING_OPTIONS = {
-    '5/4': [[3, 2], [2, 3]],
-    '7/8': [[2, 2, 3], [3, 2, 2], [2, 3, 2]],
-    '7/4': [[4, 3], [3, 4]]
-};
-
-export function updateGroupingUI() {
-    if (!ui.groupingToggle || !ui.groupingLabel) return;
-    
-    const ts = arranger.timeSignature;
-    const hasOptions = GROUPING_OPTIONS[ts] !== undefined;
-    
-    ui.groupingToggle.style.display = hasOptions ? 'flex' : 'none';
-    
-    if (hasOptions) {
-        const current = arranger.grouping || TIME_SIGNATURES[ts].grouping;
-        ui.groupingLabel.textContent = current.join('+');
-    }
 }
