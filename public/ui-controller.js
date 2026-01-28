@@ -10,7 +10,7 @@ import { MIXER_GAIN_MULTIPLIERS, TIME_SIGNATURES } from './config.js';
 import { mutateProgression } from './chords.js';
 import { generateSong } from './song-generator.js';
 import { applyTheme, setBpm } from './app-controller.js';
-import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, handleTap, resetToDefaults, togglePower } from './instrument-controller.js';
+import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, resetToDefaults, togglePower } from './instrument-controller.js';
 import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey } from './arranger-controller.js';
 import { pushHistory, undo } from './history.js';
 import { shareProgression } from './sharing.js';
@@ -20,6 +20,7 @@ import { ModalManager } from './ui-modal-controller.js';
 import { applyConductor, updateBpmUI } from './conductor.js';
 import { initMIDI, panic } from './midi-controller.js';
 import { midi as midiState } from './state.js';
+import { initTransportHandlers } from './ui-transport-controller.js';
 
 export function updateStyle(type, styleId) {
     const UPDATE_STYLE_CONFIG = {
@@ -159,6 +160,8 @@ export function setupUIHandlers(refs) {
         togglePlay, saveDrumPattern
     } = refs;
 
+    initTransportHandlers(refs);
+
     const openExportModal = () => {
         ui.arrangerActionMenu.classList.remove('open');
         ui.arrangerActionTrigger.classList.remove('active');
@@ -279,9 +282,6 @@ export function setupUIHandlers(refs) {
     });
 
     const listeners = [
-        [ui.playBtn, 'click', togglePlay],
-        [ui.bpmInput, 'input', e => setBpm(e.target.value, refs.viz)],
-        [ui.tapBtn, 'click', () => handleTap((val) => setBpm(val, refs.viz))],
         [ui.addSectionBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
@@ -601,8 +601,6 @@ export function setupUIHandlers(refs) {
         el.addEventListener('change', () => saveCurrentState());
     });
 
-    ui.swingSlider.addEventListener('input', e => { groove.swing = parseInt(e.target.value); saveCurrentState(); });
-    ui.swingBase.addEventListener('change', e => { groove.swingSub = e.target.value; saveCurrentState(); });
     ui.humanizeSlider.addEventListener('input', e => { groove.humanize = parseInt(e.target.value); saveCurrentState(); });
     ui.drumBarsSelect.addEventListener('change', e => updateMeasures(e.target.value));
     ui.cloneMeasureBtn.addEventListener('click', cloneMeasure);
