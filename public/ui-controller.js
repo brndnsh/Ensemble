@@ -809,13 +809,19 @@ export function setupUIHandlers(refs) {
 export function setupGenerateSongHandlers() {
     if (!ui.generateSongOverlay) return;
 
-    ui.closeGenerateSongBtn.addEventListener('click', () => {
+    const closeModal = () => {
         ui.generateSongOverlay.classList.remove('active');
-    });
+        // Clear forced inline styles
+        ui.generateSongOverlay.style.display = '';
+        ui.generateSongOverlay.style.opacity = '';
+        ui.generateSongOverlay.style.visibility = '';
+    };
+
+    ui.closeGenerateSongBtn.addEventListener('click', closeModal);
 
     ui.generateSongOverlay.addEventListener('click', (e) => {
         if (e.target === ui.generateSongOverlay) {
-            ui.generateSongOverlay.classList.remove('active');
+            closeModal();
         }
     });
 
@@ -856,7 +862,7 @@ export function setupGenerateSongHandlers() {
         refreshArrangerUI();
         validateAndAnalyze(); // Ensure playback engine is updated
         
-        ui.generateSongOverlay.classList.remove('active');
+        closeModal();
         showToast("Generated new song!");
     });
 }
