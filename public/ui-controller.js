@@ -342,9 +342,21 @@ export function setupUIHandlers(refs) {
             document.getElementById('analyzerOverlay').classList.add('active');
         }],
         [ui.randomizeBtn, 'click', () => {
+            console.error("V2.43: RANDOM BUTTON CLICKED");
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
-            ui.generateSongOverlay.classList.add('active');
+            if (ui.generateSongOverlay) {
+                console.error("V2.43: FORCING MODAL VISIBLE");
+                ui.generateSongOverlay.classList.add('active');
+                // Forced inline styles as a last resort
+                ui.generateSongOverlay.style.display = 'flex';
+                ui.generateSongOverlay.style.opacity = '1';
+                ui.generateSongOverlay.style.visibility = 'visible';
+                ui.generateSongOverlay.style.zIndex = '9999';
+            } else {
+                console.error("V2.43: MODAL ELEMENT MISSING");
+                alert("Error: #generateSongOverlay not found.");
+            }
         }],
         [ui.mutateBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');

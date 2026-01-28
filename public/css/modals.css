@@ -61,7 +61,7 @@
 }
 
 /* --- Settings Overlay --- */
-#settingsOverlay, #editorOverlay, #exportOverlay, #templatesOverlay, #analyzerOverlay, #generateSongOverlay {
+.settings-overlay, .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -71,17 +71,25 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 2000 !important;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
     transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
 }
 
-#settingsOverlay.active, #editorOverlay.active, #exportOverlay.active, #templatesOverlay.active, #analyzerOverlay.active, #generateSongOverlay.active {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
+.settings-overlay.active, .modal-overlay.active {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+#generateSongOverlay {
+    z-index: 3000 !important; /* Ensure it is above the arrangement editor (2000) */
+}
+
+#settingsOverlay, #editorOverlay, #exportOverlay, #templatesOverlay, #analyzerOverlay, #generateSongOverlay {
+    /* Keeping IDs for backwards compatibility if needed, but the classes above handle visibility now */
 }
 
 .settings-content {
