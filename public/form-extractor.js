@@ -199,6 +199,48 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
         }
     });
 
+    // 5.2 GLOBAL CONSENSUS HEALING (The "Logic" Pass)
+    // If "Section A" appears 3 times, use the majority vote for each measure to "heal" outliers.
+    const labelGroups = new Map();
+    consolidated.forEach(s => {
+        if (!labelGroups.has(s.label)) labelGroups.set(s.label, []);
+        labelGroups.get(s.label).push(s);
+    });
+
+    for (const [label, group] of labelGroups.entries()) {
+        if (group.length <= 1) continue;
+
+        // Determine the "Standard Length" for this label (most frequent measure count)
+        const lengths = group.map(s => s.value.split(' | ').length);
+        const freqMap = {};
+        lengths.forEach(l => freqMap[l] = (freqMap[l] || 0) + 1);
+        const standardLen = parseInt(Object.entries(freqMap).sort((a, b) => b[1] - a[1])[0][0]);
+
+        // Only include instances that match the standard length for voting
+        const validInstances = group.filter(s => s.value.split(' | ').length === standardLen);
+        if (validInstances.length <= 1) continue;
+
+        const consensusChords = [];
+        for (let m = 0; m < standardLen; m++) {
+            const voteBox = {};
+            validInstances.forEach(s => {
+                const chord = s.value.split(' | ')[m];
+                voteBox[chord] = (voteBox[chord] || 0) + 1;
+            });
+            // Winner takes the slot
+            const winner = Object.entries(voteBox).sort((a, b) => b[1] - a[1])[0][0];
+            consensusChords.push(winner);
+        }
+
+        const healedProgression = consensusChords.join(' | ');
+        // Update all instances of this label to the consensus progression
+        group.forEach(s => {
+            if (s.value.split(' | ').length === standardLen) {
+                s.value = healedProgression;
+            }
+        });
+    }
+
     // 5.5 META-STRUCTURE CONSOLIDATION (Finding the "12 Bar Loop")
     // If we have A, B, C, A, B, C -> Merge into (A+B+C) x 2
     const metaConsolidated = [];

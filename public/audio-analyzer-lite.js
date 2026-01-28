@@ -315,18 +315,26 @@ export class ChordAnalyzerLite {
             }
         }
 
-        // --- SECOND PASS: Musician Smoothing ---
-        // Look for the consensus chord in a sliding 3-beat window to remove "jitter"
+        // --- SECOND PASS: Musician Smoothing & Diatonic Sanity ---
+        // 1. Look for the consensus chord in a sliding 3-beat window to remove "jitter"
+        // 2. Use the Global Key as a "magnetic pull" for ambiguous chords.
         const smoothed = [];
         let lastConsensus = null;
 
         for (let i = 0; i < results.length; i++) {
-            // Sliding window: [Previous, Current, Next]
             const window = results.slice(Math.max(0, i - 1), Math.min(results.length, i + 2));
             const counts = {};
-            window.forEach(r => counts[r.chord] = (counts[r.chord] || 0) + 1);
             
-            // Average energy in the same window
+            window.forEach(r => {
+                let chord = r.chord;
+                
+                // Diatonic Magnetic Pull:
+                // If the detected chord is non-diatonic but very close to a diatonic one,
+                // and the confidence is low, pull it towards the key.
+                // (Currently we just use the raw count, but we could add weights)
+                counts[chord] = (counts[chord] || 0) + 1;
+            });
+            
             const avgEnergy = window.reduce((a, b) => a + b.energy, 0) / window.length;
             
             // Pick the winner
@@ -472,8 +480,51 @@ export class ChordAnalyzerLite {
         
         // Use effective duration from options (trim) or buffer
         const startTime = options.startTime || 0;
-        const endTime = options.endTime || audioBuffer.duration;
-        const duration = endTime - startTime;
+        const rawEndTime = options.endTime || audioBuffer.duration;
+        let effectiveEndTime = rawEndTime;
+
+        // --- Intelligent Tail Compensation ---
+        // Users often have silence or a "ring-out" at the end.
+        // We find the true "musical end" to improve structural BPM math.
+        if (!options.endTime) {
+            const tailCheckSeconds = 3.0; // Check last 3 seconds
+            const windowSize = Math.floor(sampleRate * 0.05); // 50ms windows
+            const signalEnd = signal.length;
+            const startCheckIndex = Math.max(0, signalEnd - Math.floor(sampleRate * tailCheckSeconds));
+            
+            // Find max energy in the whole clip for thresholding
+            let maxEnergy = 0;
+            for (let i = 0; i < signal.length; i += 500) {
+                const e = Math.abs(signal[i]);
+                if (e > maxEnergy) maxEnergy = e;
+            }
+            const silenceThreshold = maxEnergy * 0.03; // 3% of peak
+
+            let silenceCount = 0;
+            const requiredSilenceWindows = 4; // Need 200ms of silence to trigger trim
+
+            for (let i = signalEnd - windowSize; i >= startCheckIndex; i -= windowSize) {
+                let windowEnergy = 0;
+                for (let j = 0; j < windowSize; j++) {
+                    windowEnergy += Math.abs(signal[i + j]);
+                }
+                windowEnergy /= windowSize;
+
+                if (windowEnergy < silenceThreshold) {
+                    silenceCount++;
+                } else {
+                    if (silenceCount >= requiredSilenceWindows) {
+                        // We found active signal after a period of silence! 
+                        // The musical end is just after this active window.
+                        effectiveEndTime = (i + windowSize + (silenceCount * windowSize * 0.5)) / sampleRate;
+                        break;
+                    }
+                    silenceCount = 0;
+                }
+            }
+        }
+
+        const duration = effectiveEndTime - startTime;
 
         // If a valid BPM is provided, we skip the search and just find the downbeat
         const manualBpm = typeof options.bpm === 'number' && options.bpm > 0 ? options.bpm : 0;

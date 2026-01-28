@@ -81,4 +81,24 @@ describe('Audio Analyzer Structural Snapping', () => {
         expect(analysis.bpm).toBe(120);
         expect(analysis.beatsPerMeasure).toBe(3);
     });
+
+    it('should ignore a silent tail when calculating structural BPM', async () => {
+        // 120 BPM = 32.0s for 16 bars.
+        // We provide 32.5s buffer but the last 0.5s is silence.
+        const activeDuration = 32.0;
+        const totalDuration = 32.5;
+        const buffer = new MockAudioBuffer({ length: totalDuration * sampleRate, sampleRate });
+        const data = buffer.getChannelData(0);
+
+        // Active content at 120 BPM
+        for (let i = 0; i < 64; i++) {
+            addDrumHit(data, i * 0.5);
+        }
+
+        const analysis = await analyzer.identifyPulse(buffer);
+        
+        // Without tail compensation, structural target for 16 bars would be ~118 BPM.
+        // With tail compensation, it should see the 32.0s active area and snap to 120 BPM.
+        expect(analysis.bpm).toBe(120);
+    });
 });
