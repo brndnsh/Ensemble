@@ -18,6 +18,13 @@ import { editorModalHtml } from './ui/fragments/modals/editor.js';
 import { templatesModalHtml } from './ui/fragments/modals/templates.js';
 import { analyzerModalHtml } from './ui/fragments/modals/analyzer.js';
 
+// Import Panel Fragments
+import { headerHtml } from './ui/fragments/panels/header.js';
+import { arrangerPanelHtml } from './ui/fragments/panels/arranger.js';
+import { visualizerPanelHtml } from './ui/fragments/panels/visualizer.js';
+import { mobileTabsHtml } from './ui/fragments/panels/mobile-tabs.js';
+import { sidebarHtml } from './ui/fragments/panels/sidebar.js';
+
 const getEl = (id) => document.getElementById(id);
 
 /**
@@ -25,7 +32,7 @@ const getEl = (id) => document.getElementById(id);
  * Must be called before setting up event listeners.
  */
 export function initializeDOM() {
-    // Inject Modals into the top of the body for correct stacking context
+    // 1. Inject Modals
     const modalFragments = [
         songGeneratorModalHtml,
         settingsModalHtml,
@@ -34,8 +41,28 @@ export function initializeDOM() {
         templatesModalHtml,
         analyzerModalHtml
     ];
-    
     document.body.insertAdjacentHTML('afterbegin', modalFragments.join('\n'));
+
+    // 2. Inject Header
+    document.body.insertAdjacentHTML('afterbegin', headerHtml);
+
+    // 3. Inject Main Layout
+    const mainColumn = document.getElementById('col-main');
+    if (mainColumn) {
+        mainColumn.insertAdjacentHTML('beforeend', arrangerPanelHtml);
+        mainColumn.insertAdjacentHTML('beforeend', visualizerPanelHtml);
+    }
+
+    const sidebarColumn = document.getElementById('col-sidebar');
+    if (sidebarColumn) {
+        sidebarColumn.insertAdjacentHTML('beforeend', sidebarHtml);
+    }
+
+    // 4. Inject Mobile Nav
+    const dashboardGrid = document.getElementById('dashboardGrid');
+    if (dashboardGrid) {
+        dashboardGrid.insertAdjacentHTML('afterend', mobileTabsHtml);
+    }
 }
 
 /**
