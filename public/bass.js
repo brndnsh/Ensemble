@@ -3,6 +3,8 @@ import { playback, groove, bass, soloist, arranger } from './state.js';
 import { TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
 import { getScaleForChord } from './theory-scales.js';
 
+const BOSSA_STEPS = [0, 6, 8, 14];
+
 /**
  * BASS ENGINE - Procedural Line Generation
  * 
@@ -30,7 +32,7 @@ export function isBassActive(style, step, stepInChord) {
     }
     if (style === 'bossa') {
         const stepInMeasure = step % 16;
-        return [0, 6, 8, 14].includes(stepInMeasure);
+        return BOSSA_STEPS.includes(stepInMeasure);
     }
     if (style === 'quarter') {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
