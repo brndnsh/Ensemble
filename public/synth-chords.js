@@ -38,6 +38,8 @@ function createPianoWave(audioCtx) {
 }
 
 let pianoWave = null;
+let cachedShaperCurve = null;
+let cachedShaperDrive = -1;
 
 /**
  * Updates the sustain pedal state, precisely scheduled.
@@ -190,14 +192,20 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
         let lastNode = filter;
         if (intensity >= 0.8 && !muted) {
             const shaper = playback.audio.createWaveShaper();
-            const n_samples = 44100;
-            const curve = new Float32Array(n_samples);
             const drive = 1.0 + (intensity - 0.8) * 10.0; // 1.0 to 3.0
-            for (let i = 0; i < n_samples; ++i) {
-                const x = (i * 2) / n_samples - 1;
-                curve[i] = (Math.PI + drive) * x / (Math.PI + drive * Math.abs(x));
+
+            // Optimization: Cache curve if drive is similar (saves allocs)
+            if (!cachedShaperCurve || Math.abs(drive - cachedShaperDrive) > 0.01) {
+                const n_samples = 44100;
+                cachedShaperCurve = new Float32Array(n_samples);
+                for (let i = 0; i < n_samples; ++i) {
+                    const x = (i * 2) / n_samples - 1;
+                    cachedShaperCurve[i] = (Math.PI + drive) * x / (Math.PI + drive * Math.abs(x));
+                }
+                cachedShaperDrive = drive;
             }
-            shaper.curve = curve;
+
+            shaper.curve = cachedShaperCurve;
             shaper.oversample = '2x';
             filter.connect(shaper);
             lastNode = shaper;
