@@ -7,7 +7,6 @@ import { syncWorker } from './worker-client.js';
 import { generateId, formatUnicodeSymbols, normalizeKey, escapeHTML } from './utils.js';
 import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES } from './presets.js';
 import { mutateProgression } from './chords.js';
-import { generateSong } from './song-generator.js';
 import { setBpm } from './app-controller.js';
 import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, resetToDefaults, togglePower } from './instrument-controller.js';
 import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey, updateGroupingUI, initArrangerHandlers } from './arranger-controller.js';
@@ -20,6 +19,7 @@ import { applyConductor, updateBpmUI } from './conductor.js';
 import { initTransportHandlers } from './ui-transport-controller.js';
 import { initMixerHandlers } from './ui-mixer-controller.js';
 import { initSettingsHandlers, setupMIDIHandlers } from './ui-settings-controller.js';
+import { setupGenerateSongHandlers } from './ui-song-generator-controller.js';
 
 export function updateStyle(type, styleId) {
     const UPDATE_STYLE_CONFIG = {
@@ -659,68 +659,6 @@ export function setupUIHandlers(refs) {
     setupMIDIHandlers();
     setupAnalyzerHandlers();
     setupGenerateSongHandlers();
-}
-
-export function setupGenerateSongHandlers() {
-    if (!ui.generateSongOverlay) return;
-
-    ui.confirmGenerateSongBtn.addEventListener('click', () => {
-        const key = ui.genKeySelect.value;
-        const timeSignature = ui.genTimeSigSelect.value;
-        const structure = ui.genStructureSelect.value;
-
-        // Seeding logic
-        let seed = null;
-        if (ui.genSeedCheck && ui.genSeedCheck.checked) {
-            const targetId = arranger.lastInteractedSectionId;
-            const section = arranger.sections.find(s => s.id === targetId) || arranger.sections[0];
-            if (section && section.value) {
-                seed = {
-                    type: ui.genSeedTypeSelect.value,
-                    value: section.value
-                };
-            } else {
-                showToast("No section found to seed from.");
-            }
-        }
-
-        const newSections = generateSong({ key, timeSignature, structure, seed });
-
-        pushHistory();
-
-        if (arranger.isDirty && arranger.sections.length > 1) {
-            if (!confirm("Replace current arrangement with generated song?")) return;
-        }
-
-        arranger.sections = newSections;
-        
-        // Update global arranger state to match the generated song's first section details
-        // (Since generateSong returns uniform key/ts for the whole song usually)
-        if (newSections.length > 0) {
-            const first = newSections[0];
-            if (first.key && first.key !== 'Random') {
-                arranger.key = first.key;
-                ui.keySelect.value = normalizeKey(first.key);
-                updateKeySelectLabels();
-                updateRelKeyButton();
-            }
-            if (first.timeSignature && first.timeSignature !== 'Random') {
-                arranger.timeSignature = first.timeSignature;
-                ui.timeSigSelect.value = first.timeSignature;
-                updateGroupingUI();
-            }
-        }
-
-        arranger.isMinor = false; // Reset to Major if not specified
-
-        arranger.isDirty = true; // generated content is "dirty" vs a saved preset
-        clearChordPresetHighlight();
-        refreshArrangerUI();
-        validateAndAnalyze(); // Ensure playback engine is updated
-        
-        ModalManager.close(ui.generateSongOverlay);
-        showToast("Generated new song!");
-    });
 }
 
 export function setupAnalyzerHandlers() {
