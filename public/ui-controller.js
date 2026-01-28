@@ -1478,7 +1478,8 @@ export function setupAnalyzerHandlers() {
             source.connect(processor);
             processor.connect(liveAudioCtx.destination);
 
-            let buffer = new Float32Array(0);
+            let chunks = [];
+            let totalChunkLen = 0;
             const targetSamples = Math.floor(liveAudioCtx.sampleRate * 0.5); // 0.5s window for responsiveness
 
             // Pre-allocate buffers
@@ -1499,14 +1500,25 @@ export function setupAnalyzerHandlers() {
 
             processor.onaudioprocess = (e) => {
                 const input = e.inputBuffer.getChannelData(0);
-                const newBuffer = new Float32Array(buffer.length + input.length);
-                newBuffer.set(buffer);
-                newBuffer.set(input, buffer.length);
-                buffer = newBuffer;
+                const chunk = new Float32Array(input);
+                chunks.push(chunk);
+                totalChunkLen += chunk.length;
 
-                if (buffer.length >= targetSamples) {
-                    const analysisBuffer = buffer.slice(-targetSamples);
-                    buffer = buffer.slice(-Math.floor(targetSamples / 2)); // 50% overlap
+                if (totalChunkLen >= targetSamples) {
+                    // Flatten chunks only when needed
+                    const fullBuffer = new Float32Array(totalChunkLen);
+                    let offset = 0;
+                    for (const c of chunks) {
+                        fullBuffer.set(c, offset);
+                        offset += c.length;
+                    }
+
+                    const analysisBuffer = fullBuffer.slice(-targetSamples);
+
+                    // Retain overlap for next cycle
+                    const overlapBuffer = fullBuffer.slice(-Math.floor(targetSamples / 2));
+                    chunks = [overlapBuffer];
+                    totalChunkLen = overlapBuffer.length;
 
                     let detected = null;
 
