@@ -453,11 +453,17 @@ export class ChordAnalyzerLite {
     /**
      * Identifies the "Pulse" (BPM, Meter, and Downbeat) of the audio using 
      * Spectral Flux for robust onset detection and autocorrelation.
+     * Includes "Top-Down" structural snapping based on clip duration.
      */
     async identifyPulse(audioBuffer, options = {}) {
         const signal = audioBuffer.getChannelData(0);
         const sampleRate = audioBuffer.sampleRate;
         
+        // Use effective duration from options (trim) or buffer
+        const startTime = options.startTime || 0;
+        const endTime = options.endTime || audioBuffer.duration;
+        const duration = endTime - startTime;
+
         // If a valid BPM is provided, we skip the search and just find the downbeat
         const manualBpm = typeof options.bpm === 'number' && options.bpm > 0 ? options.bpm : 0;
         
@@ -465,7 +471,10 @@ export class ChordAnalyzerLite {
         // We use 20ms windows (50Hz resolution) to capture transients
         const winSize = Math.floor(sampleRate * 0.02);
         const hopSize = Math.floor(sampleRate * 0.01); // 10ms hop
-        const numWindows = Math.floor(Math.min(signal.length, sampleRate * 30) / hopSize) - 2;
+        
+        // Only analyze first 30s for pulse to save time
+        const pulseMaxSeconds = 30;
+        const numWindows = Math.floor(Math.min(signal.length, sampleRate * pulseMaxSeconds) / hopSize) - 2;
         
         const flux = new Float32Array(numWindows);
         let lastSpectrum = new Float32Array(12); // Use 12-bin chroma spectrum for flux
@@ -501,10 +510,8 @@ export class ChordAnalyzerLite {
             const start = w * hopSize;
             const window = signal.subarray(start, start + winSize);
             
-            // Simplified Spectral Power for this window
             const currentSpectrum = this.calculateChromagram(window, sampleRate, calcOptions);
 
-            // Flux = Sum of positive changes across bins
             let sum = 0;
             for (let i = 0; i < 12; i++) {
                 const diff = currentSpectrum[i] - lastSpectrum[i];
@@ -520,115 +527,147 @@ export class ChordAnalyzerLite {
 
         if (options.onProgress) options.onProgress(5);
 
-                        // 3. Find BPM via autocorrelation (Search range: 25 - 240 BPM)
-                        // Search range: 25 - 240 BPM (240 - 25 steps at 10ms)
-                        const minLag = 25; 
-                        const maxLag = 240;
-                        let bestLag = 60;
-                        let maxCorr = -1;
-                        const correlations = new Float32Array(maxLag + 1);
-                
-                        if (manualBpm > 0) {
-                            bestLag = Math.round(60 / (manualBpm * 0.01));
-                        } else {
-                            // Compute correlation for all lags
-                            for (let lag = minLag; lag <= maxLag; lag++) {
-                                if (lag % 20 === 0) await yieldToMain();
+        // 2. Generate Structural BPM Candidates (Top-Down)
+        // If the user meant 120BPM for a 16-bar phrase, it's 32.0s exactly.
+        const structuralCandidates = [];
+        const commonBarCounts = [4, 8, 12, 16, 24, 32, 48, 64];
+        const commonMeters = [4, 3];
 
-                                let corr = 0;
-                                for (let i = 0; i < onsets.length - lag; i++) {
-                                    corr += onsets[i] * onsets[i + lag];
-                                }
-                                
-                                // Musical Range Bias: Favor 60-160 BPM
-                                // We keep this mild to avoid forcing double-time on slow tracks
-                                let bias = 1.0;
-                                // Sweet spot (80-140)
-                                if (lag >= 42 && lag <= 75) bias = 1.25;
-                                // Acceptable range (60-160)
-                                else if (lag >= 37 && lag <= 100) bias = 1.10;
-                                // Penalize very slow (< 50 BPM) to avoid half-time errors
-                                else if (lag > 120) bias = 0.8;
+        commonBarCounts.forEach(bars => {
+            commonMeters.forEach(meter => {
+                const totalBeats = bars * meter;
+                const bpm = (totalBeats * 60) / duration;
+                if (bpm >= 50 && bpm <= 200) {
+                    structuralCandidates.push({ bpm, bars, meter, lag: Math.round(60 / (bpm * 0.01)) });
+                }
+            });
+        });
+
+        // 3. Find BPM via autocorrelation (Search range: 25 - 240 BPM)
+        const minLag = 25; 
+        const maxLag = 240;
+        let bestLag = 60;
+        let maxCorr = -1;
+        const correlations = new Float32Array(maxLag + 1);
+
+        if (manualBpm > 0) {
+            bestLag = Math.round(60 / (manualBpm * 0.01));
+        } else {
+            for (let lag = minLag; lag <= maxLag; lag++) {
+                if (lag % 20 === 0) await yieldToMain();
+
+                let corr = 0;
+                for (let i = 0; i < onsets.length - lag; i++) {
+                    corr += onsets[i] * onsets[i + lag];
+                }
                 
-                                correlations[lag] = corr;
-                                
-                                if (corr * bias > maxCorr) {
-                                    maxCorr = corr * bias;
-                                    bestLag = lag;
-                                }
-                            }
+                // --- Top-Down Structural Bias ---
+                let structuralBoost = 1.0;
+                const currentBPM = 60 / (lag * 0.01);
+                
+                for (const cand of structuralCandidates) {
+                    const bpmDiff = Math.abs(currentBPM - cand.bpm);
+                    // If within 2.5%, apply a boost. Favor closer matches.
+                    if (bpmDiff < cand.bpm * 0.025) {
+                        structuralBoost = Math.max(structuralBoost, 1.25 * (1 - bpmDiff / (cand.bpm * 0.025)));
+                    }
+                }
+
+                // Musical Range Bias: Favor 60-160 BPM
+                let rangeBias = 1.0;
+                if (lag >= 42 && lag <= 75) rangeBias = 1.25;
+                else if (lag >= 37 && lag <= 100) rangeBias = 1.10;
+                else if (lag > 120) rangeBias = 0.8;
+
+                correlations[lag] = corr;
+                
+                if (corr * rangeBias * structuralBoost > maxCorr) {
+                    maxCorr = corr * rangeBias * structuralBoost;
+                    bestLag = lag;
+                }
+            }
+        }
+        if (options.onProgress) options.onProgress(5);
+        
+        // Harmonic Check: Detect if we picked a "sub-beat" pulse (too fast) or "measure" pulse (too slow)
+        const checkHarmonic = (targetLag) => {
+            let currentLag = targetLag;
+            
+            // 1. Check for slower tempos (downward)
+            let changed = true;
+            while (changed) {
+                changed = false;
+                for (const m of [2, 3, 4]) {
+                    const slowerLag = Math.round(currentLag * m);
+                    if (slowerLag > maxLag) continue;
+
+                    const scoreSlower = correlations[slowerLag];
+                    const targetScore = correlations[currentLag];
+                    
+                    let threshold = 0.75;
+                    // Be reluctant to slow down if we are already in a good range
+                    if (currentLag >= 46 && currentLag <= 85) threshold = 1.3;
+                    if (slowerLag > 120) threshold = 2.5;
+
+                    if (scoreSlower > targetScore * threshold) {
+                        currentLag = slowerLag;
+                        changed = true;
+                        break; 
+                    }
+                }                            
+            }
+
+            // 2. Check for faster tempos (upward)
+            // If we are "stuck in the mud" (< 70 BPM), check if we missed a faster pulse
+            changed = true;
+            while (changed) {
+                changed = false;
+                if (currentLag > 85) { // < 70 BPM
+                    for (const m of [2, 3, 4]) {
+                        const fasterLag = Math.round(currentLag / m);
+                        if (fasterLag < minLag) continue;
+
+                        const scoreFaster = correlations[fasterLag];
+                        const scoreCurrent = correlations[currentLag];
+                        
+                        // If the faster pulse is at least 40% of the slow one, take it.
+                        // We give a bonus if the faster pulse is in the sweet spot.
+                        let bonus = (fasterLag >= 42 && fasterLag <= 75) ? 1.5 : 1.0;
+
+                        if (scoreFaster * bonus > scoreCurrent * 0.5) {
+                            currentLag = fasterLag;
+                            changed = true;
+                            break;
                         }
-                        if (options.onProgress) options.onProgress(5);
-                        
-                        // console.log(`[Pulse Debug] Initial Best Lag: ${bestLag} (${Math.round(60/(bestLag*0.01))} BPM)`);
-                        
-                        // Harmonic Check: Detect if we picked a "sub-beat" pulse (too fast) instead of a "beat" pulse.
-                        const checkHarmonic = (targetLag) => {
-                            let currentLag = targetLag;
-                            
-                            // 1. Check for slower tempos (downward)
-                            let changed = true;
-                            while (changed) {
-                                changed = false;
-                                // Check for 2x, 3x, 4x lags (1/2, 1/3, 1/4 tempo)
-                                for (const m of [2, 3, 4]) {
-                                    const slowerLag = Math.round(currentLag * m);
-                                    if (slowerLag > maxLag) continue;
-                
-                                    const scoreSlower = correlations[slowerLag];
-                                    const targetScore = correlations[currentLag];
-                                    
-                                    // Default threshold for switching to a slower tempo
-                                    let threshold = 0.75;
+                    }
+                }
+            }
 
-                                    // If current BPM is already "healthy" (70-130 BPM, Lag 46-85), 
-                                    // be reluctant to halve it unless the slower pulse is stronger.
-                                    if (currentLag >= 46 && currentLag <= 85) {
-                                        threshold = 1.25;
-                                    }
-                                    
-                                    // If slower lag corresponds to < 50 BPM (Lag > 120), require massive evidence
-                                    if (slowerLag > 120) threshold = 2.5;
-
-                                    if (scoreSlower > targetScore * threshold) {
-                                        currentLag = slowerLag;
-                                        changed = true;
-                                        break; 
-                                    }
-                                }                            
-                            }
-
-                            // 2. Check for faster tempos (upward) if we are stuck in the mud (< 55 BPM)
-                            // Often autocorrelation favors the half-note or whole-note in swing/groove.
-                            // We prefer the quarter note (approx 70-140 BPM).
-                            if (currentLag > 109) { // > 109 means < 55 BPM
-                                const fasterLag = Math.round(currentLag / 2);
-                                if (fasterLag >= minLag) {
-                                    const scoreFaster = correlations[fasterLag];
-                                    const scoreCurrent = correlations[currentLag];
-                                    
-                                    // If the faster pulse is at least 40% of the slow one, take it.
-                                    // It's better to tap twice as fast than fall asleep.
-                                    if (scoreFaster > scoreCurrent * 0.4) {
-                                        // console.log(`[Pulse Debug] Upgrading from ${Math.round(60/(currentLag*0.01))} BPM to ${Math.round(60/(fasterLag*0.01))} BPM (Double Time)`);
-                                        currentLag = fasterLag;
-                                    }
-                                }
-                            }
-
-                            return currentLag;
-                        };
+            return currentLag;
+        };
         bestLag = checkHarmonic(bestLag);
 
-        const primaryBPM = Math.round((60 / (bestLag * 0.01)));
+        // --- Final Snap to Structural Grid ---
+        let primaryBPM = Math.round((60 / (bestLag * 0.01)));
+        const snapThresholdBPM = 1.5; // Snap if within 1.5 BPM of a structural target
         
-        // Generate candidates (Half, Normal, Double)
+        const bestStructuralMatch = structuralCandidates
+            .filter(c => Math.abs(c.bpm - primaryBPM) < snapThresholdBPM)
+            .sort((a, b) => Math.abs(a.bpm - primaryBPM) - Math.abs(b.bpm - primaryBPM))[0];
+
+        if (bestStructuralMatch) {
+            // console.log(`[Pulse] Snapping ${primaryBPM} -> ${bestStructuralMatch.bpm.toFixed(2)} (${bestStructuralMatch.bars} bars structural anchor)`);
+            primaryBPM = parseFloat(bestStructuralMatch.bpm.toFixed(2));
+            // Update lag to match snapped BPM for downbeat phase detection
+            bestLag = Math.round(60 / (primaryBPM * 0.01));
+        }
+
+        // Generate candidates
         const candidatesMap = new Map();
-        
         [2, 1, 0.5, 4, 0.25].forEach(mult => {
             const lag = Math.round(bestLag * mult);
             if (lag >= minLag && lag <= maxLag) {
-                const bpm = Math.round(60 / (lag * 0.01));
+                const bpm = mult === 1 ? primaryBPM : Math.round(60 / (lag * 0.01));
                 if (!candidatesMap.has(bpm)) {
                     candidatesMap.set(bpm, correlations[lag] || 0);
                 }
@@ -636,30 +675,27 @@ export class ChordAnalyzerLite {
         });
 
         const candidates = Array.from(candidatesMap.entries()).map(([bpm, score]) => ({ bpm, score }));
-
-        // Boost the primary BPM (selected by checkHarmonic) to ensure it wins
         const primaryCandidate = candidates.find(c => c.bpm === primaryBPM);
-        if (primaryCandidate) {
-            primaryCandidate.score *= 3.0; 
-        }
-
-        // Sort by score descending
+        if (primaryCandidate) primaryCandidate.score *= 3.0; 
         candidates.sort((a, b) => b.score - a.score);
 
         // 4. Meter Detection (3/4 vs 4/4)
-        let score3 = 0;
-        let score4 = 0;
-        const lag3 = bestLag * 3;
-        const lag4 = bestLag * 4;
-
-        if (onsets.length > lag4) {
-            for (let i = 0; i < onsets.length - lag4; i++) {
-                score3 += onsets[i] * onsets[i + lag3];
-                score4 += onsets[i] * onsets[i + lag4];
+        // If we snapped to a structural match, use its meter!
+        let beatsPerMeasure = bestStructuralMatch ? bestStructuralMatch.meter : 4;
+        
+        if (!bestStructuralMatch) {
+            let score3 = 0;
+            let score4 = 0;
+            const lag3 = bestLag * 3;
+            const lag4 = bestLag * 4;
+            if (onsets.length > lag4) {
+                for (let i = 0; i < onsets.length - lag4; i++) {
+                    score3 += onsets[i] * onsets[i + lag3];
+                    score4 += onsets[i] * onsets[i + lag4];
+                }
             }
+            beatsPerMeasure = score3 > (score4 * 1.4) ? 3 : 4;
         }
-
-        const beatsPerMeasure = score3 > (score4 * 1.4) ? 3 : 4; // Stronger bias for 4/4
 
         // 5. Downbeat Detection (Phase Alignment)
         const measureSteps = bestLag * beatsPerMeasure;
@@ -677,7 +713,6 @@ export class ChordAnalyzerLite {
             }
         }
 
-        // Cleanup local references
         lastSpectrum = null;
 
         return {
