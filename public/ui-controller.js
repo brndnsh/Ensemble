@@ -16,6 +16,7 @@ import { pushHistory, undo } from './history.js';
 import { shareProgression } from './sharing.js';
 import { triggerInstall } from './pwa.js';
 import { exportToMidi } from './midi-export.js';
+import { ModalManager } from './ui-modal-controller.js';
 import { applyConductor, updateBpmUI } from './conductor.js';
 import { initMIDI, panic } from './midi-controller.js';
 import { midi as midiState } from './state.js';
@@ -161,13 +162,13 @@ export function setupUIHandlers(refs) {
     const openExportModal = () => {
         ui.arrangerActionMenu.classList.remove('open');
         ui.arrangerActionTrigger.classList.remove('active');
-        ui.settingsOverlay.classList.remove('active');
+        ModalManager.close(ui.settingsOverlay);
         
         let defaultName = arranger.lastChordPreset || "Ensemble Export";
         defaultName = defaultName.replace(/[^a-zA-Z0-9\s-_]/g, '').trim();
         ui.exportFilenameInput.value = `${defaultName} - ${arranger.key} - ${playback.bpm}bpm`;
         
-        ui.exportOverlay.classList.add('active');
+        ModalManager.open(ui.exportOverlay);
     };
 
     if (ui.intensitySlider) {
@@ -293,7 +294,7 @@ export function setupUIHandlers(refs) {
                 ui.arrangerActionTrigger.classList.remove('active');
             }
             
-            ui.templatesOverlay.classList.add('active');
+            ModalManager.open(ui.templatesOverlay);
             renderTemplates(SONG_TEMPLATES, (template) => {
                 if (arranger.isDirty) {
                     if (!confirm("Discard your custom arrangement and load this template?")) return;
@@ -311,12 +312,12 @@ export function setupUIHandlers(refs) {
                 
                 arranger.isDirty = false;
                 refreshArrangerUI();
-                ui.templatesOverlay.classList.remove('active');
+                ModalManager.close(ui.templatesOverlay);
                 showToast(`Applied template: ${template.name}`);
             });
         }],
         [ui.closeTemplatesBtn, 'click', () => {
-            ui.templatesOverlay.classList.remove('active');
+            ModalManager.close(ui.templatesOverlay);
         }],
         [ui.undoBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
@@ -339,7 +340,7 @@ export function setupUIHandlers(refs) {
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
             if (window.resetAnalyzer) window.resetAnalyzer();
-            document.getElementById('analyzerOverlay').classList.add('active');
+            ModalManager.open(ui.analyzerOverlay);
         }],
         [ui.randomizeBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
@@ -347,7 +348,7 @@ export function setupUIHandlers(refs) {
             
             setTimeout(() => {
                 if (ui.generateSongOverlay) {
-                    ui.generateSongOverlay.classList.add('active');
+                    ModalManager.open(ui.generateSongOverlay);
                 } else {
                     showToast("Error: Modal missing. Please refresh.");
                 }
@@ -397,8 +398,8 @@ export function setupUIHandlers(refs) {
                 ui.installAppBtn.style.display = 'none';
             }
         }],
-        [ui.settingsBtn, 'click', () => ui.settingsOverlay.classList.add('active')],
-        [ui.closeSettings, 'click', () => ui.settingsOverlay.classList.remove('active')],
+        [ui.settingsBtn, 'click', () => ModalManager.open(ui.settingsOverlay)],
+        [ui.closeSettings, 'click', () => ModalManager.close(ui.settingsOverlay)],
         [ui.resetSettingsBtn, 'click', () => confirm("Reset all settings?") && resetToDefaults()],
         [ui.refreshAppBtn, 'click', () => {
             if ('serviceWorker' in navigator) {
@@ -410,9 +411,9 @@ export function setupUIHandlers(refs) {
         }],
         [ui.exportMidiBtn, 'click', openExportModal],
         [ui.settingsExportMidiBtn, 'click', openExportModal],
-        [ui.closeExportBtn, 'click', () => ui.exportOverlay.classList.remove('active')],
+        [ui.closeExportBtn, 'click', () => ModalManager.close(ui.exportOverlay)],
         [ui.exportOverlay, 'click', (e) => {
-            if (e.target === ui.exportOverlay) ui.exportOverlay.classList.remove('active');
+            if (e.target === ui.exportOverlay) ModalManager.close(ui.exportOverlay);
         }],
         [ui.confirmExportBtn, 'click', () => {
             const includedTracks = [];
@@ -426,7 +427,7 @@ export function setupUIHandlers(refs) {
             const targetDuration = parseFloat(ui.exportDurationInput.value);
             const filename = ui.exportFilenameInput.value.trim();
 
-            ui.exportOverlay.classList.remove('active');
+            ModalManager.close(ui.exportOverlay);
             exportToMidi({ includedTracks, loopMode, targetDuration, filename });
         }],
         [ui.clearDrums, 'click', () => { 
@@ -444,28 +445,22 @@ export function setupUIHandlers(refs) {
     ];
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));
 
-    // --- Modal Accessibility Observer ---
+    // --- Modal Initialization ---
     const overlays = [
-        ui.settingsOverlay, ui.editorOverlay, ui.exportOverlay, 
-        ui.templatesOverlay, ui.analyzerOverlay, ui.generateSongOverlay
+        { overlay: ui.settingsOverlay, closeBtn: ui.closeSettings },
+        { overlay: ui.editorOverlay, closeBtn: ui.closeEditorBtn },
+        { overlay: ui.exportOverlay, closeBtn: ui.closeExportBtn },
+        { overlay: ui.templatesOverlay, closeBtn: ui.closeTemplatesBtn },
+        { overlay: ui.analyzerOverlay, closeBtn: ui.closeAnalyzerBtn },
+        { overlay: ui.generateSongOverlay, closeBtn: ui.closeGenerateSongBtn }
     ];
     
-    overlays.forEach(overlay => {
-        if (!overlay) return;
+    overlays.forEach(({ overlay, closeBtn }) => {
+        ModalManager.bind(overlay, closeBtn);
         // Set initial state
-        overlay.setAttribute('aria-hidden', !overlay.classList.contains('active'));
-        
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    const isActive = overlay.classList.contains('active');
-                    overlay.setAttribute('aria-hidden', !isActive);
-                    // When opening, we might want to ensure it's "inert" false, but we rely on visibility/display CSS for that now.
-                }
-            });
-        });
-        
-        observer.observe(overlay, { attributes: true });
+        if (overlay) {
+            overlay.setAttribute('aria-hidden', !overlay.classList.contains('active'));
+        }
     });
 
     document.querySelectorAll('input[name="exportMode"]').forEach(radio => {
@@ -491,24 +486,10 @@ export function setupUIHandlers(refs) {
 
     if (ui.editArrangementBtn) {
         ui.editArrangementBtn.addEventListener('click', () => {
-            ui.editorOverlay.classList.add('active');
-        });
-    }
-    if (ui.closeEditorBtn) {
-        ui.closeEditorBtn.addEventListener('click', () => {
-            ui.editorOverlay.classList.remove('active');
-        });
-    }
-    if (ui.editorOverlay) {
-        ui.editorOverlay.addEventListener('click', e => {
-            if (e.target === ui.editorOverlay) {
-                ui.editorOverlay.classList.remove('active');
-            }
+            ModalManager.open(ui.editorOverlay);
         });
     }
 
-    ui.settingsOverlay.addEventListener('click', e => e.target === ui.settingsOverlay && ui.settingsOverlay.classList.remove('active'));
-    ui.templatesOverlay.addEventListener('click', e => e.target === ui.templatesOverlay && ui.templatesOverlay.classList.remove('active'));
     ui.keySelect.addEventListener('change', () => {
         arranger.key = ui.keySelect.value;
         updateRelKeyButton();
@@ -762,7 +743,7 @@ export function setupUIHandlers(refs) {
     window.addEventListener('ensemble_state_change', saveCurrentState);
 
     document.addEventListener('open-editor', (e) => {
-        ui.editorOverlay.classList.add('active');
+        ModalManager.open(ui.editorOverlay);
         const sectionId = e.detail?.sectionId;
         if (sectionId) {
             setTimeout(() => {
@@ -780,15 +761,17 @@ export function setupUIHandlers(refs) {
         const isTyping = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
         const isAnalyzerActive = ui.analyzerOverlay && ui.analyzerOverlay.classList.contains('active');
         if (e.key === ' ' && !isTyping && !isAnalyzerActive) { e.preventDefault(); togglePlay(); }
-        if (e.key.toLowerCase() === 'e' && !isTyping && !e.metaKey && !e.ctrlKey) { e.preventDefault(); if (ui.editorOverlay.classList.contains('active')) ui.editorOverlay.classList.remove('active'); else ui.editorOverlay.classList.add('active'); }
+        if (e.key.toLowerCase() === 'e' && !isTyping && !e.metaKey && !e.ctrlKey) { 
+            e.preventDefault(); 
+            if (ui.editorOverlay.classList.contains('active')) ModalManager.close(ui.editorOverlay); 
+            else ModalManager.open(ui.editorOverlay); 
+        }
         if (['1', '2', '3', '4'].includes(e.key) && !isTyping) { const index = parseInt(e.key) - 1; const tabItem = document.querySelectorAll('.tab-item')[index]; if (tabItem) tabItem.click(); }
         if (e.key === '[' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (groove.currentMeasure - 1 + groove.measures) % groove.measures; switchMeasure(next); }
         if (e.key === ']' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (groove.currentMeasure + 1) % groove.measures; switchMeasure(next); }
         if (e.key === 'Escape') {
             if (document.body.classList.contains('chord-maximized')) { document.body.classList.remove('chord-maximized'); ui.maximizeChordBtn.textContent = '⛶'; ui.maximizeChordBtn.title = 'Maximize'; renderChordVisualizer(); }
-            if (ui.settingsOverlay.classList.contains('active')) ui.settingsOverlay.classList.remove('active');
-            if (ui.templatesOverlay.classList.contains('active')) ui.templatesOverlay.classList.remove('active');
-            if (ui.editorOverlay.classList.contains('active')) ui.editorOverlay.classList.remove('active');
+            if (ModalManager.activeModal) ModalManager.close();
         }
     });
 
@@ -803,25 +786,6 @@ export function setupUIHandlers(refs) {
 
 export function setupGenerateSongHandlers() {
     if (!ui.generateSongOverlay) return;
-
-    const closeModal = () => {
-        ui.generateSongOverlay.classList.remove('active');
-    };
-
-    ui.closeGenerateSongBtn.addEventListener('click', closeModal);
-
-    ui.generateSongOverlay.addEventListener('click', (e) => {
-        if (e.target === ui.generateSongOverlay) {
-            closeModal();
-        }
-    });
-
-    if (ui.genSeedCheck) {
-        ui.genSeedCheck.addEventListener('change', (e) => {
-            const isChecked = e.target.checked;
-            ui.genSeedControls.style.display = isChecked ? 'block' : 'none';
-        });
-    }
 
     ui.confirmGenerateSongBtn.addEventListener('click', () => {
         const key = ui.genKeySelect.value;
@@ -870,12 +834,14 @@ export function setupGenerateSongHandlers() {
             }
         }
 
+        arranger.isMinor = false; // Reset to Major if not specified
+
         arranger.isDirty = true; // generated content is "dirty" vs a saved preset
         clearChordPresetHighlight();
         refreshArrangerUI();
         validateAndAnalyze(); // Ensure playback engine is updated
         
-        closeModal();
+        ModalManager.close(ui.generateSongOverlay);
         showToast("Generated new song!");
     });
 }
@@ -916,10 +882,7 @@ export function setupAnalyzerHandlers() {
     // Init state
     updateModeUI();
 
-
-    ui.closeAnalyzerBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        ui.analyzerOverlay.classList.remove('active');
+    ui.analyzerOverlay.addEventListener('modal-closed', () => {
         stopLiveListen();
     });
 
@@ -1395,8 +1358,7 @@ export function setupAnalyzerHandlers() {
 
         arranger.isDirty = true;
         refreshArrangerUI();
-        ui.analyzerOverlay.classList.remove('active');
-        stopLiveListen();
+        ModalManager.close(ui.analyzerOverlay);
         showToast(`Imported sequence.`);
     };
 
@@ -1705,7 +1667,7 @@ export function setupAnalyzerHandlers() {
 
         arranger.isDirty = true;
         refreshArrangerUI();
-        ui.analyzerOverlay.classList.remove('active');
+        ModalManager.close(ui.analyzerOverlay);
         showToast(`Imported ${newSections.length} sections.`);
     });
 }
