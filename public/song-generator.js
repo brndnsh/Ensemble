@@ -111,6 +111,11 @@ export function generateSong(options = {}) {
     const sections = [];
     const memory = {}; // Remember what "Verse" sounds like
 
+    // If a seed is provided, pre-populate memory for that section type
+    if (options.seed && options.seed.type && options.seed.value) {
+        memory[options.seed.type] = options.seed.value;
+    }
+
     structureTemplate.forEach(label => {
         // Determine bars
         let bars = 8; // Default

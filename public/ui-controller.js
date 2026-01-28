@@ -816,12 +816,34 @@ export function setupGenerateSongHandlers() {
         }
     });
 
+    if (ui.genSeedCheck) {
+        ui.genSeedCheck.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            ui.genSeedControls.style.display = isChecked ? 'block' : 'none';
+        });
+    }
+
     ui.confirmGenerateSongBtn.addEventListener('click', () => {
         const key = ui.genKeySelect.value;
         const timeSignature = ui.genTimeSigSelect.value;
         const structure = ui.genStructureSelect.value;
 
-        const newSections = generateSong({ key, timeSignature, structure });
+        // Seeding logic
+        let seed = null;
+        if (ui.genSeedCheck && ui.genSeedCheck.checked) {
+            const targetId = arranger.lastInteractedSectionId;
+            const section = arranger.sections.find(s => s.id === targetId) || arranger.sections[0];
+            if (section && section.value) {
+                seed = {
+                    type: ui.genSeedTypeSelect.value,
+                    value: section.value
+                };
+            } else {
+                showToast("No section found to seed from.");
+            }
+        }
+
+        const newSections = generateSong({ key, timeSignature, structure, seed });
 
         pushHistory();
 

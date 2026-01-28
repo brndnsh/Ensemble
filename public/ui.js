@@ -168,6 +168,9 @@ export const ui = {
     get genKeySelect() { return getEl('genKeySelect'); },
     get genTimeSigSelect() { return getEl('genTimeSigSelect'); },
     get genStructureSelect() { return getEl('genStructureSelect'); },
+    get genSeedCheck() { return getEl('genSeedCheck'); },
+    get genSeedControls() { return getEl('genSeedControls'); },
+    get genSeedTypeSelect() { return getEl('genSeedTypeSelect'); },
 
     get suggestedSectionsContainer() { return getEl('suggestedSectionsContainer'); },
     get analyzerSummary() { return getEl('analyzerSummary'); },

@@ -72,6 +72,24 @@
                 </div>
             </div>
 
+            <div class="settings-section">
+                <h3>Seeding</h3>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
+                    <input type="checkbox" id="genSeedCheck">
+                    <span>Seed from current section</span>
+                </label>
+                <div id="genSeedControls" style="display: none; transition: opacity 0.2s;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Treat current section as:</label>
+                    <select id="genSeedTypeSelect" aria-label="Select Seed Type" style="width: 100%;">
+                        <option value="Verse">Verse</option>
+                        <option value="Chorus">Chorus</option>
+                    </select>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        The generator will preserve your current chords for all sections of this type.
+                    </p>
+                </div>
+            </div>
+
             <div style="margin-top: 1.5rem;">
                 <button id="confirmGenerateSongBtn" class="primary-btn" style="width: 100%; padding: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                    <span>✨</span> Generate Full Song
