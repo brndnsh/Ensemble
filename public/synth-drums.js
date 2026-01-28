@@ -1,6 +1,8 @@
 import { playback, groove } from './state.js';
 import { safeDisconnect } from './utils.js';
 
+const RIGHT_PANNED_INSTRUMENTS = new Set(['HiHat', 'Open', 'Crash', 'Shaker', 'Agogo', 'Perc', 'Guiro', 'Clave']);
+
 export function killDrumNote() {
     if (groove.lastHatGain) {
         try {
@@ -49,7 +51,7 @@ export function playDrumSound(name, time, velocity = 1.0) {
     // --- Mix Separation: Stereo Panning ---
     const panner = playback.audio.createStereoPanner ? playback.audio.createStereoPanner() : playback.audio.createGain();
     let panValue = 0;
-    if (['HiHat', 'Open', 'Crash', 'Shaker', 'Agogo', 'Perc', 'Guiro', 'Clave'].includes(name)) {
+    if (RIGHT_PANNED_INSTRUMENTS.has(name)) {
         panValue = 0.2; // Right
     } else if (name.includes('Tom') || name.includes('Conga') || name.includes('Bongo')) {
         panValue = (Math.random() * 2 - 1) * 0.1; // Slight spread
