@@ -766,25 +766,25 @@
                 
                 <div class="analyzer-mode-switch" style="display: flex; gap: 8px; margin: 1rem 0; background: var(--input-bg); padding: 4px; border-radius: 8px; border: 1px solid var(--border-color);">
                     <label class="mode-option" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <input type="radio" name="analyzerMode" value="chords" checked style="display:none">
+                        <input type="radio" name="analyzerMode" value="chords" checked class="sr-only">
                         <span style="font-size: 1.1rem;">🎼</span>
                         <span style="font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">Chords</span>
                     </label>
                     <label class="mode-option" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        <input type="radio" name="analyzerMode" value="melody" style="display:none">
+                        <input type="radio" name="analyzerMode" value="melody" class="sr-only">
                         <span style="font-size: 1.1rem;">🎤</span>
                         <span style="font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">Melody</span>
                     </label>
                 </div>
 
-                <div class="analyzer-drop-zone" id="analyzerDropZone">
+                <label class="analyzer-drop-zone" id="analyzerDropZone" for="analyzerFileInput">
             <div class="drop-zone-content">
                 <span class="drop-icon">🎵</span>
                 <p>Drag & drop an audio file here</p>
                 <p class="drop-subtext">Supports MP3, WAV, M4A, AAC</p>
-                <input type="file" id="analyzerFileInput" accept="audio/*,.m4a,.aac" style="display: none;">
+                <input type="file" id="analyzerFileInput" accept="audio/*,.m4a,.aac" class="sr-only">
             </div>
-        </div>
+        </label>
 
         <div id="liveListenContainer" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
             <button id="liveListenBtn" class="primary-btn" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--green); color: white; border: none;">
