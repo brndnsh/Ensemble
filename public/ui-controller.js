@@ -440,7 +440,7 @@ export function setupUIHandlers(refs) {
     // --- Modal Accessibility Observer ---
     const overlays = [
         ui.settingsOverlay, ui.editorOverlay, ui.exportOverlay, 
-        ui.templatesOverlay, ui.analyzerOverlay
+        ui.templatesOverlay, ui.analyzerOverlay, ui.generateSongOverlay
     ];
     
     overlays.forEach(overlay => {

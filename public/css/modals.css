@@ -61,7 +61,7 @@
 }
 
 /* --- Settings Overlay --- */
-#settingsOverlay, #editorOverlay, #exportOverlay, #templatesOverlay, #analyzerOverlay {
+#settingsOverlay, #editorOverlay, #exportOverlay, #templatesOverlay, #analyzerOverlay, #generateSongOverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -78,7 +78,7 @@
     transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
 }
 
-#settingsOverlay.active, #editorOverlay.active, #exportOverlay.active, #templatesOverlay.active, #analyzerOverlay.active {
+#settingsOverlay.active, #editorOverlay.active, #exportOverlay.active, #templatesOverlay.active, #analyzerOverlay.active, #generateSongOverlay.active {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
