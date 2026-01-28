@@ -322,19 +322,17 @@ export class ChordAnalyzerLite {
         let lastConsensus = null;
 
         for (let i = 0; i < results.length; i++) {
+            // Sliding window: [Previous, Current, Next]
             const window = results.slice(Math.max(0, i - 1), Math.min(results.length, i + 2));
             const counts = {};
             
             window.forEach(r => {
                 let chord = r.chord;
-                
-                // Diatonic Magnetic Pull:
-                // If the detected chord is non-diatonic but very close to a diatonic one,
-                // and the confidence is low, pull it towards the key.
-                // (Currently we just use the raw count, but we could add weights)
+                // We keep it simple for now: raw count.
                 counts[chord] = (counts[chord] || 0) + 1;
             });
             
+            // Average energy in the same window
             const avgEnergy = window.reduce((a, b) => a + b.energy, 0) / window.length;
             
             // Pick the winner
@@ -487,21 +485,17 @@ export class ChordAnalyzerLite {
         // Users often have silence or a "ring-out" at the end.
         // We find the true "musical end" to improve structural BPM math.
         if (!options.endTime) {
-            const tailCheckSeconds = 3.0; // Check last 3 seconds
-            const windowSize = Math.floor(sampleRate * 0.05); // 50ms windows
+            const tailCheckSeconds = 2.0;
+            const windowSize = Math.floor(sampleRate * 0.1); 
             const signalEnd = signal.length;
             const startCheckIndex = Math.max(0, signalEnd - Math.floor(sampleRate * tailCheckSeconds));
             
-            // Find max energy in the whole clip for thresholding
             let maxEnergy = 0;
-            for (let i = 0; i < signal.length; i += 500) {
+            for (let i = 0; i < signal.length; i += 1000) {
                 const e = Math.abs(signal[i]);
                 if (e > maxEnergy) maxEnergy = e;
             }
-            const silenceThreshold = maxEnergy * 0.03; // 3% of peak
-
-            let silenceCount = 0;
-            const requiredSilenceWindows = 4; // Need 200ms of silence to trigger trim
+            const silenceThreshold = maxEnergy * 0.05; 
 
             for (let i = signalEnd - windowSize; i >= startCheckIndex; i -= windowSize) {
                 let windowEnergy = 0;
@@ -510,16 +504,9 @@ export class ChordAnalyzerLite {
                 }
                 windowEnergy /= windowSize;
 
-                if (windowEnergy < silenceThreshold) {
-                    silenceCount++;
-                } else {
-                    if (silenceCount >= requiredSilenceWindows) {
-                        // We found active signal after a period of silence! 
-                        // The musical end is just after this active window.
-                        effectiveEndTime = (i + windowSize + (silenceCount * windowSize * 0.5)) / sampleRate;
-                        break;
-                    }
-                    silenceCount = 0;
+                if (windowEnergy > silenceThreshold) {
+                    effectiveEndTime = (i + windowSize) / sampleRate;
+                    break;
                 }
             }
         }
@@ -712,16 +699,38 @@ export class ChordAnalyzerLite {
         // --- Final Snap to Structural Grid ---
         let primaryBPM = Math.round((60 / (bestLag * 0.01)));
         const snapThresholdBPM = 1.5; // Snap if within 1.5 BPM of a structural target
+        let bestStructuralMatch = null;
         
-        const bestStructuralMatch = structuralCandidates
+        // 1. Check if the RAW primary BPM already matches a structural anchor for the FULL duration
+        // This prevents tail-trimming from breaking perfectly trimmed loops.
+        const fullDuration = rawEndTime - startTime;
+        const structuralCandidatesFull = [];
+        [4, 8, 12, 16, 24, 32, 48, 64].forEach(bars => {
+            [4, 3].forEach(meter => {
+                const bpm = (bars * meter * 60) / fullDuration;
+                if (bpm >= 50 && bpm <= 200) structuralCandidatesFull.push({ bpm, bars, meter });
+            });
+        });
+
+        bestStructuralMatch = structuralCandidatesFull
             .filter(c => Math.abs(c.bpm - primaryBPM) < snapThresholdBPM)
             .sort((a, b) => Math.abs(a.bpm - primaryBPM) - Math.abs(b.bpm - primaryBPM))[0];
 
         if (bestStructuralMatch) {
-            // console.log(`[Pulse] Snapping ${primaryBPM} -> ${bestStructuralMatch.bpm.toFixed(2)} (${bestStructuralMatch.bars} bars structural anchor)`);
+            // console.log(`[Pulse] Snapping to FULL duration anchor: ${bestStructuralMatch.bpm.toFixed(2)}`);
             primaryBPM = parseFloat(bestStructuralMatch.bpm.toFixed(2));
-            // Update lag to match snapped BPM for downbeat phase detection
             bestLag = Math.round(60 / (primaryBPM * 0.01));
+        } else {
+            // 2. Otherwise, check for a structural match using the EFFECTIVE (tail-trimmed) duration
+            bestStructuralMatch = structuralCandidates
+                .filter(c => Math.abs(c.bpm - primaryBPM) < snapThresholdBPM)
+                .sort((a, b) => Math.abs(a.bpm - primaryBPM) - Math.abs(b.bpm - primaryBPM))[0];
+
+            if (bestStructuralMatch) {
+                // console.log(`[Pulse] Snapping to EFFECTIVE duration anchor: ${bestStructuralMatch.bpm.toFixed(2)}`);
+                primaryBPM = parseFloat(bestStructuralMatch.bpm.toFixed(2));
+                bestLag = Math.round(60 / (primaryBPM * 0.01));
+            }
         }
 
         // Generate candidates

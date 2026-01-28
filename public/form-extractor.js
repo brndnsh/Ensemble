@@ -207,7 +207,7 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
         labelGroups.get(s.label).push(s);
     });
 
-    for (const [label, group] of labelGroups.entries()) {
+    for (const group of labelGroups.values()) {
         if (group.length <= 1) continue;
 
         // Determine the "Standard Length" for this label (most frequent measure count)
@@ -289,12 +289,8 @@ export function extractForm(beatData, beatsPerMeasure = 4) {
             const combinedLength = subSections.reduce((acc, s) => acc + s.lengthInMeasures * s.repeat, 0); 
             
             // If it repeats a lot or is long, it's likely the Main Theme
-            let label = "Main Theme";
-            if (combinedLength === 12) label = "12-Bar Blues Form";
-            if (combinedLength === 32) label = "32-Bar Form";
-
             metaConsolidated.push({
-                label,
+                label: combinedLength === 12 ? "12-Bar Blues Form" : (combinedLength === 32 ? "32-Bar Form" : "Main Theme"),
                 value: combinedValue,
                 repeat: bestRepeats,
                 energy: combinedEnergy,

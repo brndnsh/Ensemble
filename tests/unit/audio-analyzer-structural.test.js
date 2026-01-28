@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { ChordAnalyzerLite } from '../../public/audio-analyzer-lite.js';
 
 class MockAudioBuffer {
@@ -85,7 +85,6 @@ describe('Audio Analyzer Structural Snapping', () => {
     it('should ignore a silent tail when calculating structural BPM', async () => {
         // 120 BPM = 32.0s for 16 bars.
         // We provide 32.5s buffer but the last 0.5s is silence.
-        const activeDuration = 32.0;
         const totalDuration = 32.5;
         const buffer = new MockAudioBuffer({ length: totalDuration * sampleRate, sampleRate });
         const data = buffer.getChannelData(0);
