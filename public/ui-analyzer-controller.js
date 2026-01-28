@@ -4,12 +4,15 @@ import { initAudio } from './engine.js';
 import { generateId, normalizeKey, escapeHTML, formatUnicodeSymbols } from './utils.js';
 import { refreshArrangerUI } from './arranger-controller.js';
 import { ModalManager } from './ui-modal-controller.js';
+import { pushHistory } from './history.js';
 
 /**
  * Domain-specific UI registry for the Analyzer.
  * This makes the required DOM elements explicit and searchable for agents.
  */
 const ui = {
+    get analyzeAudioBtn() { return globalUI.analyzeAudioBtn; },
+    get closeAnalyzerBtn() { return globalUI.closeAnalyzerBtn; },
     get analyzerOverlay() { return globalUI.analyzerOverlay; },
     get analyzerDropZone() { return globalUI.analyzerDropZone; },
     get analyzerFileInput() { return globalUI.analyzerFileInput; },

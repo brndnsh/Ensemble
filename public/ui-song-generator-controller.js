@@ -1,10 +1,26 @@
-import { ui, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
+import { ui as globalUI, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
 import { arranger } from './state.js';
 import { generateSong } from './song-generator.js';
 import { pushHistory } from './history.js';
 import { normalizeKey } from './utils.js';
 import { refreshArrangerUI, clearChordPresetHighlight, validateAndAnalyze, updateGroupingUI } from './arranger-controller.js';
 import { ModalManager } from './ui-modal-controller.js';
+
+/**
+ * Domain-specific UI registry for Song Generator.
+ */
+const ui = {
+    get generateSongOverlay() { return globalUI.generateSongOverlay; },
+    get confirmGenerateSongBtn() { return globalUI.confirmGenerateSongBtn; },
+    get genKeySelect() { return globalUI.genKeySelect; },
+    get genTimeSigSelect() { return globalUI.genTimeSigSelect; },
+    get genStructureSelect() { return globalUI.genStructureSelect; },
+    get genSeedCheck() { return globalUI.genSeedCheck; },
+    get genSeedTypeSelect() { return globalUI.genSeedTypeSelect; },
+    get editArrangementBtn() { return globalUI.editArrangementBtn; },
+    get keySelect() { return globalUI.keySelect; },
+    get timeSigSelect() { return globalUI.timeSigSelect; }
+};
 
 /**
  * Initializes event handlers for the Song Generator modal.
