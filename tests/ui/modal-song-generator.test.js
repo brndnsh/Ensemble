@@ -178,7 +178,6 @@ describe('Song Generator Modal', () => {
         await new Promise(resolve => setTimeout(resolve, 50));
         
         expect(modal.classList.contains('active')).toBe(true);
-        expect(modal.style.display).toBe('flex');
     });
 
     it('should close when Cancel button is clicked', async () => {
