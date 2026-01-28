@@ -8,6 +8,7 @@ import { TIME_SIGNATURES } from './config.js';
 import { getMidi, getStepInfo } from './utils.js';
 import { generateProceduralFill } from './fills.js';
 import { analyzeForm } from './form-analysis.js';
+import { WORKER_MSG, WORKER_RESP } from './worker-types.js';
 
 // --- WORKER STATE ---
 let timerID = null;
@@ -269,13 +270,13 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
         head++;
     }
     var workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
-    if (notesToMain.length > 0) postMessage({ type: 'notes', notes: notesToMain, requestTimestamp, workerProcessTime });
+    if (notesToMain.length > 0) postMessage({ type: WORKER_RESP.NOTES, notes: notesToMain, requestTimestamp, workerProcessTime });
 }
 
 export function handleExport(options) {
     try {
         const { includedTracks = ['chords', 'bass', 'soloist', 'harmonies', 'drums'], targetDuration = 3, loopMode = 'time', filename } = options;
-        if (arranger.progression.length === 0) { postMessage({ type: 'error', data: "No progression to export" }); return; }
+        if (arranger.progression.length === 0) { postMessage({ type: WORKER_RESP.ERROR, data: "No progression to export" }); return; }
 
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
         const totalStepsOneLoop = arranger.totalSteps;
@@ -699,53 +700,59 @@ export function handleExport(options) {
         trackChunks.forEach(c => { result.set(c, offset); offset += c.length; });
 
         let finalFilename = (filename || 'ensemble-export').replace(/\.midi?$/i, '') + '.mid';
-        postMessage({ type: 'exportComplete', blob: result, filename: finalFilename });
-    } catch (e) { postMessage({ type: 'error', data: e.message, stack: e.stack }); }
+        postMessage({ type: WORKER_RESP.EXPORT_COMPLETE, blob: result, filename: finalFilename });
+    } catch (e) { postMessage({ type: WORKER_RESP.ERROR, data: e.message, stack: e.stack }); }
 }
 
 if (typeof self !== 'undefined') {
     self.onmessage = (e) => {
+        const { type, data } = e.data;
         var startTime = performance.now();
         try {
-            var { type, data } = e.data;
-            var requestTimestamp = data?.requestTimestamp || null;
             switch (type) {
-                case 'start': if (!timerID) { timerID = setInterval(() => { postMessage({ type: 'tick' }); }, interval); } break;
-                case 'stop': if (timerID) { clearInterval(timerID); timerID = null; } break;
-                case 'syncState':
+                case WORKER_MSG.START:
+                    if (!timerID) {
+                        timerID = setInterval(() => {
+                            const startTime = performance.now();
+                            postMessage({ type: WORKER_RESP.TICK });
+                            
+                            const s = playback.step;
+                            fillBuffers(s, null, startTime);
+                        }, interval);
+                    }
+                    break;
+                case WORKER_MSG.STOP:
+                    if (timerID) {
+                        clearInterval(timerID);
+                        timerID = null;
+                    }
+                    break;
+                case WORKER_MSG.SYNC_STATE:
                     if (data.arranger) {
                         Object.assign(arranger, data.arranger);
                         arranger.totalSteps = data.arranger.totalSteps;
                         arranger.stepMap = data.arranger.stepMap;
                         arranger.sectionMap = data.arranger.sectionMap;
-                        lastChordIndex = 0;
-                        lastSectionIndex = 0;
                     }
-                    if (data.chords) {
-                        Object.assign(chords, data.chords);
-                        if (data.chords.rhythmicMask !== undefined) chords.rhythmicMask = data.chords.rhythmicMask;
-                    }
+                    if (data.chords) Object.assign(chords, data.chords);
                     if (data.bass) Object.assign(bass, data.bass);
                     if (data.soloist) Object.assign(soloist, data.soloist);
-                    if (data.harmony) {
-                        Object.assign(harmony, data.harmony);
-                        if (data.harmony.rhythmicMask !== undefined) harmony.rhythmicMask = data.harmony.rhythmicMask;
-                        if (data.harmony.pocketOffset !== undefined) harmony.pocketOffset = data.harmony.pocketOffset;
-                    }
+                    if (data.harmony) Object.assign(harmony, data.harmony);
                     if (data.groove) {
                         Object.assign(groove, data.groove);
-                        if (data.groove.instruments) { data.groove.instruments.forEach(di => { const inst = groove.instruments.find(i => i.name === di.name); if (inst) { inst.steps = di.steps; inst.muted = di.muted; } }); }
-                        if (data.groove.snareMask !== undefined) groove.snareMask = data.groove.snareMask;
+                        if (data.groove.instruments) {
+                            data.groove.instruments.forEach(di => {
+                                const inst = groove.instruments.find(i => i.name === di.name);
+                                if (inst) inst.steps = di.steps;
+                            });
+                        }
                     }
                     if (data.playback) Object.assign(playback, data.playback);
                     break;
-                case 'requestBuffer': 
-                    if (playback.workerLogging) console.log(`[Worker] requestBuffer: step=${data.step}, currentHeads=[bass:${bbBufferHead}, soloist:${sbBufferHead}, chords:${cbBufferHead}]`);
-                    fillBuffers(data.step, requestTimestamp, startTime); 
+                case WORKER_MSG.REQUEST_BUFFER:
+                    fillBuffers(data.step, data.requestTimestamp, startTime);
                     break;
-                case 'flush':
-                    if (playback.workerLogging) console.log(`[Worker] flush: step=${data.step}`);
-                    // Sync first if data is provided to ensure correct style/genre
+                case WORKER_MSG.FLUSH:
                     if (data.syncData) {
                         const syncData = data.syncData;
                         if (syncData.arranger) {
@@ -793,24 +800,24 @@ if (typeof self !== 'undefined') {
                         handlePrime(data.primeSteps);
                     }
 
-                    fillBuffers(data.step, requestTimestamp, startTime);
+                    fillBuffers(data.step, data.requestTimestamp, startTime);
                     break;
-                case 'prime':
+                case WORKER_MSG.PRIME:
                     handlePrime(data);
                     break;
-                case 'resolution':
-                    handleResolution(data.step, requestTimestamp, startTime);
+                case WORKER_MSG.RESOLUTION:
+                    handleResolution(data.step, data.requestTimestamp, startTime);
                     break;
-                case 'export': handleExport(data); break;
+                case WORKER_MSG.EXPORT: handleExport(data); break;
             }
-        } catch (err) { postMessage({ type: 'error', data: err.message, stack: err.stack }); }
+        } catch (err) { postMessage({ type: WORKER_RESP.ERROR, data: err.message, stack: err.stack }); }
     };
 }
 
 export function handleResolution(step, requestTimestamp = null, processStartTime = null) {
     const notesToMain = generateResolutionNotes(step, arranger, { bass: bass.enabled, chords: chords.enabled, soloist: soloist.enabled, harmony: harmony.enabled, groove: groove.enabled }, playback.bpm);
     var workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
-    postMessage({ type: 'notes', notes: notesToMain, requestTimestamp, workerProcessTime });
+    postMessage({ type: WORKER_RESP.NOTES, notes: notesToMain, requestTimestamp, workerProcessTime });
 }
 
 function handlePrime(steps) {

@@ -1,4 +1,5 @@
 import { arranger, chords, bass, soloist, harmony, groove, playback } from './state.js';
+import { WORKER_MSG, WORKER_RESP } from './worker-types.js';
 
 let timerWorker = null;
 let schedulerRequestHandler = null;
@@ -22,13 +23,13 @@ export function initWorker(onSchedulerRequest, onNotesReceived) {
 
     timerWorker.onmessage = (e) => {
         const { type, notes, data, requestTimestamp, workerProcessTime } = e.data;
-        if (type === 'tick') {
+        if (type === WORKER_RESP.TICK) {
             if (typeof schedulerRequestHandler === 'function') schedulerRequestHandler();
-        } else if (type === 'notes') {
+        } else if (type === WORKER_RESP.NOTES) {
             if (typeof notesReceivedHandler === 'function') notesReceivedHandler(notes, requestTimestamp, workerProcessTime);
-        } else if (type === 'error') {
+        } else if (type === WORKER_RESP.ERROR) {
             console.error("[Worker Error]", data);
-        } else if (type === 'exportComplete') {
+        } else if (type === WORKER_RESP.EXPORT_COMPLETE) {
             const { blob, filename } = e.data;
             const url = URL.createObjectURL(new Blob([blob], { type: 'audio/midi' }));
             const a = document.createElement('a');
@@ -41,31 +42,31 @@ export function initWorker(onSchedulerRequest, onNotesReceived) {
 }
 
 export function startExport(options) {
-    if (timerWorker) timerWorker.postMessage({ type: 'export', data: options });
+    if (timerWorker) timerWorker.postMessage({ type: WORKER_MSG.EXPORT, data: options });
 }
 
 export function startWorker() {
-    if (timerWorker) timerWorker.postMessage({ type: 'start' });
+    if (timerWorker) timerWorker.postMessage({ type: WORKER_MSG.START });
 }
 
 export function stopWorker() {
-    if (timerWorker) timerWorker.postMessage({ type: 'stop' });
+    if (timerWorker) timerWorker.postMessage({ type: WORKER_MSG.STOP });
 }
 
 export function flushWorker(step, syncData = null, primeSteps = 0) {
-    if (timerWorker) timerWorker.postMessage({ type: 'flush', data: { step, syncData, primeSteps, requestTimestamp: performance.now() } });
+    if (timerWorker) timerWorker.postMessage({ type: WORKER_MSG.FLUSH, data: { step, syncData, primeSteps, requestTimestamp: performance.now() } });
 }
 
 export function requestBuffer(step) {
-    if (timerWorker) timerWorker.postMessage({ type: 'requestBuffer', data: { step, requestTimestamp: performance.now() } });
+    if (timerWorker) timerWorker.postMessage({ type: WORKER_MSG.REQUEST_BUFFER, data: { step, requestTimestamp: performance.now() } });
 }
 
 export function requestResolution(step) {
-    if (timerWorker) timerWorker.postMessage({ type: 'resolution', data: { step, requestTimestamp: performance.now() } });
+    if (timerWorker) timerWorker.postMessage({ type: WORKER_MSG.RESOLUTION, data: { step, requestTimestamp: performance.now() } });
 }
 
 export function primeWorker(steps = 32) {
-    if (timerWorker) timerWorker.postMessage({ type: 'prime', data: steps });
+    if (timerWorker) timerWorker.postMessage({ type: WORKER_MSG.PRIME, data: steps });
 }
 
 export function syncWorker(action, payload) {
@@ -157,6 +158,6 @@ export function syncWorker(action, payload) {
     }
 
     if (Object.keys(data).length > 0) {
-        timerWorker.postMessage({ type: 'syncState', data });
+        timerWorker.postMessage({ type: WORKER_MSG.SYNC_STATE, data });
     }
 }
