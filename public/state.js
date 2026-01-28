@@ -13,22 +13,14 @@ export {
     playback, arranger, chords, bass, soloist, harmony, groove, midi, vizState 
 };
 
-// Legacy Aliases (Legacy names for compatibility)
-export const ctx = playback;
-export const cb = chords;
-export const gb = groove;
-export const bb = bass;
-export const sb = soloist;
-export const hb = harmony;
-
 // Central State Map for Generic PARAM Updates
 const stateMap = { 
-    ctx: playback, playback,
-    cb: chords, chords,
-    bb: bass, bass,
-    sb: soloist, soloist,
-    gb: groove, groove,
-    hb: harmony, harmony,
+    playback,
+    chords,
+    bass,
+    soloist,
+    groove,
+    harmony,
     arranger, vizState, midi 
 };
 
