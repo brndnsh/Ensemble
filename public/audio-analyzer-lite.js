@@ -631,7 +631,7 @@ export class ChordAnalyzerLite {
                     const bpmDiff = Math.abs(currentBPM - cand.bpm);
                     // If within 2.5%, apply a boost. Favor closer matches.
                     if (bpmDiff < cand.bpm * 0.025) {
-                        structuralBoost = Math.max(structuralBoost, 1.25 * (1 - bpmDiff / (cand.bpm * 0.025)));
+                        structuralBoost = Math.max(structuralBoost, 2.0 * (1 - bpmDiff / (cand.bpm * 0.025)));
                     }
                 }
 
@@ -641,10 +641,11 @@ export class ChordAnalyzerLite {
                 else if (lag >= 37 && lag <= 100) rangeBias = 1.10;
                 else if (lag > 120) rangeBias = 0.8;
 
-                correlations[lag] = corr;
+                const biasedScore = corr * rangeBias * structuralBoost;
+                correlations[lag] = biasedScore;
                 
-                if (corr * rangeBias * structuralBoost > maxCorr) {
-                    maxCorr = corr * rangeBias * structuralBoost;
+                if (biasedScore > maxCorr) {
+                    maxCorr = biasedScore;
                     bestLag = lag;
                 }
             }
