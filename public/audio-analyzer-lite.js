@@ -73,10 +73,11 @@ export class ChordAnalyzerLite {
     identifyGlobalKey(totalChroma) {
         let bestScore = -1;
         let bestKey = { root: 0, type: 'major', tuningOffset: 0 };
+        const rotatedBuffer = new Float32Array(12);
 
         // Test -2.0 to +2.0 semitones in 0.1 steps (higher res)
         for (let offset = -20; offset <= 20; offset++) {
-            const rotatedChroma = this.rotateChroma(totalChroma, offset * 0.1);
+            const rotatedChroma = this.rotateChroma(totalChroma, offset * 0.1, rotatedBuffer);
             
             for (let root = 0; root < 12; root++) {
                 for (const type of KEY_TYPES) {
@@ -133,9 +134,16 @@ export class ChordAnalyzerLite {
     /**
      * Rotates a 12-bin chromagram by a fractional semitone using linear interpolation.
      */
-    rotateChroma(chroma, amount) {
-        if (amount === 0) return chroma;
-        const result = new Float32Array(12);
+    rotateChroma(chroma, amount, output = null) {
+        if (!output && amount === 0) return chroma;
+
+        const result = output || new Float32Array(12);
+
+        if (amount === 0) {
+            if (result !== chroma) result.set(chroma);
+            return result;
+        }
+
         for (let i = 0; i < 12; i++) {
             const sourceIdx = (i - amount + 12) % 12;
             const idx1 = Math.floor(sourceIdx);
@@ -251,6 +259,9 @@ export class ChordAnalyzerLite {
             buffers: sharedBuffers
         };
 
+        const finalChroma = new Float32Array(12);
+        const finalBassChroma = new Float32Array(12);
+
         for (let b = 0; b < beats; b++) {
             if (b % 10 === 0) await yieldToMain();
 
@@ -266,7 +277,7 @@ export class ChordAnalyzerLite {
             // This prevents bass notes (E, G, A) from being interpreted as the Root of the chord.
             // We DISABLE harmonic suppression because it removes the Chord Root/5th when the Bass plays the Root!
             let chroma = this.calculateChromagram(window, sampleRate, fullChromaOptions);
-            if (tuningOffset !== 0) chroma = this.rotateChroma(chroma, tuningOffset);
+            chroma = this.rotateChroma(chroma, tuningOffset, finalChroma);
             
             // Update Rolling Chroma (Local Key Context)
             if (energy > 0.0001) {
@@ -278,7 +289,7 @@ export class ChordAnalyzerLite {
             
             // 2. Bass Chromagram (for inversions)
             let bassChroma = this.calculateChromagram(window, sampleRate, bassChromaOptions);
-            if (tuningOffset !== 0) bassChroma = this.rotateChroma(bassChroma, tuningOffset);
+            bassChroma = this.rotateChroma(bassChroma, tuningOffset, finalBassChroma);
 
             // Identify Chord with Local Key Bias
             let chord = 'Rest';
