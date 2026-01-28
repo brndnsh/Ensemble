@@ -398,9 +398,13 @@ export class ChordAnalyzerLite {
             let maxEnergy = 0;
             let bestMidi = -1;
 
-            // Use the pre-calculated pitch frequencies
-            this.pitchFrequencies.forEach(p => {
-                if (p.midi < minMidi || p.midi > maxMidi) return;
+            // Optimization: Use loop bounds for vocal range (48-84)
+            // pitchFrequencies starts at MIDI 24.
+            const startIdx = Math.max(0, minMidi - 24);
+            const endIdx = Math.min(this.pitchFrequencies.length, maxMidi - 24 + 1);
+
+            for (let pfIdx = startIdx; pfIdx < endIdx; pfIdx++) {
+                const p = this.pitchFrequencies[pfIdx];
 
                 let real = 0;
                 let imag = 0;
@@ -431,7 +435,7 @@ export class ChordAnalyzerLite {
                     maxEnergy = energy;
                     bestMidi = p.midi;
                 }
-            });
+            }
 
             // Normalize energy score
             const normalizedEnergy = Math.min(1.0, maxEnergy / 100); // Arbitrary scaling based on testing
@@ -732,12 +736,20 @@ export class ChordAnalyzerLite {
             }
         }
 
-        // Always calculate full range (24-96) for harmonic suppression context
-        this.pitchFrequencies.forEach(p => {
-            // Optimization: Skip frequencies outside desired range if suppression is disabled
-            if (!options.suppressHarmonics && (p.midi < minMidi || p.midi > maxMidi)) {
-                return;
-            }
+        // Optimization: Determine loop bounds based on MIDI range
+        // pitchFrequencies starts at MIDI 24 (Index 0)
+        let startIdx = 0;
+        let endIdx = this.pitchFrequencies.length;
+
+        if (!options.suppressHarmonics) {
+            // If suppression is OFF, we only need to calculate the requested range.
+            // clamp to valid array indices
+            startIdx = Math.max(0, Math.min(this.pitchFrequencies.length, minMidi - 24));
+            endIdx = Math.max(0, Math.min(this.pitchFrequencies.length, maxMidi - 24 + 1));
+        }
+
+        for (let pfIdx = startIdx; pfIdx < endIdx; pfIdx++) {
+            const p = this.pitchFrequencies[pfIdx];
             
             let real = 0;
             let imag = 0;
@@ -763,7 +775,7 @@ export class ChordAnalyzerLite {
             }
 
             pitchEnergy[p.midi] = (real * real + imag * imag);
-        });
+        }
 
         // Harmonic Suppression: Remove overtones of low fundamentals
         if (options.suppressHarmonics) {

@@ -16,6 +16,9 @@ export class UnifiedVisualizer {
         this.themeCache = {};
         this.isFillActive = false;
         
+        // Optimization: Reuse Map to avoid per-frame GC
+        this.activeNotes = new Map();
+
         this.initDOM();
         this.updateThemeCache();
 
@@ -213,7 +216,7 @@ export class UnifiedVisualizer {
         ctx.fillRect(0, 0, w, h);
 
         // --- Collect Active Notes for Piano Roll Highlight ---
-        const activeNotes = new Map(); // MIDI -> Color
+        this.activeNotes.clear(); // Reuse existing Map
 
         // Active Chords
         for (const ev of this.chordEvents) {
@@ -223,7 +226,7 @@ export class UnifiedVisualizer {
                     for (const m of ev.notes) {
                          const interval = (m % 12 - rootPC + 12) % 12;
                          const cat = getCategory(interval);
-                         activeNotes.set(m, chordColors[cat]);
+                         this.activeNotes.set(m, chordColors[cat]);
                     }
                 }
             }
@@ -235,7 +238,7 @@ export class UnifiedVisualizer {
             let color = track.resolvedColor || track.color;
             for (const ev of track.history) {
                  if (ev.time <= currentTime && ev.time + (ev.duration || 0.25) >= currentTime) {
-                     activeNotes.set(ev.midi, color);
+                     this.activeNotes.set(ev.midi, color);
                  }
             }
         }
@@ -255,8 +258,8 @@ export class UnifiedVisualizer {
             const isBlack = [1, 3, 6, 8, 10].includes(noteInOctave); // C# D# F# G# A#
             
             // Draw Key Background
-            if (activeNotes.has(m)) {
-                ctx.fillStyle = activeNotes.get(m);
+            if (this.activeNotes.has(m)) {
+                ctx.fillStyle = this.activeNotes.get(m);
             } else {
                 ctx.fillStyle = isBlack ? keyBlack : keyWhite;
             }
@@ -273,7 +276,7 @@ export class UnifiedVisualizer {
             // Draw Label for C
             if (noteInOctave === 0) {
                 ctx.fillStyle = labelColor;
-                if (activeNotes.has(m)) ctx.fillStyle = '#fff'; // Contrast for active
+                if (this.activeNotes.has(m)) ctx.fillStyle = '#fff'; // Contrast for active
                 ctx.font = '10px sans-serif';
                 ctx.textAlign = 'right';
                 ctx.textBaseline = 'middle';

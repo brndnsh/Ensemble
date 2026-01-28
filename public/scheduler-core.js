@@ -421,12 +421,17 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
     soloist.buffer.delete(step);
     
     if (notes && notes.length > 0) {
-        // Enforce monophony at the scheduler level if double stops are disabled.
-        // This acts as a safety net if the worker sends overlapping notes.
-        const notesToPlay = soloist.doubleStops ? notes : [notes[0]];
+        // Optimization: Avoid allocation if we only play one note (Common case)
+        let notesToPlay = notes;
+        if (!soloist.doubleStops && notes.length > 1) {
+             notesToPlay = [notes[0]];
+        }
         
         // Power-compensation for double stops: Scale volume by 1/sqrt(N)
-        const numVoices = notesToPlay.filter(n => n.freq).length;
+        let numVoices = 0;
+        for (let i = 0; i < notesToPlay.length; i++) {
+            if (notesToPlay[i].freq) numVoices++;
+        }
         const polyphonyComp = 1 / Math.sqrt(Math.max(1, numVoices));
 
         notesToPlay.forEach(noteEntry => {
@@ -492,7 +497,10 @@ export function scheduleChords(chordData, step, time) {
     if (notes && notes.length > 0) {
         const spb = 60.0 / playback.bpm;
         // Count how many non-muted notes are in this step for volume normalization
-        const numVoices = notes.filter(n => !n.muted && n.freq).length;
+        let numVoices = 0;
+        for (let i = 0; i < notes.length; i++) {
+            if (!notes[i].muted && notes[i].freq) numVoices++;
+        }
 
         notes.forEach(n => {
             const { freq, velocity, timingOffset, durationSteps, muted, instrument, dry, ccEvents } = n;
@@ -539,7 +547,11 @@ export function scheduleHarmonies(chordData, step, time) {
         }
 
         // Power-compensation for multiple voices: Scale volume by 1/sqrt(N)
-        const numVoices = notes.filter(n => n.freq || n.midi).length;
+        // Optimization: Count voices without array allocation
+        let numVoices = 0;
+        for (let i = 0; i < notes.length; i++) {
+            if (notes[i].freq || notes[i].midi) numVoices++;
+        }
         const polyphonyComp = 1 / Math.sqrt(Math.max(1, numVoices));
 
         notes.forEach(n => {
