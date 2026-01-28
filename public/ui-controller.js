@@ -342,21 +342,33 @@ export function setupUIHandlers(refs) {
             document.getElementById('analyzerOverlay').classList.add('active');
         }],
         [ui.randomizeBtn, 'click', () => {
-            console.error("V2.43: RANDOM BUTTON CLICKED");
+            console.error("V2.44: RANDOM BUTTON CLICKED");
             ui.arrangerActionMenu.classList.remove('open');
             ui.arrangerActionTrigger.classList.remove('active');
-            if (ui.generateSongOverlay) {
-                console.error("V2.43: FORCING MODAL VISIBLE");
-                ui.generateSongOverlay.classList.add('active');
-                // Forced inline styles as a last resort
-                ui.generateSongOverlay.style.display = 'flex';
-                ui.generateSongOverlay.style.opacity = '1';
-                ui.generateSongOverlay.style.visibility = 'visible';
-                ui.generateSongOverlay.style.zIndex = '9999';
-            } else {
-                console.error("V2.43: MODAL ELEMENT MISSING");
-                alert("Error: #generateSongOverlay not found.");
-            }
+            
+            setTimeout(() => {
+                if (ui.generateSongOverlay) {
+                    console.error("V2.44: FORCING MODAL VISIBLE NOW");
+                    ui.generateSongOverlay.classList.add('active');
+                    
+                    // Most aggressive forced visibility
+                    ui.generateSongOverlay.style.setProperty('display', 'flex', 'important');
+                    ui.generateSongOverlay.style.setProperty('opacity', '1', 'important');
+                    ui.generateSongOverlay.style.setProperty('visibility', 'visible', 'important');
+                    ui.generateSongOverlay.style.setProperty('z-index', '99999', 'important');
+                    ui.generateSongOverlay.style.setProperty('pointer-events', 'auto', 'important');
+                    
+                    console.error("V2.44: AGGRESSIVE STYLES APPLIED");
+                } else {
+                    console.error("V2.44: MODAL MISSING FROM UI OBJECT");
+                    const el = document.getElementById('generateSongOverlay');
+                    if (el) {
+                        console.error("V2.44: Found via getElementById but not UI object!");
+                        el.classList.add('active');
+                        el.style.display = 'flex';
+                    }
+                }
+            }, 10);
         }],
         [ui.mutateBtn, 'click', () => {
             ui.arrangerActionMenu.classList.remove('open');
@@ -807,17 +819,24 @@ export function setupUIHandlers(refs) {
 }
 
 export function setupGenerateSongHandlers() {
-    if (!ui.generateSongOverlay) return;
+    console.error("V2.44: Setting up Generate Song Handlers");
+    if (!ui.generateSongOverlay) {
+        console.error("V2.44: generateSongOverlay missing during setup!");
+        return;
+    }
 
     const closeModal = () => {
+        console.error("V2.44: Closing Modal");
         ui.generateSongOverlay.classList.remove('active');
         // Clear forced inline styles
-        ui.generateSongOverlay.style.display = '';
-        ui.generateSongOverlay.style.opacity = '';
-        ui.generateSongOverlay.style.visibility = '';
+        ui.generateSongOverlay.style.setProperty('display', '', '');
+        ui.generateSongOverlay.style.setProperty('opacity', '', '');
+        ui.generateSongOverlay.style.setProperty('visibility', '', '');
+        ui.generateSongOverlay.style.setProperty('pointer-events', '', '');
     };
 
     ui.closeGenerateSongBtn.addEventListener('click', closeModal);
+    console.error("V2.44: Handlers attached to Generate Song buttons");
 
     ui.generateSongOverlay.addEventListener('click', (e) => {
         if (e.target === ui.generateSongOverlay) {

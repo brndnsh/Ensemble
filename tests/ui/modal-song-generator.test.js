@@ -41,11 +41,11 @@ describe('Song Generator Modal', () => {
                 <select id="genStructureSelect"></select>
             </div>
 
-            <div id="settingsOverlay" class="overlay"></div>
-            <div id="editorOverlay" class="overlay"></div>
-            <div id="exportOverlay" class="overlay"></div>
-            <div id="templatesOverlay" class="overlay"></div>
-            <div id="analyzerOverlay" class="overlay"></div>
+            <div id="settingsOverlay" class="settings-overlay"></div>
+            <div id="editorOverlay" class="settings-overlay"></div>
+            <div id="exportOverlay" class="settings-overlay"></div>
+            <div id="templatesOverlay" class="settings-overlay"></div>
+            <div id="analyzerOverlay" class="modal-overlay"></div>
             
             <button id="arrangerActionTrigger">Actions</button>
             <div id="arrangerActionMenu"></div>
@@ -174,12 +174,11 @@ describe('Song Generator Modal', () => {
         
         btn.click();
         
-        // Wait for mutation observer if needed, but classList.add is synchronous
-        // However, aria-hidden update relies on observer which is async in DOM
-        await new Promise(resolve => setTimeout(resolve, 0));
+        // Wait for setTimeout(..., 10)
+        await new Promise(resolve => setTimeout(resolve, 50));
         
         expect(modal.classList.contains('active')).toBe(true);
-        expect(modal.getAttribute('aria-hidden')).toBe('false');
+        expect(modal.style.display).toBe('flex');
     });
 
     it('should close when Cancel button is clicked', async () => {
@@ -188,6 +187,7 @@ describe('Song Generator Modal', () => {
         const closeBtn = document.getElementById('closeGenerateSongBtn');
         
         openBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 50));
         expect(modal.classList.contains('active')).toBe(true);
         
         closeBtn.click();
@@ -199,6 +199,7 @@ describe('Song Generator Modal', () => {
         const openBtn = document.getElementById('randomizeBtn');
         
         openBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 50));
         expect(modal.classList.contains('active')).toBe(true);
         
         // Click the overlay background
