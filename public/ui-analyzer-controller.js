@@ -1,8 +1,8 @@
-import { ui, showToast, formatUnicodeSymbols } from './ui.js';
+import { ui, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
 import { arranger, playback } from './state.js';
 import { initAudio } from './engine.js';
-import { generateId, normalizeKey, escapeHTML } from './utils.js';
-import { updateKeySelectLabels, updateRelKeyButton, refreshArrangerUI } from './arranger-controller.js';
+import { generateId, normalizeKey, escapeHTML, formatUnicodeSymbols } from './utils.js';
+import { refreshArrangerUI } from './arranger-controller.js';
 import { ModalManager } from './ui-modal-controller.js';
 import { pushHistory } from './history.js';
 

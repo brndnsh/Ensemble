@@ -153,7 +153,7 @@ export function addSection() {
     refreshArrangerUI();
 }
 
-export function transposeKey(delta, updateRelKeyButton) {
+export function transposeKey(delta) {
     // Use arranger.key as the source of truth, fallback to UI if somehow missing
     const currentKeyName = arranger.key || (ui.keySelect ? ui.keySelect.value : 'C');
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(currentKeyName));
@@ -200,11 +200,11 @@ export function transposeKey(delta, updateRelKeyButton) {
     arranger.isDirty = true;
     clearChordPresetHighlight();
     refreshArrangerUI();
-    if (updateRelKeyButton) updateRelKeyButton();
+    updateRelKeyButton();
     updateKeySelectLabels();
 }
 
-export function switchToRelativeKey(updateRelKeyButton) {
+export function switchToRelativeKey() {
     const wasMinor = !!arranger.isMinor;
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(arranger.key));
     const shift = wasMinor ? 3 : -3;
@@ -233,11 +233,7 @@ export function switchToRelativeKey(updateRelKeyButton) {
     });
     
     arranger.isDirty = true;
-    if (typeof updateRelKeyButton === 'function') {
-        updateRelKeyButton();
-    } else {
-        console.warn("[Arranger] updateRelKeyButton is not a function", updateRelKeyButton);
-    }
+    updateRelKeyButton();
     updateKeySelectLabels();
     refreshArrangerUI();
     showToast(`Switched to Relative ${arranger.isMinor ? 'Minor' : 'Major'}: ${newKey}${arranger.isMinor ? 'm' : ''}`);

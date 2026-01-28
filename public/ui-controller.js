@@ -393,9 +393,9 @@ export function setupUIHandlers(refs) {
             ui.arrangerActionTrigger.classList.remove('active');
             shareProgression();
         }],
-        [ui.transUpBtn, 'click', () => transposeKey(1, updateRelKeyButton)],
-        [ui.transDownBtn, 'click', () => transposeKey(-1, updateRelKeyButton)],
-        [ui.relKeyBtn, 'click', () => switchToRelativeKey(updateRelKeyButton)],
+        [ui.transUpBtn, 'click', () => transposeKey(1)],
+        [ui.transDownBtn, 'click', () => transposeKey(-1)],
+        [ui.relKeyBtn, 'click', () => switchToRelativeKey()],
         [ui.installAppBtn, 'click', async () => {
             if (await triggerInstall()) {
                 ui.installAppBtn.style.display = 'none';
