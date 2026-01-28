@@ -923,8 +923,6 @@ export function setupAnalyzerHandlers() {
         stopLiveListen();
     });
 
-    ui.analyzerDropZone.addEventListener('click', () => ui.analyzerFileInput.click());
-
     let detectedChords = [];
     let currentAudioBuffer = null;
     let currentFileName = "";
