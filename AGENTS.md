@@ -26,6 +26,15 @@ This document outlines mandatory protocols for AI agents (Jules, Gemini, etc.) w
 *   **Avoid Fragile Assertions:** When possible, test for *properties* (e.g., "contains a minor 3rd") rather than exact array equality, unless verifying a specific strict algorithm.
 *   **Respect "Smart" Context:** Remember that functions like `getScaleForChord` behave differently based on `groove.genreFeel`. Ensure your test setup mocks this state correctly.
 
-## 4. Final Verification
+## 4. Modular Architecture & State
+**Context:** The codebase has transitioned from monolithic "God Classes" to domain-specific controllers and state slices.
+
+*   **Respect State Boundaries:** State is decomposed into `public/state/`. Use the corresponding slice (e.g., `playback`, `arranger`, `instruments`) for reads.
+*   **Dispatch for Writes:** ALWAYS use `dispatch(ACTIONS.TYPE, payload)` for writes. Never modify state objects directly.
+*   **Domain-Specific UI Registries:** UI controllers now use local `ui` objects that map to the global registry in `ui.js`.
+    *   When adding a feature to a controller, **explicitly add** the required DOM elements to that controller's local `ui` object. This makes the dependencies searchable for other agents.
+
+## 5. Final Verification
 *   **Linting:** Run `npm run lint` to catch unused imports or variables introduced during refactoring.
 *   **Build:** Ensure the project builds/transpiles if applicable.
+*   **State Integrity:** Verify that any changes to state schema are reflected in the domain slices in `public/state/`.

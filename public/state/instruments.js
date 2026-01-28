@@ -1,0 +1,207 @@
+import { ACTIONS } from '../types.js';
+
+/**
+ * @typedef {Object} ChordState
+ * @property {boolean} enabled - Whether the accompanist is active.
+ * @property {string} style - The comping style ('smart', 'pad', etc).
+ * @property {number} volume - Output gain multiplier.
+ * @property {number} reverb - Reverb send amount.
+ * @property {number} octave - Base MIDI octave for voicing.
+ * @property {string} density - Voicing density ('thin', 'standard', 'rich').
+ * @property {boolean} pianoRoots - Whether the piano should play roots even if bass is enabled.
+ * @property {number|null} lastActiveChordIndex - Index of the currently playing chord.
+ * @property {Map<number, Object>} buffer - Scheduled notes buffer.
+ * @property {number} rhythmicMask - 16-bit mask of the current comping pattern.
+ * @property {string} activeTab - Currently active UI tab ('classic' or 'smart').
+ */
+export const chords = {
+    enabled: true,
+    style: 'smart',
+    volume: 0.5,
+    reverb: 0.3,
+    octave: 65,
+    density: 'standard', 
+    pianoRoots: false,
+    lastActiveChordIndex: null,
+    buffer: new Map(),
+    rhythmicMask: 0,
+    activeTab: 'smart'
+};
+
+/**
+ * @typedef {Object} BassState
+ * @property {boolean} enabled - Whether the bass engine is active.
+ * @property {number} volume - Volume level.
+ * @property {number} reverb - Reverb level.
+ * @property {number|null} lastFreq - Frequency of the last played note.
+ * @property {number|null} lastPlayedFreq - Frequency of the note currently ringing.
+ * @property {Map<number, Object>} buffer - Map of scheduled notes from the worker.
+ * @property {number} octave - Base MIDI octave.
+ * @property {string} style - Playing style ID (e.g., 'walking', 'funk').
+ * @property {number} pocketOffset - Micro-timing offset in seconds (e.g. 0.02 for 20ms lag).
+ * @property {number} busySteps - Counter for "busy" playing periods.
+ * @property {string} activeTab - Currently active UI tab.
+ * @property {number|null} lastBassGain - Last velocity/gain value for dynamic continuity.
+ */
+export const bass = {
+    enabled: true,
+    volume: 0.45,
+    reverb: 0.05,
+    lastFreq: null,
+    lastPlayedFreq: null,
+    buffer: new Map(),
+    octave: 38,
+    style: 'smart',
+    pocketOffset: 0.0,
+    busySteps: 0,
+    activeTab: 'smart',
+    lastBassGain: null
+};
+
+/**
+ * @typedef {Object} SoloistState
+ * @property {boolean} enabled - Whether the soloist engine is active.
+ * @property {number} volume - Volume level.
+ * @property {number} reverb - Reverb level.
+ * @property {number|null} lastFreq - Last generated frequency.
+ * @property {number|null} lastPlayedFreq - Last played frequency.
+ * @property {Map<number, Object>} buffer - Map of scheduled notes from the worker.
+ * @property {number} lastNoteEnd - Time when the last note ends.
+ * @property {number} octave - Base MIDI octave.
+ * @property {string} style - Soloing style ID (e.g., 'blues', 'shred').
+ * @property {number} direction - Melodic direction (1 or -1).
+ * @property {string} melodicTrend - Current melodic direction intent ('Up', 'Down', 'Static').
+ * @property {number} contourSteps - Remaining steps for the current melodic trend.
+ * @property {number} currentPhraseSteps - Steps elapsed in current phrase.
+ * @property {number} notesInPhrase - Number of notes played in the current phrase.
+ * @property {string} qaState - Conversational state ('Question' or 'Answer').
+ * @property {boolean} isResting - Whether the soloist is taking a breath.
+ * @property {Array<number>} currentCell - Current rhythmic cell.
+ * @property {number} busySteps - Counter for "busy" playing periods.
+ * @property {Array<Object>} motifBuffer - Short-term memory for current phrase.
+ * @property {Array<Object>} hookBuffer - Long-term memory for catchy loops.
+ * @property {boolean} isReplayingMotif - Whether currently replaying a motif.
+ * @property {number} motifReplayIndex - Current index in motif/hook replay.
+ * @property {number} hookRetentionProb - Probability of retaining a motif as a "hook".
+ * @property {number} tension - Current harmonic tension level (0.0 - 1.0).
+ * @property {boolean} doubleStops - Whether to play double stops (two notes at once).
+ * @property {Array<GainNode>} activeVoices - List of active gain nodes for voice stealing.
+ * @property {number} sessionSteps - Total steps elapsed since playback started.
+ * @property {Array<Object>} deviceBuffer - Buffer for multi-step melodic devices.
+ * @property {string} activeTab - Currently active UI tab.
+ * @property {Array<number>} pitchHistory - Rolling buffer of recent pitches for anti-stagnation.
+ * @property {number} stagnationCount - Counter for consecutive small intervals.
+ * @property {number} lastInterval - The interval between the last two notes.
+ */
+export const soloist = {
+    enabled: false,
+    volume: 0.5,
+    reverb: 0.6,
+    lastFreq: null,
+    lastPlayedFreq: null,
+    buffer: new Map(),
+    lastNoteEnd: 0,
+    octave: 64,
+    style: 'smart',
+    direction: 1,
+    melodicTrend: 'Static',
+    contourSteps: 0,
+    currentPhraseSteps: 0,
+    notesInPhrase: 0,
+    qaState: 'Question',
+    isResting: false,
+    currentCell: [1, 0, 1, 0],
+    busySteps: 0,
+    motifBuffer: [],
+    hookBuffer: [],
+    isReplayingMotif: false,
+    motifReplayIndex: 0,
+    hookRetentionProb: 0.4,
+    tension: 0,
+    doubleStops: false,
+    activeVoices: [],
+    sessionSteps: 0,
+    deviceBuffer: [],
+    activeTab: 'smart',
+    pitchHistory: [],
+    stagnationCount: 0,
+    lastInterval: 0
+};
+
+/**
+ * @typedef {Object} HarmonyState
+ * @property {boolean} enabled - Whether the harmony engine is active.
+ * @property {number} volume - Volume level.
+ * @property {number} reverb - Reverb level.
+ * @property {Map<number, Object>} buffer - Map of scheduled notes from the worker.
+ * @property {number} octave - Base MIDI octave.
+ * @property {string} style - Playing style ID (e.g., 'horns', 'strings').
+ * @property {number} complexity - Local complexity override (0.0 - 1.0).
+ * @property {Array<Object>} motifBuffer - Short-term memory for current section hooks.
+ * @property {number} rhythmicMask - 16-bit mask of the current rhythmic motif (16th notes).
+ * @property {string} activeTab - Currently active UI tab.
+ */
+export const harmony = {
+    enabled: false,
+    volume: 0.4,
+    reverb: 0.4,
+    buffer: new Map(),
+    octave: 60,
+    style: 'smart',
+    complexity: 0.5,
+    motifBuffer: [],
+    lastMidis: [],
+    rhythmicMask: 0,
+    pocketOffset: 0.0,
+    activeTab: 'smart'
+};
+
+const instrumentStateMap = {
+    cb: chords, chords,
+    bb: bass, bass,
+    sb: soloist, soloist,
+    hb: harmony, harmony
+};
+
+export function instrumentReducer(action, payload) {
+    switch (action) {
+        case ACTIONS.SET_STYLE:
+            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].style = payload.style;
+            return true;
+        case ACTIONS.SET_DENSITY:
+            chords.density = payload;
+            return true;
+        case ACTIONS.SET_VOLUME:
+            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].volume = payload.value;
+            return true;
+        case ACTIONS.SET_REVERB:
+            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].reverb = payload.value;
+            return true;
+        case ACTIONS.SET_OCTAVE:
+            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].octave = payload.value;
+            return true;
+        case ACTIONS.SET_PIANO_ROOTS:
+            chords.pianoRoots = payload;
+            return true;
+        case ACTIONS.SET_DOUBLE_STOPS:
+            soloist.doubleStops = !!payload;
+            return true;
+        case ACTIONS.RESET_SESSION:
+            soloist.sessionSteps = 0;
+            return true;
+        case ACTIONS.SET_SESSION_STEPS:
+            soloist.sessionSteps = payload;
+            return true;
+        case ACTIONS.UPDATE_CONDUCTOR_DECISION:
+            if (payload.density) chords.density = payload.density;
+            if (payload.hookProb) soloist.hookRetentionProb = payload.hookProb;
+            return true;
+        case ACTIONS.SET_ACTIVE_TAB:
+            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].activeTab = payload.tab;
+            return true;
+        case ACTIONS.UPDATE_HB:
+            Object.assign(harmony, payload);
+            return true;
+    }
+    return false;
+}

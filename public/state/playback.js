@@ -1,0 +1,143 @@
+import { ACTIONS } from '../types.js';
+
+/**
+ * @typedef {Object} GlobalContext
+ * @property {AudioContext|null} audio - The Web Audio API context.
+ * @property {GainNode|null} masterGain - The master volume gain node.
+ * @property {WaveShaperNode|null} saturator - The master soft-clipper/saturator.
+ * @property {DynamicsCompressorNode|null} masterLimiter - The master safety limiter.
+ * @property {ConvolverNode|null} reverbNode - The global reverb node.
+ * @property {GainNode|null} chordsGain - The gain node for chords.
+ * @property {GainNode|null} chordsReverb - Reverb send for chords.
+ * @property {BiquadFilterNode|null} chordsEQ - EQ for chords (HP/Notch).
+ * @property {GainNode|null} drumsReverb - Reverb send for drums.
+ * @property {GainNode|null} bassReverb - Reverb send for bass.
+ * @property {GainNode|null} soloistReverb - Reverb send for soloist.
+ * @property {GainNode|null} harmoniesReverb - Reverb send for harmonies.
+ * @property {boolean} isPlaying - Whether the sequencer is currently playing.
+ * @property {number} bpm - Beats per minute (40-240).
+ * @property {number} nextNoteTime - The scheduler time for the next note (swung).
+ * @property {number} unswungNextNoteTime - The scheduler time for the next note (straight/quantized).
+ * @property {number} scheduleAheadTime - Lookahead time for scheduling (in seconds).
+ * @property {number} step - The global step counter.
+ * @property {Array<Object>} drawQueue - Queue of visual events to be rendered.
+ * @property {boolean} isCountingIn - Whether the metronome count-in is active.
+ * @property {number} countInBeat - Current beat of the count-in (0-3).
+ * @property {boolean} isDrawing - Whether the visualizer loop is active.
+ * @property {string} theme - The current UI theme ('auto', 'light', 'dark').
+ * @property {WakeLockSentinel|null} wakeLock - The screen wake lock object.
+ * @property {number} bandIntensity - Global band intensity/energy level (0.0 - 1.0).
+ * @property {number} complexity - Global complexity level (0.0 - 1.0).
+ * @property {boolean} autoIntensity - Whether the intensity automatically drifts over time.
+ * @property {boolean} metronome - Whether the metronome is active.
+ * @property {boolean} applyPresetSettings - Whether to apply BPM/Style from presets.
+ * @property {boolean} sustainActive - Whether the global sustain pedal is "pressed".
+ * @property {number} sessionTimer - Session timer in minutes (0 = infinite).
+ * @property {boolean} stopAtEnd - Whether to stop at the end of the current progression/loop.
+ * @property {boolean} isEndingPending - Whether the resolution sequence is about to trigger.
+ * @property {Object} intent - Current rhythmic intent (syncopation, anticipation, etc).
+ * @property {Array<HTMLElement>|null} lastActiveDrumElements - Cache of currently animating drum UI elements.
+ * @property {number} lastPlayingStep - The last step index processed by the UI loop.
+ * @property {boolean} workerLogging - Whether to log messages from the audio worker.
+ * @property {Object|null} viz - Reference to the Visualizer instance.
+ * @property {number|null} suspendTimeout - ID of the timeout for audio context suspension.
+ * @property {number} conductorVelocity - Dynamic velocity modifier (0.0-1.0) applied by Conductor.
+ */
+export const playback = {
+    audio: null,
+    masterGain: null,
+    saturator: null,
+    reverbNode: null,
+    chordsGain: null,
+    chordsReverb: null,
+    chordsEQ: null,
+    drumsReverb: null,
+    drumsGain: null,
+    bassReverb: null,
+    bassGain: null,
+    bassEQ: null,
+    soloistReverb: null,
+    soloistGain: null,
+    harmoniesReverb: null,
+    isPlaying: false,
+    bpm: 100,
+    nextNoteTime: 0.0,
+    unswungNextNoteTime: 0.0,
+    scheduleAheadTime: 0.2,
+    step: 0, 
+    drawQueue: [],
+    isCountingIn: false,
+    countInBeat: 0,
+    isDrawing: false,
+    theme: 'auto',
+    wakeLock: null,
+    bandIntensity: 0.5,
+    complexity: 0.3,
+    autoIntensity: true,
+    metronome: false,
+    applyPresetSettings: false,
+    sustainActive: false,
+    sessionTimer: 5,
+    sessionStartTime: 0,
+    stopAtEnd: false,
+    isEndingPending: false,
+    intent: {
+        syncopation: 0.2,
+        anticipation: 0.1,
+        layBack: 0.0,
+        density: 0.5
+    },
+    lastActiveDrumElements: null,
+    lastPlayingStep: 0,
+    workerLogging: false,
+    viz: null,
+    suspendTimeout: null,
+    conductorVelocity: 1.0,
+    masterLimiter: null,
+    masterVolume: 0.4
+};
+
+export function playbackReducer(action, payload) {
+    switch (action) {
+        case ACTIONS.SET_BAND_INTENSITY:
+            playback.bandIntensity = Math.max(0, Math.min(1, payload));
+            return true;
+        case ACTIONS.SET_COMPLEXITY:
+            playback.complexity = Math.max(0, Math.min(1, payload));
+            return true;
+        case ACTIONS.SET_AUTO_INTENSITY:
+            playback.autoIntensity = !!payload;
+            return true;
+        case ACTIONS.SET_METRONOME:
+            playback.metronome = payload;
+            return true;
+        case ACTIONS.SET_PRESET_SETTINGS_MODE:
+            playback.applyPresetSettings = payload;
+            return true;
+        case ACTIONS.SET_SESSION_TIMER:
+            playback.sessionTimer = payload;
+            return true;
+        case ACTIONS.SET_STOP_AT_END:
+            playback.stopAtEnd = payload;
+            return true;
+        case ACTIONS.SET_ENDING_PENDING:
+            playback.isEndingPending = payload;
+            return true;
+        case ACTIONS.TRIGGER_EMERGENCY_LOOKAHEAD:
+            if (playback.scheduleAheadTime < 0.4) {
+                playback.scheduleAheadTime *= 2.0;
+                console.warn(`[Performance] Emergency Lookahead Triggered: ${playback.scheduleAheadTime}s`);
+                setTimeout(() => {
+                    playback.scheduleAheadTime = 0.2;
+                    console.log("[Performance] Lookahead reset to normal.");
+                }, 10000);
+            }
+            return true;
+        case ACTIONS.UPDATE_CONDUCTOR_DECISION:
+            if (payload.velocity) playback.conductorVelocity = payload.velocity;
+            if (payload.intent) Object.assign(playback.intent, payload.intent);
+            // Note: density is handled by instrument reducer
+            break;
+    }
+    return false;
+}

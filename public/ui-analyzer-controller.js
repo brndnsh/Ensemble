@@ -1,14 +1,46 @@
-import { ui, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
+import { ui as globalUI, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
 import { arranger, playback } from './state.js';
 import { initAudio } from './engine.js';
 import { generateId, normalizeKey, escapeHTML, formatUnicodeSymbols } from './utils.js';
 import { refreshArrangerUI } from './arranger-controller.js';
 import { ModalManager } from './ui-modal-controller.js';
-import { pushHistory } from './history.js';
 
 /**
- * Initializes event handlers for the Audio Analyzer and Live Listen features.
+ * Domain-specific UI registry for the Analyzer.
+ * This makes the required DOM elements explicit and searchable for agents.
  */
+const ui = {
+    get analyzerOverlay() { return globalUI.analyzerOverlay; },
+    get analyzerDropZone() { return globalUI.analyzerDropZone; },
+    get analyzerFileInput() { return globalUI.analyzerFileInput; },
+    get liveListenContainer() { return globalUI.liveListenContainer; },
+    get analyzerTrimView() { return globalUI.analyzerTrimView; },
+    get analyzerProcessing() { return globalUI.analyzerProcessing; },
+    get analyzerResults() { return globalUI.analyzerResults; },
+    get analyzerProgressBar() { return globalUI.analyzerProgressBar; },
+    get analyzerWaveformCanvas() { return globalUI.analyzerWaveformCanvas; },
+    get analyzerStartInput() { return globalUI.analyzerStartInput; },
+    get analyzerEndInput() { return globalUI.analyzerEndInput; },
+    get analyzerSelectionOverlay() { return globalUI.analyzerSelectionOverlay; },
+    get analyzerDurationLabel() { return globalUI.analyzerDurationLabel; },
+    get bpmChips() { return globalUI.bpmChips; },
+    get suggestedSectionsContainer() { return globalUI.suggestedSectionsContainer; },
+    get analyzerSummary() { return globalUI.analyzerSummary; },
+    get detectedBpmLabel() { return globalUI.detectedBpmLabel; },
+    get analyzerSyncBpmCheck() { return globalUI.analyzerSyncBpmCheck; },
+    get liveListenBtn() { return globalUI.liveListenBtn; },
+    get stopLiveListenBtn() { return globalUI.stopLiveListenBtn; },
+    get liveListenView() { return globalUI.liveListenView; },
+    get liveChordDisplay() { return globalUI.liveChordDisplay; },
+    get captureLiveHistoryBtn() { return globalUI.captureLiveHistoryBtn; },
+    get startAnalysisBtn() { return globalUI.startAnalysisBtn; },
+    get applyAnalysisBtn() { return globalUI.applyAnalysisBtn; },
+    get liveKeyLabel() { return globalUI.liveKeyLabel; },
+    get liveForceKeyCheck() { return globalUI.liveForceKeyCheck; },
+    get analyzerCurrentKeyLabel() { return globalUI.analyzerCurrentKeyLabel; },
+    get analyzerForceKeyCheck() { return globalUI.analyzerForceKeyCheck; }
+};
+
 export function setupAnalyzerHandlers() {
     if (!ui.analyzeAudioBtn) {
         console.warn("[Analyzer] analyzeAudioBtn not found in UI registry.");

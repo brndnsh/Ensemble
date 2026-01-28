@@ -1,10 +1,46 @@
-import { ui, showToast } from './ui.js';
+import { ui as globalUI, showToast } from './ui.js';
 import { playback, midi as midiState, dispatch, subscribe } from './state.js';
 import { ACTIONS } from './types.js';
 import { saveCurrentState } from './persistence.js';
 import { applyTheme } from './app-controller.js';
 import { initMIDI, panic } from './midi-controller.js';
 import { restoreGains } from './engine.js';
+
+/**
+ * Domain-specific UI registry for Settings.
+ */
+const ui = {
+    get themeSelect() { return globalUI.themeSelect; },
+    get haptic() { return globalUI.haptic; },
+    get applyPresetSettings() { return globalUI.applyPresetSettings; },
+    get sessionTimerCheck() { return globalUI.sessionTimerCheck; },
+    get sessionTimerInput() { return globalUI.sessionTimerInput; },
+    get sessionTimerDurationContainer() { return globalUI.sessionTimerDurationContainer; },
+    get sessionTimerStepper() { return globalUI.sessionTimerStepper; },
+    get sessionTimerDec() { return globalUI.sessionTimerDec; },
+    get sessionTimerInc() { return globalUI.sessionTimerInc; },
+    get midiEnableCheck() { return globalUI.midiEnableCheck; },
+    get midiMuteLocalCheck() { return globalUI.midiMuteLocalCheck; },
+    get midiOutputSelect() { return globalUI.midiOutputSelect; },
+    get midiLatencySlider() { return globalUI.midiLatencySlider; },
+    get midiLatencyValue() { return globalUI.midiLatencyValue; },
+    get midiVelocitySlider() { return globalUI.midiVelocitySlider; },
+    get midiVelocityValue() { return globalUI.midiVelocityValue; },
+    get midiControls() { return globalUI.midiControls; },
+    // Helper for dynamic channels
+    get midiChordsChannel() { return globalUI.midiChordsChannel; },
+    get midiBassChannel() { return globalUI.midiBassChannel; },
+    get midiSoloistChannel() { return globalUI.midiSoloistChannel; },
+    get midiHarmonyChannel() { return globalUI.midiHarmonyChannel; },
+    get midiDrumsChannel() { return globalUI.midiDrumsChannel; },
+    get midiChordsOctave() { return globalUI.midiChordsOctave; },
+    get midiBassOctave() { return globalUI.midiBassOctave; },
+    get midiSoloistOctave() { return globalUI.midiSoloistOctave; },
+    get midiHarmonyOctave() { return globalUI.midiHarmonyOctave; },
+    get midiDrumsOctave() { return globalUI.midiDrumsOctave; },
+    // Indexer for bulk iteration
+    get(id) { return globalUI[id]; }
+};
 
 /**
  * Initializes general settings handlers (Theme, Timer, Haptic).
@@ -125,7 +161,7 @@ export function setupMIDIHandlers() {
 
     const channels = ['Chords', 'Bass', 'Soloist', 'Harmony', 'Drums'];
     channels.forEach(ch => {
-        const el = ui[`midi${ch}Channel`];
+        const el = ui.get(`midi${ch}Channel`);
         if (el) {
             el.addEventListener('change', (e) => {
                 const val = parseInt(e.target.value);
@@ -134,7 +170,7 @@ export function setupMIDIHandlers() {
             });
         }
         
-        const octEl = ui[`midi${ch}Octave`];
+        const octEl = ui.get(`midi${ch}Octave`);
         if (octEl) {
             octEl.addEventListener('change', (e) => {
                 const val = parseInt(e.target.value);

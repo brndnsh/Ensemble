@@ -1,7 +1,24 @@
-import { ui } from './ui.js';
+import { ui as globalUI } from './ui.js';
 import { playback, chords, bass, soloist, harmony, groove } from './state.js';
 import { saveCurrentState } from './persistence.js';
 import { MIXER_GAIN_MULTIPLIERS } from './config.js';
+
+/**
+ * Domain-specific UI registry for the Mixer.
+ */
+const ui = {
+    get chordVol() { return globalUI.chordVol; },
+    get bassVol() { return globalUI.bassVol; },
+    get soloistVol() { return globalUI.soloistVol; },
+    get harmonyVol() { return globalUI.harmonyVol; },
+    get drumVol() { return globalUI.drumVol; },
+    get masterVol() { return globalUI.masterVol; },
+    get chordReverb() { return globalUI.chordReverb; },
+    get bassReverb() { return globalUI.bassReverb; },
+    get soloistReverb() { return globalUI.soloistReverb; },
+    get harmonyReverb() { return globalUI.harmonyReverb; },
+    get drumReverb() { return globalUI.drumReverb; }
+};
 
 /**
  * Initializes event handlers for mixer controls (Volume, Reverb).

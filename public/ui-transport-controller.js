@@ -1,9 +1,20 @@
-import { ui } from './ui.js';
+import { ui as globalUI } from './ui.js';
 import { dispatch } from './state.js';
 import { ACTIONS } from './types.js';
 import { setBpm } from './app-controller.js';
 import { handleTap } from './instrument-controller.js';
 import { saveCurrentState } from './persistence.js';
+
+/**
+ * Domain-specific UI registry for Transport.
+ */
+const ui = {
+    get playBtn() { return globalUI.playBtn; },
+    get bpmInput() { return globalUI.bpmInput; },
+    get tapBtn() { return globalUI.tapBtn; },
+    get swingSlider() { return globalUI.swingSlider; },
+    get swingBase() { return globalUI.swingBase; }
+};
 
 /**
  * Initializes event handlers for transport controls (Play, BPM, Swing).

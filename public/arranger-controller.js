@@ -1,5 +1,5 @@
 import { arranger } from './state.js';
-import { ui, renderSections, renderChordVisualizer, showToast, updateKeySelectLabels } from './ui.js';
+import { ui, renderSections, renderChordVisualizer, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
 import { restoreGains } from './engine.js';
