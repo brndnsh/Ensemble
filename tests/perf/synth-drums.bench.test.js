@@ -48,7 +48,7 @@ vi.mock('../../public/state.js', () => {
             connect: () => {},
             type: 'lowpass'
         }),
-        createBuffer: (channels, length, rate) => ({
+        createBuffer: (channels, length) => ({
             getChannelData: () => new Float32Array(length)
         })
     };
