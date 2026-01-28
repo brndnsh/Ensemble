@@ -376,9 +376,10 @@ export class ChordAnalyzerLite {
     /**
      * Extracts the single strongest note per beat from the audio.
      * Used for the "Harmonize Melody" feature.
+     * Includes Diatonic Gravity to favor notes within the detected key.
      * @returns {Promise<Array<{beat: number, midi: number, energy: number}>>}
      */
-    async extractMelody(audioBuffer, pulseData) {
+    async extractMelody(audioBuffer, pulseData, options = {}) {
         const signal = audioBuffer.getChannelData(0);
         const sampleRate = audioBuffer.sampleRate;
         const bpm = pulseData.bpm;
@@ -392,6 +393,13 @@ export class ChordAnalyzerLite {
         const workingSignal = signal.subarray(startSample);
         const beats = Math.floor(workingSignal.length / samplesPerBeat);
         const melodyLine = [];
+
+        // Key Bias logic
+        const keyBias = options.keyBias || null;
+        let scale = null;
+        if (keyBias) {
+            scale = keyBias.type === 'minor' ? MINOR_DIATONIC : MAJOR_DIATONIC;
+        }
 
         // We focus on the vocal range: C3 (48) to C6 (84)
         const minMidi = 48;
@@ -412,11 +420,9 @@ export class ChordAnalyzerLite {
             }
 
             // Find strongest frequency in vocal range
-            let maxEnergy = 0;
+            let maxScore = -1;
             let bestMidi = -1;
 
-            // Optimization: Use loop bounds for vocal range (48-84)
-            // pitchFrequencies starts at MIDI 24.
             const startIdx = Math.max(0, minMidi - 24);
             const endIdx = Math.min(this.pitchFrequencies.length, maxMidi - 24 + 1);
 
@@ -427,14 +433,11 @@ export class ChordAnalyzerLite {
                 let imag = 0;
                 const angleStep = (2 * Math.PI * p.freq) / sampleRate;
 
-                // Simple Goertzel-like accumulation for specific frequency
-                // We decimate by 4 for speed, as we just need coarse pitch detection
-                // Optimized with trigonometric recurrence to avoid Math.cos/sin calls
                 const delta = 4 * angleStep;
                 const cosDelta = Math.cos(delta);
                 const sinDelta = Math.sin(delta);
-                let c = 1.0; // cos(0)
-                let s = 0.0; // sin(0)
+                let c = 1.0; 
+                let s = 0.0; 
 
                 for (let i = 0; i < window.length; i += 4) {
                     const val = window[i];
@@ -448,14 +451,24 @@ export class ChordAnalyzerLite {
                 }
 
                 const energy = (real * real + imag * imag);
-                if (energy > maxEnergy) {
-                    maxEnergy = energy;
+                
+                // --- Diatonic Gravity ---
+                let score = energy;
+                if (scale) {
+                    const relativePitch = (p.midi - keyBias.root + 12) % 12;
+                    if (scale.includes(relativePitch)) {
+                        score *= 1.35; // 30% boost for notes in the detected key
+                    }
+                }
+
+                if (score > maxScore) {
+                    maxScore = score;
                     bestMidi = p.midi;
                 }
             }
 
-            // Normalize energy score
-            const normalizedEnergy = Math.min(1.0, maxEnergy / 100); // Arbitrary scaling based on testing
+            // Normalize energy score using the raw energy of the winner
+            const normalizedEnergy = Math.min(1.0, maxScore / 130); 
             
             melodyLine.push({ 
                 beat: b, 

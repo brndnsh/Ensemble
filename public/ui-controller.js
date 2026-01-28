@@ -1059,7 +1059,7 @@ export function setupAnalyzerHandlers() {
 
         try {
             const { ChordAnalyzerLite } = await import('./audio-analyzer-lite.js');
-            const { extractForm } = await import('./form-extractor.js');
+            const { extractForm, extractMelodyForm } = await import('./form-extractor.js');
             const analyzer = new ChordAnalyzerLite();
 
             const startTime = parseFloat(ui.analyzerStartInput.value) || 0;
@@ -1068,7 +1068,7 @@ export function setupAnalyzerHandlers() {
             // Common Pulse Analysis
             const pulse = await analyzer.identifyPulse(currentAudioBuffer, {
                 startTime, endTime, bpm: targetBpm, 
-                onProgress: (pct) => ui.analyzerProgressBar.style.width = `${pct * 0.5}%` 
+                onProgress: (pct) => ui.analyzerProgressBar.style.width = `${pct * 0.4}%` 
             });
 
             const bpm = pulse.bpm;
@@ -1077,42 +1077,41 @@ export function setupAnalyzerHandlers() {
                 const { Harmonizer } = await import('./melody-harmonizer.js');
                 const { HarmonizerTrainer } = await import('./harmonizer-trainer.js');
                 
+                // --- Key Detection (Pre-pass for Melody Bias) ---
+                const signal = currentAudioBuffer.getChannelData(0);
+                const globalChroma = analyzer.calculateChromagram(signal, currentAudioBuffer.sampleRate, {
+                        minMidi: 48, maxMidi: 84, skipSharpening: true, step: Math.max(4, Math.floor(signal.length / 500000))
+                });
+                const detectedKeyObj = analyzer.identifyGlobalKey(globalChroma);
+                const rootName = analyzer.notes[detectedKeyObj.root];
+                const key = rootName + (detectedKeyObj.type === 'minor' ? 'm' : '');
+
+                // Update UI Key if force key is off
+                if (ui.analyzerForceKeyCheck && !ui.analyzerForceKeyCheck.checked) {
+                    if (ui.keySelect && key !== arranger.key) {
+                        ui.keySelect.value = normalizeKey(key);
+                        arranger.key = key;
+                        updateKeySelectLabels();
+                        updateRelKeyButton();
+                    }
+                }
+
                 const harmonizer = new Harmonizer();
                 
                 // 1. Train the engine on current Band logic
                 const kb = await HarmonizerTrainer.train();
                 harmonizer.setKnowledgeBase(kb);
                 
-                // 2. Extract melody and generate
-                const melodyLine = await analyzer.extractMelody(currentAudioBuffer, pulse);
-                ui.analyzerProgressBar.style.width = '80%';
-                
-                // Key Detection
-                let key = arranger.key || 'C';
-                if (ui.analyzerForceKeyCheck && !ui.analyzerForceKeyCheck.checked) {
-                    // Use the already calculated globalChroma from step 1 logic?
-                    // Wait, performAnalysis doesn't do globalChroma yet here. We need to calculate it.
-                    // We can reuse the buffers or just do a quick one.
-                    // Actually, audio-analyzer-lite calculateChromagram is fast.
-                    const signal = currentAudioBuffer.getChannelData(0);
-                    const globalChroma = analyzer.calculateChromagram(signal, currentAudioBuffer.sampleRate, {
-                         minMidi: 48, maxMidi: 84, skipSharpening: true, step: Math.max(4, Math.floor(signal.length / 500000))
-                    });
-                    const detectedKeyObj = analyzer.identifyGlobalKey(globalChroma);
-                    const rootName = analyzer.notes[detectedKeyObj.root];
-                    key = rootName + (detectedKeyObj.type === 'minor' ? 'm' : '');
+                // 2. Extract melody with Key Bias
+                let melodyLine = await analyzer.extractMelody(currentAudioBuffer, pulse, {
+                    keyBias: detectedKeyObj
+                });
 
-                    // Update Global Key
-                    if (ui.keySelect && key !== arranger.key) {
-                        ui.keySelect.value = normalizeKey(key);
-                        // If exact match not found (enharmonics), try best effort or just set arranger.key directly
-                        // But setting ui.keySelect.value triggers change event which updates state.
-                        // Let's force update state to be safe.
-                        arranger.key = key;
-                        updateKeySelectLabels();
-                        updateRelKeyButton();
-                    }
-                }
+                // 2.5 Heal Melody (Top-Down structural check)
+                const beatsPerMeasure = pulse.beatsPerMeasure || 4;
+                melodyLine = extractMelodyForm(melodyLine, beatsPerMeasure);
+
+                ui.analyzerProgressBar.style.width = '80%';
 
                 const options = harmonizer.generateOptions(melodyLine, key);
                 
