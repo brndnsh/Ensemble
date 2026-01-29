@@ -404,6 +404,7 @@ function GenreSelector() {
                         <button 
                             key={genre}
                             className={`genre-btn ${isActive ? 'active' : ''} ${isPending ? 'pending' : ''}`}
+                            data-genre={genre}
                             onClick={() => handleGenreClick(genre)}
                             aria-pressed={isActive ? 'true' : 'false'}
                         >
