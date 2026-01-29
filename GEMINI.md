@@ -4,27 +4,18 @@ Ensemble is a high-performance Progressive Web App (PWA) designed for generative
 
 ## Project Overview
 
-*   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`, `midi`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `harmonies`, `fills`). Core logic is modularized into high-precision scheduling (`scheduler-core.js`), visual rendering (`visualizer.js`), and decentralized synthesis (`synth-*.js`). UI logic is componentized into specialized renderers (`ui-chord-visualizer.js`, `ui-sequencer-grid.js`). UI-specific transient state and DOM caches are decoupled from the reactive state and stored in `ui-store.js`. Section-level error catching in `chords.js` ensures robust arrangement parsing.
-...
-*   `ui-controller.js` / `ui.js`: Bridges DOM events with back-end logic and handles complex rendering.
-*   `ui.js` exports an explicit `ui` object with getters for DOM elements, replacing the previous `Proxy` implementation.
-*   `ui-chord-visualizer.js`: Dedicated renderer for the dynamic chord chart and section blocks.
-*   `ui-sequencer-grid.js`: Specialized logic for the drum sequencer interface and step recycling.
+*   **Architecture**: Modular ES6 architecture with domain-specific controllers (`app`, `arranger`, `instrument`, `ui`, `midi`) and specialized musical engines (`bass`, `soloist`, `accompaniment`, `harmonies`, `fills`). Core logic is modularized into high-precision scheduling (`scheduler-core.js`), visual rendering (`visualizer.js`), and decentralized synthesis (`synth-*.js`).
+*   **UI Layer**: **Preact (v10)** Component-Based Architecture. Logic is decentralized into functional components within `public/components/`.
+*   **State Bridge**: `public/ui-bridge.js` exports `useEnsembleState` for reactive component updates. It uses a `version` counter to force re-renders since the underlying engine state is mutated via `Object.assign`.
+*   **Initialization**: `public/main.js` orchestrates hydration, worker setup, and root mounting (`ui-root.jsx`). Hydration and parsing MUST happen before mounting to prevent stale UI state.
+*   `ui-controller.js`: Orchestrates top-level legacy events and bridges components with non-reactive DOM elements.
+*   `ui.js`: Exports a registry of DOM elements used by secondary controllers and legacy logic.
 *   `types.js`: Centralized `ACTIONS` constants for the state dispatch system.
 ...
-*   **State Access**: Read state through the exported objects (`playback`, `arranger`, `groove`, `chords`, `bass`, `soloist`, `harmony`). **NEVER** modify these objects directly. Use `dispatch(ACTIONS.ACTION_TYPE, payload)` from `state.js` using constants from `types.js` to trigger updates.
-*   **Precision Timing**: Use `playback.audio.currentTime` for all audio scheduling. Visual events should be pushed to `playback.drawQueue` for synchronization in the `requestAnimationFrame` loop. Always snap `playback.nextNoteTime` to `playback.unswungNextNoteTime` at measure boundaries to prevent drift accumulation.
-*   **Worker Sync**: When refreshing the engine state, use `syncWorker(action, payload)` for delta-based updates or a full sync before `flushBuffers()`. Monitor **Logic Latency** via `performance.now()` in worker messages. See `public/WORKER_CONTRACT.md` for the message schema.
-*   **Atomic Transitions**: When implementing state changes that affect rhythmic feel (swing, subdivisions), perform the update at the *start* of the scheduling loop for Step 0. This prevents lookahead logic from queuing notes using stale state.
-*   **Mobile First**: Prioritize performance and touch-target sizes for mobile devices. Prefer simplified visuals over complex effects if they cause lag on low-end hardware.
-
-## Gemini Specific Instructions
-
-*   When modifying musical logic, refer to `config.js` for constants regarding scales, intervals, and drum presets.
-*   Ensure all new features respect the `bandIntensity` and `complexity` signals from the conductor.
-*   Always maintain JSDoc comments in `state.js` when updating the state schema.
-*   **Intensity Mapping**: Link features to `playback.bandIntensity` for dynamic response (e.g., filter cutoffs, pattern density).
-*   **Buffer Integrity**: During a `flush` operation (e.g., genre switch), explicitly clear the client-side instrument buffers (`chords.buffer`, `bass.buffer`, `soloist.buffer`, `harmony.buffer`) to prevent stale patterns from playing.
+*   **State Access**: Read state through the `useEnsembleState` hook in components, or the exported state objects in engine code. **NEVER** modify state objects directly in components. Use `dispatch(ACTIONS.ACTION_TYPE, payload)` from `state.js` using constants from `types.js` to trigger updates.
+*   **Precision Timing**: Use `playback.audio.currentTime` for all audio scheduling. Visual events should be pushed to `playback.drawQueue` for synchronization in `requestAnimationFrame` loop.
+*   **Worker Sync**: State updates that affect engine logic (genre, intensity, chords) are automatically synced to the worker via the `subscribe` mechanism in `main.js`. Use `syncWorker(action, payload)` for explicit delta-based updates.
+...
 *   **Atomic Commits**: STRICTLY avoid "kitchen sink" commits. Break tasks into granular steps:
     1.  **Refactor**: Clean up or restructure code *without* changing behavior. Commit.
     2.  **Implementation**: Add the new feature or fix the bug. Commit.
