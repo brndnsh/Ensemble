@@ -11,16 +11,15 @@ import { showToast } from '../ui.js';
 
 export function Settings() {
     const { 
-        theme, masterVolume, countIn, metronome, visualFlash, haptic, sessionTimer,
+        theme, countIn, metronome, visualFlash, haptic, sessionTimer,
         midiEnabled, midiMuteLocal, midiSelectedOutputId, midiOutputs,
         midiChannels, midiOctaves, midiLatency, midiVelocity
     } = useEnsembleState(state => ({
         theme: state.playback.theme,
-        masterVolume: state.playback.masterVolume, // Note: State doesn't explicitly track masterVolume in playback object in some versions, but let's assume it does or we read from gain. 
-        // Wait, ui-mixer-controller.js said: `state !== playback`. So playback HAS volume.
-        countIn: state.playback.countIn, // Assuming exist
-        metronome: state.playback.metronome, // Assuming exist
-        visualFlash: state.playback.visualFlash, // Assuming exist
+        // masterVolume removed from here
+        countIn: state.playback.countIn, 
+        metronome: state.playback.metronome, 
+        visualFlash: state.playback.visualFlash, 
         haptic: state.playback.haptic,
         sessionTimer: state.playback.sessionTimer,
         
@@ -46,14 +45,7 @@ export function Settings() {
         midiVelocity: state.midi.velocitySensitivity
     }));
     
-    // We need to fetch 'masterVolume' if it's not in state. 
-    // In `ui-mixer-controller.js`: `el: ui.masterVol, state: playback`.
-    // So playback.volume IS master volume?
-    // Let's check `state.js`.
-    // `playback` export usually has `isPlaying`, `bpm`. 
-    // `ui-mixer-controller` sets `playback.volume`. 
-    // So yes, `state.playback.volume` is master volume.
-    const actualMasterVolume = useEnsembleState(s => s.playback.volume);
+    const masterVolume = useEnsembleState(s => s.playback.masterVolume);
 
     const closeSettings = () => {
         const overlay = document.getElementById('settingsOverlay');
@@ -62,7 +54,7 @@ export function Settings() {
 
     const handleMasterVolume = (e) => {
         const val = parseFloat(e.target.value);
-        playback.volume = val;
+        playback.masterVolume = val;
         
         if (playback.masterGain && playback.audio) {
             const target = Math.max(0.0001, val * MIXER_GAIN_MULTIPLIERS.master);
@@ -108,6 +100,7 @@ export function Settings() {
                     <div style="margin-bottom: 1rem;">
                         <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Theme</label>
                         <select 
+                            id="themeSelect"
                             value={theme} 
                             onChange={(e) => {
                                 applyTheme(e.target.value);
@@ -130,11 +123,12 @@ export function Settings() {
                             <span>Master Volume</span>
                         </label>
                         <input 
+                            id="masterVolume"
                             type="range" 
                             min="0" 
                             max="1" 
                             step="0.05" 
-                            value={actualMasterVolume || 0.5} 
+                            value={masterVolume || 0.5} 
                             onInput={handleMasterVolume}
                             style="width: 100%;" 
                             aria-label="Master Volume"
@@ -143,7 +137,7 @@ export function Settings() {
 
                     <div style="margin-bottom: 1.5rem; display: flex; gap: 1.5rem; flex-wrap: wrap;">
                          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input type="checkbox" checked={haptic} onChange={(e) => {
+                            <input id="hapticCheck" type="checkbox" checked={haptic} onChange={(e) => {
                                 dispatch(ACTIONS.SET_PARAM, { module: 'playback', param: 'haptic', value: e.target.checked });
                                 saveCurrentState();
                             }} />
@@ -155,6 +149,7 @@ export function Settings() {
                          <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
                             <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 500;">
                                 <input 
+                                    id="sessionTimerCheck"
                                     type="checkbox" 
                                     checked={sessionTimer > 0} 
                                     onChange={(e) => {
@@ -166,7 +161,9 @@ export function Settings() {
                                 <span>Session Timer</span>
                             </label>
                             
-                            <div style={{
+                            <div 
+                                id="sessionTimerDurationContainer"
+                                style={{
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 gap: '0.5rem', 
@@ -174,7 +171,7 @@ export function Settings() {
                                 pointerEvents: sessionTimer > 0 ? 'auto' : 'none',
                                 transition: 'all 0.2s ease'
                             }}>
-                                <div class="stepper-control" style={{
+                                <div id="sessionTimerStepper" class="stepper-control" style={{
                                     display: 'flex', 
                                     alignItems: 'center', 
                                     background: 'var(--input-bg)', 
@@ -185,6 +182,7 @@ export function Settings() {
                                     backgroundColor: sessionTimer > 0 ? 'var(--card-bg)' : 'var(--input-bg)'
                                 }}>
                                     <button 
+                                        id="sessionTimerDec"
                                         class="stepper-btn" 
                                         style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem;"
                                         onClick={() => {
@@ -194,12 +192,14 @@ export function Settings() {
                                         }}
                                     >-</button>
                                     <input 
+                                        id="sessionTimerInput"
                                         type="number" 
                                         value={sessionTimer > 0 ? sessionTimer : 5} 
                                         readonly 
                                         style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;"
                                     />
                                     <button 
+                                        id="sessionTimerInc"
                                         class="stepper-btn" 
                                         style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem;"
                                         onClick={() => {
@@ -221,6 +221,7 @@ export function Settings() {
                     <div style="margin-bottom: 1rem;">
                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                             <input 
+                                id="midiEnableCheck"
                                 type="checkbox" 
                                 checked={midiEnabled} 
                                 onChange={handleMidiEnable}
@@ -229,7 +230,7 @@ export function Settings() {
                         </label>
                     </div>
 
-                    <div style={{
+                    <div id="midiControls" style={{
                         opacity: midiEnabled ? '1' : '0.5', 
                         pointerEvents: midiEnabled ? 'auto' : 'none', 
                         transition: 'opacity 0.2s'
@@ -237,6 +238,7 @@ export function Settings() {
                         <div style="margin-bottom: 1.5rem;">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                                 <input 
+                                    id="midiMuteLocalCheck"
                                     type="checkbox" 
                                     checked={midiMuteLocal} 
                                     onChange={(e) => {
@@ -252,6 +254,7 @@ export function Settings() {
                         <div style="margin-bottom: 1.5rem;">
                             <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Output Port</label>
                             <select 
+                                id="midiOutputSelect"
                                 value={midiSelectedOutputId || ''} 
                                 onChange={(e) => {
                                     dispatch(ACTIONS.SET_MIDI_CONFIG, { selectedOutputId: e.target.value });
@@ -273,6 +276,7 @@ export function Settings() {
                                     <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">{ch}</label>
                                     <div style="display: flex; gap: 0.25rem;">
                                         <input 
+                                            id={`midi${ch}Channel`}
                                             type="number" 
                                             min="1" max="16" 
                                             value={midiChannels[ch.toLowerCase()]} 
@@ -284,6 +288,7 @@ export function Settings() {
                                             title="Channel" 
                                         />
                                         <input 
+                                            id={`midi${ch}Octave`}
                                             type="number" 
                                             min="-2" max="2" 
                                             value={midiOctaves[ch.toLowerCase()]} 

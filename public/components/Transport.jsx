@@ -45,6 +45,7 @@ export function Transport() {
                 onClick={onTogglePlay}
             >
                 <span id="playBtnText">{isPlaying ? 'STOP' : 'START'}</span>
+                <span id="playBtnTimer" class="btn-timer" style="display: none;"></span>
             </button>
             
             <div class="control-group" id="bpmControlGroup">
