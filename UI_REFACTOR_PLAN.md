@@ -16,10 +16,10 @@ Transition the Ensemble UI from imperative DOM manipulation (`ui-controller.js`,
 - [x] **Mount Point**: Create a root entry point to mount components into the existing HTML structure.
 - [x] **Verification**: Ensure style switching works seamlessly between the component and the legacy engine.
 
-## Phase 2: Core Controls
-- [ ] **Transport Controls**: Play/Stop, BPM, Metronome (high frequency updates).
-- [ ] **Mixer Panel**: Volume sliders and mute toggles.
-- [ ] **Settings Modal**: Complex form state management.
+## Phase 2: Core Controls (Completed)
+- [x] **Transport Controls**: Play/Stop, BPM, Metronome (high frequency updates).
+- [x] **Mixer Panel**: Volume sliders and mute toggles (via InstrumentSettings components).
+- [x] **Settings Modal**: Complex form state management.
 
 ## Phase 3: The Arranger (Complex)
 - [ ] **Section List**: Drag-and-drop reordering, editing (replacing `renderSections`).
