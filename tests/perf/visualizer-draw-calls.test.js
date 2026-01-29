@@ -78,8 +78,17 @@ describe('UnifiedVisualizer Optimization Check', () => {
 
     visualizer.render(0.5, 120);
 
-    console.log(`Stroke calls: ${mockCtx.stroke.mock.calls.length}`);
-    console.log(`BeginPath calls: ${mockCtx.beginPath.mock.calls.length}`);
-    console.log(`FillRect calls: ${mockCtx.fillRect.mock.calls.length}`);
+    const strokeCalls = mockCtx.stroke.mock.calls.length;
+    const beginPathCalls = mockCtx.beginPath.mock.calls.length;
+    const fillRectCalls = mockCtx.fillRect.mock.calls.length;
+
+    console.log(`Stroke calls: ${strokeCalls}`);
+    console.log(`BeginPath calls: ${beginPathCalls}`);
+    console.log(`FillRect calls: ${fillRectCalls}`);
+
+    // Assert that draw calls are batched (should be much less than if we drew every note individually)
+    expect(strokeCalls).toBeLessThan(15);
+    expect(beginPathCalls).toBeLessThan(15);
+    expect(fillRectCalls).toBeLessThan(100);
   });
 });
