@@ -5,7 +5,7 @@ import { saveCurrentState } from './persistence.js';
 import { restoreGains } from './engine.js';
 import { syncWorker } from './worker-client.js';
 import { generateId, formatUnicodeSymbols } from './utils.js';
-import { CHORD_STYLES, SOLOIST_STYLES, BASS_STYLES, HARMONY_STYLES, DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES, SMART_GENRES } from './presets.js';
+import { DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES, SMART_GENRES } from './presets.js';
 import { mutateProgression } from './chords.js';
 import { setBpm } from './app-controller.js';
 import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, resetToDefaults, togglePower } from './instrument-controller.js';
@@ -16,9 +16,9 @@ import { triggerInstall } from './pwa.js';
 import { exportToMidi } from './midi-export.js';
 import { ModalManager } from './ui-modal-controller.js';
 import { applyConductor, updateBpmUI } from './conductor.js';
-import { initTransportHandlers } from './ui-transport-controller.js';
-import { initMixerHandlers } from './ui-mixer-controller.js';
-import { initSettingsHandlers, setupMIDIHandlers } from './ui-settings-controller.js';
+// import { initTransportHandlers } from './ui-transport-controller.js';
+// import { initMixerHandlers } from './ui-mixer-controller.js';
+// import { initSettingsHandlers, setupMIDIHandlers } from './ui-settings-controller.js';
 import { setupGenerateSongHandlers } from './ui-song-generator-controller.js';
 import { setupAnalyzerHandlers } from './ui-analyzer-controller.js';
 
@@ -147,9 +147,12 @@ export function setupUIHandlers(refs) {
         togglePlay, saveDrumPattern
     } = refs;
 
-    initTransportHandlers(refs);
-    initMixerHandlers();
-    initSettingsHandlers();
+    // --- UI REFACTOR PHASE 2: Legacy Handlers Disabled (Handled by Preact) ---
+    // initTransportHandlers(refs);
+    // initMixerHandlers();
+    // initSettingsHandlers();
+    // setupMIDIHandlers();
+    // -------------------------------------------------------------------------
     initArrangerHandlers();
 
     const openExportModal = () => {
@@ -644,7 +647,7 @@ export function setupUIHandlers(refs) {
     window.addEventListener('resize', () => { if (resizeTimeout) clearTimeout(resizeTimeout); resizeTimeout = setTimeout(() => recalculateScrollOffsets(), 150); });
 
     updateGroupingUI();
-    setupMIDIHandlers();
+    // setupMIDIHandlers();
     setupAnalyzerHandlers();
     setupGenerateSongHandlers();
 }
