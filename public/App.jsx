@@ -57,7 +57,7 @@ export function App() {
 function Header() {
     return (
         <header>
-            <h1>Ensemble <span style="font-size: 0.4em; color: var(--text-secondary); vertical-align: middle;">v{APP_VERSION}</span></h1>
+            <h1>Ensemble</h1>
             <Transport />
         </header>
     );
