@@ -1,0 +1,138 @@
+/**
+ * @vitest-environment happy-dom
+ */
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { h, render } from 'preact';
+import React from 'preact/compat';
+import { setupUIHandlers } from '../../public/ui-controller.js';
+import { ModalManager } from '../../public/ui-modal-controller.js';
+import { GenerateSongModal } from '../../public/components/GenerateSongModal.jsx';
+import { EditorModal } from '../../public/components/EditorModal.jsx';
+
+// Mock dependencies
+vi.mock('../../public/persistence.js', () => ({
+    saveCurrentState: vi.fn()
+}));
+vi.mock('../../public/app-controller.js', () => ({
+    setBpm: vi.fn()
+}));
+vi.mock('../../public/instrument-controller.js', () => ({
+    togglePower: vi.fn(),
+    switchMeasure: vi.fn(),
+    updateMeasures: vi.fn(),
+    cloneMeasure: vi.fn()
+}));
+vi.mock('../../public/ui-analyzer-controller.js', () => ({
+    setupAnalyzerHandlers: vi.fn()
+}));
+vi.mock('../../public/ui-song-generator-controller.js', () => ({
+    setupGenerateSongHandlers: vi.fn()
+}));
+
+describe('Song Generator Modal', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        ModalManager.activeModal = null;
+        document.body.classList.remove('modal-open');
+        
+        // Polyfill requestAnimationFrame for Preact
+        global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
+
+        document.body.innerHTML = `
+            <div id="modalContainer"></div>
+            <div id="editorContainer"></div>
+            
+            <div id="settingsOverlay" class="settings-overlay" aria-hidden="true"></div>
+            <div id="editorOverlay" class="settings-overlay" aria-hidden="true"></div>
+            <div id="exportOverlay" class="settings-overlay" aria-hidden="true"></div>
+            <div id="templatesOverlay" class="settings-overlay" aria-hidden="true"></div>
+            <div id="analyzerOverlay" class="modal-overlay" aria-hidden="true"></div>
+            <div id="arrangerActionTrigger"></div>
+            <div id="arrangerActionMenu"></div>
+            <button id="addSectionBtn"></button>
+            <button id="templatesBtn"></button>
+            <button id="undoBtn"></button>
+            <div id="analyzeAudioBtn"></div>
+            <button id="mutateBtn"></button>
+            <button id="clearProgBtn"></button>
+            <button id="saveBtn"></button>
+            <button id="saveDrumBtn"></button>
+            <button id="shareBtn"></button>
+            <button id="installAppBtn"></button>
+            <button id="refreshAppBtn"></button>
+            <button id="exportMidiBtn"></button>
+            <button id="settingsExportMidiBtn"></button>
+            <button id="confirmExportBtn"></button>
+            <input id="exportChordsCheck" type="checkbox">
+            <input id="exportBassCheck" type="checkbox">
+            <input id="exportSoloistCheck" type="checkbox">
+            <input id="exportHarmoniesCheck" type="checkbox">
+            <input id="exportDrumsCheck" type="checkbox">
+            <input id="exportDurationInput">
+            <button id="clearDrumsBtn"></button>
+            <select id="densitySelect"></select>
+            <select id="drumBarsSelect"></select>
+            <button id="cloneMeasureBtn"></button>
+            <button id="editArrangementBtn"></button>
+            <button id="settingsBtn"></button>
+            <button id="closeSettingsBtn"></button>
+            <button id="resetSettingsBtn"></button>
+            <input id="masterVolume">
+            <input id="bpmInput">
+            <input type="radio" name="analyzerMode" value="chords" checked>
+            <input type="radio" name="analyzerMode" value="melody">
+        `;
+        
+        render(<GenerateSongModal />, document.getElementById('modalContainer'));
+        render(<EditorModal />, document.getElementById('editorContainer'));
+        
+        setupUIHandlers({
+            togglePlay: vi.fn()
+        });
+    });
+
+    it('should be initially hidden', () => {
+        const modal = document.getElementById('generateSongOverlay');
+        expect(modal.classList.contains('active')).toBe(false);
+        expect(modal.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('should open when Random button is clicked', async () => {
+        const modal = document.getElementById('generateSongOverlay');
+        const btn = document.getElementById('randomizeBtn');
+        
+        btn.click();
+        
+        // Wait for Preact state update and ModalManager.open
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        expect(modal.classList.contains('active')).toBe(true);
+    });
+
+    it('should close when Cancel button is clicked', async () => {
+        const modal = document.getElementById('generateSongOverlay');
+        
+        // Open it first
+        document.getElementById('randomizeBtn').click();
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(modal.classList.contains('active')).toBe(true);
+        
+        const closeBtn = document.getElementById('closeGenerateSongBtn');
+        closeBtn.click();
+        await new Promise(resolve => setTimeout(resolve, 150));
+        expect(document.getElementById('generateSongOverlay').classList.contains('active')).toBe(false);
+    });
+    
+    it('should close when clicking outside the modal content', async () => {
+        const modal = document.getElementById('generateSongOverlay');
+        
+        document.getElementById('randomizeBtn').click();
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(modal.classList.contains('active')).toBe(true);
+        
+        // Click the overlay background (the div itself)
+        modal.click();
+        await new Promise(resolve => setTimeout(resolve, 150));
+        expect(document.getElementById('generateSongOverlay').classList.contains('active')).toBe(false);
+    });
+});
