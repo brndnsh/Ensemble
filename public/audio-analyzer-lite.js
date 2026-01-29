@@ -15,11 +15,11 @@ const CHORD_PROFILES = {
     'm':    { 0: 1.6, 3: 1.4, 7: 1.1 },
     '7':    { 0: 1.6, 4: 1.3, 7: 1.1, 10: 1.5 },
     'maj7': { 0: 1.6, 4: 1.3, 7: 1.1, 11: 1.2 },
-    'm7':   { 0: 1.6, 3: 1.3, 7: 1.1, 10: 1.2 },
+    'm7':   { 0: 2.0, 3: 1.4, 7: 1.1, 10: 1.3 },
     '6':    { 0: 1.6, 4: 1.4, 7: 1.1, 9: 1.2 },
     'm6':   { 0: 1.6, 3: 1.4, 7: 1.1, 9: 1.2 },
     'sus4': { 0: 1.6, 5: 1.4, 7: 1.1 },
-    'dim':  { 0: 1.6, 3: 1.3, 6: 1.3 }
+    'dim':  { 0: 1.7, 3: 1.4, 6: 1.4 }
 };
 const CHORD_PROFILE_ENTRIES = Object.entries(CHORD_PROFILES);
 
@@ -296,7 +296,8 @@ export class ChordAnalyzerLite {
             if (energy > 0.0001) {
                 chord = this.identifyChord(chroma, { 
                     keyBias: localKey,
-                    bassNote: this.getStrongestBassNote(bassChroma)
+                    bassNote: this.getStrongestBassNote(bassChroma),
+                    bassChroma: bassChroma
                 });
                 
                 // If it's a weak detection, maybe keep the last chord? 
@@ -964,8 +965,13 @@ export class ChordAnalyzerLite {
                     const chromaIdx = (root + i) % 12;
                     const val = chroma[chromaIdx];
                     if (profile[i]) {
-                        score += val * profile[i];
-                        if (val < 0.1) score -= 1.0; // Penalty for missing a required note
+                        let effectiveVal = val;
+                        if (val < 0.1 && options.bassChroma && options.bassChroma[chromaIdx] > 0.1) {
+                            effectiveVal = options.bassChroma[chromaIdx];
+                        }
+
+                        score += effectiveVal * profile[i];
+                        if (effectiveVal < 0.1) score -= 2.0; // Penalty for missing a required note
                     }
                     else score -= val * 0.5;
                 }
@@ -1022,10 +1028,15 @@ export class ChordAnalyzerLite {
             // Check if bass note is strong relative to total energy
             const totalEnergy = chroma.reduce((a, b) => a + b, 0);
             const bassIdx = this.notes.indexOf(options.bassNote);
-            const bassEnergy = chroma[bassIdx];
             
-            // Significant bass presence (at least 35% of total chromagram energy to avoid jitter in walking lines)
-            if (bassEnergy > totalEnergy * 0.35) {
+            let bassEnergy = chroma[bassIdx];
+            // If bassChroma is provided, use it to capture energy below the main analysis range (e.g. C1-B2)
+            if (options.bassChroma) {
+                bassEnergy = Math.max(bassEnergy, options.bassChroma[bassIdx]);
+            }
+            
+            // Significant bass presence (at least 12% of total chromagram energy to avoid jitter in walking lines)
+            if (bassEnergy > totalEnergy * 0.12) {
                 const root = bestChordData.root;
                 const interval = (bassIdx - root + 12) % 12;
                 // Only consider 3rd or 5th as stable inversions for this demo
