@@ -421,7 +421,7 @@ export function createPresetChip(name, onDelete, onSelect, extraClass = '') {
 
 export function updateActiveChordUI(index) {
     chords.lastActiveChordIndex = index;
-    const cards = UIStore.cachedCards;
+    const cards = document.querySelectorAll('.chord-card');
     cards.forEach((c, i) => c.classList.toggle('active', i === index));
     
     // --- 1. Arranger Scrolling ---
