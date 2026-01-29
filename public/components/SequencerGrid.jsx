@@ -72,7 +72,7 @@ export function SequencerGrid() {
 
                 if (step !== lastStep) {
                     const grid = document.getElementById('sequencerGrid');
-                    if (grid) {
+                    if (grid && grid.offsetParent !== null) {
                         if (lastStep !== -1) {
                             // Use efficient class toggling
                             const prev = grid.querySelectorAll(`.step[data-step-idx="${lastStep}"]`);

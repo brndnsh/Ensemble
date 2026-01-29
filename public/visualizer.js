@@ -416,10 +416,12 @@ export class UnifiedVisualizer {
         // 3. Melodic Tracks
         for (const name in this.tracks) {
             const track = this.tracks[name];
-            
-            // SPECIAL HANDLING: Drums
+            let activeX = -10, activeY = -10, isActive = false, activeColor = null;
+
+            // SPECIAL HANDLING: Drums (Batched)
             if (name === 'drums') {
                 ctx.fillStyle = track.resolvedColor || track.color;
+                ctx.beginPath();
                 for (const ev of track.history) {
                     const noteEnd = ev.time + (ev.duration || 0.1);
                     if (noteEnd < minTime) continue;
@@ -430,51 +432,25 @@ export class UnifiedVisualizer {
                     const intensity = ev.velocity || 1.0;
                     
                     // Render drum hits as diamonds or vertical diamonds
-                    ctx.beginPath();
                     ctx.moveTo(x, y - 6 * intensity);
                     ctx.lineTo(x + 4 * intensity, y);
                     ctx.lineTo(x, y + 6 * intensity);
                     ctx.lineTo(x - 4 * intensity, y);
-                    ctx.closePath();
-                    ctx.fill();
                 }
+                ctx.fill();
                 continue;
             }
 
             // Standard Melodic Tracks (Bass, Soloist, Harmony)
             const baseWidth = name === 'soloist' ? 4 : 5;
-            
-            // Resolve track color if it's a CSS variable
             let color = track.resolvedColor || track.color;
 
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             
-            let activeX = -10, activeY = -10, isActive = false, activeColor = null;
-
-            // First pass: Glow/outline for distinctness
+            // First pass: Glow/outline for distinctness (Batched)
             ctx.strokeStyle = outlineColor;
             ctx.lineWidth = baseWidth + 2;
-            ctx.beginPath();
-            for (const ev of track.history) {
-                const noteEnd = ev.time + (ev.duration || 0.25);
-                if (noteEnd < minTime) continue;
-                if (ev.time > currentTime) break;
-
-                const startT = Math.max(minTime, ev.time);
-                const endT = Math.min(currentTime, noteEnd);
-                const x1 = getX(startT);
-                const x2 = getX(endT);
-                const y = Math.round(getY(ev.midi)); // Absolute Y
-
-                if (y >= -10 && y <= h + 10) {
-                    ctx.moveTo(x1, y);
-                    ctx.lineTo(x2, y);
-                }
-            }
-            ctx.stroke();
-
-            // Second pass: Colored line
             ctx.beginPath();
             for (const ev of track.history) {
                 const noteEnd = ev.time + (ev.duration || 0.25);
@@ -488,26 +464,102 @@ export class UnifiedVisualizer {
                 const y = Math.round(getY(ev.midi));
 
                 if (y >= -10 && y <= h + 10) {
-                    // Context-aware coloring for soloist
-                    if (name === 'soloist' && ev.noteType) {
-                        if (ev.noteType === 'arp') ctx.strokeStyle = chordColors.fifth;
-                        else if (ev.noteType === 'target') ctx.strokeStyle = chordColors.root;
-                        else if (ev.noteType === 'altered') ctx.strokeStyle = chordColors.seventh;
-                        else ctx.strokeStyle = color;
-                    } else {
-                        ctx.strokeStyle = color;
-                    }
-
-                    ctx.beginPath();
                     ctx.moveTo(x1, y);
                     ctx.lineTo(x2, y);
-                    ctx.stroke();
-                    
-                    if (ev.time <= currentTime && noteEnd >= currentTime) {
-                        activeX = x2; activeY = y; isActive = true;
-                        activeColor = ctx.strokeStyle;
+                }
+            }
+            ctx.stroke();
+
+            // Second pass: Colored line (Batched)
+            ctx.lineWidth = baseWidth;
+            if (name === 'soloist') {
+                // For soloist, we need to batch by color category
+                const batches = {
+                    default: [],
+                    root: [],
+                    fifth: [],
+                    seventh: []
+                };
+
+                for (const ev of track.history) {
+                    const noteEnd = ev.time + (ev.duration || 0.25);
+                    if (noteEnd < minTime) continue;
+                    if (ev.time > currentTime) break;
+
+                    const startT = Math.max(minTime, ev.time);
+                    const endT = Math.min(currentTime, noteEnd);
+                    const x1 = getX(startT);
+                    const x2 = getX(endT);
+                    const y = Math.round(getY(ev.midi));
+
+                    if (y >= -10 && y <= h + 10) {
+                        if (ev.noteType === 'arp') batches.fifth.push([x1, y, x2]);
+                        else if (ev.noteType === 'target') batches.root.push([x1, y, x2]);
+                        else if (ev.noteType === 'altered') batches.seventh.push([x1, y, x2]);
+                        else batches.default.push([x1, y, x2]);
+
+                        if (ev.time <= currentTime && noteEnd >= currentTime) {
+                            activeX = x2; activeY = y; isActive = true;
+                            if (ev.noteType === 'arp') activeColor = chordColors.fifth;
+                            else if (ev.noteType === 'target') activeColor = chordColors.root;
+                            else if (ev.noteType === 'altered') activeColor = chordColors.seventh;
+                            else activeColor = color;
+                        }
                     }
                 }
+
+                // Render batches
+                if (batches.default.length) {
+                    ctx.strokeStyle = color;
+                    ctx.beginPath();
+                    for (const [x1, y, x2] of batches.default) { ctx.moveTo(x1, y); ctx.lineTo(x2, y); }
+                    ctx.stroke();
+                }
+                if (batches.root.length) {
+                    ctx.strokeStyle = chordColors.root;
+                    ctx.beginPath();
+                    for (const [x1, y, x2] of batches.root) { ctx.moveTo(x1, y); ctx.lineTo(x2, y); }
+                    ctx.stroke();
+                }
+                if (batches.fifth.length) {
+                    ctx.strokeStyle = chordColors.fifth;
+                    ctx.beginPath();
+                    for (const [x1, y, x2] of batches.fifth) { ctx.moveTo(x1, y); ctx.lineTo(x2, y); }
+                    ctx.stroke();
+                }
+                if (batches.seventh.length) {
+                    ctx.strokeStyle = chordColors.seventh;
+                    ctx.beginPath();
+                    for (const [x1, y, x2] of batches.seventh) { ctx.moveTo(x1, y); ctx.lineTo(x2, y); }
+                    ctx.stroke();
+                }
+
+            } else {
+                // Simple batch for non-soloist tracks
+                ctx.strokeStyle = color;
+                ctx.beginPath();
+                for (const ev of track.history) {
+                    const noteEnd = ev.time + (ev.duration || 0.25);
+                    if (noteEnd < minTime) continue;
+                    if (ev.time > currentTime) break;
+
+                    const startT = Math.max(minTime, ev.time);
+                    const endT = Math.min(currentTime, noteEnd);
+                    const x1 = getX(startT);
+                    const x2 = getX(endT);
+                    const y = Math.round(getY(ev.midi));
+
+                    if (y >= -10 && y <= h + 10) {
+                        ctx.moveTo(x1, y);
+                        ctx.lineTo(x2, y);
+                        
+                        if (ev.time <= currentTime && noteEnd >= currentTime) {
+                            activeX = x2; activeY = y; isActive = true;
+                            activeColor = color;
+                        }
+                    }
+                }
+                ctx.stroke();
             }
 
             if (isActive) {
