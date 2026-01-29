@@ -22,6 +22,9 @@ export function hydrateState() {
             complexity: savedState.complexity !== undefined ? savedState.complexity : 0.3,
             autoIntensity: savedState.autoIntensity !== undefined ? savedState.autoIntensity : true,
             metronome: savedState.metronome || false,
+            visualFlash: savedState.visualFlash !== undefined ? savedState.visualFlash : true,
+            haptic: savedState.haptic !== undefined ? savedState.haptic : true,
+            countIn: savedState.countIn !== undefined ? savedState.countIn : true,
             sessionTimer: savedState.sessionTimer !== undefined ? savedState.sessionTimer : 5,
             applyPresetSettings: savedState.applyPresetSettings !== undefined ? savedState.applyPresetSettings : false,
             stopAtEnd: false
