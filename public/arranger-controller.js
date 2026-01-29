@@ -1,5 +1,5 @@
 import { arranger } from './state.js';
-import { ui, renderChordVisualizer, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
+import { ui, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
 import { restoreGains } from './engine.js';
@@ -61,7 +61,7 @@ export function analyzeFormUI() {
 
 export function validateAndAnalyze() {
     validateProgression(() => {
-        renderChordVisualizer();
+        // renderChordVisualizer();
         analyzeFormUI();
     });
 }
