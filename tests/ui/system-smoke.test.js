@@ -216,7 +216,7 @@ describe('System Smoke Test (E2E Workflow)', () => {
             resume: vi.fn(),
             suspend: vi.fn(),
             createGain: () => ({ gain: { value: 1, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn() }),
-            createOscillator: () => ({ frequency: { value: 440 }, connect: vi.fn(), start: vi.fn(), stop: vi.fn() }),
+            createOscillator: () => ({ frequency: { value: 440, setValueAtTime: vi.fn() }, connect: vi.fn(), start: vi.fn(), stop: vi.fn() }),
             createBufferSource: () => ({ connect: vi.fn(), start: vi.fn(), stop: vi.fn() }),
             createBiquadFilter: () => ({ connect: vi.fn(), frequency: { value: 1000, setValueAtTime: vi.fn() }, Q: { value: 1 } })
         };

@@ -23,7 +23,10 @@ vi.mock('../../../public/state.js', async (importOriginal) => {
             currentKey: '',
             conductorVelocity: 1.0,
             bandIntensity: 0.5,
-            drawQueue: []
+            drawQueue: [],
+            visualFlash: false,
+            metronome: false,
+            countIn: false
         },
         groove: { genreFeel: 'Rock', instruments: [], humanize: 0, measures: 1 },
         midi: { enabled: false },

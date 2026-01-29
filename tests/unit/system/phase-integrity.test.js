@@ -17,7 +17,10 @@ vi.mock('../../../public/state.js', () => ({
         bpm: 120,
         conductorVelocity: 1.0,
         bandIntensity: 0.5,
-        masterGain: {}
+        masterGain: {},
+        visualFlash: true,
+        metronome: true,
+        countIn: true
     },
     groove: { 
         enabled: true, 

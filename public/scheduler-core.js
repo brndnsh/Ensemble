@@ -1,6 +1,6 @@
 import { ACTIONS } from './types.js';
 import { playback, groove, chords, bass, soloist, harmony, arranger, vizState, dispatch } from './state.js';
-import { ui, triggerFlash, clearActiveVisuals } from './ui.js';
+import { triggerFlash, clearActiveVisuals } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playHarmonyNote, killHarmonyNote, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
@@ -30,8 +30,6 @@ export function togglePlay(viz) {
     const activeViz = viz || playback.viz;
     if (playback.isPlaying) {
         playback.isPlaying = false;
-        ui.playBtnText.textContent = 'START';
-        ui.playBtn.classList.remove('playing');
         stopWorker();
         lockAudio();
         deactivateWakeLock();
@@ -43,7 +41,7 @@ export function togglePlay(viz) {
         panic(true); // Full MIDI reset
         sendMIDITransport('stop', playback.audio.currentTime);
         flushBuffers();
-        ui.sequencerGrid.scrollTo({ left: 0, behavior: 'smooth' });
+        
         if (playback.audio) {
             if (playback.suspendTimeout) clearTimeout(playback.suspendTimeout);
             playback.suspendTimeout = setTimeout(() => {
@@ -70,12 +68,10 @@ export function togglePlay(viz) {
         
         unlockAudio();
         restoreGains();
-        ui.playBtnText.textContent = 'STOP';
-        ui.playBtn.classList.add('playing');
         const startTime = playback.audio.currentTime + 0.1;
         playback.nextNoteTime = startTime;
         playback.unswungNextNoteTime = startTime;
-        playback.isCountingIn = ui.countIn.checked;
+        playback.isCountingIn = playback.countIn;
         playback.countInBeat = 0;
         activateWakeLock();
         if (activeViz) activeViz.setBeatReference(playback.nextNoteTime);
@@ -123,8 +119,7 @@ function scheduleResolution(time) {
     if (groove.enabled) scheduleDrumsFromBuffer(playback.step, time);
     
     // 2. Add a final flash
-    const visualFlashCheck = UIStore.get('visualFlash', '#visualFlashCheck');
-    if (visualFlashCheck && visualFlashCheck.checked && UIStore.triggerFlash) {
+    if (playback.visualFlash && UIStore.triggerFlash) {
         UIStore.triggerFlash(0.4);
     }
 
@@ -231,7 +226,7 @@ function advanceCountIn() {
 }
 
 function scheduleCountIn(beat, time) {
-     if (ui.visualFlash.checked) playback.drawQueue.push({ type: 'flash', time: time, intensity: 0.3, beat: 1 });
+     if (playback.visualFlash) playback.drawQueue.push({ type: 'flash', time: time, intensity: 0.3, beat: 1 });
      const osc = playback.audio.createOscillator();
      const gain = playback.audio.createGain();
      osc.connect(gain);
@@ -483,8 +478,7 @@ export function scheduleChordVisuals(chordData, t) {
     if (chordData.stepInChord === 0) {
         playback.drawQueue.push({ type: 'chord_vis', time: t, index: chordData.chordIndex, chordNotes: chordData.chord.freqs.map(f => getMidi(f)), rootMidi: chordData.chord.rootMidi, intervals: chordData.chord.intervals, duration: chordData.chord.beats * (60/playback.bpm) });
         
-        const visualFlashCheck = UIStore.get('visualFlash', '#visualFlashCheck');
-        if (visualFlashCheck && visualFlashCheck.checked && UIStore.triggerFlash) {
+        if (playback.visualFlash && UIStore.triggerFlash) {
             UIStore.triggerFlash(0.1);
         }
     }
@@ -617,7 +611,7 @@ export function scheduleGlobalEvent(step, swungTime) {
     const drumStep = step % (groove.measures * spm);
     const t = swungTime + (Math.random() - 0.5) * (groove.humanize / 100) * 0.025;
 
-    if (ui.metronome.checked && stepInfo.isBeatStart) {
+    if (playback.metronome && stepInfo.isBeatStart) {
         let freq = stepInfo.isMeasureStart ? 1000 : (stepInfo.isGroupStart ? 800 : 600);
         if (ts.beats === 4 && stepInfo.beatIndex === 2 && !stepInfo.isGroupStart) freq = 800;
 
@@ -639,7 +633,7 @@ export function scheduleGlobalEvent(step, swungTime) {
         const isQuarter = stepInfo.isBeatStart;
         const isBackbeat = (ts.beats === 4) ? (stepInfo.beatIndex === 1 || stepInfo.beatIndex === 3) : false;
 
-        if (stepInfo.isBeatStart && ui.visualFlash.checked) {
+        if (stepInfo.isBeatStart && playback.visualFlash) {
             playback.drawQueue.push({ 
                 type: 'flash', 
                 time: swungTime, 
