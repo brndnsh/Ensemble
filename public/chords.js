@@ -674,7 +674,7 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
                     }
 
                     // Only auto-diminished if it's a natural vii (no b or # prefix)
-                if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|°|aug|\+|ø|h|7b5)/)) {
+                    if (numeral.toLowerCase() === 'vii' && !accidental && !suffixPart.match(/(maj|min|m|dim|o|°|aug|\+|ø|h|7b5)/)) {
                         quality = 'halfdim';
                         is7th = true;
                     }

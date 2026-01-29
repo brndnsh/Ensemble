@@ -116,9 +116,9 @@ export function updateAutoConductor() {
         let newIntensity = playback.bandIntensity + ((playback.bandIntensity < conductorState.target) ? Math.abs(conductorState.stepSize) : -Math.abs(conductorState.stepSize)) * multiplier;
         newIntensity = Math.max(0.01, Math.min(1.0, newIntensity));
         
-    if (newIntensity !== playback.bandIntensity) {
-        dispatch(ACTIONS.SET_BAND_INTENSITY, newIntensity);
-    }
+        if (newIntensity !== playback.bandIntensity) {
+            dispatch(ACTIONS.SET_BAND_INTENSITY, newIntensity);
+        }
 
         applyConductor();
     }

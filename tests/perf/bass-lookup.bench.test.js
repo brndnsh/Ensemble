@@ -1,5 +1,5 @@
 
-import { describe, it, vi, expect } from 'vitest';
+import { describe, it, vi } from 'vitest';
 import { getBassNote } from '../../public/bass.js';
 
 const { mockArranger, stepMap, TOTAL_SECTIONS, STEPS_PER_SECTION } = vi.hoisted(() => {
