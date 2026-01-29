@@ -10,23 +10,21 @@ const localStateMap = { playback, chords, bass, soloist, harmony, groove, arrang
  * @returns {*} The selected state slice.
  */
 export function useEnsembleState(selector) {
-    // Initialize with current state
     const [slice, setSlice] = useState(() => selector(localStateMap));
 
     useEffect(() => {
-        const unsubscribe = subscribe((action, payload, updatedStateMap) => {
+        const update = (action, payload, updatedStateMap) => {
             const newSlice = selector(updatedStateMap);
-            
             setSlice(prev => {
-                // If the selector returns a primitive (string, number, boolean), strict equality is sufficient.
-                // If it returns an object, we rely on the reducer having created a new reference,
-                // OR we force an update if we know it's a mutation.
-                // Given the legacy mutable state, we might encounter issues where prev === newSlice even if content changed.
-                // For this refactor, we encourage selectors to return primitives or spread copies.
                 if (prev === newSlice) return prev;
                 return newSlice;
             });
-        });
+        };
+        
+        // Initial sync in case state changed between render and effect
+        update(null, null, localStateMap);
+
+        const unsubscribe = subscribe(update);
         return unsubscribe;
     }, [selector]);
 

@@ -1,3 +1,4 @@
+/** @jsx h */
 import { h } from 'preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
