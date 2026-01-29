@@ -70,9 +70,7 @@ export function ChordVisualizer() {
         sectionsState: s.arranger.sections
     }));
 
-    const visualizerRef = useRef(null);
     const isMaximized = document.body.classList.contains('chord-maximized');
-
     const ts = TIME_SIGNATURES[timeSignature] || TIME_SIGNATURES['4/4'];
 
     const groupedSections = useMemo(() => {
@@ -105,9 +103,14 @@ export function ChordVisualizer() {
     [groupedSections]);
 
     useEffect(() => {
-        if (isMaximized || !visualizerRef.current) return;
+        // Sync attributes to the parent container
+        const container = document.getElementById('chordVisualizer');
+        if (!container) return;
         
-        const container = visualizerRef.current;
+        container.dataset.totalMeasures = totalMeasures;
+
+        if (isMaximized) return;
+        
         const activeCard = container.querySelector('.chord-card.active');
         if (!activeCard) return;
 
@@ -122,27 +125,13 @@ export function ChordVisualizer() {
                 behavior: 'smooth'
             });
         }
-    }, [lastActiveChordIndex, isMaximized]);
-
-    let activeBlockContentId = null;
-    let pendingKeyLabel = null;
+    }, [lastActiveChordIndex, isMaximized, totalMeasures]);
 
     return (
-        <div 
-            className="display-area" 
-            id="chordVisualizer" 
-            ref={visualizerRef} 
-            aria-live="polite"
-            data-total-measures={totalMeasures}
-        >
+        <Fragment>
             {groupedSections.map((section, sIdx) => {
                 const sectionData = sectionsState.find(s => s.id === section.id);
                 const isSeamless = sectionData && sectionData.seamless;
-                
-                // Simplified seamless logic for Preact: 
-                // In legacy, it appended to the same DOM node. 
-                // Here, we can just render them as consecutive blocks or merge them.
-                // For layout, consecutive blocks with 'seamless' class might be easier.
                 
                 return (
                     <div 
@@ -179,6 +168,6 @@ export function ChordVisualizer() {
                     </div>
                 );
             })}
-        </div>
+        </Fragment>
     );
 }

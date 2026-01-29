@@ -1,5 +1,5 @@
 /** @jsx h */
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
 import { memo } from 'preact/compat';
 import { useState, useMemo, useEffect, useRef } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
@@ -75,8 +75,6 @@ export function SequencerGrid() {
         if (inst.steps[stepIdx] !== newType) {
             inst.steps[stepIdx] = newType;
             clearDrumPresetHighlight();
-            // Force update via bridge or local state if needed. 
-            // Since we mutate inst.steps directly (legacy pattern), we trigger a dummy action to notify listeners.
             import('../state.js').then(({ dispatch }) => dispatch('STEP_TOGGLE'));
         }
     };
@@ -94,7 +92,7 @@ export function SequencerGrid() {
     };
 
     return (
-        <div className="sequencer-grid" id="sequencerGrid" ref={gridRef} role="grid" aria-label="Drum Sequencer">
+        <Fragment>
             {instruments.map((inst, instIdx) => (
                 <div key={inst.name} className="track">
                     <div className="track-header">
@@ -145,6 +143,6 @@ export function SequencerGrid() {
                     })}
                 </div>
             </div>
-        </div>
+        </Fragment>
     );
 }
