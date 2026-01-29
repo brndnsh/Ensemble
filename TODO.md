@@ -83,6 +83,26 @@
 - [x] **Polyphonic Synthesis**: Create a high-performance polyphonic synth with genre-aware timbres and velocity-dependent articulation.
 - [x] **Dynamic Soaring Trend**: Implement melodic lift logic for Disco and Modern Pop genres.
 
+# Post-Preact Refactor Cleanup & Optimization
+
+- [ ] **Engine-UI Decoupling**:
+    - [ ] Move "Fill Active" visual feedback from `scheduler-core.js` (direct DOM color change) to the `GroovePanel` component using `groove.fillActive` state.
+    - [ ] Replace manual `.drum-preset-chip` class manipulation in `instrument-controller.js` with declarative state-based classes in `PresetLibrary.jsx`.
+    - [ ] Remove `initializePowerButtons()` and other legacy no-op bridges from `main.js` and `instrument-controller.js`.
+
+- [ ] **Dead Code & Legacy Shrapnel Removal**:
+    - [ ] Strip all commented-out legacy render calls (e.g., `renderGrid`, `renderSections`) from `main.js`, `arranger-controller.js`, and `instrument-controller.js`.
+    - [ ] Clean up `arranger-controller.js` to remove exported functions that are no longer called by the Preact UI.
+    - [ ] Remove unused `playBtnTimer` span from `Transport.jsx`.
+
+- [ ] **Performance & Reactivity Optimization**:
+    - [ ] **SequencerGrid Optimization**: Refactor the "playing" step indicator to avoid 1024 individual component subscriptions to `playback.step`. Consider using a single canvas overlay or a specialized subscription in the parent grid.
+    - [ ] **Transport Visuals**: Replace manual `classList` toggle for TAP button feedback with a state-driven animation class.
+    - [ ] **Style Consolidation**: Move remaining inline styles from `App.jsx` and modal components into `public/css/layout.css` or `public/css/components.css`.
+
+- [ ] **Standardization**:
+    - [ ] Consolidate theme-matching logic between `app-controller.js` and `manual-theme.js` to ensure perfect parity between the main app and the manual.
+
 ## Future Harmony Refinements
 
 - [ ] **Counter-Melody Expansion**: Implement a "Conversational" mode where harmonies play call-and-response melodies against the soloist.
