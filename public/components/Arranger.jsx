@@ -1,5 +1,5 @@
 /** @jsx h */
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { SectionCard } from './SectionCard.jsx';
@@ -30,7 +30,7 @@ export function Arranger() {
     if (!sections) return null;
 
     return (
-        <div className="section-list">
+        <Fragment>
             {sections.map((section, index) => (
                 <SectionCard 
                     key={section.id} 
@@ -39,6 +39,6 @@ export function Arranger() {
                     totalSections={sections.length} 
                 />
             ))}
-        </div>
+        </Fragment>
     );
 }
