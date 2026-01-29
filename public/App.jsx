@@ -369,23 +369,25 @@ function GenreSelector() {
     ];
 
     const handleGenreClick = (genre) => {
-        // Find existing logic in ui-controller.js or replicate here
-        // We'll dispatch the action that the legacy code did
         import('./presets.js').then(({ SMART_GENRES }) => {
             const config = SMART_GENRES[genre];
             if (config) {
-                dispatch(ACTIONS.SET_GENRE_FEEL, {
-                    genreName: genre,
-                    feel: config.feel,
-                    swing: config.swing,
-                    sub: config.sub,
-                    drum: config.drum,
-                    chord: config.chord,
-                    bass: config.bass,
-                    soloist: config.soloist
+                // Ensure state matches before dispatch
+                import('./state.js').then(({ groove }) => {
+                    Object.assign(groove, { lastSmartGenre: genre });
+                    dispatch(ACTIONS.SET_GENRE_FEEL, {
+                        genreName: genre,
+                        feel: config.feel,
+                        swing: config.swing,
+                        sub: config.sub,
+                        drum: config.drum,
+                        chord: config.chord,
+                        bass: config.bass,
+                        soloist: config.soloist
+                    });
+                    syncWorker();
+                    saveCurrentState();
                 });
-                syncWorker();
-                saveCurrentState();
             }
         });
     };
