@@ -15,6 +15,7 @@ This document outlines mandatory protocols for AI agents (Jules, Gemini, etc.) w
 
 *   **Run Tests BEFORE Committing:** Always run `npm test` after your changes.
     *   If tests fail, **diagnose** whether the Code is broken or the Test is outdated.
+*   **Test Globals Enabled:** The test environment (Vitest) is configured with `globals: true`. You can use `describe`, `it`, and `expect` without importing them.
 *   **Logic Changes require Test Updates:** If you intentionally improve logic (e.g., "Use Lydian instead of Major for Jazz"), you **MUST** update the test expectations to reflect this new behavior.
     *   *Do not* leave tests failing.
     *   *Do not* revert correct logic to satisfy an outdated test. Update the test.
@@ -31,6 +32,10 @@ This document outlines mandatory protocols for AI agents (Jules, Gemini, etc.) w
 
 *   **Respect State Boundaries:** State is decomposed into `public/state/`. Use the corresponding slice (e.g., `playback`, `arranger`, `instruments`) for reads.
 *   **Dispatch for Writes:** ALWAYS use `dispatch(ACTIONS.TYPE, payload)` for writes. Never modify state objects directly.
+*   **Hybrid Controller Pattern:**
+    *   **UI Reads:** Use `useEnsembleState` hook to read state reactively.
+    *   **Simple Writes:** Use `dispatch(ACTIONS.SET_PARAM, ...)` for simple value updates.
+    *   **Complex Actions:** For actions with audio side effects (e.g., `togglePlay`, `setBpm`), import the specific controller function (e.g., from `scheduler-core.js` or `app-controller.js`) instead of dispatching raw actions.
 
 ## 5. Final Verification
 *   **Linting:** Run `npm run lint` to catch unused imports or variables introduced during refactoring.
