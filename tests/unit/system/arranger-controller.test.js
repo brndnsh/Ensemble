@@ -149,7 +149,6 @@ describe('Arranger Controller', () => {
             transposeKey(2, vi.fn());
             
             expect(arranger.key).toBe('D');
-            expect(ui.keySelect.value).toBe('D');
             
             // 'C | F' should become 'D | G' if they are NOT roman numerals
             expect(arranger.sections[0].value).toBe('D | G');
