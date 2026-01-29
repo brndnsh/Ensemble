@@ -3,7 +3,6 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ui } from '../../public/ui.js';
 
 describe('Accessibility (A11y) & Interactive Integrity', () => {
     beforeEach(() => {
@@ -58,9 +57,9 @@ describe('Accessibility (A11y) & Interactive Integrity', () => {
     });
 
     it('should have critical interactive elements with accessible labels', () => {
-        expect(ui.playBtn.getAttribute('aria-label')).toBeDefined();
-        expect(ui.bpmInput.getAttribute('aria-label')).toBeDefined();
-        expect(ui.settingsBtn.getAttribute('aria-label')).toBeDefined();
+        expect(document.getElementById('playBtn').getAttribute('aria-label')).toBeDefined();
+        expect(document.getElementById('bpmInput').getAttribute('aria-label')).toBeDefined();
+        expect(document.getElementById('settingsBtn').getAttribute('aria-label')).toBeDefined();
     });
 
     it('should use aria-live for the chord visualizer to announce harmonic changes', () => {

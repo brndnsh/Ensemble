@@ -1,6 +1,5 @@
 import { playback, chords, bass, soloist, harmony, groove, arranger, subscribe } from './state.js';
 import { mountComponents } from './ui-root.jsx';
-import { renderMeasurePagination } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';
 import { validateProgression } from './chords.js';
@@ -8,7 +7,6 @@ import { hydrateState, loadFromUrl } from './state-hydration.js';
 import { setInstrumentControllerRefs, switchMeasure, getPowerConfig, initializePowerButtons, loadDrumPreset } from './instrument-controller.js';
 import { togglePlay, scheduler } from './scheduler-core.js';
 import { analyzeFormUI } from './arranger-controller.js';
-import { setupUIHandlers } from './ui-controller.js';
 import { syncWorker, initWorker } from './worker-client.js';
 import { initPWA } from './pwa.js';
 import { UnifiedVisualizer } from './visualizer.js';
@@ -87,19 +85,10 @@ function init() {
         setInstrumentControllerRefs(() => scheduler(), viz);
         // initSequencerHandlers();
         // renderGrid(); 
-        renderMeasurePagination(switchMeasure);
         
         const hasDrumPattern = groove.instruments.some(inst => inst.steps.some(s => s > 0));
         if (!hasDrumPattern) loadDrumPreset(groove.lastDrumPreset || 'Basic Rock');
         
-        setupUIHandlers({ 
-            togglePlay: () => togglePlay(viz), 
-            previewChord: window.previewChord, 
-            init, 
-            viz, 
-            POWER_CONFIG: getPowerConfig() 
-        });
-
         // renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         initializePowerButtons();
 
@@ -116,10 +105,6 @@ function init() {
         
         subscribe((action, payload) => syncWorker(action, payload));
         syncWorker(); 
-
-        document.querySelector('.app-main-layout').classList.add('loaded');
-        const versionEl = document.getElementById('appVersion'); 
-        if (versionEl) versionEl.textContent = `Ensemble v${APP_VERSION}`;
 
         // Start animation loop
         playback.isDrawing = true;

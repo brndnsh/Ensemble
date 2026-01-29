@@ -4,7 +4,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { h, render } from 'preact';
 import React from 'preact/compat';
-import { setupUIHandlers } from '../../public/ui-controller.js';
 import { ModalManager } from '../../public/ui-modal-controller.js';
 import { Settings } from '../../public/components/Settings.jsx';
 import { EditorModal } from '../../public/components/EditorModal.jsx';
@@ -56,7 +55,6 @@ describe('Modal Accessibility Focus', () => {
             <div id="settingsContainer"></div>
             <div id="editorContainer"></div>
             
-            <!-- Other required elements for ui-controller and components -->
             <div id="arrangerActionTrigger"></div>
             <div id="arrangerActionMenu"></div>
             <button id="addSectionBtn"></button>
@@ -101,10 +99,6 @@ describe('Modal Accessibility Focus', () => {
         // Use direct dispatch for editArrangementBtn to avoid complex listener issues in test
         document.getElementById('editArrangementBtn').addEventListener('click', () => {
             dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: true });
-        });
-
-        setupUIHandlers({
-            togglePlay: vi.fn()
         });
     });
 

@@ -5,7 +5,6 @@ import { ACTIONS } from '../types.js';
 import { CHORD_PRESETS, DRUM_PRESETS } from '../presets.js';
 import { formatUnicodeSymbols, generateId, decompressSections } from '../utils.js';
 import { loadDrumPreset, flushBuffers, switchMeasure } from '../instrument-controller.js';
-import { renderMeasurePagination } from '../ui.js';
 import { validateAndAnalyze } from '../arranger-controller.js';
 import { saveCurrentState } from '../persistence.js';
 import { setBpm } from '../app-controller.js';
@@ -83,7 +82,6 @@ export function PresetLibrary({ type }) {
                     if (item.measures) {
                         groove.measures = item.measures;
                         groove.currentMeasure = 0;
-                        renderMeasurePagination(switchMeasure);
                     }
                     item.pattern.forEach(savedInst => {
                         const inst = groove.instruments.find(i => i.name === savedInst.name);

@@ -8,7 +8,7 @@ import { arranger } from '../state.js';
 import { pushHistory } from '../history.js';
 import { generateId, formatUnicodeSymbols, normalizeKey } from '../utils.js';
 import { refreshArrangerUI, clearChordPresetHighlight, validateAndAnalyze, updateGroupingUI } from '../arranger-controller.js';
-import { showToast, ui } from '../ui.js';
+import { showToast } from '../ui.js';
 
 export function TemplatesModal() {
     const dispatch = useDispatch();
@@ -44,11 +44,9 @@ export function TemplatesModal() {
         const first = newSections[0];
         if (first.key) {
             arranger.key = first.key;
-            if (ui.keySelect) ui.keySelect.value = normalizeKey(first.key);
         }
         if (first.timeSignature) {
             arranger.timeSignature = first.timeSignature;
-            if (ui.timeSigSelect) ui.timeSigSelect.value = first.timeSignature;
             updateGroupingUI();
         }
 

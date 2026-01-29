@@ -1,5 +1,5 @@
 import { groove, arranger, playback, chords, bass, soloist, harmony, vizState, dispatch } from './state.js';
-import { ui, renderMeasurePagination, showToast } from './ui.js';
+import { showToast } from './ui.js';
 import { ACTIONS } from './types.js';
 import { DRUM_PRESETS } from './presets.js';
 import { saveCurrentState } from './persistence.js';
@@ -19,14 +19,12 @@ export function setInstrumentControllerRefs(scheduler, viz) {
 export function switchMeasure(idx) {
     if (groove.currentMeasure === idx) return;
     groove.currentMeasure = idx;
-    renderMeasurePagination(switchMeasure);
+    dispatch('MEASURE_SWITCH');
 }
 
 export function updateMeasures(val) {
     groove.measures = parseInt(val);
     if (groove.currentMeasure >= groove.measures) groove.currentMeasure = 0;
-    renderMeasurePagination(switchMeasure);
-    // renderGrid removed
     saveCurrentState();
 }
 
@@ -52,7 +50,6 @@ export function loadDrumPreset(name) {
         swingSub: p.sub || groove.swingSub
     });
     
-    renderMeasurePagination(switchMeasure);
     dispatch('DRUM_PRESET_LOADED');
 }
 
@@ -185,76 +182,48 @@ export function flushBuffer(type, primeSteps = 0) {
 }
 
 export function getPowerConfig() {
-    return {
-        chord: { state: chords, els: [ui.chordPowerBtn, ui.chordPowerBtnDesktop] },
-        groove: { state: groove, els: [ui.groovePowerBtn, ui.groovePowerBtnDesktop], cleanup: () => document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing')) },
-        bass: { state: bass, els: [ui.bassPowerBtn, ui.bassPowerBtnDesktop] },
-        soloist: { state: soloist, els: [ui.soloistPowerBtn, ui.soloistPowerBtnDesktop] },
-        harmony: { state: harmony, els: [ui.harmonyPowerBtn, ui.harmonyPowerBtnDesktop] },
-        viz: { 
-            state: vizState, 
-            els: [ui.vizPowerBtn], 
-            cleanup: () => { 
-                if (vizRef) vizRef.clear(); 
-                if (ui.vizPanel) ui.vizPanel.classList.add('collapsed');
-            },
-            onEnable: () => {
-                if (ui.vizPanel) ui.vizPanel.classList.remove('collapsed');
-            }
-        }
-    };
+    // Deprecated but kept for compatibility if needed by other modules
+    return {};
 }
 
 export function initializePowerButtons() {
-    const config = getPowerConfig();
-    Object.keys(config).forEach(type => {
-        const c = config[type];
-        c.els.forEach(el => {
-            if (el) el.classList.toggle('active', !!c.state.enabled);
-        });
-        
-        // Ensure panels match minimized state on load
-        if (type === 'viz') {
-            if (ui.vizPanel) ui.vizPanel.classList.toggle('collapsed', !c.state.enabled);
-        }
-    });
+    // Deprecated: Buttons are managed by Preact
 }
 
 export function togglePower(type) {
-    const config = getPowerConfig();
-    
-    // Normalize type for lookup (chords -> chord, harmonies -> harmony)
     const normalizedType = type === 'chords' ? 'chord' : (type === 'harmonies' ? 'harmony' : type);
     
-    const c = config[normalizedType];
-    if (!c) {
-        console.warn(`[Instrument-Controller] No power config for type: ${type} (normalized: ${normalizedType})`);
-        return;
-    }
+    const stateMap = {
+        chord: chords,
+        bass: bass,
+        soloist: soloist,
+        harmony: harmony,
+        groove: groove,
+        viz: vizState
+    };
+
+    const state = stateMap[normalizedType];
+    if (!state) return;
     
-    const newState = !c.state.enabled;
+    const newState = !state.enabled;
     const moduleName = normalizedType === 'chord' ? 'chords' : (normalizedType === 'viz' ? 'vizState' : normalizedType);
     
     dispatch(ACTIONS.SET_PARAM, { module: moduleName, param: 'enabled', value: newState });
     
-    c.els.forEach(el => {
-        if (el) el.classList.toggle('active', newState);
-    });
+    // Viz cleanup
+    if (normalizedType === 'viz' && !newState && vizRef) {
+        vizRef.clear();
+    }
     
-    if (!newState && c.cleanup) {
-        c.cleanup();
-    } 
-    
-    syncWorker(); // Essential: tell worker about state change BEFORE flushing/requesting new notes
+    syncWorker();
 
     if (['chord', 'bass', 'soloist', 'harmony'].includes(normalizedType)) {
         flushBuffer(normalizedType);
     } else {
-        restoreGains(); // Ensure newly enabled buses are audible
+        restoreGains();
     }
 
     if (newState) {
-        if (c.onEnable) c.onEnable();
         restoreGains();
     }
 

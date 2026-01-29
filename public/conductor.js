@@ -3,7 +3,7 @@ import { playback, soloist, groove, arranger, chords, bass, harmony, dispatch } 
 import { getSectionEnergy } from './form-analysis.js';
 import { debounceSaveState } from './persistence.js';
 import { generateProceduralFill } from './fills.js';
-import { UIStore } from './ui-store.js';
+import { triggerFlash } from './ui.js';
 
 export const conductorState = { 
     target: 0.5, 
@@ -22,11 +22,6 @@ export function applyConductor() {
     let targetDensity = 'standard';
     if (intensity < 0.4) targetDensity = 'thin';
     else if (intensity > 0.85) targetDensity = 'rich';
-    
-    const densitySelect = UIStore.get('densitySelect', '#densitySelect');
-    if (densitySelect && densitySelect.value !== targetDensity) {
-        densitySelect.value = targetDensity;
-    }
 
     const targetVelocity = 0.7 + (intensity * 0.45); // 0.7x to 1.15x (Adjusted to avoid overloads)
 
@@ -84,11 +79,11 @@ export function applyConductor() {
         const targetReverb = 0.6 - (intensity * 0.4); 
         
         const reverbNodes = [
-            { el: UIStore.get('chordReverb', '#chordReverb'), state: chords, gain: 'chordsReverb' },
-            { el: UIStore.get('bassReverb', '#bassReverb'), state: bass, gain: 'bassReverb' },
-            { el: UIStore.get('soloistReverb', '#soloistReverb'), state: soloist, gain: 'soloistReverb' },
-            { el: UIStore.get('harmonyReverb', '#harmonyReverb'), state: harmony, gain: 'harmoniesReverb' },
-            { el: UIStore.get('drumReverb', '#drumReverb'), state: groove, gain: 'drumsReverb' }
+            { state: chords, gain: 'chordsReverb' },
+            { state: bass, gain: 'bassReverb' },
+            { state: soloist, gain: 'soloistReverb' },
+            { state: harmony, gain: 'harmoniesReverb' },
+            { state: groove, gain: 'drumsReverb' }
         ];
 
         reverbNodes.forEach(node => {
@@ -98,11 +93,6 @@ export function applyConductor() {
             else if (node.gain === 'soloistReverb') bias = 1.2; // Keep soloist wetter
             
             const finalReverb = Math.max(0.001, targetReverb * bias);
-            
-            // Sync UI if slider is not being touched
-            if (node.el && Math.abs(parseFloat(node.el.value) - node.state.reverb) < 0.05) {
-                node.el.value = finalReverb;
-            }
             node.state.reverb = finalReverb;
 
             if (playback[node.gain]) {
@@ -130,16 +120,6 @@ export function updateAutoConductor() {
         dispatch(ACTIONS.SET_BAND_INTENSITY, newIntensity);
     }
 
-        
-        const val = Math.round(newIntensity * 100);
-        const slider = UIStore.get('intensitySlider', '#intensitySlider');
-        const valEl = UIStore.get('intensityValue', '#intensityValue');
-        if (slider) {
-            if (parseInt(slider.value) !== val) {
-                slider.value = val;
-                if (valEl) valEl.textContent = `${val}%`;
-            }
-        }
         applyConductor();
     }
 }
@@ -198,9 +178,9 @@ export function updateLarsTempo(currentStep) {
 }
 
 export function updateBpmUI() {
-    const bpmInput = UIStore.get('bpmInput', '#bpmInput');
-    const bpmControlGroup = UIStore.get('bpmControlGroup', '.control-group:has(#bpmInput)');
-    const bpmLabel = UIStore.get('bpmLabel', '#bpmLabel');
+    const bpmInput = document.getElementById('bpmInput');
+    const bpmControlGroup = document.getElementById('bpmControlGroup');
+    const bpmLabel = document.getElementById('bpmLabel');
 
     if (!bpmInput || !bpmControlGroup) return;
     
@@ -341,9 +321,8 @@ export function checkSectionTransition(currentStep, stepsPerMeasure) {
                 const fillSteps = generateProceduralFill(groove.genreFeel, playback.bandIntensity, stepsPerMeasure);
                 dispatch(ACTIONS.TRIGGER_FILL, { steps: fillSteps, startStep: currentStep, length: stepsPerMeasure, crash: true });
                 
-                const visualFlashCheck = UIStore.get('visualFlash', '#visualFlashCheck');
-                if (visualFlashCheck && visualFlashCheck.checked && UIStore.triggerFlash) {
-                    UIStore.triggerFlash(0.25);
+                if (playback.visualFlash) {
+                    triggerFlash(0.25);
                 }
                 
                 if (playback.autoIntensity) {

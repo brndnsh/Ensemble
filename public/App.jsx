@@ -17,8 +17,10 @@ import { ACTIONS } from './types.js';
 import { syncWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
 import { ModalManager } from './ui-modal-controller.js';
-import { togglePower, updateMeasures, cloneMeasure } from './instrument-controller.js';
+import { togglePower, updateMeasures, cloneMeasure, switchMeasure } from './instrument-controller.js';
 import { triggerInstall } from './pwa.js';
+import { APP_VERSION } from './config.js';
+import { GlobalShortcuts } from './components/GlobalShortcuts.jsx';
 
 export function App() {
     const { 
@@ -31,6 +33,7 @@ export function App() {
 
     return (
         <Fragment>
+            <GlobalShortcuts />
             <div class="app-container">
                 <Header />
                 <main class="app-main-layout loaded" id="dashboardGrid">
@@ -54,7 +57,7 @@ export function App() {
 function Header() {
     return (
         <header>
-            <h1>Ensemble</h1>
+            <h1>Ensemble <span style="font-size: 0.4em; color: var(--text-secondary); vertical-align: middle;">v{APP_VERSION}</span></h1>
             <Transport />
         </header>
     );

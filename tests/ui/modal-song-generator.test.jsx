@@ -4,7 +4,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { h, render } from 'preact';
 import React from 'preact/compat';
-import { setupUIHandlers } from '../../public/ui-controller.js';
 import { ModalManager } from '../../public/ui-modal-controller.js';
 import { GenerateSongModal } from '../../public/components/GenerateSongModal.jsx';
 import { EditorModal } from '../../public/components/EditorModal.jsx';
@@ -40,7 +39,6 @@ describe('Song Generator Modal', () => {
             <div id="editorContainer"></div>
             
             <div id="settingsOverlay" class="settings-overlay" aria-hidden="true"></div>
-            <div id="editorOverlay" class="settings-overlay" aria-hidden="true"></div>
             <div id="exportOverlay" class="settings-overlay" aria-hidden="true"></div>
             <div id="templatesOverlay" class="settings-overlay" aria-hidden="true"></div>
             <div id="analyzerOverlay" class="modal-overlay" aria-hidden="true"></div>
@@ -82,10 +80,6 @@ describe('Song Generator Modal', () => {
         
         render(<GenerateSongModal />, document.getElementById('modalContainer'));
         render(<EditorModal />, document.getElementById('editorContainer'));
-        
-        setupUIHandlers({
-            togglePlay: vi.fn()
-        });
     });
 
     it('should be initially hidden', () => {

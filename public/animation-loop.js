@@ -1,27 +1,9 @@
 import { ACTIONS } from './types.js';
 import { playback, groove, chords, bass, soloist, harmony, vizState, dispatch, arranger } from './state.js';
-import { ui, clearActiveVisuals, updateActiveChordUI } from './ui.js';
 import { getVisualTime } from './engine.js';
 import { getStepsPerMeasure } from './utils.js';
 import { switchMeasure } from './instrument-controller.js';
 import { TIME_SIGNATURES } from './config.js';
-import { UIStore } from './ui-store.js';
-
-export function updateDrumVis(ev) {
-    if (playback.lastActiveDrumElements) playback.lastActiveDrumElements.forEach(s => s.classList.remove('playing'));
-    const spm = getStepsPerMeasure(arranger.timeSignature);
-    const stepMeasure = Math.floor(ev.step / spm);
-    if (groove.followPlayback && stepMeasure !== groove.currentMeasure && playback.isPlaying) switchMeasure(stepMeasure, true);
-    const offset = groove.currentMeasure * spm;
-    if (ev.step >= offset && ev.step < offset + spm) {
-        const activeSteps = UIStore.cachedSteps[ev.step - offset];
-        if (activeSteps) { activeSteps.forEach(s => s.classList.add('playing')); playback.lastActiveDrumElements = activeSteps; }
-        else playback.lastActiveDrumElements = null;
-    } else playback.lastActiveDrumElements = null;
-    playback.lastPlayingStep = ev.step;
-}
-
-export function updateChordVis(ev) { updateActiveChordUI(ev.index); }
 
 let lastFrameTime = 0;
 let missedFrames = 0;
@@ -51,15 +33,31 @@ export function draw(viz) {
         requestAnimationFrame(() => draw(viz));
         return;
     }
-    if (!playback.isPlaying && playback.drawQueue.length === 0) { playback.isDrawing = false; clearActiveVisuals(viz); return; }
+    if (!playback.isPlaying && playback.drawQueue.length === 0) {
+        playback.isDrawing = false;
+        if (chords.lastActiveChordIndex !== null) {
+            chords.lastActiveChordIndex = null;
+            dispatch('VIS_RESET');
+        }
+        if (viz) viz.clear();
+        return;
+    }
     const now = getVisualTime();
     while (playback.drawQueue.length > 0 && playback.drawQueue[0].time < now - 2.0) playback.drawQueue.shift();
     if (playback.drawQueue.length > 300) playback.drawQueue = playback.drawQueue.slice(playback.drawQueue.length - 200);
     while (playback.drawQueue.length && playback.drawQueue[0].time <= now) {
         const ev = playback.drawQueue.shift();
-        if (ev.type === 'drum_vis') updateDrumVis(ev);
+        if (ev.type === 'drum_vis') {
+            const spm = getStepsPerMeasure(arranger.timeSignature);
+            const stepMeasure = Math.floor(ev.step / spm);
+            if (groove.followPlayback && stepMeasure !== groove.currentMeasure && playback.isPlaying) switchMeasure(stepMeasure, true);
+            playback.lastPlayingStep = ev.step;
+        }
         else if (ev.type === 'chord_vis') {
-            updateChordVis(ev);
+            if (chords.lastActiveChordIndex !== ev.index) {
+                chords.lastActiveChordIndex = ev.index;
+                dispatch('VIS_UPDATE', { type: 'chord', index: ev.index });
+            }
             if (viz && vizState.enabled && playback.isDrawing) viz.pushChord({ time: ev.time, notes: ev.chordNotes, rootMidi: ev.rootMidi, intervals: ev.intervals, duration: ev.duration });
         } else if (ev.type === 'bass_vis') {
             if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('bass', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
@@ -91,17 +89,18 @@ export function draw(viz) {
     }
 
     // --- Session Timer Display Update ---
-    if (playback.isPlaying && playback.sessionTimer > 0 && ui.playBtnTimer) {
+    const timerEl = document.getElementById('playBtnTimer');
+    if (playback.isPlaying && playback.sessionTimer > 0 && timerEl) {
         const elapsedMins = (performance.now() - playback.sessionStartTime) / 60000;
         const remainingMins = playback.sessionTimer - elapsedMins;
 
         if (remainingMins <= 0) {
-            if (ui.playBtnTimer.style.display !== 'none') {
-                ui.playBtnTimer.style.display = 'none';
+            if (timerEl.style.display !== 'none') {
+                timerEl.style.display = 'none';
             }
         } else {
-            if (ui.playBtnTimer.style.display !== 'block') {
-                ui.playBtnTimer.style.display = 'block';
+            if (timerEl.style.display !== 'block') {
+                timerEl.style.display = 'block';
             }
 
             const totalSeconds = Math.max(0, Math.ceil(remainingMins * 60));
@@ -110,20 +109,20 @@ export function draw(viz) {
             if (totalSeconds !== lastTimerSeconds) {
                 const m = Math.floor(totalSeconds / 60);
                 const s = totalSeconds % 60;
-                ui.playBtnTimer.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+                timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
 
                 if (totalSeconds <= 30) {
-                    ui.playBtnTimer.classList.add('warning');
+                    timerEl.classList.add('warning');
                 } else {
-                    ui.playBtnTimer.classList.remove('warning');
+                    timerEl.classList.remove('warning');
                 }
                 lastTimerSeconds = totalSeconds;
             }
         }
-    } else if (ui.playBtnTimer) {
-        if (ui.playBtnTimer.style.display !== 'none') {
-            ui.playBtnTimer.style.display = 'none';
-            ui.playBtnTimer.classList.remove('warning');
+    } else if (timerEl) {
+        if (timerEl.style.display !== 'none') {
+            timerEl.style.display = 'none';
+            timerEl.classList.remove('warning');
             lastTimerSeconds = -1;
         }
     }
