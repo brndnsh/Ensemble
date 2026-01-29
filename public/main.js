@@ -7,7 +7,7 @@ import { validateProgression } from './chords.js';
 import { hydrateState, loadFromUrl } from './state-hydration.js';
 import { setInstrumentControllerRefs, switchMeasure, getPowerConfig, initializePowerButtons } from './instrument-controller.js';
 import { setBpm } from './app-controller.js';
-import { togglePlay } from './scheduler-core.js';
+import { togglePlay, scheduler } from './scheduler-core.js';
 import { validateAndAnalyze, analyzeFormUI } from './arranger-controller.js';
 import { setupUIHandlers } from './ui-controller.js';
 import { syncWorker, initWorker } from './worker-client.js';
