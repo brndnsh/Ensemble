@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect, useRef } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { getStepsPerMeasure, getStepInfo } from '../utils.js';
 import { TIME_SIGNATURES } from '../config.js';
+import { ACTIONS } from '../types.js';
 import { clearDrumPresetHighlight } from '../instrument-controller.js';
 import { playback as playbackState } from '../state.js';
 
@@ -37,10 +38,11 @@ const Step = memo(({ instIdx, stepIdx, value, instName, stepInfo, onToggle }) =>
 });
 
 export function SequencerGrid() {
-    const { instruments, measures, timeSignature } = useEnsembleState(s => ({
+    const { instruments, measures, timeSignature, gridVersion } = useEnsembleState(s => ({
         instruments: s.groove.instruments,
         measures: s.groove.measures,
-        timeSignature: s.arranger.timeSignature
+        timeSignature: s.arranger.timeSignature,
+        gridVersion: s.groove.gridVersion
     }));
 
     const [isDragging, setIsDragging] = useState(false);
@@ -121,7 +123,7 @@ export function SequencerGrid() {
         if (inst.steps[stepIdx] !== newType) {
             inst.steps[stepIdx] = newType;
             clearDrumPresetHighlight();
-            import('../state.js').then(({ dispatch }) => dispatch('STEP_TOGGLE'));
+            import('../state.js').then(({ dispatch }) => dispatch(ACTIONS.STEP_TOGGLE));
         }
     };
 

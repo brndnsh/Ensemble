@@ -76,7 +76,8 @@ export const groove = {
     fillStartStep: 0,
     fillLength: 0,
     snareMask: 0,
-    pendingCrash: false
+    pendingCrash: false,
+    gridVersion: 0
 };
 
 export function grooveReducer(action, payload, playback) {
@@ -142,6 +143,9 @@ export function grooveReducer(action, payload, playback) {
                 fillLength: payload.length,
                 pendingCrash: !!payload.crash
             });
+            return true;
+        case ACTIONS.STEP_TOGGLE:
+            groove.gridVersion++;
             return true;
     }
     return false;
