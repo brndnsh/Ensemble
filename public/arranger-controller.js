@@ -62,14 +62,18 @@ export function onSectionUpdate(id, field, value) {
             const newIndex = index + value;
             if (newIndex >= 0 && newIndex < arranger.sections.length) {
                 pushHistory();
-                const temp = arranger.sections[index];
-                arranger.sections[index] = arranger.sections[newIndex];
-                arranger.sections[newIndex] = temp;
+                const newSections = [...arranger.sections];
+                const temp = newSections[index];
+                newSections[index] = newSections[newIndex];
+                newSections[newIndex] = temp;
+                arranger.sections = newSections;
             } else {
                 return;
             }
         } else {
-            section[field] = value;
+            const newSections = [...arranger.sections];
+            newSections[index] = { ...section, [field]: value };
+            arranger.sections = newSections;
         }
     }
     arranger.isDirty = true;
@@ -102,14 +106,16 @@ export function onSectionDuplicate(id) {
     pushHistory();
     const newSection = { ...section, id: generateId(), label: `${section.label} (Copy)` };
     const index = arranger.sections.findIndex(s => s.id === id);
-    arranger.sections.splice(index + 1, 0, newSection);
+    const newSections = [...arranger.sections];
+    newSections.splice(index + 1, 0, newSection);
+    arranger.sections = newSections;
     arranger.isDirty = true;
     clearChordPresetHighlight();
     refreshArrangerUI();
 }
 
 export function addSection() {
-    arranger.sections.push({ id: generateId(), label: `Section ${arranger.sections.length + 1}`, value: 'I', repeat: 1 });
+    arranger.sections = [...arranger.sections, { id: generateId(), label: `Section ${arranger.sections.length + 1}`, value: 'I', repeat: 1 }];
     arranger.isDirty = true;
     clearChordPresetHighlight();
     refreshArrangerUI();
