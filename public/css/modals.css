@@ -673,3 +673,37 @@ select, input[type="range"] {
     color: var(--text-secondary);
     margin-right: 2px;
 }
+
+/* --- Linked Section Grouping --- */
+.section-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    /* Ensure group behaves like a single unit in the grid */
+    height: fit-content;
+}
+
+.section-group .section-card {
+    box-shadow: none; /* Remove individual shadows when grouped */
+}
+
+/* Add shadow to the group or keep on cards but fix z-index? */
+/* Actually, let's keep shadows but fix stacking context or make them subtle */
+/* For now, just removing radius to show connection */
+
+.section-group .section-card:not(:last-child) {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 1px solid transparent; /* Hide bottom border to merge */
+    margin-bottom: -1px; /* Overlap borders */
+    z-index: 1;
+}
+
+.section-group .section-card:not(:first-child) {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.section-group .section-card:hover {
+    z-index: 5; /* Bring to front on hover */
+}

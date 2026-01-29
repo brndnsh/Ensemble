@@ -47,16 +47,47 @@ export function Arranger() {
 
     if (!sections) return null;
 
+    const groupedSections = [];
+    sections.forEach(section => {
+        if (section.seamless && groupedSections.length > 0) {
+            groupedSections[groupedSections.length - 1].push(section);
+        } else {
+            groupedSections.push([section]);
+        }
+    });
+
     return (
         <Fragment>
-            {sections.map((section, index) => (
-                <SectionCard 
-                    key={section.id} 
-                    section={section} 
-                    index={index} 
-                    totalSections={sections.length} 
-                />
-            ))}
+            {groupedSections.map(group => {
+                if (group.length === 1) {
+                    const section = group[0];
+                    const index = sections.findIndex(s => s.id === section.id);
+                    return (
+                        <SectionCard 
+                            key={section.id} 
+                            section={section} 
+                            index={index} 
+                            totalSections={sections.length} 
+                        />
+                    );
+                }
+
+                return (
+                    <div className="section-group" key={`group-${group[0].id}`}>
+                        {group.map(section => {
+                            const index = sections.findIndex(s => s.id === section.id);
+                            return (
+                                <SectionCard 
+                                    key={section.id} 
+                                    section={section} 
+                                    index={index} 
+                                    totalSections={sections.length} 
+                                />
+                            );
+                        })}
+                    </div>
+                );
+            })}
         </Fragment>
     );
 }

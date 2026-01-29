@@ -74,36 +74,62 @@ export function ChordVisualizer() {
     const ts = TIME_SIGNATURES[timeSignature] || TIME_SIGNATURES['4/4'];
 
     const groupedSections = useMemo(() => {
-        const sections = [];
-        let currentSection = null;
+        const blocks = [];
+        let currentBlock = null;
         let currentMeasure = null;
         let currentMeasureBeats = 0;
 
         progression.forEach((chord, i) => {
-            if (!currentSection || currentSection.id !== chord.sectionId) {
-                currentSection = { id: chord.sectionId, label: chord.sectionLabel, measures: [] };
-                sections.push(currentSection);
-                currentMeasure = null;
+            const sectionData = sectionsState.find(s => s.id === chord.sectionId);
+            const isSeamless = sectionData && sectionData.seamless;
+            const isNewSection = !currentBlock || currentBlock.lastSectionId !== chord.sectionId;
+
+            if (isNewSection) {
+                if (!currentBlock || !isSeamless) {
+                    currentBlock = { 
+                        id: chord.sectionId, 
+                        label: chord.sectionLabel, 
+                        measures: [],
+                        lastSectionId: chord.sectionId 
+                    };
+                    blocks.push(currentBlock);
+                    currentMeasure = null;
+                    currentMeasureBeats = 0;
+                } else {
+                    currentBlock.lastSectionId = chord.sectionId;
+                }
+            }
+
+            // Force new measure if section changes? 
+            // Usually nice for visual clarity, unless it's a mid-bar modulation.
+            // Let's force new measure for section change to keep labels clean for now.
+            if (isNewSection && currentMeasureBeats > 0) {
+                currentMeasure = null; 
+                currentMeasureBeats = 0;
             }
 
             if (!currentMeasure || currentMeasureBeats >= ts.beats) {
-                currentMeasure = { chords: [] };
-                currentSection.measures.push(currentMeasure);
+                currentMeasure = { 
+                    chords: [], 
+                    // Tag measure if it starts a seamless section
+                    sectionLabel: (isNewSection && isSeamless) ? chord.sectionLabel : null
+                };
+                currentBlock.measures.push(currentMeasure);
                 currentMeasureBeats = 0;
             }
 
             currentMeasure.chords.push({ ...chord, globalIndex: i });
             currentMeasureBeats += chord.beats;
         });
-        return sections;
-    }, [progression, ts]);
+        return blocks;
+    }, [progression, ts, sectionsState]);
 
     const totalMeasures = useMemo(() => 
         groupedSections.reduce((acc, s) => acc + s.measures.length, 0), 
     [groupedSections]);
 
     useEffect(() => {
-        // Sync attributes to the parent container
+        // ... (existing effect)
         const container = document.getElementById('chordVisualizer');
         if (!container) return;
         
@@ -129,46 +155,39 @@ export function ChordVisualizer() {
 
     return (
         <Fragment>
-            {groupedSections.map((section, sIdx) => {
-                const sectionData = sectionsState.find(s => s.id === section.id);
-                const isSeamless = sectionData && sectionData.seamless;
-                
-                return (
-                    <div 
-                        key={section.id} 
-                        className={`section-block ${isSeamless ? 'seamless' : ''}`}
-                        onClick={() => {
-                            const detail = { detail: { sectionId: section.id } };
-                            document.dispatchEvent(new CustomEvent('open-editor', detail));
-                        }}
-                    >
-                        {!isSeamless && (
-                            <div className="section-block-header">
-                                {formatUnicodeSymbols(section.label)}
-                            </div>
-                        )}
-                        <div className="section-block-content">
-                            {section.measures.map((measure, mIdx) => (
-                                <div key={mIdx} className="measure-box">
-                                    {isSeamless && mIdx === 0 && (
-                                        <div className="key-label">{formatUnicodeSymbols(section.label)}</div>
-                                    )}
-                                    {measure.chords.map(chord => (
-                                        <ChordCard 
-                                            key={chord.globalIndex}
-                                            chord={chord}
-                                            isActive={chord.globalIndex === lastActiveChordIndex}
-                                            totalMeasures={totalMeasures}
-                                            isMaximized={isMaximized}
-                                            notation={notation}
-                                        />
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
+            {groupedSections.map((section) => (
+                <div 
+                    key={section.id} 
+                    className="section-block"
+                    onClick={() => {
+                        const detail = { detail: { sectionId: section.id } };
+                        document.dispatchEvent(new CustomEvent('open-editor', detail));
+                    }}
+                >
+                    <div className="section-block-header">
+                        {formatUnicodeSymbols(section.label)}
                     </div>
-                );
-            })}
+                    <div className="section-block-content">
+                        {section.measures.map((measure, mIdx) => (
+                            <div key={mIdx} className="measure-box">
+                                {measure.sectionLabel && (
+                                    <div className="key-label">{formatUnicodeSymbols(measure.sectionLabel)}</div>
+                                )}
+                                {measure.chords.map(chord => (
+                                    <ChordCard 
+                                        key={chord.globalIndex}
+                                        chord={chord}
+                                        isActive={chord.globalIndex === lastActiveChordIndex}
+                                        totalMeasures={totalMeasures}
+                                        isMaximized={isMaximized}
+                                        notation={notation}
+                                    />
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
         </Fragment>
     );
 }
