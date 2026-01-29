@@ -1,8 +1,10 @@
 import { h } from 'preact';
+import { useState } from 'preact/hooks';
 import React from 'preact/compat';
 import { ModalManager } from '../ui-modal-controller.js';
-import { useEnsembleState } from '../ui-bridge.js';
-import { arranger, dispatch } from '../state.js';
+import { useEnsembleState, useDispatch } from '../ui-bridge.js';
+import { ACTIONS } from '../types.js';
+import { arranger } from '../state.js';
 import { generateSong } from '../song-generator.js';
 import { pushHistory } from '../history.js';
 import { normalizeKey } from '../utils.js';
@@ -10,19 +12,39 @@ import { refreshArrangerUI, clearChordPresetHighlight, validateAndAnalyze, updat
 import { showToast } from '../ui.js';
 
 export function GenerateSongModal() {
+    const dispatch = useDispatch();
     const isOpen = useEnsembleState(s => s.playback.modals.generateSong);
+    
+    // Internal component state for form values
+    const [key, setKey] = useState('Random');
+    const [timeSignature, setTimeSignature] = useState('Random');
+    const [structure, setStructure] = useState('pop');
+    const [useSeed, setUseSeed] = useState(false);
+    const [seedType, setSeedType] = useState('Verse');
 
     const close = () => {
+        dispatch(ACTIONS.SET_MODAL, { modal: 'generateSong', open: false });
         const overlay = document.getElementById('generateSongOverlay');
         if (overlay) ModalManager.close(overlay);
     };
 
     const handleConfirm = () => {
-        const key = document.getElementById('genKeySelect')?.value || 'Random';
-        const timeSignature = document.getElementById('genTimeSigSelect')?.value || 'Random';
-        const structure = document.getElementById('genStructureSelect')?.value || 'pop';
+        let seed = null;
+        if (useSeed) {
+            const targetId = arranger.lastInteractedSectionId;
+            const section = arranger.sections.find(s => s.id === targetId) || arranger.sections[0];
+            if (section && section.value) {
+                seed = {
+                    type: seedType,
+                    value: section.value
+                };
+            } else {
+                showToast("No section found to seed from.");
+                // We'll continue anyway, just without the seed
+            }
+        }
 
-        const newSections = generateSong({ key, timeSignature, structure });
+        const newSections = generateSong({ key, timeSignature, structure, seed });
 
         pushHistory();
 
@@ -66,31 +88,50 @@ export function GenerateSongModal() {
                     <div class="settings-section">
                         <div class="setting-item">
                             <label class="setting-label">Root Key</label>
-                            <select id="genKeySelect">
+                            <select value={key} onChange={(e) => setKey(e.target.value)}>
                                 <option value="Random">Random</option>
                                 <option value="C">C</option><option value="Db">Db</option><option value="D">D</option><option value="Eb">Eb</option><option value="E">E</option><option value="F">F</option><option value="Gb">Gb</option><option value="G">G</option><option value="Ab">Ab</option><option value="A">A</option><option value="Bb">Bb</option><option value="B">B</option>
                             </select>
                         </div>
                         <div class="setting-item">
                             <label class="setting-label">Time Signature</label>
-                            <select id="genTimeSigSelect">
+                            <select value={timeSignature} onChange={(e) => setTimeSignature(e.target.value)}>
                                 <option value="Random">Random</option>
                                 <option value="4/4">4/4</option><option value="3/4">3/4</option><option value="2/4">2/4</option><option value="5/4">5/4</option><option value="6/8">6/8</option><option value="7/8">7/8</option><option value="12/8">12/8</option>
                             </select>
                         </div>
                         <div class="setting-item">
                             <label class="setting-label">Structure</label>
-                            <select id="genStructureSelect">
+                            <select value={structure} onChange={(e) => setStructure(e.target.value)}>
                                 <option value="pop">Pop (Verse-Chorus-Bridge)</option>
                                 <option value="blues">12-Bar Blues</option>
                                 <option value="jazz">Jazz Standard (AABA)</option>
                                 <option value="loop">Short Loop (4 Bars)</option>
                             </select>
                         </div>
+                        
+                        <div class="setting-item" style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" checked={useSeed} onChange={(e) => setUseSeed(e.target.checked)} />
+                                <span class="setting-label" style="margin: 0;">Seed from current section</span>
+                            </label>
+                        </div>
+
+                        {useSeed && (
+                            <div class="setting-item animate-in">
+                                <label class="setting-label">Seed as...</label>
+                                <select value={seedType} onChange={(e) => setSeedType(e.target.value)}>
+                                    <option value="Verse">Verse</option>
+                                    <option value="Chorus">Chorus</option>
+                                    <option value="Bridge">Bridge</option>
+                                    <option value="Intro">Intro</option>
+                                </select>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <button id="confirmGenerateSongBtn" class="primary-btn" style="width: 100%; margin-top: 1.5rem; padding: 1rem;" onClick={handleConfirm}>Generate Song</button>
+                <button class="primary-btn" style="width: 100%; margin-top: 1.5rem; padding: 1rem;" onClick={handleConfirm}>Generate Song</button>
             </div>
         </div>
     );

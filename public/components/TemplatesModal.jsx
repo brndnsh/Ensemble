@@ -1,14 +1,64 @@
 import { h } from 'preact';
 import React from 'preact/compat';
 import { ModalManager } from '../ui-modal-controller.js';
-import { useEnsembleState } from '../ui-bridge.js';
+import { useEnsembleState, useDispatch } from '../ui-bridge.js';
+import { ACTIONS } from '../types.js';
+import { SONG_TEMPLATES } from '../presets.js';
+import { arranger } from '../state.js';
+import { pushHistory } from '../history.js';
+import { generateId, formatUnicodeSymbols, normalizeKey } from '../utils.js';
+import { refreshArrangerUI, clearChordPresetHighlight, validateAndAnalyze, updateGroupingUI } from '../arranger-controller.js';
+import { showToast, ui } from '../ui.js';
 
 export function TemplatesModal() {
+    const dispatch = useDispatch();
     const isOpen = useEnsembleState(s => s.playback.modals.templates);
 
     const close = () => {
+        dispatch(ACTIONS.SET_MODAL, { modal: 'templates', open: false });
         const overlay = document.getElementById('templatesOverlay');
         if (overlay) ModalManager.close(overlay);
+    };
+
+    const applyTemplate = (template) => {
+        pushHistory();
+        
+        const newSections = template.sections.map(s => ({
+            id: generateId(),
+            label: s.label,
+            value: s.value,
+            repeat: s.repeat || 1,
+            key: s.key || '',
+            timeSignature: s.timeSignature || '',
+            seamless: s.seamless || false
+        }));
+
+        if (arranger.isDirty && arranger.sections.length > 1) {
+            if (!confirm(`Replace current arrangement with "${template.name}"?`)) return;
+        }
+
+        arranger.sections = newSections;
+        if (template.isMinor !== undefined) arranger.isMinor = template.isMinor;
+        
+        // Update global arranger state to match the template's first section details if specified
+        const first = newSections[0];
+        if (first.key) {
+            arranger.key = first.key;
+            if (ui.keySelect) ui.keySelect.value = normalizeKey(first.key);
+        }
+        if (first.timeSignature) {
+            arranger.timeSignature = first.timeSignature;
+            if (ui.timeSigSelect) ui.timeSigSelect.value = first.timeSignature;
+            updateGroupingUI();
+        }
+
+        arranger.isDirty = true;
+        clearChordPresetHighlight();
+        refreshArrangerUI();
+        validateAndAnalyze();
+        
+        close();
+        showToast(`Applied template: ${template.name}`);
     };
 
     return (
@@ -20,10 +70,21 @@ export function TemplatesModal() {
                     <h2>Song Templates</h2>
                     <button id="closeTemplatesBtn" class="primary-btn" onClick={close}>Cancel</button>
                 </div>
-                <div class="templates-modal-label">
+                <div class="templates-modal-label" style="margin-bottom: 1.5rem; color: var(--text-muted);">
                     Select a template to replace your current arrangement:
                 </div>
-                <div id="templateChips" class="template-chips"></div>
+                
+                <div class="template-chips" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    {SONG_TEMPLATES.map((template, idx) => (
+                        <button 
+                            key={idx}
+                            class="preset-chip template-chip" 
+                            onClick={() => applyTemplate(template)}
+                        >
+                            {formatUnicodeSymbols(template.name)}
+                        </button>
+                    ))}
+                </div>
             </div>
         </div>
     );

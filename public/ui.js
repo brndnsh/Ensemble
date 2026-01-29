@@ -82,41 +82,6 @@ export const ui = {
     get userPresetsContainer() { return getEl('userPresetsContainer'); },
     get userDrumPresetsContainer() { return getEl('userDrumPresetsContainer'); },
     
-    // --- Analyzer ---
-    get analyzeAudioBtn() { return getEl('analyzeAudioBtn'); },
-    get analyzerOverlay() { return getEl('analyzerOverlay'); },
-    get analyzerDropZone() { return getEl('analyzerDropZone'); },
-    get analyzerFileInput() { return getEl('analyzerFileInput'); },
-    get liveListenBtn() { return getEl('liveListenBtn'); },
-    get stopLiveListenBtn() { return getEl('stopLiveListenBtn'); },
-    get captureLiveHistoryBtn() { return getEl('captureLiveHistoryBtn'); },
-    get liveListenView() { return getEl('liveListenView'); },
-    get liveChordDisplay() { return getEl('liveChordDisplay'); },
-    get analyzerTrimView() { return getEl('analyzerTrimView'); },
-    get analyzerWaveformCanvas() { return getEl('analyzerWaveformCanvas'); },
-    get analyzerSelectionOverlay() { return getEl('analyzerSelectionOverlay'); },
-    get analyzerStartInput() { return getEl('analyzerStartInput'); },
-    get analyzerEndInput() { return getEl('analyzerEndInput'); },
-    get analyzerDurationLabel() { return getEl('analyzerDurationLabel'); },
-    get startAnalysisBtn() { return getEl('startAnalysisBtn'); },
-    get analyzerProcessing() { return getEl('analyzerProcessing'); },
-    get analyzerProgressBar() { return getEl('analyzerProgressBar'); },
-    get analyzerResults() { return getEl('analyzerResults'); },
-    get analyzerSummary() { return getEl('analyzerSummary'); },
-    get detectedBpmLabel() { return getEl('detectedBpmLabel'); },
-    get analyzerSyncBpmCheck() { return getEl('analyzerSyncBpmCheck'); },
-    get suggestedSectionsContainer() { return getEl('suggestedSectionsContainer'); },
-    get applyAnalysisBtn() { return getEl('applyAnalysisBtn'); },
-    get closeAnalyzerBtn() { return getEl('closeAnalyzerBtn'); },
-
-    // --- Generate Song ---
-    get generateSongOverlay() { return getEl('generateSongOverlay'); },
-    get confirmGenerateSongBtn() { return getEl('confirmGenerateSongBtn'); },
-    get closeGenerateSongBtn() { return getEl('closeGenerateSongBtn'); },
-    get genKeySelect() { return getEl('genKeySelect'); },
-    get genTimeSigSelect() { return getEl('genTimeSigSelect'); },
-    get genStructureSelect() { return getEl('genStructureSelect'); },
-    
     // --- Power Buttons ---
     get chordPowerBtn() { return getEl('chordPowerBtn'); },
     get chordPowerBtnDesktop() { return getEl('chordPowerBtnDesktop'); },
@@ -201,43 +166,6 @@ export function renderMeasurePagination(onSwitch) {
         btn.onclick = () => onSwitch(i);
         ui.measurePagination.appendChild(btn);
     }
-}
-
-/**
- * Legacy template chip rendering.
- */
-export function renderTemplates(templates, onApply) {
-    const container = document.getElementById('templateChips');
-    if (!container) return;
-    container.innerHTML = '';
-    if (!templates || !Array.isArray(templates)) return;
-    templates.forEach(t => {
-        const chip = document.createElement('button');
-        chip.className = 'preset-chip template-chip';
-        chip.type = 'button';
-        chip.textContent = formatUnicodeSymbols(t.name);
-        chip.dataset.category = t.category || 'Basic';
-        chip.onclick = (e) => { e.stopPropagation(); onApply(t); };
-        container.appendChild(chip);
-    });
-}
-
-/**
- * Helper to create a user preset chip.
- */
-export function createPresetChip(name, onDelete, onSelect, extraClass = '') {
-    const chip = document.createElement('div');
-    chip.className = `preset-chip user-preset-chip ${extraClass}`;
-    const label = document.createElement('span');
-    label.textContent = formatUnicodeSymbols(name);
-    label.onclick = (e) => { e.stopPropagation(); onSelect(); };
-    const del = document.createElement('button');
-    del.className = 'delete-preset';
-    del.innerHTML = '✕';
-    del.onclick = (e) => { e.stopPropagation(); onDelete(); };
-    chip.appendChild(label);
-    chip.appendChild(del);
-    return chip;
 }
 
 /**

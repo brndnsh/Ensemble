@@ -3,7 +3,6 @@ import { groove } from './state.js';
 import { switchMeasure } from './instrument-controller.js';
 import { ModalManager } from './ui-modal-controller.js';
 import { pushHistory } from './history.js';
-import { setupSongGeneratorHandlers } from './ui-song-generator-controller.js';
 import { getStepsPerMeasure } from './utils.js';
 
 /**
@@ -46,8 +45,6 @@ export function setupUIHandlers(refs) {
             // Future UI recalculations if needed
         }, 150); 
     });
-
-    setupSongGeneratorHandlers();
 
     // --- Arrangement Editor Buttons ---
 
