@@ -23,8 +23,13 @@ export function Transport() {
         setBpm(e.target.value, playback.viz);
     };
 
-    const onTap = () => {
+    const onTap = (e) => {
         handleTap((val) => setBpm(val, playback.viz));
+        
+        // Visual feedback
+        const btn = e.currentTarget;
+        btn.classList.add('handle-tap');
+        setTimeout(() => btn.classList.remove('handle-tap'), 100);
     };
 
     const openSettings = () => {

@@ -1,4 +1,4 @@
-import { playback, arranger } from './state.js';
+import { playback, arranger, dispatch } from './state.js';
 import { syncWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
 import { getStepsPerMeasure } from './utils.js';
@@ -31,6 +31,7 @@ export function setBpm(val, viz) {
     
     syncWorker();
     saveCurrentState();
+    dispatch('BPM_CHANGE');
 
     if (viz && playback.isPlaying && playback.audio) {
         const secondsPerBeat = 60.0 / playback.bpm;

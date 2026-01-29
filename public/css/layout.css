@@ -117,6 +117,12 @@ header {
     }
 }
 
+.handle-tap {
+    background-color: var(--accent-color) !important;
+    color: white !important;
+    transform: scale(0.95);
+}
+
 h1 {
     margin: 0;
     font-size: 1.5rem;
