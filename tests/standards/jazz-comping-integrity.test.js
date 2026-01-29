@@ -18,7 +18,7 @@ vi.mock('../../public/state.js', () => ({
     },
     groove: { genreFeel: 'Jazz' },
     bass: { enabled: true, lastFreq: 65.41 }, // C2
-    harmony: { enabled: false }
+    harmony: { enabled: false }, dispatch: vi.fn()
 }));
 
 vi.mock('../../public/config.js', async (importOriginal) => {

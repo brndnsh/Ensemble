@@ -22,7 +22,7 @@ vi.mock('../../public/state.js', () => ({
     },
     groove: { genreFeel: 'Jazz' },
     bass: { enabled: true },
-    harmony: { enabled: false },
+    harmony: { enabled: false }, dispatch: vi.fn(),
     sb_enabled: true
 }));
 

@@ -1,6 +1,6 @@
 /** @jsx h */
 import { h, Fragment } from 'preact';
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import { useEnsembleState } from './ui-bridge.js';
 import { Transport } from './components/Transport.jsx';
 import { Arranger } from './components/Arranger.jsx';
@@ -11,6 +11,10 @@ import { StyleSelector } from './components/StyleSelector.jsx';
 import { Settings } from './components/Settings.jsx';
 import { CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, HARMONY_STYLES } from './presets.js';
 import { APP_VERSION } from './config.js';
+import { dispatch } from './state.js';
+import { ACTIONS } from './types.js';
+import { syncWorker } from './worker-client.js';
+import { saveCurrentState } from './persistence.js';
 
 export function App() {
     const { 
@@ -166,6 +170,12 @@ function InstrumentPanel({ id, module, title, styles }) {
         enabled: s[module].enabled
     }));
 
+    const switchTab = (tab) => {
+        dispatch(ACTIONS.SET_ACTIVE_TAB, { module, tab });
+        syncWorker();
+        saveCurrentState();
+    };
+
     return (
         <div class={`panel dashboard-panel instrument-panel ${activeTab === 'smart' ? 'smart-active' : ''}`} id={id} data-id={module}>
             <div class="panel-header">
@@ -173,8 +183,14 @@ function InstrumentPanel({ id, module, title, styles }) {
                     <h2>{title}</h2>
                 </div>
                 <div class="instrument-tabs">
-                    <button class={`instrument-tab-btn ${activeTab === 'classic' ? 'active' : ''}`} data-module={module} data-tab="classic">Classic</button>
-                    <button class={`instrument-tab-btn ${activeTab === 'smart' ? 'active' : ''}`} data-module={module} data-tab="smart">Smart</button>
+                    <button 
+                        class={`instrument-tab-btn ${activeTab === 'classic' ? 'active' : ''}`} 
+                        onClick={() => switchTab('classic')}
+                    >Classic</button>
+                    <button 
+                        class={`instrument-tab-btn ${activeTab === 'smart' ? 'active' : ''}`} 
+                        onClick={() => switchTab('smart')}
+                    >Smart</button>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <button class="panel-menu-btn" aria-label="Settings">⋮</button>
@@ -208,6 +224,12 @@ function GroovePanel() {
         enabled: s.groove.enabled
     }));
 
+    const switchTab = (tab) => {
+        dispatch(ACTIONS.SET_ACTIVE_TAB, { module: 'groove', tab });
+        syncWorker();
+        saveCurrentState();
+    };
+
     return (
         <div class="panel dashboard-panel instrument-panel" id="panel-grooves" data-id="grooves">
             <div class="panel-header groove-panel-header">
@@ -215,8 +237,14 @@ function GroovePanel() {
                     <h2>Grooves</h2>
                 </div>
                 <div class="instrument-tabs">
-                    <button class={`instrument-tab-btn ${activeTab === 'classic' ? 'active' : ''}`} data-module="groove" data-tab="classic">Classic</button>
-                    <button class={`instrument-tab-btn ${activeTab === 'smart' ? 'active' : ''}`} data-module="groove" data-tab="smart">Smart</button>
+                    <button 
+                        class={`instrument-tab-btn ${activeTab === 'classic' ? 'active' : ''}`} 
+                        onClick={() => switchTab('classic')}
+                    >Classic</button>
+                    <button 
+                        class={`instrument-tab-btn ${activeTab === 'smart' ? 'active' : ''}`} 
+                        onClick={() => switchTab('smart')}
+                    >Smart</button>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <button class="panel-menu-btn" aria-label="Settings">⋮</button>
@@ -260,17 +288,34 @@ function GroovePanel() {
 }
 
 function MobileNav({ activeTab }) {
+    const switchMobileTab = (tab) => {
+        dispatch(ACTIONS.SET_ACTIVE_TAB, { module: 'groove', tab: 'mobile', target: tab }); // Follow legacy state schema if needed
+        // Actually, looking at ui.js legacy: groove.mobileTab = target;
+        import('./state.js').then(({ groove }) => {
+            groove.mobileTab = tab;
+            dispatch('MOBILE_TAB_SWITCH');
+            syncWorker();
+            saveCurrentState();
+        });
+    };
+
     return (
         <div class="mobile-tabs-nav">
-            <div class="tab-item">
-                <button class={`tab-btn ${activeTab === 'chords' ? 'active' : ''}`} data-tab="chords">Chords</button>
-                <button id="chordPowerBtn" class="power-btn" aria-label="Toggle Chords">⏻</button>
-            </div>
-            <div class="tab-item">
-                <button class={`tab-btn ${activeTab === 'grooves' ? 'active' : ''}`} data-tab="grooves">Grooves</button>
-                <button id="groovePowerBtn" class="power-btn" aria-label="Toggle Grooves">⏻</button>
-            </div>
-            {/* ... other tabs */}
+            {[
+                { id: 'chords', label: 'Chords', power: 'chord' },
+                { id: 'grooves', label: 'Grooves', power: 'groove' },
+                { id: 'bass', label: 'Bass', power: 'bass' },
+                { id: 'soloist', label: 'Soloist', power: 'soloist' },
+                { id: 'harmonies', label: 'Harmony', power: 'harmony' }
+            ].map(tab => (
+                <div key={tab.id} class="tab-item">
+                    <button 
+                        class={`tab-btn ${activeTab === tab.id ? 'active' : ''}`} 
+                        onClick={() => switchMobileTab(tab.id)}
+                    >{tab.label}</button>
+                    <button id={`${tab.power}PowerBtn`} class="power-btn" aria-label={`Toggle ${tab.label}`}>⏻</button>
+                </div>
+            ))}
         </div>
     );
 }

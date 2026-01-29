@@ -22,7 +22,7 @@ vi.mock('../../public/state.js', () => ({
     chords: { enabled: true, style: 'strum-country' },
     bass: { enabled: true, pocketOffset: 0 },
     soloist: { enabled: true, tension: 0, busySteps: 0, motifBuffer: [] },
-    harmony: { enabled: false },
+    harmony: { enabled: false }, dispatch: vi.fn(),
     playback: {
         bandIntensity: 0.5,
         complexity: 0.5,

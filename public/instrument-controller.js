@@ -1,4 +1,4 @@
-import { groove, arranger, playback, chords, bass, soloist, harmony, vizState } from './state.js';
+import { groove, arranger, playback, chords, bass, soloist, harmony, vizState, dispatch } from './state.js';
 import { ui, renderMeasurePagination, showToast, initTabs } from './ui.js';
 import { DRUM_PRESETS } from './presets.js';
 import { saveCurrentState } from './persistence.js';
@@ -52,6 +52,7 @@ export function loadDrumPreset(name) {
     });
     
     renderMeasurePagination(switchMeasure);
+    dispatch('DRUM_PRESET_LOADED');
 }
 
 export function cloneMeasure() {
@@ -71,6 +72,7 @@ export function cloneMeasure() {
     });
     Object.assign(groove, { instruments: newInstruments });
     showToast(`Measure ${groove.currentMeasure + 1} copied to all`);
+    dispatch('DRUM_MEASURE_CLONED');
 }
 
 export function clearDrumPresetHighlight() {

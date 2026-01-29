@@ -1,6 +1,7 @@
 import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN, TIME_SIGNATURES } from './config.js';
 import { normalizeKey, getFrequency } from './utils.js';
 import * as stateModule from './state.js';
+import { dispatch } from './state.js';
 
 const ROMAN_REGEX = /^([#b])?(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v)/;
 const NNS_REGEX = /^([#b])?([1-7])/;
@@ -773,6 +774,7 @@ export function validateProgression(renderCallback) {
     arranger.progression = allChords;
     Object.assign(arranger, { progression: allChords });
     updateProgressionCache();
+    dispatch('PROG_VALIDATED'); // Notify Preact
     if (renderCallback) renderCallback();
 }
 

@@ -19,7 +19,8 @@ vi.mock('../../../public/state.js', () => ({
     groove: { enabled: true, genreFeel: 'Rock' },
     bass: { enabled: false },
     soloist: { enabled: false },
-    playback: { isPlaying: false, bandIntensity: 0.5, complexity: 0.3 }
+    playback: { isPlaying: false, bandIntensity: 0.5, complexity: 0.3 },
+    dispatch: vi.fn()
 }));
 
 // Mock Config
