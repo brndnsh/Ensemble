@@ -1,9 +1,7 @@
 import { ACTIONS } from './types.js';
 import { playback, chords, bass, soloist, harmony, groove, arranger, vizState, storage, dispatch } from './state.js';
 import { applyTheme, setBpm } from './app-controller.js';
-import { ui, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
 import { decompressSections, generateId, normalizeKey } from './utils.js';
-import { updateStyle } from './ui-controller.js';
 
 export function hydrateState() {
     const savedState = storage.get('currentState');
