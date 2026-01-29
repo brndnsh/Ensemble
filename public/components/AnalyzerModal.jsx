@@ -40,6 +40,251 @@ export function AnalyzerModal() {
     const STABILITY_THRESHOLD = 3;
     const AUTO_ADD_DELAY = 1200;
 
+    // --- HOISTED FUNCTIONS ---
+
+    function close() {
+        const overlay = document.getElementById('analyzerOverlay');
+        if (overlay) ModalManager.close(overlay);
+        stopLiveListen();
+        setAudioBuffer(null);
+        setView('idle');
+    }
+
+    function stopLiveListen() {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
+        if (audioCtxRef.current) {
+            audioCtxRef.current.close();
+            audioCtxRef.current = null;
+        }
+        analyzerRef.current = null;
+        harmonizerRef.current = null;
+        if (autoAddTimerRef.current) clearTimeout(autoAddTimerRef.current);
+        
+        setCurrentStableChord(null);
+        setDetectedKey('--');
+        setView('idle');
+    }
+
+    function addCurrentChord() {
+        if (!currentStableChord) return;
+        setStagedChords(prev => {
+            const last = prev[prev.length - 1];
+            if (last === currentStableChord + ' ') return prev; // Avoid duplicates
+            return [...prev, currentStableChord + ' '];
+        });
+    }
+
+    async function startLiveListen() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast("Live Listen requires a Secure Context (HTTPS or localhost).");
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: true
+            }});
+
+            const { ChordAnalyzerLite } = await import('../audio-analyzer-lite.js');
+            analyzerRef.current = new ChordAnalyzerLite();
+            
+            if (mode === 'melody') {
+                const { Harmonizer } = await import('../melody-harmonizer.js');
+                harmonizerRef.current = new Harmonizer();
+            }
+
+            streamRef.current = stream;
+            audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioCtxRef.current.createMediaStreamSource(stream);
+            
+            const processor = audioCtxRef.current.createScriptProcessor(4096, 1, 1);
+            source.connect(processor);
+            processor.connect(audioCtxRef.current.destination);
+
+            const targetSamples = Math.floor(audioCtxRef.current.sampleRate * 0.5); 
+            let chunks = [];
+            let totalChunkLen = 0;
+
+            processor.onaudioprocess = (e) => {
+                const input = e.inputBuffer.getChannelData(0);
+                chunks.push(new Float32Array(input));
+                totalChunkLen += input.length;
+
+                if (totalChunkLen >= targetSamples) {
+                    const fullBuffer = new Float32Array(totalChunkLen);
+                    let offset = 0;
+                    for (const c of chunks) { fullBuffer.set(c, offset); offset += c.length; }
+                    
+                    const analysisBuffer = fullBuffer.slice(-targetSamples);
+                    chunks = [fullBuffer.slice(-Math.floor(targetSamples / 2))];
+                    totalChunkLen = chunks[0].length;
+
+                    processAnalysis(analysisBuffer);
+                }
+            };
+
+            setView('live');
+
+        } catch (err) {
+            console.error("[LiveListen] Error:", err);
+            showToast("Microphone access denied or error: " + err.message);
+        }
+    }
+
+    function processAnalysis(buffer) {
+        if (!analyzerRef.current || !audioCtxRef.current) return;
+        const sampleRate = audioCtxRef.current.sampleRate;
+        let detected = null;
+
+        if (mode === 'melody') {
+            const rms = Math.sqrt(buffer.reduce((s, x) => s + x * x, 0) / buffer.length);
+            if (rms > 0.02) {
+                const chroma = analyzerRef.current.calculateChromagram(buffer, sampleRate, { minMidi: 48, maxMidi: 84 });
+                const keyRes = analyzerRef.current.identifySimpleKey(chroma);
+                const keyStr = analyzerRef.current.notes[keyRes.root] + (keyRes.type === 'minor' ? 'm' : '');
+                setDetectedKey(keyStr);
+            }
+        } else {
+            const chroma = analyzerRef.current.calculateChromagram(buffer, sampleRate, { minMidi: 32, maxMidi: 80 });
+            detected = analyzerRef.current.identifyChord(chroma);
+        }
+
+        if (detected && detected !== 'Rest') {
+            if (detected === stabilityRef.current.lastChord) {
+                stabilityRef.current.counter++;
+            } else {
+                stabilityRef.current.counter = 0;
+                stabilityRef.current.lastChord = detected;
+            }
+
+            if (stabilityRef.current.counter >= STABILITY_THRESHOLD) {
+                setCurrentStableChord(detected);
+            }
+        } else {
+            stabilityRef.current.counter = 0;
+            stabilityRef.current.lastChord = null;
+        }
+    }
+
+    async function handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setView('processing');
+        setProgress(10);
+        
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            import('../state.js').then(async ({ playback }) => {
+                if (!playback.audio) {
+                    const { initAudio } = await import('../engine.js');
+                    initAudio();
+                }
+                const decoded = await playback.audio.decodeAudioData(arrayBuffer);
+                setAudioBuffer(decoded);
+                setTrimRange({ start: 0, end: Math.floor(decoded.duration) });
+                setView('trim');
+            });
+        } catch (err) {
+            console.error("[Analyzer] Load Error:", err);
+            showToast("Failed to load audio");
+            setView('idle');
+        }
+    }
+
+    async function performAnalysis() {
+        if (!audioBuffer) return;
+        setView('processing');
+        setProgress(20);
+
+        try {
+            const { ChordAnalyzerLite } = await import('../audio-analyzer-lite.js');
+            const { extractForm } = await import('../form-extractor.js');
+            const analyzer = new ChordAnalyzerLite();
+            
+            const sampleRate = audioBuffer.sampleRate;
+            const startIdx = Math.floor(trimRange.start * sampleRate);
+            const endIdx = Math.floor(trimRange.end * sampleRate);
+            const slice = audioBuffer.getChannelData(0).slice(startIdx, endIdx);
+
+            setProgress(50);
+            const result = await analyzer.analyzeProgression(slice, sampleRate);
+            setProgress(80);
+            
+            const sections = extractForm(result.chords, result.pulse);
+            setAnalysisData({
+                summary: `Detected ${sections.length} sections`,
+                bpm: Math.round(result.pulse.bpm),
+                sections: sections
+            });
+            setView('results');
+        } catch (err) {
+            console.error("[Analyzer] Analysis Error:", err);
+            showToast("Analysis failed");
+            setView('trim');
+        }
+    }
+
+    function importResults() {
+        if (!analysisData) return;
+        pushHistory();
+        
+        const newSections = analysisData.sections.map(s => ({
+            id: generateId(),
+            label: s.label,
+            value: s.value,
+            repeat: s.repeat,
+            key: '',
+            timeSignature: '',
+            seamless: false
+        }));
+
+        import('../state.js').then(({ arranger }) => {
+            if (replaceExisting) arranger.sections = newSections;
+            else arranger.sections.push(...newSections);
+            
+            arranger.isDirty = true;
+            refreshArrangerUI();
+            close();
+            showToast(`Imported ${newSections.length} sections.`);
+        });
+    }
+
+    function captureLiveHistory() {
+        if (stagedChords.length === 0) return;
+        pushHistory();
+        
+        const progressionStr = stagedChords.join('').trim();
+        const cleanProgression = progressionStr.endsWith('|') ? progressionStr.slice(0, -1).trim() : progressionStr;
+
+        const newSection = {
+            id: generateId(),
+            label: 'Live Input',
+            value: cleanProgression,
+            repeat: 1,
+            key: '',
+            timeSignature: '',
+            seamless: false
+        };
+
+        import('../state.js').then(({ arranger }) => {
+            if (replaceExisting) arranger.sections = [newSection];
+            else arranger.sections.push(newSection);
+            
+            arranger.isDirty = true;
+            refreshArrangerUI();
+            close();
+            showToast(`Imported sequence.`);
+        });
+    }
+
+    // --- EFFECTS ---
+
     // Waveform Drawing
     useEffect(() => {
         if (view === 'trim' && audioBuffer && canvasRef.current) {
@@ -78,116 +323,25 @@ export function AnalyzerModal() {
         }
     }, [view, audioBuffer]);
 
-    const close = () => {
-        const overlay = document.getElementById('analyzerOverlay');
-        if (overlay) ModalManager.close(overlay);
-        stopLiveListen();
-        setAudioBuffer(null);
-        setView('idle');
-    };
-
-    const stopLiveListen = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(t => t.stop());
-            streamRef.current = null;
+    // Auto-add logic
+    useEffect(() => {
+        if (autoAdd && currentStableChord) {
+            if (autoAddTimerRef.current) clearTimeout(autoAddTimerRef.current);
+            autoAddTimerRef.current = setTimeout(addCurrentChord, AUTO_ADD_DELAY);
         }
-        if (audioCtxRef.current) {
-            audioCtxRef.current.close();
-            audioCtxRef.current = null;
+    }, [currentStableChord, autoAdd]);
+
+    // Keyboard Handler
+    useEffect(() => {
+        function handleKeyDown(e) {
+            if (e.code === 'Space' && isOpen && view === 'live') {
+                e.preventDefault();
+                addCurrentChord();
+            }
         }
-        analyzerRef.current = null;
-        harmonizerRef.current = null;
-        if (autoAddTimerRef.current) clearTimeout(autoAddTimerRef.current);
-        
-        setCurrentStableChord(null);
-        setDetectedKey('--');
-        setView('idle');
-    };
-
-    const handleFileUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        setView('processing');
-        setProgress(10);
-        
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            import('../state.js').then(async ({ playback }) => {
-                if (!playback.audio) {
-                    const { initAudio } = await import('../engine.js');
-                    initAudio();
-                }
-                const decoded = await playback.audio.decodeAudioData(arrayBuffer);
-                setAudioBuffer(decoded);
-                setTrimRange({ start: 0, end: Math.floor(decoded.duration) });
-                setView('trim');
-            });
-        } catch (err) {
-            console.error("[Analyzer] Load Error:", err);
-            showToast("Failed to load audio");
-            setView('idle');
-        }
-    };
-
-    const performAnalysis = async () => {
-        if (!audioBuffer) return;
-        setView('processing');
-        setProgress(20);
-
-        try {
-            const { ChordAnalyzerLite } = await import('../audio-analyzer-lite.js');
-            const { extractForm } = await import('../form-extractor.js');
-            const analyzer = new ChordAnalyzerLite();
-            
-            // Simplified Analysis Logic
-            const sampleRate = audioBuffer.sampleRate;
-            const startIdx = Math.floor(trimRange.start * sampleRate);
-            const endIdx = Math.floor(trimRange.end * sampleRate);
-            const slice = audioBuffer.getChannelData(0).slice(startIdx, endIdx);
-
-            setProgress(50);
-            const result = await analyzer.analyzeProgression(slice, sampleRate);
-            setProgress(80);
-            
-            const sections = extractForm(result.chords, result.pulse);
-            setAnalysisData({
-                summary: `Detected ${sections.length} sections`,
-                bpm: Math.round(result.pulse.bpm),
-                sections: sections
-            });
-            setView('results');
-        } catch (err) {
-            console.error("[Analyzer] Analysis Error:", err);
-            showToast("Analysis failed");
-            setView('trim');
-        }
-    };
-
-    const importResults = () => {
-        if (!analysisData) return;
-        pushHistory();
-        
-        const newSections = analysisData.sections.map(s => ({
-            id: generateId(),
-            label: s.label,
-            value: s.value,
-            repeat: s.repeat,
-            key: '',
-            timeSignature: '',
-            seamless: false
-        }));
-
-        import('../state.js').then(({ arranger }) => {
-            if (replaceExisting) arranger.sections = newSections;
-            else arranger.sections.push(...newSections);
-            
-            arranger.isDirty = true;
-            refreshArrangerUI();
-            close();
-            showToast(`Imported ${newSections.length} sections.`);
-        });
-    };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, view, currentStableChord]);
 
     return (
         <div id="analyzerOverlay" class={`modal-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
