@@ -71,10 +71,23 @@ export function SectionCard({ section, index, totalSections }) {
         }, 0);
     };
 
+    const handleViewTransition = (fn) => {
+        if (!document.startViewTransition) {
+            fn();
+            return;
+        }
+        document.startViewTransition(async () => {
+            fn();
+            // Allow Preact time to render the new state before the transition snapshot
+            await new Promise(r => setTimeout(r, 0));
+        });
+    };
+
     return (
         <div 
             class={`section-card ${section.seamless ? 'linked' : ''} ${isMenuOpen ? 'menu-active' : ''}`}
             data-id={section.id}
+            style={{ viewTransitionName: `editor-card-${section.id}` }}
             draggable={true}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
@@ -138,20 +151,20 @@ export function SectionCard({ section, index, totalSections }) {
                         <button 
                             class={`section-link-btn ${section.seamless ? 'active' : ''}`}
                             title={section.seamless ? 'Unlink from previous (Enable Fills)' : 'Link to previous (Seamless Transition)'}
-                            onClick={() => onSectionUpdate(section.id, 'seamless', !section.seamless)}
+                            onClick={() => handleViewTransition(() => onSectionUpdate(section.id, 'seamless', !section.seamless))}
                         >🔗</button>
 
                         <button 
                             class="section-move-btn" 
                             title="Move Up" 
-                            onClick={() => onSectionUpdate(section.id, 'move', -1)}
+                            onClick={() => handleViewTransition(() => onSectionUpdate(section.id, 'move', -1))}
                             disabled={index === 0}
                         >▴</button>
 
                         <button 
                             class="section-move-btn" 
                             title="Move Down" 
-                            onClick={() => onSectionUpdate(section.id, 'move', 1)}
+                            onClick={() => handleViewTransition(() => onSectionUpdate(section.id, 'move', 1))}
                             disabled={index === totalSections - 1}
                         >▾</button>
                         
