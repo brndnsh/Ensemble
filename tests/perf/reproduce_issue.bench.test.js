@@ -1,5 +1,5 @@
 
-import { describe, it, beforeEach, expect } from 'vitest';
+import { describe, it, beforeEach } from 'vitest';
 import { getChordAtStep } from '../../public/logic-worker.js';
 import { arranger } from '../../public/state.js';
 
