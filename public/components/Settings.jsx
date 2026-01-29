@@ -6,7 +6,7 @@ import { saveCurrentState } from '../persistence.js';
 import { applyTheme } from '../app-controller.js';
 import { initMIDI, panic } from '../midi-controller.js';
 import { restoreGains } from '../engine.js';
-import { MIXER_GAIN_MULTIPLIERS } from '../config.js';
+import { MIXER_GAIN_MULTIPLIERS, APP_VERSION } from '../config.js';
 import { showToast } from '../ui.js';
 
 export function Settings() {
