@@ -8,7 +8,6 @@ import { TIME_SIGNATURES } from './config.js';
 let lastFrameTime = 0;
 let missedFrames = 0;
 let vizCrashCount = 0;
-let lastTimerSeconds = -1;
 
 export function draw(viz) {
     if (!playback.isDrawing) return;
@@ -85,45 +84,6 @@ export function draw(viz) {
                 vizState.enabled = false;
                 vizCrashCount = 0;
             }
-        }
-    }
-
-    // --- Session Timer Display Update ---
-    const timerEl = document.getElementById('playBtnTimer');
-    if (playback.isPlaying && playback.sessionTimer > 0 && timerEl) {
-        const elapsedMins = (performance.now() - playback.sessionStartTime) / 60000;
-        const remainingMins = playback.sessionTimer - elapsedMins;
-
-        if (remainingMins <= 0) {
-            if (timerEl.style.display !== 'none') {
-                timerEl.style.display = 'none';
-            }
-        } else {
-            if (timerEl.style.display !== 'block') {
-                timerEl.style.display = 'block';
-            }
-
-            const totalSeconds = Math.max(0, Math.ceil(remainingMins * 60));
-
-            // Optimization: Only update DOM if seconds have changed
-            if (totalSeconds !== lastTimerSeconds) {
-                const m = Math.floor(totalSeconds / 60);
-                const s = totalSeconds % 60;
-                timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
-
-                if (totalSeconds <= 30) {
-                    timerEl.classList.add('warning');
-                } else {
-                    timerEl.classList.remove('warning');
-                }
-                lastTimerSeconds = totalSeconds;
-            }
-        }
-    } else if (timerEl) {
-        if (timerEl.style.display !== 'none') {
-            timerEl.style.display = 'none';
-            timerEl.classList.remove('warning');
-            lastTimerSeconds = -1;
         }
     }
 

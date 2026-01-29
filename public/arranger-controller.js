@@ -11,10 +11,6 @@ import { analyzeForm } from './form-analysis.js';
 import { conductorState } from './conductor.js';
 import { KEY_ORDER } from './config.js';
 
-export function updateGroupingUI() {
-    // No-op: handled by Preact
-}
-
 export function analyzeFormUI() {
     const form = analyzeForm();
     if (form) {
@@ -25,7 +21,6 @@ export function analyzeFormUI() {
 
 export function validateAndAnalyze() {
     validateProgression(() => {
-        // renderChordVisualizer();
         analyzeFormUI();
     });
 }
@@ -36,7 +31,6 @@ export function clearChordPresetHighlight() {
 }
 
 export function refreshArrangerUI() {
-    // renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateAndAnalyze();
     syncWorker();
     flushBuffers();
@@ -72,9 +66,6 @@ export function onSectionUpdate(id, field, value) {
         }
     }
     arranger.isDirty = true;
-    if (field === 'reorder' || field === 'move' || field === 'seamless') {
-        // renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-    }
     if (field === 'reorder' || field === 'move' || field === 'value') {
         clearChordPresetHighlight();
     }

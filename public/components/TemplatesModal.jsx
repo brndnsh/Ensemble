@@ -7,7 +7,7 @@ import { SONG_TEMPLATES } from '../presets.js';
 import { arranger } from '../state.js';
 import { pushHistory } from '../history.js';
 import { generateId, formatUnicodeSymbols, normalizeKey } from '../utils.js';
-import { refreshArrangerUI, clearChordPresetHighlight, validateAndAnalyze, updateGroupingUI } from '../arranger-controller.js';
+import { refreshArrangerUI, clearChordPresetHighlight, validateAndAnalyze } from '../arranger-controller.js';
 import { showToast } from '../ui.js';
 
 export function TemplatesModal() {
@@ -53,7 +53,6 @@ export function TemplatesModal() {
         }
         if (first.timeSignature) {
             arranger.timeSignature = first.timeSignature;
-            updateGroupingUI();
         }
 
         arranger.isDirty = true;

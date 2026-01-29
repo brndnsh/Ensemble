@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import { useState } from 'preact/hooks';
 import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
@@ -14,6 +15,8 @@ export function Transport() {
         bpm: state.playback.bpm
     }));
 
+    const [tapActive, setTapActive] = useState(false);
+
     const onTogglePlay = () => {
         // Pass playback.viz as required by legacy togglePlay
         togglePlay(playback.viz);
@@ -26,10 +29,8 @@ export function Transport() {
     const onTap = (e) => {
         handleTap((val) => setBpm(val, playback.viz));
         
-        // Visual feedback
-        const btn = e.currentTarget;
-        btn.classList.add('handle-tap');
-        setTimeout(() => btn.classList.remove('handle-tap'), 100);
+        setTapActive(true);
+        setTimeout(() => setTapActive(false), 100);
     };
 
     const openSettings = () => {
@@ -44,7 +45,6 @@ export function Transport() {
                 onClick={onTogglePlay}
             >
                 <span id="playBtnText">{isPlaying ? 'STOP' : 'START'}</span>
-                <span id="playBtnTimer" class="btn-timer" style="display: none;"></span>
             </button>
             
             <div class="control-group" id="bpmControlGroup">
@@ -61,6 +61,7 @@ export function Transport() {
                 />
                 <button 
                     id="tapBtn" 
+                    class={tapActive ? 'handle-tap' : ''}
                     style="padding: 0.2rem 0.5rem; font-size: 0.8rem; height: auto;" 
                     aria-label="Tap Tempo"
                     onClick={onTap}

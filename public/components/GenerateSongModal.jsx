@@ -7,7 +7,7 @@ import { arranger } from '../state.js';
 import { generateSong } from '../song-generator.js';
 import { pushHistory } from '../history.js';
 import { normalizeKey } from '../utils.js';
-import { refreshArrangerUI, clearChordPresetHighlight, validateAndAnalyze, updateGroupingUI } from '../arranger-controller.js';
+import { refreshArrangerUI, clearChordPresetHighlight, validateAndAnalyze } from '../arranger-controller.js';
 import { showToast } from '../ui.js';
 
 export function GenerateSongModal() {
@@ -66,7 +66,6 @@ export function GenerateSongModal() {
             }
             if (first.timeSignature && first.timeSignature !== 'Random') {
                 arranger.timeSignature = first.timeSignature;
-                updateGroupingUI();
             }
         }
 
