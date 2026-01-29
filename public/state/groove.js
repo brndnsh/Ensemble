@@ -109,6 +109,12 @@ export function grooveReducer(action, payload, playback) {
                 Object.assign(groove, updates);
             }
             return true;
+        case ACTIONS.SET_ACTIVE_TAB:
+            if (payload.module === 'groove') {
+                Object.assign(groove, { activeTab: payload.tab });
+                return true;
+            }
+            return false;
         case ACTIONS.TRIGGER_FILL:
             Object.assign(groove, {
                 fillSteps: payload.steps,

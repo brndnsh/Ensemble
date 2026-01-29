@@ -82,6 +82,8 @@ function init() {
         hydrateState();
         loadFromUrl(viz);
 
+        validateProgression(); // Parse initial progression BEFORE mounting fully or immediately after
+
         setInstrumentControllerRefs(() => scheduler(), viz);
         initTabs(); 
         setupPanelMenus(); 
@@ -115,7 +117,7 @@ function init() {
             }
         });
 
-        validateProgression(() => { /* renderChordVisualizer(); */ analyzeFormUI(); });
+        analyzeFormUI();
         
         subscribe((action, payload) => syncWorker(action, payload));
         syncWorker(); 

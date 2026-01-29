@@ -205,7 +205,10 @@ export function instrumentReducer(action, payload) {
             if (payload.hookProb) Object.assign(soloist, { hookRetentionProb: payload.hookProb });
             return true;
         case ACTIONS.SET_ACTIVE_TAB:
-            if (instrumentStateMap[payload.module]) {
+            if (payload.module === 'groove') {
+                // We'll handle this in state.js or groove.js instead to avoid circularity
+                return false; 
+            } else if (instrumentStateMap[payload.module]) {
                 Object.assign(instrumentStateMap[payload.module], { activeTab: payload.tab });
             }
             return true;
