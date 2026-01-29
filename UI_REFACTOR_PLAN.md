@@ -9,12 +9,12 @@ Transition the Ensemble UI from imperative DOM manipulation (`ui-controller.js`,
 *   **Unidirectional Data:** Components render based on state; User actions dispatch events; State updates trigger re-renders.
 *   **Performance:** Maintain the strict "Mobile First" performance budget.
 
-## Phase 1: Foundation & Proof of Concept (Current)
-- [ ] **Tooling Setup**: Install Preact and configure `esbuild` for JSX support.
-- [ ] **State Bridge**: Create a hook/utility to subscribe Preact components to the existing `state.js`.
-- [ ] **POC Component**: Migrate the "Style Selector" (Genre/Style chips) to a Preact component.
-- [ ] **Mount Point**: Create a root entry point to mount components into the existing HTML structure.
-- [ ] **Verification**: Ensure style switching works seamlessly between the component and the legacy engine.
+## Phase 1: Foundation & Proof of Concept (Completed)
+- [x] **Tooling Setup**: Install Preact and configure `esbuild` for JSX support.
+- [x] **State Bridge**: Create a hook/utility to subscribe Preact components to the existing `state.js`.
+- [x] **POC Component**: Migrate the "Style Selector" (Genre/Style chips) to a Preact component.
+- [x] **Mount Point**: Create a root entry point to mount components into the existing HTML structure.
+- [x] **Verification**: Ensure style switching works seamlessly between the component and the legacy engine.
 
 ## Phase 2: Core Controls
 - [ ] **Transport Controls**: Play/Stop, BPM, Metronome (high frequency updates).
