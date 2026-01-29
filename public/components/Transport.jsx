@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
 import { dispatch } from '../state.js';
@@ -27,14 +28,7 @@ export function Transport() {
     };
 
     const openSettings = () => {
-        // Dispatch an event or set state to open settings
-        // For now, we rely on the existing class-based toggle or new state
-        // Let's assume we'll use a new action or just direct DOM manipulation if we haven't migrated the modal visibility logic yet.
-        // Actually, let's use a custom event or direct call if the Settings Modal isn't fully React-controlled yet.
-        // But wait, we are building Settings.jsx too. Let's use a global UI action?
-        // Current toggle is via CSS class on #settingsOverlay.
-        const overlay = document.getElementById('settingsOverlay');
-        if (overlay) overlay.classList.add('active');
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'settings', open: true });
     };
 
     return (

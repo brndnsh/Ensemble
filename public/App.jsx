@@ -12,10 +12,13 @@ import { KeySignatureControls } from './components/KeySignatureControls.jsx';
 import { Modals } from './components/Modals.jsx';
 import { NotificationLayer } from './components/NotificationLayer.jsx';
 import { CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, HARMONY_STYLES } from './presets.js';
-import { dispatch } from './state.js';
+import { dispatch, groove } from './state.js';
 import { ACTIONS } from './types.js';
 import { syncWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
+import { ModalManager } from './ui-modal-controller.js';
+import { togglePower, updateMeasures, cloneMeasure } from './instrument-controller.js';
+import { triggerInstall } from './pwa.js';
 
 export function App() {
     const { 
@@ -44,9 +47,6 @@ export function App() {
 
             <Modals />
             <NotificationLayer />
-            
-            {/* The rest of the modals are still legacy HTML fragments for now, 
-                we can migrate them one by one if they have complex logic */}
         </Fragment>
     );
 }
@@ -61,6 +61,11 @@ function Header() {
 }
 
 function ArrangerPanel() {
+    const openEditor = () => {
+        const overlay = document.getElementById('editorOverlay');
+        if (overlay) ModalManager.open(overlay);
+    };
+
     return (
         <div class="panel dashboard-panel active-mobile" id="panel-arranger" data-id="arranger">
             <div class="panel-header chord-panel-header">
@@ -79,7 +84,7 @@ function ArrangerPanel() {
             <div id="activeSectionLabel" class="active-section-label"></div>
 
             <div style="margin-bottom: 1.5rem;">
-                <button id="editArrangementBtn" class="primary-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
+                <button id="editArrangementBtn" class="primary-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;" onClick={openEditor}>
                     <span>✏️</span> Edit Arrangement
                 </button>
             </div>
@@ -94,11 +99,15 @@ function ArrangerPanel() {
 }
 
 function VisualizerPanel({ enabled }) {
+    const handleToggle = () => {
+        togglePower('viz');
+    };
+
     return (
         <div class={`panel dashboard-panel ${!enabled ? 'collapsed' : ''}`} id="panel-visualizer" data-id="visualizer">
             <div class="panel-header">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <button id="vizPowerBtn" class={`power-btn ${enabled ? 'active' : ''}`} aria-label="Toggle Visualizer">⏻</button>
+                    <button id="vizPowerBtn" class={`power-btn ${enabled ? 'active' : ''}`} aria-label="Toggle Visualizer" onClick={handleToggle}>⏻</button>
                     <h2>Visualizer</h2>
                 </div>
             </div>
@@ -160,7 +169,12 @@ function InstrumentPanel({ id, module, title, styles }) {
                         aria-label="Settings"
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                     >⋮</button>
-                    <button class={`power-btn desktop-power-btn ${enabled ? 'active' : ''}`} id={`${module === 'chords' ? 'chord' : module}PowerBtnDesktop`} aria-label={`Toggle ${title}`}>⏻</button>
+                    <button 
+                        class={`power-btn desktop-power-btn ${enabled ? 'active' : ''}`} 
+                        id={`${module === 'chords' ? 'chord' : module}PowerBtnDesktop`} 
+                        aria-label={`Toggle ${title}`}
+                        onClick={() => togglePower(module)}
+                    >⏻</button>
                 </div>
             </div>
 
@@ -185,9 +199,10 @@ function InstrumentPanel({ id, module, title, styles }) {
 }
 
 function GroovePanel() {
-    const { activeTab, enabled } = useEnsembleState(s => ({
+    const { activeTab, enabled, measures } = useEnsembleState(s => ({
         activeTab: s.groove.activeTab,
-        enabled: s.groove.enabled
+        enabled: s.groove.enabled,
+        measures: s.groove.measures
     }));
 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -220,7 +235,12 @@ function GroovePanel() {
                         aria-label="Settings"
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                     >⋮</button>
-                    <button class={`power-btn desktop-power-btn ${enabled ? 'active' : ''}`} id="groovePowerBtnDesktop" aria-label="Toggle Grooves">⏻</button>
+                    <button 
+                        class={`power-btn desktop-power-btn ${enabled ? 'active' : ''}`} 
+                        id="groovePowerBtnDesktop" 
+                        aria-label="Toggle Grooves"
+                        onClick={() => togglePower('groove')}
+                    >⏻</button>
                 </div>
             </div>
 
@@ -233,7 +253,12 @@ function GroovePanel() {
                 <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; margin-bottom: 0;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h4 style="margin: 0; font-size: 0.9rem; color: var(--accent-color);">Step Sequencer</h4>
-                        <select id="drumBarsSelect" aria-label="Number of Drum Measures">
+                        <select 
+                            id="drumBarsSelect" 
+                            aria-label="Number of Drum Measures"
+                            value={measures}
+                            onChange={(e) => updateMeasures(e.target.value)}
+                        >
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="4">4</option>
@@ -241,7 +266,7 @@ function GroovePanel() {
                         </select>
                     </div>
                     <div id="measurePagination" style="display: flex; gap: 0.4rem; margin-bottom: 1rem; align-items: center;"></div>
-                    <button id="cloneMeasureBtn" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; margin-bottom: 1rem;">⧉ Copy to All</button>
+                    <button id="cloneMeasureBtn" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; margin-bottom: 1rem;" onClick={cloneMeasure}>⧉ Copy to All</button>
                     <div className="sequencer-grid" id="sequencerGrid">
                         <SequencerGrid />
                     </div>
@@ -402,20 +427,28 @@ function MobileNav({ activeTab }) {
     return (
         <div class="mobile-tabs-nav">
             {[
-                { id: 'chords', label: 'Chords', power: 'chord' },
-                { id: 'grooves', label: 'Grooves', power: 'groove' },
-                { id: 'bass', label: 'Bass', power: 'bass' },
-                { id: 'soloist', label: 'Soloist', power: 'soloist' },
-                { id: 'harmonies', label: 'Harmony', power: 'harmony' }
+                { id: 'chords', label: 'Chords', module: 'chords' },
+                { id: 'grooves', label: 'Grooves', module: 'groove' },
+                { id: 'bass', label: 'Bass', module: 'bass' },
+                { id: 'soloist', label: 'Soloist', module: 'soloist' },
+                { id: 'harmonies', label: 'Harmony', module: 'harmony' }
             ].map(tab => {
                 const isActive = (activeTab === tab.id) || (activeTab === 'mobile' && tab.id === 'grooves');
+                const moduleState = useEnsembleState(s => s[tab.module]);
+                const enabled = moduleState?.enabled;
+
                 return (
                     <div key={tab.id} class="tab-item">
                         <button 
                             class={`tab-btn ${isActive ? 'active' : ''}`} 
                             onClick={() => switchMobileTab(tab.id)}
                         >{tab.label}</button>
-                        <button id={`${tab.power}PowerBtn`} class="power-btn" aria-label={`Toggle ${tab.label}`}>⏻</button>
+                        <button 
+                            id={`${tab.module === 'chords' ? 'chord' : tab.module}PowerBtn`} 
+                            class={`power-btn ${enabled ? 'active' : ''}`} 
+                            aria-label={`Toggle ${tab.label}`}
+                            onClick={() => togglePower(tab.module)}
+                        >⏻</button>
                     </div>
                 );
             })}

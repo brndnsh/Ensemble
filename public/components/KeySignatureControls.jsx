@@ -1,10 +1,18 @@
 import { h } from 'preact';
 import { useEnsembleState, useDispatch } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
-import { transposeKey, switchToRelativeKey, updateGroupingUI, validateAndAnalyze } from '../arranger-controller.js';
+import { transposeKey, switchToRelativeKey, validateAndAnalyze } from '../arranger-controller.js';
 import { saveCurrentState } from '../persistence.js';
-import { loadDrumPreset } from '../instrument-controller.js';
+import { loadDrumPreset, flushBuffers } from '../instrument-controller.js';
 import { formatUnicodeSymbols } from '../utils.js';
+import { TIME_SIGNATURES } from '../config.js';
+import { syncWorker } from '../worker-client.js';
+
+const GROUPING_OPTIONS = {
+    '5/4': [[3, 2], [2, 3]],
+    '7/8': [[2, 2, 3], [3, 2, 2], [2, 3, 2]],
+    '7/4': [[4, 3], [3, 4]]
+};
 
 export function KeySignatureControls() {
     const dispatch = useDispatch();
@@ -28,15 +36,13 @@ export function KeySignatureControls() {
             arranger.key = newKey;
             validateAndAnalyze();
             saveCurrentState();
-            // Trigger a re-render via bridge if needed, 
-            // though bridge usually handles direct mutations if they trigger bridge updates
             dispatch('KEY_CHANGE'); 
         });
     };
 
     const handleTimeSigChange = (e) => {
         const newTS = e.target.value;
-        import('../state.js').then(({ arranger, groove }) => {
+        import('../state.js').then(({ arranger }) => {
             arranger.timeSignature = newTS;
             arranger.grouping = null;
             if (lastDrumPreset) loadDrumPreset(lastDrumPreset);
@@ -47,12 +53,20 @@ export function KeySignatureControls() {
     };
 
     const toggleGrouping = () => {
-        const event = new CustomEvent('toggle-grouping');
-        window.dispatchEvent(event);
-        // The actual logic is in arranger-controller.js which we'll keep for now 
-        // but we can move it to state if we want full purity.
-        // For now, arranger-controller has a listener for groupingLabel click.
-        document.getElementById('groupingLabel')?.click();
+        const options = GROUPING_OPTIONS[timeSignature];
+        if (!options) return;
+
+        import('../state.js').then(({ arranger }) => {
+            const current = arranger.grouping || TIME_SIGNATURES[timeSignature].grouping;
+            const currentIndex = options.findIndex(opt => opt.join('+') === current.join('+'));
+            const nextIndex = (currentIndex + 1) % options.length;
+            
+            arranger.grouping = options[nextIndex];
+            flushBuffers();
+            syncWorker();
+            saveCurrentState();
+            dispatch('GROUPING_CHANGE');
+        });
     };
 
     const keys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -95,7 +109,7 @@ export function KeySignatureControls() {
                         aria-label="Toggle rhythmic grouping"
                         onClick={toggleGrouping}
                     >
-                        {grouping ? grouping.join('+') : '3+2'}
+                        {grouping ? grouping.join('+') : (TIME_SIGNATURES[timeSignature]?.grouping.join('+') || '3+2')}
                     </button>
                 </div>
             </div>
