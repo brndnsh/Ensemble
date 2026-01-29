@@ -29,14 +29,6 @@ export function hydrateState() {
             stopAtEnd: false
         });
         
-        if (ui.sessionTimerCheck) ui.sessionTimerCheck.checked = playback.sessionTimer > 0;
-        if (ui.sessionTimerInput) ui.sessionTimerInput.value = playback.sessionTimer > 0 ? playback.sessionTimer : 5;
-        
-        if (ui.sessionTimerDurationContainer) {
-            ui.sessionTimerDurationContainer.style.opacity = playback.sessionTimer > 0 ? '1' : '0.4';
-            ui.sessionTimerDurationContainer.style.pointerEvents = playback.sessionTimer > 0 ? 'auto' : 'none';
-        }
-
         vizState.enabled = savedState.vizEnabled !== undefined ? savedState.vizEnabled : false;
         
         if (savedState.chords) { 
@@ -111,50 +103,6 @@ export function hydrateState() {
                 }); 
             }
         }
-        ui.keySelect.value = arranger.key; 
-        ui.timeSigSelect.value = arranger.timeSignature; 
-        ui.bpmInput.value = playback.bpm;
-        
-        if (ui.intensitySlider) { 
-            ui.intensitySlider.value = Math.round(playback.bandIntensity * 100); 
-            if (ui.intensityValue) ui.intensityValue.textContent = `${ui.intensitySlider.value}%`; 
-            ui.intensitySlider.disabled = playback.autoIntensity; 
-            ui.intensitySlider.style.opacity = playback.autoIntensity ? 0.5 : 1; 
-        }
-        if (ui.complexitySlider) { 
-            ui.complexitySlider.value = Math.round(playback.complexity * 100); 
-            let label = 'Low'; 
-            if (playback.complexity > 0.33) label = 'Medium'; 
-            if (playback.complexity > 0.66) label = 'High'; 
-            if (ui.complexityValue) ui.complexityValue.textContent = label; 
-        }
-        if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = playback.autoIntensity;
-        document.querySelectorAll('.genre-btn').forEach(btn => { 
-            btn.classList.toggle('active', btn.dataset.genre === groove.lastSmartGenre); 
-        });
-        ui.notationSelect.value = arranger.notation; 
-        ui.densitySelect.value = chords.density; 
-        if (ui.chordVol) ui.chordVol.value = chords.volume;
-        if (ui.pianoRootsCheck) ui.pianoRootsCheck.checked = chords.pianoRoots;
-        if (ui.chordReverb) ui.chordReverb.value = chords.reverb;
-        if (ui.bassVol) ui.bassVol.value = bass.volume;
-        if (ui.bassReverb) ui.bassReverb.value = bass.reverb;
-        if (ui.soloistVol) ui.soloistVol.value = soloist.volume;
-        if (ui.soloistReverb) ui.soloistReverb.value = soloist.reverb;
-        if (ui.soloistDoubleStops) ui.soloistDoubleStops.checked = soloist.doubleStops;
-        if (ui.harmonyVol) ui.harmonyVol.value = harmony.volume;
-        if (ui.harmonyReverb) ui.harmonyReverb.value = harmony.reverb;
-        if (ui.harmonyComplexity) {
-            ui.harmonyComplexity.value = harmony.complexity;
-            if (ui.harmonyComplexityValue) ui.harmonyComplexityValue.textContent = `${Math.round(harmony.complexity * 100)}%`;
-        }
-        if (ui.drumVol) ui.drumVol.value = groove.volume;
-        if (ui.drumReverb) ui.drumReverb.value = groove.reverb;
-        if (ui.swingSlider) ui.swingSlider.value = groove.swing;
-        if (ui.swingBase) ui.swingBase.value = groove.swingSub;
-        if (ui.humanizeSlider) ui.humanizeSlider.value = groove.humanize;
-        if (ui.drumBarsSelect) ui.drumBarsSelect.value = groove.measures;
-        if (ui.applyPresetSettings) ui.applyPresetSettings.checked = playback.applyPresetSettings;
         
         if (savedState.midi) {
             dispatch(ACTIONS.SET_MIDI_CONFIG, {
@@ -174,24 +122,6 @@ export function hydrateState() {
                 velocitySensitivity: savedState.midi.velocitySensitivity !== undefined ? savedState.midi.velocitySensitivity : 1.0
             });
 
-            if (ui.midiEnableCheck) ui.midiEnableCheck.checked = savedState.midi.enabled || false;
-            if (ui.midiMuteLocalCheck) ui.midiMuteLocalCheck.checked = savedState.midi.muteLocal !== undefined ? savedState.midi.muteLocal : true;
-            if (ui.midiChordsChannel) ui.midiChordsChannel.value = savedState.midi.chordsChannel || 1;
-            if (ui.midiBassChannel) ui.midiBassChannel.value = savedState.midi.bassChannel || 2;
-            if (ui.midiSoloistChannel) ui.midiSoloistChannel.value = savedState.midi.soloistChannel || 3;
-            if (ui.midiHarmonyChannel) ui.midiHarmonyChannel.value = savedState.midi.harmonyChannel || 4;
-            if (ui.midiDrumsChannel) ui.midiDrumsChannel.value = savedState.midi.drumsChannel || 10;
-            
-            if (ui.midiVelocitySlider) {
-                ui.midiVelocitySlider.value = savedState.midi.velocitySensitivity !== undefined ? savedState.midi.velocitySensitivity : 1.0;
-                if (ui.midiVelocityValue) ui.midiVelocityValue.textContent = parseFloat(ui.midiVelocitySlider.value).toFixed(1);
-            }
-            if (ui.midiChordsOctave) ui.midiChordsOctave.value = savedState.midi.chordsOctave || 0;
-            if (ui.midiBassOctave) ui.midiBassOctave.value = savedState.midi.bassOctave || 0;
-            if (ui.midiSoloistOctave) ui.midiSoloistOctave.value = savedState.midi.soloistOctave || 0;
-            if (ui.midiHarmonyOctave) ui.midiHarmonyOctave.value = savedState.midi.harmonyOctave || 0;
-            if (ui.midiDrumsOctave) ui.midiDrumsOctave.value = savedState.midi.drumsOctave || 0;
-
             if (savedState.midi.enabled) {
                 import('./midi-controller.js').then(({ initMIDI }) => {
                     initMIDI();
@@ -202,14 +132,7 @@ export function hydrateState() {
         applyTheme(playback.theme); 
     } else { 
         applyTheme('auto'); 
-        if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = true;
-        if (ui.intensitySlider) {
-            ui.intensitySlider.disabled = true;
-            ui.intensitySlider.style.opacity = 0.5;
-        }
     }
-    updateRelKeyButton(); 
-    updateKeySelectLabels();
     dispatch('HYDRATE'); // Notify UI of all changes
 }
 
@@ -219,41 +142,31 @@ export function loadFromUrl(viz) {
     if (params.get('s')) { arranger.sections = decompressSections(params.get('s')); hasParams = true; }
     else if (params.get('prog')) { arranger.sections = [{ id: generateId(), label: 'Main', value: params.get('prog') }]; hasParams = true; }
     if (hasParams) clearChordPresetHighlight();
-    if (params.get('key')) { ui.keySelect.value = normalizeKey(params.get('key')); arranger.key = ui.keySelect.value; }
-    if (params.get('ts')) { arranger.timeSignature = params.get('ts'); ui.timeSigSelect.value = arranger.timeSignature; }
+    if (params.get('key')) { arranger.key = normalizeKey(params.get('key')); }
+    if (params.get('ts')) { arranger.timeSignature = params.get('ts'); }
     if (params.get('bpm')) { setBpm(params.get('bpm'), viz); }
-    if (params.get('style')) updateStyle('chord', params.get('style'));
+    if (params.get('style')) {
+        // Dispatch style update instead of direct UI manipulation
+        dispatch(ACTIONS.SET_STYLE, { module: 'chords', style: params.get('style') });
+    }
     if (params.get('genre')) {
         const genre = params.get('genre');
-        // Find the genre button and simulate a click to trigger all associated logic
-        const btn = document.querySelector(`.genre-btn[data-genre="${genre}"]`);
-        if (btn) {
-            btn.click();
-        }
-        else {
-            // Fallback if UI not yet ready
-            groove.lastSmartGenre = genre;
-            groove.genreFeel = genre;
-        }
+        // Fallback since UI not ready for click simulation
+        groove.lastSmartGenre = genre;
+        groove.genreFeel = genre;
+        // Logic for applying genre feel should ideally be dispatched or handled by components reacting to 'genreFeel'
     }
     if (params.get('int')) {
         const val = parseFloat(params.get('int'));
         dispatch(ACTIONS.SET_BAND_INTENSITY, val);
-        if (ui.intensitySlider) {
-            ui.intensitySlider.value = Math.round(val * 100);
-            if (ui.intensityValue) ui.intensityValue.textContent = `${ui.intensitySlider.value}%`;
-        }
     }
     if (params.get('comp')) {
         const val = parseFloat(params.get('comp'));
         dispatch(ACTIONS.SET_COMPLEXITY, val);
-        if (ui.complexitySlider) {
-            ui.complexitySlider.value = Math.round(val * 100);
-        }
     }
-    if (params.get('notation')) { arranger.notation = params.get('notation'); ui.notationSelect.value = arranger.notation; }
+    if (params.get('notation')) { arranger.notation = params.get('notation'); }
 }
 
 function clearChordPresetHighlight() {
-    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    // DOM manipulation not needed here as UI will reflect state
 }

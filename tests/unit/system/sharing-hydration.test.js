@@ -92,13 +92,6 @@ describe('Sharing & Hydration Round-trip', () => {
         mockUi.keySelect.value = 'F';
         mockUi.bpmInput.value = '80';
         
-        // Add a mock genre button to the DOM for click simulation
-        const btn = document.createElement('div');
-        btn.className = 'genre-btn';
-        btn.dataset.genre = 'Jazz';
-        btn.onclick = vi.fn();
-        document.body.appendChild(btn);
-
         shareProgression();
         const urlString = vi.mocked(navigator.clipboard.writeText).mock.calls[0][0];
         
@@ -119,7 +112,7 @@ describe('Sharing & Hydration Round-trip', () => {
         expect(playback.bpm).toBe(80);
         expect(chords.style).toBe('jazz');
         expect(arranger.sections[0].label).toBe('Blues');
-        expect(btn.onclick).toHaveBeenCalled(); // Verified click simulation
+        expect(groove.genreFeel).toBe('Jazz'); // Verified state update directly
         expect(playback.bandIntensity).toBe(0.4);
     });
 });
