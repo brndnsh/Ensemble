@@ -23,12 +23,12 @@ mkdir -p dist
 
 # 3. Bundle and Minify JavaScript
 echo "📦 Bundling JavaScript..."
-./node_modules/.bin/esbuild public/logic-worker.js --bundle --outfile=dist/logic-worker.$REV.js --format=esm
-./node_modules/.bin/esbuild public/main.js --bundle --outfile=dist/main.$REV.js --format=esm --define:WORKER_PATH="'logic-worker.$REV.js'" --external:./audio-analyzer-lite.js --jsx=automatic --jsx-import-source=preact
+./node_modules/.bin/esbuild public/logic-worker.js --bundle --sourcemap --outfile=dist/logic-worker.$REV.js --format=esm
+./node_modules/.bin/esbuild public/main.js --bundle --sourcemap --outfile=dist/main.$REV.js --format=esm --define:WORKER_PATH="'logic-worker.$REV.js'" --external:./audio-analyzer-lite.js --jsx=automatic --jsx-import-source=preact
 
 # 4. Bundle and Minify CSS
 echo "🎨 Bundling CSS..."
-./node_modules/.bin/esbuild public/styles.css --bundle --outfile=dist/styles.$REV.css
+./node_modules/.bin/esbuild public/styles.css --bundle --sourcemap --outfile=dist/styles.$REV.css
 
 # 5. Copy other assets
 echo "📄 Copying static assets..."
