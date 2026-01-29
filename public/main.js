@@ -4,16 +4,15 @@ import { renderMeasurePagination } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';
 import { validateProgression } from './chords.js';
-import { restoreState } from './state-hydration.js';
+import { hydrateState, loadFromUrl } from './state-hydration.js';
 import { setInstrumentControllerRefs, switchMeasure } from './instrument-controller.js';
-import { setAppControllerRefs, setBpm } from './app-controller.js';
+import { setBpm } from './app-controller.js';
 import { togglePlay } from './scheduler-core.js';
-import { setArrangerControllerRefs, validateAndAnalyze } from './arranger-controller.js';
+import { validateAndAnalyze } from './arranger-controller.js';
 import { syncWorker, initWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
 import { initPWA } from './pwa.js';
 import { UnifiedVisualizer } from './visualizer.js';
-import { clearChordPresetHighlight } from './instrument-controller.js';
 
 let viz;
 
