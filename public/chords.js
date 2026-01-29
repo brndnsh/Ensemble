@@ -771,6 +771,7 @@ export function validateProgression(renderCallback) {
     });
 
     arranger.progression = allChords;
+    Object.assign(arranger, { progression: allChords });
     updateProgressionCache();
     if (renderCallback) renderCallback();
 }
@@ -781,14 +782,17 @@ export function validateProgression(renderCallback) {
 export function updateProgressionCache() {
     const { arranger } = stateModule;
     if (!arranger.progression.length) {
-        arranger.totalSteps = 0;
-        arranger.stepMap = [];
-        arranger.measureMap = [];
+        Object.assign(arranger, {
+            totalSteps: 0,
+            stepMap: [],
+            measureMap: [],
+            sectionMap: []
+        });
         return;
     }
 
     let current = 0;
-    arranger.stepMap = arranger.progression.map(chord => {
+    const newStepMap = arranger.progression.map(chord => {
         const tsName = chord.timeSignature || arranger.timeSignature;
         const ts = TIME_SIGNATURES[tsName] || TIME_SIGNATURES['4/4'];
         const steps = Math.round(chord.beats * ts.stepsPerBeat);
@@ -796,11 +800,9 @@ export function updateProgressionCache() {
         current += steps;
         return entry;
     });
-    arranger.totalSteps = current;
 
-    // Build Section Map and Measure Map efficiently using the stepMap we just built
-    arranger.sectionMap = [];
-    arranger.measureMap = [];
+    const newSectionMap = [];
+    const newMeasureMap = [];
 
     let mapIndex = 0;
     let sectionAcc = 0;
@@ -809,30 +811,22 @@ export function updateProgressionCache() {
         const sectionStart = sectionAcc;
         let iterationSteps = 0;
 
-        // Efficiently consume chords from stepMap that belong to this section
         const startMapIndex = mapIndex;
 
-        while (mapIndex < arranger.stepMap.length) {
-            const entry = arranger.stepMap[mapIndex];
+        while (mapIndex < newStepMap.length) {
+            const entry = newStepMap[mapIndex];
 
-            // Safety check: ID must match
             if (entry.chord.sectionId !== section.id) break;
 
             if (mapIndex > startMapIndex) {
-                const prevEntry = arranger.stepMap[mapIndex-1];
-
-                // Robust detection of section boundaries even with shared IDs:
-                // If localIndex reset (<= prev) ...
+                const prevEntry = newStepMap[mapIndex-1];
                 if (entry.chord.localIndex <= prevEntry.chord.localIndex) {
-                    // ... it must be a new repeat (r = prev + 1).
-                    // If not, it's a new section.
                     if (entry.chord.repeatIndex !== prevEntry.chord.repeatIndex + 1) {
                         break;
                     }
                 }
             }
 
-            // Calculate iterationSteps from the first repeat only
             if (entry.chord.repeatIndex === 0) {
                 iterationSteps += (entry.end - entry.start);
             }
@@ -840,9 +834,9 @@ export function updateProgressionCache() {
             mapIndex++;
         }
 
-        const totalSectionSteps = (mapIndex > startMapIndex) ? (arranger.stepMap[mapIndex-1].end - arranger.stepMap[startMapIndex].start) : 0;
+        const totalSectionSteps = (mapIndex > startMapIndex) ? (newStepMap[mapIndex-1].end - newStepMap[startMapIndex].start) : 0;
 
-        arranger.sectionMap.push({
+        newSectionMap.push({
             id: section.id,
             start: sectionStart,
             end: sectionStart + totalSectionSteps,
@@ -850,7 +844,6 @@ export function updateProgressionCache() {
         });
         sectionAcc += totalSectionSteps;
 
-        // Build Measure Map (only if section is valid/has steps)
         if (iterationSteps > 0) {
             const repeats = section.repeat || 1;
             const tsName = section.timeSignature || arranger.timeSignature;
@@ -863,7 +856,7 @@ export function updateProgressionCache() {
                 let sectionStep = 0;
                 while (sectionStep < iterationSteps) {
                     const measureEnd = Math.min(sectionStep + stepsPerMeasure, iterationSteps);
-                    arranger.measureMap.push({
+                    newMeasureMap.push({
                         start: stepAccLocal + sectionStep,
                         end: stepAccLocal + measureEnd,
                         ts: tsName
@@ -873,5 +866,12 @@ export function updateProgressionCache() {
                 stepAccLocal += iterationSteps;
             }
         }
+    });
+
+    Object.assign(arranger, {
+        totalSteps: current,
+        stepMap: newStepMap,
+        sectionMap: newSectionMap,
+        measureMap: newMeasureMap
     });
 }

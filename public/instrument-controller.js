@@ -34,38 +34,43 @@ export function loadDrumPreset(name) {
     if (p[arranger.timeSignature]) {
         p = { ...p, ...p[arranger.timeSignature] };
     }
-    groove.lastDrumPreset = name;
-    groove.measures = p.measures || 1; 
-    groove.currentMeasure = 0;
-    ui.drumBarsSelect.value = String(groove.measures);
-    
-    if (p.swing !== undefined) { groove.swing = p.swing; ui.swingSlider.value = p.swing; }
-    if (p.sub) { groove.swingSub = p.sub; ui.swingBase.value = p.sub; }
-    groove.instruments.forEach(inst => {
+    const newInstruments = groove.instruments.map(inst => {
         const spm = getStepsPerMeasure(arranger.timeSignature);
         const pattern = p[inst.name] || new Array(spm).fill(0);
-        inst.steps.fill(0);
-        pattern.forEach((v, i) => { if (i < 128) inst.steps[i] = v; });
+        const newSteps = new Array(128).fill(0);
+        pattern.forEach((v, i) => { if (i < 128) newSteps[i] = v; });
+        return { ...inst, steps: newSteps };
     });
+
+    Object.assign(groove, {
+        lastDrumPreset: name,
+        measures: p.measures || 1,
+        currentMeasure: 0,
+        instruments: newInstruments,
+        swing: p.swing !== undefined ? p.swing : groove.swing,
+        swingSub: p.sub || groove.swingSub
+    });
+    
     renderMeasurePagination(switchMeasure);
-    // renderGrid removed
 }
 
 export function cloneMeasure() {
     const spm = getStepsPerMeasure(arranger.timeSignature);
     const sourceOffset = groove.currentMeasure * spm;
-    groove.instruments.forEach(inst => {
+    const newInstruments = groove.instruments.map(inst => {
+        const newSteps = [...inst.steps];
         const pattern = inst.steps.slice(sourceOffset, sourceOffset + spm);
         for (let m = 0; m < groove.measures; m++) {
             if (m === groove.currentMeasure) continue;
             const targetOffset = m * spm;
             for (let i = 0; i < spm; i++) {
-                inst.steps[targetOffset + i] = pattern[i];
+                newSteps[targetOffset + i] = pattern[i];
             }
         }
+        return { ...inst, steps: newSteps };
     });
+    Object.assign(groove, { instruments: newInstruments });
     showToast(`Measure ${groove.currentMeasure + 1} copied to all`);
-    // renderGridState removed
 }
 
 export function clearDrumPresetHighlight() {
