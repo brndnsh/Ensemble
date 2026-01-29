@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { ui, showToast, renderChordVisualizer, renderSections, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels, switchInstrumentTab } from './ui.js';
+import { ui, showToast, renderChordVisualizer, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels, switchInstrumentTab } from './ui.js';
 import { playback, chords, bass, soloist, harmony, groove, arranger, dispatch, subscribe } from './state.js';
 import { saveCurrentState } from './persistence.js';
 import { restoreGains } from './engine.js';
@@ -9,7 +9,7 @@ import { DRUM_PRESETS, CHORD_PRESETS, SONG_TEMPLATES, SMART_GENRES } from './pre
 import { mutateProgression } from './chords.js';
 import { setBpm } from './app-controller.js';
 import { flushBuffers, switchMeasure, updateMeasures, loadDrumPreset, cloneMeasure, clearDrumPresetHighlight, resetToDefaults, togglePower } from './instrument-controller.js';
-import { onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey, updateGroupingUI, initArrangerHandlers } from './arranger-controller.js';
+import { validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, addSection, transposeKey, switchToRelativeKey, updateGroupingUI, initArrangerHandlers } from './arranger-controller.js';
 import { pushHistory, undo } from './history.js';
 import { shareProgression } from './sharing.js';
 import { triggerInstall } from './pwa.js';
@@ -131,7 +131,7 @@ export function setupPresets(refs = {}) {
         updateRelKeyButton();
         updateKeySelectLabels();
         arranger.lastChordPreset = item.name;
-        renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+        // renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         validateAndAnalyze();
         flushBuffers();
         document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));

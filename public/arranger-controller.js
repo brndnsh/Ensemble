@@ -1,5 +1,5 @@
 import { arranger } from './state.js';
-import { ui, renderSections, renderChordVisualizer, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
+import { ui, renderChordVisualizer, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
 import { restoreGains } from './engine.js';
@@ -72,7 +72,7 @@ export function clearChordPresetHighlight() {
 }
 
 export function refreshArrangerUI() {
-    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    // renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     validateAndAnalyze();
     syncWorker();
     flushBuffers();
@@ -109,7 +109,7 @@ export function onSectionUpdate(id, field, value) {
     }
     arranger.isDirty = true;
     if (field === 'reorder' || field === 'move' || field === 'seamless') {
-        renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+        // renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
     }
     if (field === 'reorder' || field === 'move' || field === 'value') {
         clearChordPresetHighlight();

@@ -3,6 +3,7 @@ import { StyleSelector } from './components/StyleSelector.jsx';
 import { Transport } from './components/Transport.jsx';
 import { Settings } from './components/Settings.jsx';
 import { InstrumentSettings } from './components/InstrumentSettings.jsx';
+import { Arranger } from './components/Arranger.jsx';
 import { CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, HARMONY_STYLES } from './presets.js';
 
 export function mountComponents() {
@@ -28,7 +29,6 @@ export function mountComponents() {
     const header = document.querySelector('header');
     const legacyControls = header ? header.querySelector('.main-controls') : null;
     if (header && legacyControls) {
-        // We replace the legacy controls div with our new Component
         render(<Transport />, header, legacyControls);
     }
 
@@ -53,10 +53,16 @@ export function mountComponents() {
         if (panel) {
             const menu = panel.querySelector('.panel-settings-menu');
             if (menu) {
-                menu.innerHTML = ''; // Clear legacy HTML
-                // We keep the container for CSS (positioning) and render inside
+                menu.innerHTML = ''; 
                 render(<InstrumentSettings module={module} />, menu);
             }
         }
     });
+
+    // 5. Arranger (Replaces #sectionList content)
+    const sectionList = document.getElementById('sectionList');
+    if (sectionList) {
+        sectionList.innerHTML = '';
+        render(<Arranger />, sectionList);
+    }
 }
