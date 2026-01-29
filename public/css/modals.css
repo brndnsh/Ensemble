@@ -457,6 +457,12 @@ select, input[type="range"] {
     outline: none;
     border-bottom: 1px solid var(--accent-color);
 }
+.section-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
 .section-move-btn,
 .section-duplicate-btn,
 .section-kebab-btn,
