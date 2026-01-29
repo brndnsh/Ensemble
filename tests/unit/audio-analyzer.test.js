@@ -96,6 +96,14 @@ describe('Audio Analyzer (Consolidated)', () => {
             expect(results[0].chord).toBe('G7');
         });
 
+        it('should identify a C Major 7th (adjacent semitones check)', async () => {
+            // C4 (261.63), E4 (329.63), G4 (392.00), B4 (493.88)
+            // C and B are adjacent in chromagram (0 and 11)
+            const buffer = createChordBuffer([261.63, 329.63, 392.00, 493.88]);
+            const { results } = await analyzer.analyze(buffer, { bpm: 60 });
+            expect(results[0].chord).toBe('Cmaj7');
+        });
+
         it('should ignore high-frequency melody noise', async () => {
             // C Major triad + high-pitched "vocal" noise (A6 @ 1760Hz)
             const buffer = createChordBuffer([261.63, 329.63, 392.00, 1760.00]);

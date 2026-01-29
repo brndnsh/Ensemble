@@ -936,7 +936,8 @@ export class ChordAnalyzerLite {
             const prev = chroma[(i - 1 + 12) % 12];
             const next = chroma[(i + 1) % 12];
             // Only keep bins that are local maxima to clear out spectral leakage
-            if (chroma[i] > prev && chroma[i] > next && chroma[i] > 0.1) {
+            // We use a tolerance (0.85) to allow adjacent peaks of similar magnitude (e.g. Major 7th intervals C and B)
+            if (chroma[i] >= prev * 0.85 && chroma[i] >= next * 0.85 && chroma[i] > 0.1) {
                 sharpened[i] = chroma[i];
             }
         }
