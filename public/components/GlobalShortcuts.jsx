@@ -2,7 +2,8 @@ import { useEffect } from 'preact/hooks';
 import { togglePlay } from '../scheduler-core.js';
 import { switchMeasure } from '../instrument-controller.js';
 import { ModalManager } from '../ui-modal-controller.js';
-import { playback, groove } from '../state.js';
+import { playback, groove, dispatch } from '../state.js';
+import { ACTIONS } from '../types.js';
 
 export function GlobalShortcuts() {
     useEffect(() => {
@@ -10,7 +11,8 @@ export function GlobalShortcuts() {
             const isTyping = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
 
             // Space: Toggle Play
-            if (e.key === ' ' && !isTyping && !ModalManager.activeModal) {
+            const anyModalOpen = ModalManager.activeModal || Object.values(playback.modals).some(isOpen => isOpen);
+            if (e.key === ' ' && !isTyping && !anyModalOpen) {
                 e.preventDefault();
                 togglePlay(playback.viz);
             }
@@ -18,11 +20,8 @@ export function GlobalShortcuts() {
             // 'E': Toggle Editor
             if (e.key.toLowerCase() === 'e' && !isTyping && !e.metaKey && !e.ctrlKey) {
                 e.preventDefault();
-                const overlay = document.getElementById('editorOverlay');
-                if (overlay) {
-                    if (overlay.classList.contains('active')) ModalManager.close(overlay);
-                    else ModalManager.open(overlay);
-                }
+                const isOpen = playback.modals.editor;
+                dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: !isOpen });
             }
 
             // 1-4: Switch Mobile Tabs
@@ -43,7 +42,13 @@ export function GlobalShortcuts() {
                     const btn = document.getElementById('maximizeChordBtn');
                     if (btn) btn.textContent = '⛶';
                 }
-                if (ModalManager.activeModal) ModalManager.close();
+
+                // Close any open modals
+                Object.keys(playback.modals).forEach(key => {
+                    if (playback.modals[key]) {
+                        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: key, open: false });
+                    }
+                });
             }
         };
 
@@ -54,8 +59,7 @@ export function GlobalShortcuts() {
                     arranger.lastInteractedSectionId = sectionId;
                 });
             }
-            const overlay = document.getElementById('editorOverlay');
-            if (overlay) ModalManager.open(overlay);
+            dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: true });
         };
 
         window.addEventListener('keydown', handleKeyDown);

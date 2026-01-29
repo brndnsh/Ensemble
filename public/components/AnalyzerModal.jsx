@@ -43,11 +43,7 @@ export function AnalyzerModal() {
     // --- HOISTED FUNCTIONS ---
 
     function close() {
-        const overlay = document.getElementById('analyzerOverlay');
-        if (overlay) ModalManager.close(overlay);
-        stopLiveListen();
-        setAudioBuffer(null);
-        setView('idle');
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'analyzer', open: false });
     }
 
     function stopLiveListen() {
@@ -67,6 +63,18 @@ export function AnalyzerModal() {
         setDetectedKey('--');
         setView('idle');
     }
+
+    useEffect(() => {
+        return () => {
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(t => t.stop());
+            }
+            if (audioCtxRef.current) {
+                audioCtxRef.current.close();
+            }
+            if (autoAddTimerRef.current) clearTimeout(autoAddTimerRef.current);
+        };
+    }, []);
 
     function addCurrentChord() {
         if (!currentStableChord) return;

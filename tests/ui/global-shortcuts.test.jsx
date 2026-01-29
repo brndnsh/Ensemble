@@ -7,6 +7,7 @@ import React from 'preact/compat';
 import { GlobalShortcuts } from '../../public/components/GlobalShortcuts.jsx';
 import { togglePlay } from '../../public/scheduler-core.js';
 import { ModalManager } from '../../public/ui-modal-controller.js';
+import { ACTIONS } from '../../public/types.js';
 
 // Mock scheduler-core
 vi.mock('../../public/scheduler-core.js', () => ({
@@ -24,8 +25,12 @@ vi.mock('../../public/ui-modal-controller.js', () => ({
 
 // Mock State
 vi.mock('../../public/state.js', () => ({
-    playback: { viz: {} },
-    groove: { currentMeasure: 0, measures: 4 }
+    playback: {
+        viz: {},
+        modals: { editor: false, settings: false }
+    },
+    groove: { currentMeasure: 0, measures: 4 },
+    dispatch: vi.fn()
 }));
 
 // Mock instrument-controller
@@ -55,7 +60,7 @@ describe('Global Shortcuts', () => {
         expect(togglePlay).toHaveBeenCalled();
     });
 
-    it('should NOT toggle playback if modal is open', () => {
+    it('should NOT toggle playback if modal is open via ModalManager', () => {
         ModalManager.activeModal = document.createElement('div');
         const event = new KeyboardEvent('keydown', { key: ' ' });
         window.dispatchEvent(event);
@@ -63,17 +68,22 @@ describe('Global Shortcuts', () => {
         ModalManager.activeModal = null; // Reset
     });
 
-    it('should toggle editor on E', () => {
-        // Mock getElementById
-        const overlay = document.createElement('div');
-        overlay.id = 'editorOverlay';
-        document.body.appendChild(overlay);
+    it('should NOT toggle playback if modal is open via state', async () => {
+        const { playback } = await import('../../public/state.js');
+        playback.modals.editor = true;
 
+        const event = new KeyboardEvent('keydown', { key: ' ' });
+        window.dispatchEvent(event);
+
+        expect(togglePlay).not.toHaveBeenCalled();
+        playback.modals.editor = false; // Reset
+    });
+
+    it('should toggle editor on E', async () => {
+        const { dispatch } = await import('../../public/state.js');
         const event = new KeyboardEvent('keydown', { key: 'e' });
         window.dispatchEvent(event);
 
-        expect(ModalManager.open).toHaveBeenCalledWith(overlay);
-
-        overlay.remove();
+        expect(dispatch).toHaveBeenCalledWith(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: true });
     });
 });

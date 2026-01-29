@@ -1,15 +1,26 @@
 import { h } from 'preact';
 import React from 'preact/compat';
+import { useEffect, useState } from 'preact/hooks';
 import { ModalManager } from '../ui-modal-controller.js';
 import { useEnsembleState } from '../ui-bridge.js';
 import { exportToMidi } from '../midi-export.js';
+import { arranger, playback, dispatch } from '../state.js';
+import { ACTIONS } from '../types.js';
 
 export function ExportModal() {
     const isOpen = useEnsembleState(s => s.playback.modals.export);
+    const [filename, setFilename] = useState("Ensemble Export");
+
+    useEffect(() => {
+        if (isOpen) {
+            let defaultName = arranger.lastChordPreset || "Ensemble Export";
+            defaultName = defaultName.replace(/[^a-zA-Z0-9\s-_]/g, '').trim();
+            setFilename(`${defaultName} - ${arranger.key} - ${playback.bpm}bpm`);
+        }
+    }, [isOpen]);
 
     const close = () => {
-        const overlay = document.getElementById('exportOverlay');
-        if (overlay) ModalManager.close(overlay);
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'export', open: false });
     };
 
     const adjustExportDuration = (delta) => {
@@ -45,11 +56,10 @@ export function ExportModal() {
         const loopMode = document.querySelector('input[name="exportMode"]:checked')?.value || 'once';
         const targetDurationInput = document.getElementById('exportDurationInput');
         const targetDuration = targetDurationInput ? parseFloat(targetDurationInput.value) : 1;
-        const filenameInput = document.getElementById('exportFilenameInput');
-        const filename = filenameInput ? filenameInput.value.trim() : "Ensemble Export";
+        const finalFilename = filename.trim() || "Ensemble Export";
         
         close();
-        exportToMidi({ includedTracks, loopMode, targetDuration, filename });
+        exportToMidi({ includedTracks, loopMode, targetDuration, filename: finalFilename });
     };
 
     return (
@@ -69,7 +79,7 @@ export function ExportModal() {
                             <label class="setting-label">
                                 <span>Filename</span>
                             </label>
-                            <input type="text" id="exportFilenameInput" value="Ensemble Export" style="width: 100%; padding: 0.5rem; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;" spellcheck="false" />
+                            <input type="text" id="exportFilenameInput" value={filename} onInput={(e) => setFilename(e.target.value)} style="width: 100%; padding: 0.5rem; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;" spellcheck="false" />
                         </div>
                     </div>
 
