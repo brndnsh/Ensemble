@@ -16,6 +16,15 @@ export function useEnsembleState(selector) {
     useEffect(() => {
         const update = (action, payload, updatedStateMap) => {
             const newSlice = selector(updatedStateMap);
+            
+            // DIAGNOSTIC LOGGING
+            if (action && (action === 'PROG_VALIDATED' || action === 'DRUM_PRESET_LOADED')) {
+                console.log(`[UI-Bridge] State Update Triggered by: ${action}`, {
+                    action,
+                    hasProgression: !!updatedStateMap.arranger.progression.length
+                });
+            }
+
             setSlice(newSlice);
             setVersion(v => v + 1);
         };

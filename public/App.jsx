@@ -277,11 +277,138 @@ function GroovePanel() {
             </div>
 
             <div id="groove-tab-smart" class={`instrument-tab-content ${activeTab === 'smart' ? 'active' : ''}`}>
-                {/* Genre Selector Omitted for brevity, but should be included */}
+                <GenreSelector />
+                <IntensitySlider />
+                <ComplexitySlider />
             </div>
 
             <div class="panel-settings-menu grooves-settings-menu">
                 <InstrumentSettings module="groove" />
+            </div>
+        </div>
+    );
+}
+
+function IntensitySlider() {
+    const { bandIntensity, autoIntensity } = useEnsembleState(s => ({
+        bandIntensity: s.playback.bandIntensity,
+        autoIntensity: s.playback.autoIntensity
+    }));
+
+    return (
+        <div class="smart-control-group" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
+                <label style="font-size: 0.9rem; color: #94a3b8;">Intensity (Global)</label>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                        <input 
+                            type="checkbox" 
+                            checked={autoIntensity} 
+                            onChange={(e) => {
+                                dispatch(ACTIONS.SET_AUTO_INTENSITY, e.target.checked);
+                                saveCurrentState();
+                            }}
+                        /> Auto
+                    </label>
+                    <span style="color: var(--accent-color); font-weight: bold; font-size: 0.9rem;">{Math.round(bandIntensity * 100)}%</span>
+                </div>
+            </div>
+            <input 
+                id="intensitySlider"
+                type="range" 
+                min="0" 
+                max="100" 
+                value={Math.round(bandIntensity * 100)} 
+                onInput={(e) => {
+                    dispatch(ACTIONS.SET_BAND_INTENSITY, parseInt(e.target.value) / 100);
+                }}
+                disabled={autoIntensity}
+                style={{ width: '100%', height: '6px', opacity: autoIntensity ? 0.5 : 1 }} 
+            />
+        </div>
+    );
+}
+
+function ComplexitySlider() {
+    const complexity = useEnsembleState(s => s.playback.complexity);
+
+    let label = 'Low';
+    if (complexity > 0.33) label = 'Medium';
+    if (complexity > 0.66) label = 'High';
+
+    return (
+        <div class="smart-control-group" style="margin-bottom: 1rem;">
+            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">
+                <span>Complexity</span>
+                <span style="color: var(--accent-color); font-weight: bold;">{label}</span>
+            </label>
+            <input 
+                id="complexitySlider"
+                type="range" 
+                min="0" 
+                max="100" 
+                value={Math.round(complexity * 100)} 
+                onInput={(e) => {
+                    dispatch(ACTIONS.SET_COMPLEXITY, parseInt(e.target.value) / 100);
+                }}
+                style="width: 100%; height: 6px;" 
+            />
+        </div>
+    );
+}
+
+function GenreSelector() {
+    const { lastSmartGenre, pendingGenreFeel } = useEnsembleState(s => ({
+        lastSmartGenre: s.groove.lastSmartGenre,
+        pendingGenreFeel: s.groove.pendingGenreFeel
+    }));
+
+    const genres = [
+        'Rock', 'Jazz', 'Funk', 'Disco', 'Hip Hop', 'Blues', 
+        'Neo-Soul', 'Reggae', 'Acoustic', 'Bossa', 'Country', 'Metal'
+    ];
+
+    const handleGenreClick = (genre) => {
+        // Find existing logic in ui-controller.js or replicate here
+        // We'll dispatch the action that the legacy code did
+        import('./presets.js').then(({ SMART_GENRES }) => {
+            const config = SMART_GENRES[genre];
+            if (config) {
+                dispatch(ACTIONS.SET_GENRE_FEEL, {
+                    genreName: genre,
+                    feel: config.feel,
+                    swing: config.swing,
+                    sub: config.sub,
+                    drum: config.drum,
+                    chord: config.chord,
+                    bass: config.bass,
+                    soloist: config.soloist
+                });
+                syncWorker();
+                saveCurrentState();
+            }
+        });
+    };
+
+    return (
+        <div class="smart-control-group" style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Genre</label>
+            <div class="genre-selector">
+                {genres.map(genre => {
+                    const isActive = genre === lastSmartGenre && !pendingGenreFeel;
+                    const isPending = pendingGenreFeel && (pendingGenreFeel.genreName === genre);
+                    
+                    return (
+                        <button 
+                            key={genre}
+                            className={`genre-btn ${isActive ? 'active' : ''} ${isPending ? 'pending' : ''}`}
+                            onClick={() => handleGenreClick(genre)}
+                            aria-pressed={isActive ? 'true' : 'false'}
+                        >
+                            {genre}
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );
@@ -307,15 +434,18 @@ function MobileNav({ activeTab }) {
                 { id: 'bass', label: 'Bass', power: 'bass' },
                 { id: 'soloist', label: 'Soloist', power: 'soloist' },
                 { id: 'harmonies', label: 'Harmony', power: 'harmony' }
-            ].map(tab => (
-                <div key={tab.id} class="tab-item">
-                    <button 
-                        class={`tab-btn ${activeTab === tab.id ? 'active' : ''}`} 
-                        onClick={() => switchMobileTab(tab.id)}
-                    >{tab.label}</button>
-                    <button id={`${tab.power}PowerBtn`} class="power-btn" aria-label={`Toggle ${tab.label}`}>⏻</button>
-                </div>
-            ))}
+            ].map(tab => {
+                const isActive = (activeTab === tab.id) || (activeTab === 'mobile' && tab.id === 'grooves'); // Handle legacy tab naming
+                return (
+                    <div key={tab.id} class="tab-item">
+                        <button 
+                            class={`tab-btn ${isActive ? 'active' : ''}`} 
+                            onClick={() => switchMobileTab(tab.id)}
+                        >{tab.label}</button>
+                        <button id={`${tab.power}PowerBtn`} class="power-btn" aria-label={`Toggle ${tab.label}`}>⏻</button>
+                    </div>
+                );
+            })}
         </div>
     );
 }
