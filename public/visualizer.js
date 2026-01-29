@@ -251,46 +251,69 @@ export class UnifiedVisualizer {
 
         ctx.lineWidth = 1;
 
-        // Draw Keys
+        // Draw Keys (Batched for performance)
+        // Pass 1: Backgrounds & Labels (Fills)
         for (let m = startMidi; m <= endMidi; m++) {
             const y = getY(m);
             const noteInOctave = m % 12;
-            const isBlack = [1, 3, 6, 8, 10].includes(noteInOctave); // C# D# F# G# A#
+            const isBlack = [1, 3, 6, 8, 10].includes(noteInOctave);
             
-            // Draw Key Background
             if (this.activeNotes.has(m)) {
                 ctx.fillStyle = this.activeNotes.get(m);
             } else {
                 ctx.fillStyle = isBlack ? keyBlack : keyWhite;
             }
-            
             ctx.fillRect(0, y - yScale/2, this.pianoRollWidth, yScale);
 
-            // Draw Separator
-            ctx.strokeStyle = keySeparator;
-            ctx.beginPath();
-            ctx.moveTo(0, y + yScale/2);
-            ctx.lineTo(this.pianoRollWidth, y + yScale/2);
-            ctx.stroke();
-
-            // Draw Label for C
             if (noteInOctave === 0) {
                 ctx.fillStyle = labelColor;
-                if (this.activeNotes.has(m)) ctx.fillStyle = '#fff'; // Contrast for active
+                if (this.activeNotes.has(m)) ctx.fillStyle = '#fff';
                 ctx.font = '10px sans-serif';
                 ctx.textAlign = 'right';
                 ctx.textBaseline = 'middle';
                 const octave = (m / 12) - 1;
                 ctx.fillText(`C${octave}`, this.pianoRollWidth - 4, y);
             }
-
-            // Draw horizontal pitch guide lines across the graph
-            ctx.strokeStyle = isBlack ? guideLineBlack : guideLineWhite;
-            ctx.beginPath();
-            ctx.moveTo(this.pianoRollWidth, y);
-            ctx.lineTo(w, y);
-            ctx.stroke();
         }
+
+        // Pass 2: Separators (Batch Stroke)
+        ctx.strokeStyle = keySeparator;
+        ctx.beginPath();
+        for (let m = startMidi; m <= endMidi; m++) {
+            const y = getY(m);
+            ctx.moveTo(0, y + yScale/2);
+            ctx.lineTo(this.pianoRollWidth, y + yScale/2);
+        }
+        ctx.stroke();
+
+        // Pass 3: Guide Lines (Batch Strokes by Color)
+        // White Keys Guide Lines
+        ctx.strokeStyle = guideLineWhite;
+        ctx.beginPath();
+        for (let m = startMidi; m <= endMidi; m++) {
+            const noteInOctave = m % 12;
+            const isBlack = [1, 3, 6, 8, 10].includes(noteInOctave);
+            if (!isBlack) {
+                const y = getY(m);
+                ctx.moveTo(this.pianoRollWidth, y);
+                ctx.lineTo(w, y);
+            }
+        }
+        ctx.stroke();
+
+        // Black Keys Guide Lines
+        ctx.strokeStyle = guideLineBlack;
+        ctx.beginPath();
+        for (let m = startMidi; m <= endMidi; m++) {
+            const noteInOctave = m % 12;
+            const isBlack = [1, 3, 6, 8, 10].includes(noteInOctave);
+            if (isBlack) {
+                const y = getY(m);
+                ctx.moveTo(this.pianoRollWidth, y);
+                ctx.lineTo(w, y);
+            }
+        }
+        ctx.stroke();
 
         // Separator line between keys and graph
         ctx.strokeStyle = separatorColor;
@@ -353,11 +376,11 @@ export class UnifiedVisualizer {
 
             // Render background guide tones
             if (ev.intervals) {
+                ctx.globalAlpha = 0.1; // Optimization: Set alpha once
                 for (const interval of ev.intervals) {
                     const pc = (rootPC + interval) % 12;
                     const cat = getCategory(interval);
                     ctx.fillStyle = chordColors[cat];
-                    ctx.globalAlpha = 0.1;
                     
                     // Render in visible octaves
                     const minOct = Math.floor(startMidi / 12);
@@ -370,8 +393,8 @@ export class UnifiedVisualizer {
                             ctx.fillRect(x, y - yScale/2, cw, yScale);
                         }
                     }
-                    ctx.globalAlpha = 1.0;
                 }
+                ctx.globalAlpha = 1.0;
             }
 
             // Render specifically played notes (highlighted)
