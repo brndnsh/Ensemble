@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { subscribe, dispatch as internalDispatch, playback, chords, bass, soloist, harmony, groove, arranger, vizState, midi } from './state.js';
 
 // Reconstruct the map locally since it's not exported directly, though it is passed to listeners
@@ -22,11 +22,14 @@ function shallowEqual(objA, objB) {
  * @returns {*} The selected state slice.
  */
 export function useEnsembleState(selector) {
+    const selectorRef = useRef(selector);
+    selectorRef.current = selector;
+
     const [slice, setSlice] = useState(() => selector(localStateMap));
 
     useEffect(() => {
         const update = (action, payload, updatedStateMap) => {
-            const newSlice = selector(updatedStateMap);
+            const newSlice = selectorRef.current(updatedStateMap);
             setSlice(prevSlice => {
                 if (!shallowEqual(prevSlice, newSlice)) {
                     return newSlice;
@@ -37,7 +40,7 @@ export function useEnsembleState(selector) {
         
         const unsubscribe = subscribe(update);
         return unsubscribe;
-    }, [selector]);
+    }, []);
 
     return slice;
 }

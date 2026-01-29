@@ -1,7 +1,7 @@
 import { h, Fragment } from 'preact';
 import React from 'preact/compat';
 import { memo } from 'preact/compat';
-import { useState, useMemo, useEffect, useRef } from 'preact/hooks';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { getStepsPerMeasure, getStepInfo } from '../utils.js';
 import { TIME_SIGNATURES } from '../config.js';
@@ -105,7 +105,7 @@ export function SequencerGrid() {
         return () => cancelAnimationFrame(frameId);
     }, [totalSteps]);
 
-    const handleToggle = (e, instIdx, stepIdx) => {
+    const handleToggle = useCallback((e, instIdx, stepIdx) => {
         if (e.type === 'mouseover' && !isDragging) return;
         
         const inst = instruments[instIdx];
@@ -120,24 +120,26 @@ export function SequencerGrid() {
             setIsDragging(true);
         }
 
+        // Only update if changed (though dispatch handles logic too)
+        // We use the local 'instruments' from closure, but actual update goes to store via dispatch
         if (inst.steps[stepIdx] !== newType) {
             inst.steps[stepIdx] = newType;
             clearDrumPresetHighlight();
             import('../state.js').then(({ dispatch }) => dispatch(ACTIONS.STEP_TOGGLE));
         }
-    };
+    }, [isDragging, dragType, instruments]);
 
-    const handleAudition = (inst) => {
+    const handleAudition = useCallback((inst) => {
         import('../engine.js').then(({ initAudio, playDrumSound }) => {
             initAudio();
             playDrumSound(inst.name, playbackState.audio.currentTime, 1.0);
         });
-    };
+    }, []);
 
-    const handleMute = (inst, instIdx) => {
+    const handleMute = useCallback((inst, instIdx) => {
         inst.muted = !inst.muted;
         import('../state.js').then(({ dispatch }) => dispatch('MUTE_TOGGLE'));
-    };
+    }, []);
 
     return (
         <Fragment>
