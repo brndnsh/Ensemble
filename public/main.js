@@ -27,6 +27,12 @@ window.enableWorkerLogging = (enabled) => {
 
 function init() {
     try {
+        // --- HYDRATE STATE FIRST ---
+        // Ensure state is populated BEFORE the UI mounts so components initialize with correct data.
+        hydrateState();
+        loadFromUrl(viz);
+        validateProgression(); 
+
         // --- ASSEMBLE UI ---
         mountComponents();
 
@@ -78,11 +84,6 @@ function init() {
         viz.addTrack('soloist', 'var(--soloist-color)');
         viz.addTrack('harmony', 'var(--harmony-color)');
         viz.addTrack('drums', 'var(--text-color)');
-
-        hydrateState();
-        loadFromUrl(viz);
-
-        validateProgression(); // Parse initial progression BEFORE mounting fully or immediately after
 
         setInstrumentControllerRefs(() => scheduler(), viz);
         initTabs(); 
