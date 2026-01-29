@@ -1,5 +1,4 @@
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi } from './state.js';
-import { decompressSections, generateId } from './utils.js';
 
 let saveTimeout;
 

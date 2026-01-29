@@ -2,8 +2,6 @@ import { ui } from './ui.js';
 import { groove } from './state.js';
 import { switchMeasure } from './instrument-controller.js';
 import { ModalManager } from './ui-modal-controller.js';
-import { pushHistory } from './history.js';
-import { getStepsPerMeasure } from './utils.js';
 
 /**
  * Legacy UI Controller - Handles remaining imperative logic and global events.
