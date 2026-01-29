@@ -3,7 +3,7 @@ import { mountComponents } from './ui-root.jsx';
 import { initAudio, playNote } from './engine.js';
 import { validateProgression } from './chords.js';
 import { hydrateState, loadFromUrl } from './state-hydration.js';
-import { setInstrumentControllerRefs, initializePowerButtons, loadDrumPreset } from './instrument-controller.js';
+import { setInstrumentControllerRefs, loadDrumPreset } from './instrument-controller.js';
 import { scheduler } from './scheduler-core.js';
 import { analyzeFormUI } from './arranger-controller.js';
 import { syncWorker, initWorker } from './worker-client.js';
@@ -82,15 +82,10 @@ function init() {
         viz.addTrack('drums', 'var(--text-color)');
 
         setInstrumentControllerRefs(() => scheduler(), viz);
-        // initSequencerHandlers();
-        // renderGrid(); 
         
         const hasDrumPattern = groove.instruments.some(inst => inst.steps.some(s => s > 0));
         if (!hasDrumPattern) loadDrumPreset(groove.lastDrumPreset || 'Basic Rock');
         
-        // renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
-        initializePowerButtons();
-
         // --- BACKGROUND RECOVERY ---
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {

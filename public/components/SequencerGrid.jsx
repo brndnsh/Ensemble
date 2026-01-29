@@ -9,15 +9,15 @@ import { clearDrumPresetHighlight } from '../instrument-controller.js';
 import { playback as playbackState } from '../state.js';
 
 const Step = memo(({ instIdx, stepIdx, value, instName, stepInfo, onToggle }) => {
-    const isPlaying = useEnsembleState(s => s.playback.isPlaying && s.playback.step === stepIdx);
+    // Optimization: Removed per-step subscription to playback state.
+    // Visual "playing" state is handled by parent via direct DOM manipulation.
     
     const className = [
         'step',
         value === 1 ? 'active' : '',
         value === 2 ? 'accented' : '',
         stepInfo.isGroupStart ? 'group-marker' : '',
-        stepInfo.isBeatStart ? 'beat-marker' : '',
-        isPlaying ? 'playing' : ''
+        stepInfo.isBeatStart ? 'beat-marker' : ''
     ].filter(Boolean).join(' ');
 
     const status = value === 1 ? 'active' : (value === 2 ? 'accented' : 'inactive');
@@ -56,6 +56,52 @@ export function SequencerGrid() {
         window.addEventListener('mouseup', handleMouseUp);
         return () => window.removeEventListener('mouseup', handleMouseUp);
     }, []);
+
+    // Optimized visual update loop
+    useEffect(() => {
+        let lastStep = -1;
+        let frameId;
+
+        const loop = () => {
+            if (playbackState.isPlaying) {
+                // Determine current visible step based on lastPlayingStep (absolute) and totalSteps
+                // playbackState.lastPlayingStep comes from animation loop which processes visual events
+                const step = (playbackState.lastPlayingStep || 0) % totalSteps;
+
+                if (step !== lastStep) {
+                    const grid = document.getElementById('sequencerGrid');
+                    if (grid) {
+                        if (lastStep !== -1) {
+                            // Use efficient class toggling
+                            const prev = grid.querySelectorAll(`.step[data-step-idx="${lastStep}"]`);
+                            for (let i = 0; i < prev.length; i++) {
+                                prev[i].classList.remove('playing');
+                            }
+                        }
+
+                        const curr = grid.querySelectorAll(`.step[data-step-idx="${step}"]`);
+                        for (let i = 0; i < curr.length; i++) {
+                            curr[i].classList.add('playing');
+                        }
+                    }
+                    lastStep = step;
+                }
+            } else if (lastStep !== -1) {
+                const grid = document.getElementById('sequencerGrid');
+                if (grid) {
+                    const prev = grid.querySelectorAll(`.step[data-step-idx="${lastStep}"]`);
+                    for (let i = 0; i < prev.length; i++) {
+                        prev[i].classList.remove('playing');
+                    }
+                }
+                lastStep = -1;
+            }
+            frameId = requestAnimationFrame(loop);
+        };
+
+        frameId = requestAnimationFrame(loop);
+        return () => cancelAnimationFrame(frameId);
+    }, [totalSteps]);
 
     const handleToggle = (e, instIdx, stepIdx) => {
         if (e.type === 'mouseover' && !isDragging) return;

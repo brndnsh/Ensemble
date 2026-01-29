@@ -74,8 +74,7 @@ export function cloneMeasure() {
 }
 
 export function clearDrumPresetHighlight() {
-    groove.lastDrumPreset = null;
-    document.querySelectorAll('.drum-preset-chip').forEach(c => c.classList.remove('active'));
+    dispatch(ACTIONS.SET_PARAM, { module: 'groove', param: 'lastDrumPreset', value: null });
 }
 
 let tapTimes = [];
@@ -179,15 +178,6 @@ export function flushBuffer(type, primeSteps = 0) {
         flushWorker(playback.step, null, primeSteps);
     }
     restoreGains();
-}
-
-export function getPowerConfig() {
-    // Deprecated but kept for compatibility if needed by other modules
-    return {};
-}
-
-export function initializePowerButtons() {
-    // Deprecated: Buttons are managed by Preact
 }
 
 export function togglePower(type) {

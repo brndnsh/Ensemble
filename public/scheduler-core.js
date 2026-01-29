@@ -288,14 +288,11 @@ function getChordAtStep(step) {
 export function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteStep, isGroupStart) {
     const conductorVel = playback.conductorVelocity || 1.0;
     const finalTime = time + calculatePocketOffset(playback, groove);
-
-    const header = document.querySelector('.groove-panel-header h2');
-    if (header) header.style.color = groove.fillActive ? 'var(--soloist-color)' : '';
     
     if (groove.fillActive) {
         const fillStep = absoluteStep - groove.fillStartStep;
         if (fillStep >= groove.fillLength) {
-            groove.fillActive = false;
+            dispatch(ACTIONS.SET_PARAM, { module: 'groove', param: 'fillActive', value: false });
             if (groove.pendingCrash) { playDrumSound('Crash', finalTime, 1.1 * conductorVel); groove.pendingCrash = false; }
         }
     }
@@ -693,7 +690,7 @@ export function syncAndFlushWorker(step) {
             bass.buffer.clear();
             soloist.buffer.clear();
             harmony.buffer.clear();
-            groove.fillActive = false;
+            dispatch(ACTIONS.SET_PARAM, { module: 'groove', param: 'fillActive', value: false });
         
             killAllNotes();    flushWorker(step, syncData);
     restoreGains();
