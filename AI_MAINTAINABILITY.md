@@ -41,4 +41,4 @@ The "Ensemble" codebase is exceptionally well-structured for AI agents. Followin
 1.  **UI Modification:** Always look for the relevant component in `public/components/`. Use `App.jsx` only for layout-level changes.
 2.  **State Modification:** Never mutate state slices directly. Use the imported `ACTIONS` and the global `dispatch` function from `state.js`.
 3.  **UI Synchronization:** When adding new state properties, ensure they are handled in the appropriate reducer (e.g., `playback.js`) and followed by a `dispatch` call to trigger component re-renders.
-4.  **Legacy Bridging:** If you need to access a DOM element directly (e.g., for legacy Canvas or 3rd party libs), use the `ui` object from `ui.js` or `ref` within a component.
+4.  **Legacy Bridging:** If you need to access a DOM element directly (e.g., for legacy Canvas or 3rd party libs), use a `ref` within a component.

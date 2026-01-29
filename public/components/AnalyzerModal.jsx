@@ -1,7 +1,6 @@
 import { h, Fragment } from 'preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
 import React from 'preact/compat';
-import { ModalManager } from '../ui-modal-controller.js';
 import { useEnsembleState, useDispatch } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
 import { formatUnicodeSymbols, generateId } from '../utils.js';
@@ -13,6 +12,14 @@ export function AnalyzerModal() {
     const dispatch = useDispatch();
     const isOpen = useEnsembleState(s => s.playback.modals.analyzer);
     const arrangerKey = useEnsembleState(s => s.arranger.key);
+    const overlayRef = useRef(null);
+
+    useEffect(() => {
+        if (isOpen && overlayRef.current) {
+            const focusable = overlayRef.current.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusable) setTimeout(() => focusable.focus(), 50);
+        }
+    }, [isOpen]);
     
     // View States: 'idle', 'live', 'trim', 'processing', 'results'
     const [view, setView] = useState('idle');
@@ -352,7 +359,7 @@ export function AnalyzerModal() {
     }, [isOpen, view, currentStableChord]);
 
     return (
-        <div id="analyzerOverlay" class={`modal-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+        <div id="analyzerOverlay" ref={overlayRef} class={`modal-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
             if (e.target.id === 'analyzerOverlay') close();
         }}>
             <div class="modal-content analyzer-modal settings-content" onClick={(e) => e.stopPropagation()}>

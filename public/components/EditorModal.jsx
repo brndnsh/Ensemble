@@ -1,8 +1,7 @@
 import { h } from 'preact';
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import React from 'preact/compat';
 import { Arranger } from './Arranger.jsx';
-import { ModalManager } from '../ui-modal-controller.js';
 import { useEnsembleState } from '../ui-bridge.js';
 import { arranger, dispatch } from '../state.js';
 import { ACTIONS } from '../types.js';
@@ -15,10 +14,18 @@ import { shareProgression } from '../sharing.js';
 export function EditorModal() {
     const isOpen = useEnsembleState(s => s.playback.modals.editor);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const overlayRef = useRef(null);
 
     const closeEditor = () => {
         dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: false });
     };
+
+    useEffect(() => {
+        if (isOpen && overlayRef.current) {
+            const focusable = overlayRef.current.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusable) setTimeout(() => focusable.focus(), 50);
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (!isMenuOpen) return;
@@ -102,8 +109,10 @@ export function EditorModal() {
     };
 
     return (
-        <div id="editorOverlay" class={`settings-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'}>
-            <div class="settings-content editor-modal">
+        <div id="editorOverlay" ref={overlayRef} class={`settings-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+            if (e.target.id === 'editorOverlay') closeEditor();
+        }}>
+            <div class="settings-content editor-modal" onClick={(e) => e.stopPropagation()}>
                 <div class="modal-header">
                     <h2>Arrangement Editor</h2>
                     <button id="closeEditorBtn" class="primary-btn" onClick={closeEditor}>Done</button>

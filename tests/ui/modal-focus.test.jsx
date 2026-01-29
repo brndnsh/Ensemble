@@ -4,7 +4,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { h, render } from 'preact';
 import React from 'preact/compat';
-import { ModalManager } from '../../public/ui-modal-controller.js';
 import { Settings } from '../../public/components/Settings.jsx';
 import { EditorModal } from '../../public/components/EditorModal.jsx';
 import { Transport } from '../../public/components/Transport.jsx';
@@ -40,7 +39,6 @@ vi.mock('../../public/ui-song-generator-controller.js', () => ({
 describe('Modal Accessibility Focus', () => {
     beforeEach(async () => {
         vi.clearAllMocks();
-        ModalManager.activeModal = null;
         document.body.classList.remove('modal-open');
         
         // Reset state for each test

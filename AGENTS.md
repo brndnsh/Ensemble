@@ -31,8 +31,6 @@ This document outlines mandatory protocols for AI agents (Jules, Gemini, etc.) w
 
 *   **Respect State Boundaries:** State is decomposed into `public/state/`. Use the corresponding slice (e.g., `playback`, `arranger`, `instruments`) for reads.
 *   **Dispatch for Writes:** ALWAYS use `dispatch(ACTIONS.TYPE, payload)` for writes. Never modify state objects directly.
-*   **Domain-Specific UI Registries:** UI controllers now use local `ui` objects that map to the global registry in `ui.js`.
-    *   When adding a feature to a controller, **explicitly add** the required DOM elements to that controller's local `ui` object. This makes the dependencies searchable for other agents.
 
 ## 5. Final Verification
 *   **Linting:** Run `npm run lint` to catch unused imports or variables introduced during refactoring.

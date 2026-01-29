@@ -1,7 +1,6 @@
 import { h } from 'preact';
 import React from 'preact/compat';
-import { useEffect, useState } from 'preact/hooks';
-import { ModalManager } from '../ui-modal-controller.js';
+import { useEffect, useState, useRef } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { exportToMidi } from '../midi-export.js';
 import { arranger, playback, dispatch } from '../state.js';
@@ -10,6 +9,14 @@ import { ACTIONS } from '../types.js';
 export function ExportModal() {
     const isOpen = useEnsembleState(s => s.playback.modals.export);
     const [filename, setFilename] = useState("Ensemble Export");
+    const overlayRef = useRef(null);
+
+    useEffect(() => {
+        if (isOpen && overlayRef.current) {
+            const focusable = overlayRef.current.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusable) setTimeout(() => focusable.focus(), 50);
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen) {
@@ -63,7 +70,7 @@ export function ExportModal() {
     };
 
     return (
-        <div id="exportOverlay" class={`settings-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+        <div id="exportOverlay" ref={overlayRef} class={`settings-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
             if (e.target.id === 'exportOverlay') close();
         }}>
             <div class="settings-content" onClick={(e) => e.stopPropagation()}>

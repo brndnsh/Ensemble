@@ -28,16 +28,6 @@ export function mountComponents() {
     console.log("[UI-Root] Mounting Preact Root...");
     
     const root = document.body;
-    // We clear the body's existing structural placeholders that were previously injected
-    // but we keep flashOverlay and toast since they are managed by legacy logic or global CSS
-    const mainLayout = document.getElementById('dashboardGrid');
-    if (mainLayout) mainLayout.remove();
-    
-    const header = document.querySelector('header');
-    if (header) header.remove();
-
-    const sidebar = document.getElementById('col-sidebar');
-    if (sidebar) sidebar.remove();
 
     render(
         <ErrorBoundary>

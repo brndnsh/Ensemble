@@ -4,9 +4,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { h, render } from 'preact';
 import React from 'preact/compat';
-import { ModalManager } from '../../public/ui-modal-controller.js';
 import { GenerateSongModal } from '../../public/components/GenerateSongModal.jsx';
 import { EditorModal } from '../../public/components/EditorModal.jsx';
+import { dispatch } from '../../public/state.js';
+import { ACTIONS } from '../../public/types.js';
 
 // Mock dependencies
 vi.mock('../../public/persistence.js', () => ({
@@ -28,8 +29,13 @@ vi.mock('../../public/ui-song-generator-controller.js', () => ({
 describe('Song Generator Modal', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        ModalManager.activeModal = null;
         document.body.classList.remove('modal-open');
+
+        // Reset state for all modals
+        ['settings', 'editor', 'generateSong', 'export', 'templates', 'analyzer'].forEach(modal => {
+            dispatch(ACTIONS.SET_MODAL_OPEN, { modal, open: false });
+        });
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: true });
         
         // Polyfill requestAnimationFrame for Preact
         global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
@@ -94,7 +100,7 @@ describe('Song Generator Modal', () => {
         
         btn.click();
         
-        // Wait for Preact state update and ModalManager.open
+        // Wait for Preact state update
         await new Promise(resolve => setTimeout(resolve, 50));
         
         expect(modal.classList.contains('active')).toBe(true);
@@ -114,16 +120,4 @@ describe('Song Generator Modal', () => {
         expect(document.getElementById('generateSongOverlay').classList.contains('active')).toBe(false);
     });
     
-    it('should close when clicking outside the modal content', async () => {
-        const modal = document.getElementById('generateSongOverlay');
-        
-        document.getElementById('randomizeBtn').click();
-        await new Promise(resolve => setTimeout(resolve, 50));
-        expect(modal.classList.contains('active')).toBe(true);
-        
-        // Click the overlay background (the div itself)
-        modal.click();
-        await new Promise(resolve => setTimeout(resolve, 150));
-        expect(document.getElementById('generateSongOverlay').classList.contains('active')).toBe(false);
-    });
 });

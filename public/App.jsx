@@ -16,7 +16,6 @@ import { dispatch, groove } from './state.js';
 import { ACTIONS } from './types.js';
 import { syncWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
-import { ModalManager } from './ui-modal-controller.js';
 import { togglePower, updateMeasures, cloneMeasure, switchMeasure } from './instrument-controller.js';
 import { triggerInstall } from './pwa.js';
 import { APP_VERSION } from './config.js';
@@ -65,8 +64,7 @@ function Header() {
 
 function ArrangerPanel() {
     const openEditor = () => {
-        const overlay = document.getElementById('editorOverlay');
-        if (overlay) ModalManager.open(overlay);
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: true });
     };
 
     return (
