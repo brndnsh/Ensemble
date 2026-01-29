@@ -1,3 +1,11 @@
 ## 2024-05-23 - Global State Subscription Overhead & Mutable State Traps
 **Learning:** Connecting Preact components to a global event bus without equality checks caused massive re-render storms on every dispatch (even irrelevant ones). Furthermore, relying on reference equality for selectors fails when the underlying state is mutable (e.g. arrays modified in place), requiring explicit version counters to signal updates reliably.
 **Action:** Always implement equality checks in custom store hooks. When using mutable state, add version/timestamp properties to signal changes to subscribers.
+
+## 2024-05-24 - DOM Query Thrashing in Animation Loops
+**Learning:** Using `querySelectorAll` inside a `requestAnimationFrame` loop (even 60fps) is a major performance killer (O(N) * 60/sec). In `SequencerGrid`, this caused 50ms+ frame times for simple highlighting.
+**Action:** For animation loops driving DOM elements, pre-cache the elements in a `Map` or `Array` (using `useLayoutEffect` to keep it synced with React renders) and use O(1) lookups in the loop.
+
+## 2024-05-24 - Garbage Collection Jitter in Canvas Visualizers
+**Learning:** Allocating temporary arrays (like `[x1, y, x2]`) or objects inside a canvas render loop creates significant Garbage Collection pressure, causing frame drops (jitter).
+**Action:** Use pre-allocated "batch" arrays (class properties) and clear them (`length = 0`) each frame. Store data in flat arrays (e.g., `[x1, y, x2, x3, y, x4]`) instead of arrays of arrays to further reduce object count.
