@@ -5,60 +5,7 @@ import { saveCurrentState } from './persistence.js';
 import { syncWorker } from './worker-client.js';
 import { UIStore } from './ui-store.js';
 
-// Import UI Fragments
-import { songGeneratorModalHtml } from './ui/fragments/modals/song-generator.js';
-import { settingsModalHtml } from './ui/fragments/modals/settings.js';
-import { exportModalHtml } from './ui/fragments/modals/export.js';
-import { editorModalHtml } from './ui/fragments/modals/editor.js';
-import { templatesModalHtml } from './ui/fragments/modals/templates.js';
-import { analyzerModalHtml } from './ui/fragments/modals/analyzer.js';
-
-// Import Panel Fragments
-import { headerHtml } from './ui/fragments/panels/header.js';
-import { arrangerPanelHtml } from './ui/fragments/panels/arranger.js';
-import { visualizerPanelHtml } from './ui/fragments/panels/visualizer.js';
-import { mobileTabsHtml } from './ui/fragments/panels/mobile-tabs.js';
-import { sidebarHtml } from './ui/fragments/panels/sidebar.js';
-
 const getEl = (id) => document.getElementById(id);
-
-/**
- * Injects UI fragments into the DOM.
- * Must be called before setting up event listeners.
- */
-export function initializeDOM() {
-    // 1. Inject Modals
-    const modalFragments = [
-        songGeneratorModalHtml,
-        settingsModalHtml,
-        exportModalHtml,
-        editorModalHtml,
-        templatesModalHtml,
-        analyzerModalHtml
-    ];
-    document.body.insertAdjacentHTML('afterbegin', modalFragments.join('\n'));
-
-    // 2. Inject Header
-    document.body.insertAdjacentHTML('afterbegin', headerHtml);
-
-    // 3. Inject Main Layout
-    const mainColumn = document.getElementById('col-main');
-    if (mainColumn) {
-        mainColumn.insertAdjacentHTML('beforeend', arrangerPanelHtml);
-        mainColumn.insertAdjacentHTML('beforeend', visualizerPanelHtml);
-    }
-
-    const sidebarColumn = document.getElementById('col-sidebar');
-    if (sidebarColumn) {
-        sidebarColumn.insertAdjacentHTML('beforeend', sidebarHtml);
-    }
-
-    // 4. Inject Mobile Nav
-    const dashboardGrid = document.getElementById('dashboardGrid');
-    if (dashboardGrid) {
-        dashboardGrid.insertAdjacentHTML('afterend', mobileTabsHtml);
-    }
-}
 
 /**
  * Explicit UI Element References.
