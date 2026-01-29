@@ -6,7 +6,7 @@ import { arranger, arrangerReducer } from './state/arranger.js';
 import { chords, bass, soloist, harmony, instrumentReducer } from './state/instruments.js';
 import { groove, grooveReducer } from './state/groove.js';
 import { midi, midiReducer } from './state/midi.js';
-import { vizState } from './state/visualizer.js';
+import { vizState, vizReducer } from './state/visualizer.js';
 
 // Export everything for backward compatibility
 export { 
@@ -63,6 +63,7 @@ export function dispatch(action, payload) {
         if (instrumentReducer(action, payload)) handled = true;
         if (grooveReducer(action, payload, playback)) handled = true;
         if (midiReducer(action, payload)) handled = true;
+        if (vizReducer(action, payload)) handled = true;
     }
 
     // Notify listeners

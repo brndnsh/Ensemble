@@ -1,5 +1,6 @@
 import { groove, arranger, playback, chords, bass, soloist, harmony, vizState, dispatch } from './state.js';
-import { ui, renderMeasurePagination, showToast, initTabs } from './ui.js';
+import { ui, renderMeasurePagination, showToast } from './ui.js';
+import { ACTIONS } from './types.js';
 import { DRUM_PRESETS } from './presets.js';
 import { saveCurrentState } from './persistence.js';
 import { syncWorker, flushWorker } from './worker-client.js';
@@ -221,11 +222,18 @@ export function initializePowerButtons() {
 
 export function togglePower(type) {
     const config = getPowerConfig();
-    const c = config[type];
-    if (!c) return;
+    
+    // Normalize type for lookup (chords -> chord, harmonies -> harmony)
+    const normalizedType = type === 'chords' ? 'chord' : (type === 'harmonies' ? 'harmony' : type);
+    
+    const c = config[normalizedType];
+    if (!c) {
+        console.warn(`[Instrument-Controller] No power config for type: ${type} (normalized: ${normalizedType})`);
+        return;
+    }
     
     const newState = !c.state.enabled;
-    const moduleName = type === 'chord' ? 'chords' : (type === 'viz' ? 'vizState' : type);
+    const moduleName = normalizedType === 'chord' ? 'chords' : (normalizedType === 'viz' ? 'vizState' : normalizedType);
     
     dispatch(ACTIONS.SET_PARAM, { module: moduleName, param: 'enabled', value: newState });
     
@@ -239,8 +247,8 @@ export function togglePower(type) {
     
     syncWorker(); // Essential: tell worker about state change BEFORE flushing/requesting new notes
 
-    if (['chord', 'bass', 'soloist', 'harmony'].includes(type)) {
-        flushBuffer(type);
+    if (['chord', 'bass', 'soloist', 'harmony'].includes(normalizedType)) {
+        flushBuffer(normalizedType);
     } else {
         restoreGains(); // Ensure newly enabled buses are audible
     }
