@@ -21,15 +21,15 @@ Transition the Ensemble UI from imperative DOM manipulation (`ui-controller.js`,
 - [x] **Mixer Panel**: Volume sliders and mute toggles (via InstrumentSettings components).
 - [x] **Settings Modal**: Complex form state management.
 
-## Phase 3: The Arranger (Complex)
-- [ ] **Section List**: Drag-and-drop reordering, editing (replacing `renderSections`).
-- [ ] **Chord Input**: The complex text input and symbol insertion logic.
+## Phase 3: The Arranger (Completed)
+- [x] **Section List**: Drag-and-drop reordering, editing (replacing `renderSections`).
+- [x] **Chord Input**: The complex text input and symbol insertion logic.
 
-## Phase 4: Visualization & Grid
-- [ ] **Sequencer Grid**: The drum grid (highly performance sensitive).
-- [ ] **Chord Visualizer**: The scrolling chord display.
+## Phase 4: Visualization & Grid (Completed)
+- [x] **Sequencer Grid**: The drum grid (highly performance sensitive).
+- [x] **Chord Visualizer**: The scrolling chord display.
 
-## Phase 5: Cleanup
-- [ ] **Deprecate Legacy**: Remove `ui-controller.js` logic as it is replaced.
-- [ ] **HTML Cleanup**: Remove empty containers from `index.html` as they are taken over by the root component.
-- [ ] **CSS Refactor**: Move towards component-scoped styles (optional/later).
+## Phase 5: Cleanup (Completed)
+- [x] **Deprecate Legacy**: Remove `ui-controller.js` logic as it is replaced.
+- [x] **HTML Cleanup**: Remove empty containers from `index.html` as they are taken over by the root component.
+- [x] **CSS Refactor**: Move towards component-scoped styles (optional/later).
