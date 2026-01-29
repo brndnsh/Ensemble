@@ -1,15 +1,21 @@
 import { h } from 'preact';
+import React from 'preact/compat';
 import { ModalManager } from '../ui-modal-controller.js';
+import { useEnsembleState } from '../ui-bridge.js';
 
 export function AnalyzerModal() {
+    const isOpen = useEnsembleState(s => s.playback.modals.analyzer);
+
     const close = () => {
         const overlay = document.getElementById('analyzerOverlay');
         if (overlay) ModalManager.close(overlay);
     };
 
     return (
-        <div id="analyzerOverlay" class="modal-overlay">
-            <div class="modal-content analyzer-modal settings-content">
+        <div id="analyzerOverlay" class={`modal-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+            if (e.target.id === 'analyzerOverlay') close();
+        }}>
+            <div class="modal-content analyzer-modal settings-content" onClick={(e) => e.stopPropagation()}>
                 <button class="close-modal-btn" id="closeAnalyzerBtn" aria-label="Close Analyzer" onClick={close}>✕</button>
                 
                 <div class="analyzer-body">

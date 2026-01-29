@@ -100,7 +100,15 @@ export const playback = {
     haptic: true,
     toasts: [],
     flashIntensity: 0,
-    updateAvailable: false
+    updateAvailable: false,
+    modals: {
+        settings: false,
+        editor: false,
+        export: false,
+        templates: false,
+        analyzer: false,
+        generateSong: false
+    }
 };
 
 export function playbackReducer(action, payload) {
@@ -125,6 +133,12 @@ export function playbackReducer(action, payload) {
         case ACTIONS.SET_UPDATE_AVAILABLE:
             playback.updateAvailable = !!payload;
             return true;
+        case ACTIONS.SET_MODAL_OPEN:
+            if (Object.prototype.hasOwnProperty.call(playback.modals, payload.modal)) {
+                playback.modals[payload.modal] = !!payload.open;
+                return true;
+            }
+            return false;
         case ACTIONS.SET_PARAM:
             if (payload.module === 'playback') {
                 playback[payload.param] = payload.value;
@@ -169,7 +183,7 @@ export function playbackReducer(action, payload) {
             if (payload.velocity) playback.conductorVelocity = payload.velocity;
             if (payload.intent) Object.assign(playback.intent, payload.intent);
             break;
-        case ACTIONS.SHOW_TOAST:
+        case ACTIONS.SHOW_TOAST: {
             const id = Math.random().toString(36).substr(2, 9);
             playback.toasts = [...playback.toasts, { id, message: payload }];
             setTimeout(() => {
@@ -179,6 +193,7 @@ export function playbackReducer(action, payload) {
                 import('../state.js').then(({ dispatch }) => dispatch('TOAST_EXPIRED'));
             }, 2000);
             return true;
+        }
         case ACTIONS.TRIGGER_FLASH:
             playback.flashIntensity = payload || 0.25;
             setTimeout(() => {

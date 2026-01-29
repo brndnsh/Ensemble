@@ -1,13 +1,15 @@
 import { h } from 'preact';
+import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
-import { dispatch, playback } from '../state.js'; // playback needed for audio access
+import { dispatch, playback, arranger } from '../state.js'; 
 import { saveCurrentState } from '../persistence.js';
 import { applyTheme } from '../app-controller.js';
 import { initMIDI, panic } from '../midi-controller.js';
 import { restoreGains } from '../engine.js';
 import { MIXER_GAIN_MULTIPLIERS, APP_VERSION } from '../config.js';
-import { showToast } from '../ui.js';
+import { ModalManager } from '../ui-modal-controller.js';
+import { triggerInstall } from '../pwa.js';
 
 export function Settings() {
     const { 
@@ -16,7 +18,6 @@ export function Settings() {
         midiChannels, midiOctaves, midiLatency, midiVelocity
     } = useEnsembleState(state => ({
         theme: state.playback.theme,
-        // masterVolume removed from here
         countIn: state.playback.countIn, 
         metronome: state.playback.metronome, 
         visualFlash: state.playback.visualFlash, 
@@ -49,7 +50,7 @@ export function Settings() {
 
     const closeSettings = () => {
         const overlay = document.getElementById('settingsOverlay');
-        if (overlay) overlay.classList.remove('active');
+        if (overlay) ModalManager.close(overlay);
     };
 
     const handleMasterVolume = (e) => {
@@ -69,10 +70,7 @@ export function Settings() {
         const enabled = e.target.checked;
         if (enabled) {
             const success = await initMIDI();
-            if (!success) {
-                showToast("MIDI Access Denied or Not Supported");
-                return; // Checkbox will revert on re-render if state didn't change
-            }
+            if (!success) return; 
         } else {
             panic();
         }
@@ -81,371 +79,349 @@ export function Settings() {
         saveCurrentState();
     };
 
+    const openExportModal = () => {
+        closeSettings();
+        
+        const exportOverlay = document.getElementById('exportOverlay');
+        if (!exportOverlay) return;
+
+        let defaultName = arranger.lastChordPreset || "Ensemble Export";
+        defaultName = defaultName.replace(/[^a-zA-Z0-9\s-_]/g, '').trim();
+        const filenameInput = document.getElementById('exportFilenameInput');
+        if (filenameInput) {
+            filenameInput.value = `${defaultName} - ${arranger.key} - ${playback.bpm}bpm`;
+        }
+        
+        ModalManager.open(exportOverlay);
+    };
+
+    const handleReset = () => {
+        if (confirm("Reset all settings and progress? This cannot be undone.")) {
+            localStorage.clear();
+            window.location.reload();
+        }
+    };
+
+    const handleInstall = async () => {
+        if (await triggerInstall()) {
+            const btn = document.getElementById('installAppBtn');
+            if (btn) btn.style.display = 'none';
+        }
+    };
+
+    const isOpen = useEnsembleState(s => s.playback.modals.settings);
+
     return (
-        <div class="settings-content">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                <h2>Settings</h2>
-                <button 
-                    id="closeSettingsBtn" 
-                    style="background: none; border: none; font-size: 1.5rem;" 
-                    aria-label="Close Settings"
-                    onClick={closeSettings}
-                >&times;</button>
-            </div>
-            
-            <div class="settings-controls">
-                {/* Appearance Section */}
-                <div class="settings-section">
-                    <h3>Appearance</h3>
-                    <div style="margin-bottom: 1rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Theme</label>
-                        <select 
-                            id="themeSelect"
-                            value={theme} 
-                            onChange={(e) => {
-                                applyTheme(e.target.value);
-                                saveCurrentState();
-                            }}
-                            aria-label="Select Theme"
-                        >
-                            <option value="auto">Auto (System Default)</option>
-                            <option value="dark">Dark</option>
-                            <option value="light">Light</option>
-                        </select>
-                    </div>
-
-                    <div style="margin-bottom: 0;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Chord Notation</label>
-                        <select 
-                            id="notationSelect" 
-                            value={useEnsembleState(s => s.arranger.notation)}
-                            onChange={(e) => {
-                                dispatch(ACTIONS.SET_NOTATION, e.target.value);
-                                saveCurrentState();
-                            }}
-                            aria-label="Chord Notation"
-                        >
-                            <option value="roman">Roman Numerals (I, vi, IV)</option>
-                            <option value="name">Chord Names (C, Am, F)</option>
-                            <option value="nns">Nashville Numbers (1, 6-, 4)</option>
-                        </select>
-                    </div>
+        <div id="settingsOverlay" class={`settings-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+            if (e.target.id === 'settingsOverlay') closeSettings();
+        }}>
+            <div class="settings-content" onClick={(e) => e.stopPropagation()}>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <h2>Settings</h2>
+                    <button 
+                        id="closeSettingsBtn" 
+                        style="background: none; border: none; font-size: 1.5rem;" 
+                        aria-label="Close Settings"
+                        onClick={closeSettings}
+                    >&times;</button>
                 </div>
-
-                {/* Playback & Performance Section */}
-                <div class="settings-section">
-                    <h3>Playback & Performance</h3>
-                    <div class="setting-item" style="margin-bottom: 1.5rem;">
-                        <label class="setting-label">
-                            <span>Master Volume</span>
-                        </label>
-                        <input 
-                            id="masterVolume"
-                            type="range" 
-                            min="0" 
-                            max="1" 
-                            step="0.05" 
-                            value={masterVolume || 0.5} 
-                            onInput={handleMasterVolume}
-                            style="width: 100%;" 
-                            aria-label="Master Volume"
-                        />
-                    </div>
-
-                    <div style="margin-bottom: 1.5rem; display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                         <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input id="countInCheck" type="checkbox" checked={countIn} onChange={(e) => {
-                                dispatch(ACTIONS.SET_PARAM, { module: 'playback', param: 'countIn', value: e.target.checked });
-                                saveCurrentState();
-                            }} />
-                            <span>Count-in</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input id="metronomeCheck" type="checkbox" checked={metronome} onChange={(e) => {
-                                dispatch(ACTIONS.SET_METRONOME, e.target.checked);
-                                saveCurrentState();
-                            }} />
-                            <span>Metronome</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input id="visualFlashCheck" type="checkbox" checked={visualFlash} onChange={(e) => {
-                                dispatch(ACTIONS.SET_PARAM, { module: 'playback', param: 'visualFlash', value: e.target.checked });
-                                saveCurrentState();
-                            }} />
-                            <span>Visual Flash</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input id="hapticCheck" type="checkbox" checked={haptic} onChange={(e) => {
-                                dispatch(ACTIONS.SET_PARAM, { module: 'playback', param: 'haptic', value: e.target.checked });
-                                saveCurrentState();
-                            }} />
-                            <span>Haptic Feedback</span>
-                        </label>
-                    </div>
-
-                    <div class="performance-ending-section" style="background: rgba(0,0,0,0.1); padding: 1rem; border-radius: 8px;">
-                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-                            <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 500;">
-                                <input 
-                                    id="sessionTimerCheck"
-                                    type="checkbox" 
-                                    checked={sessionTimer > 0} 
-                                    onChange={(e) => {
-                                        const val = e.target.checked ? 5 : 0;
-                                        dispatch(ACTIONS.SET_SESSION_TIMER, val);
-                                        saveCurrentState();
-                                    }}
-                                />
-                                <span>Session Timer</span>
-                            </label>
-                            
-                            <div 
-                                id="sessionTimerDurationContainer"
-                                style={{
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '0.5rem', 
-                                opacity: sessionTimer > 0 ? '1' : '0.4', 
-                                pointerEvents: sessionTimer > 0 ? 'auto' : 'none',
-                                transition: 'all 0.2s ease'
-                            }}>
-                                <div id="sessionTimerStepper" class="stepper-control" style={{
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    background: 'var(--input-bg)', 
-                                    border: '1px solid var(--border-color)', 
-                                    borderRadius: '8px', 
-                                    overflow: 'hidden',
-                                    borderColor: sessionTimer > 0 ? 'var(--accent-color)' : 'var(--border-color)',
-                                    backgroundColor: sessionTimer > 0 ? 'var(--card-bg)' : 'var(--input-bg)'
-                                }}>
-                                    <button 
-                                        id="sessionTimerDec"
-                                        class="stepper-btn" 
-                                        style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem;"
-                                        onClick={() => {
-                                            const next = Math.max(1, sessionTimer - 1);
-                                            dispatch(ACTIONS.SET_SESSION_TIMER, next);
-                                            saveCurrentState();
-                                        }}
-                                    >-</button>
-                                    <input 
-                                        id="sessionTimerInput"
-                                        type="number" 
-                                        value={sessionTimer > 0 ? sessionTimer : 5} 
-                                        readonly 
-                                        style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;"
-                                    />
-                                    <button 
-                                        id="sessionTimerInc"
-                                        class="stepper-btn" 
-                                        style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem;"
-                                        onClick={() => {
-                                            const next = Math.min(20, sessionTimer + 1);
-                                            dispatch(ACTIONS.SET_SESSION_TIMER, next);
-                                            saveCurrentState();
-                                        }}
-                                    >+</button>
-                                </div>
-                                <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Minutes</span>
-                            </div>
-                        </div>
-                        <p class="performance-ending-footer" style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">The band will complete the current progression loop before performing the resolution.</p>
-                    </div>
-                </div>
-
-                {/* Library & Presets Section */}
-                <div class="settings-section">
-                    <h3>Library & Presets</h3>
-                    <div style="margin-bottom: 0;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input 
-                                type="checkbox" 
-                                id="applyPresetSettingsCheck" 
-                                checked={useEnsembleState(s => s.playback.applyPresetSettings)}
-                                onChange={(e) => {
-                                    dispatch(ACTIONS.SET_PRESET_SETTINGS_MODE, e.target.checked);
-                                    saveCurrentState();
-                                }}
-                            />
-                            <span>Auto-Apply Preset Settings</span>
-                        </label>
-                        <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; margin-left: 1.8rem;">
-                            Automatically update BPM and Style when loading a library preset.
-                        </p>
-                    </div>
-                </div>
-
-                {/* External Section (MIDI) */}
-                <div class="settings-section">
-                    <h3>External (MIDI Output)</h3>
-                    <div style="margin-bottom: 1rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input 
-                                id="midiEnableCheck"
-                                type="checkbox" 
-                                checked={midiEnabled} 
-                                onChange={handleMidiEnable}
-                            />
-                            <span>Enable Web MIDI Output</span>
-                        </label>
-                        <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; margin-left: 1.8rem;">
-                            Route notes to your DAW or external hardware.
-                        </p>
-                    </div>
-
-                    <div id="midiControls" style={{
-                        opacity: midiEnabled ? '1' : '0.5', 
-                        pointerEvents: midiEnabled ? 'auto' : 'none', 
-                        transition: 'opacity 0.2s'
-                    }}>
-                        <div style="margin-bottom: 1.5rem;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                <input 
-                                    id="midiMuteLocalCheck"
-                                    type="checkbox" 
-                                    checked={midiMuteLocal} 
-                                    onChange={(e) => {
-                                        dispatch(ACTIONS.SET_MIDI_CONFIG, { muteLocal: e.target.checked });
-                                        restoreGains();
-                                        saveCurrentState();
-                                    }}
-                                />
-                                <span>Mute Browser Audio</span>
-                            </label>
-                        </div>
-
-                        <div style="margin-bottom: 1.5rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Output Port</label>
+                
+                <div class="settings-controls">
+                    {/* Appearance Section */}
+                    <div class="settings-section">
+                        <h3>Appearance</h3>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Theme</label>
                             <select 
-                                id="midiOutputSelect"
-                                value={midiSelectedOutputId || ''} 
+                                id="themeSelect"
+                                value={theme} 
                                 onChange={(e) => {
-                                    dispatch(ACTIONS.SET_MIDI_CONFIG, { selectedOutputId: e.target.value });
+                                    applyTheme(e.target.value);
                                     saveCurrentState();
                                 }}
-                                style="width: 100%;"
+                                aria-label="Select Theme"
                             >
-                                {midiOutputs && midiOutputs.length > 0 ? 
-                                    midiOutputs.map(out => <option value={out.id}>{out.name}</option>) : 
-                                    <option value="">No outputs found</option>
-                                }
+                                <option value="auto">Auto (System Default)</option>
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
                             </select>
                         </div>
 
-                        {/* MIDI Channels */}
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                            {['Chords', 'Bass', 'Soloist', 'Harmony', 'Drums'].map(ch => (
-                                <div class="midi-ch-group">
-                                    <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">{ch}</label>
-                                    <div style="display: flex; gap: 0.25rem;">
-                                        <input 
-                                            id={`midi${ch}Channel`}
-                                            type="number" 
-                                            min="1" max="16" 
-                                            value={midiChannels[ch.toLowerCase()]} 
-                                            onChange={(e) => {
-                                                dispatch(ACTIONS.SET_MIDI_CONFIG, { [`${ch.toLowerCase()}Channel`]: parseInt(e.target.value) });
-                                                saveCurrentState();
-                                            }}
-                                            style="width: 50%;" 
-                                            title="Channel" 
-                                        />
-                                        <input 
-                                            id={`midi${ch}Octave`}
-                                            type="number" 
-                                            min="-2" max="2" 
-                                            value={midiOctaves[ch.toLowerCase()]} 
-                                            onChange={(e) => {
-                                                dispatch(ACTIONS.SET_MIDI_CONFIG, { [`${ch.toLowerCase()}Octave`]: parseInt(e.target.value) });
-                                                saveCurrentState();
-                                            }}
-                                            style="width: 50%;" 
-                                            title="Octave Offset" 
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">
-                                <span>Latency Offset</span>
-                                <span id="midiLatencyValue" style="color: var(--accent-color);">{midiLatency}ms</span>
-                            </label>
-                            <input 
-                                id="midiLatencySlider"
-                                type="range" 
-                                min="-100" 
-                                max="100" 
-                                step="1" 
-                                value={midiLatency} 
-                                onInput={(e) => {
-                                    dispatch(ACTIONS.SET_MIDI_CONFIG, { latency: parseInt(e.target.value) });
-                                    saveCurrentState();
-                                }}
-                                style="width: 100%;" 
-                                aria-label="MIDI Latency Offset"
-                            />
-                        </div>
-
                         <div style="margin-bottom: 0;">
-                            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">
-                                <span>Velocity Sensitivity</span>
-                                <span id="midiVelocityValue" style="color: var(--accent-color);">{parseFloat(midiVelocity).toFixed(1)}</span>
-                            </label>
-                            <input 
-                                id="midiVelocitySlider"
-                                type="range" 
-                                min="0.5" 
-                                max="2.0" 
-                                step="0.1" 
-                                value={midiVelocity} 
-                                onInput={(e) => {
-                                    dispatch(ACTIONS.SET_MIDI_CONFIG, { velocitySensitivity: parseFloat(e.target.value) });
+                            <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Chord Notation</label>
+                            <select 
+                                id="notationSelect" 
+                                value={useEnsembleState(s => s.arranger.notation)}
+                                onChange={(e) => {
+                                    dispatch(ACTIONS.SET_NOTATION, e.target.value);
                                     saveCurrentState();
                                 }}
-                                style="width: 100%;" 
-                                aria-label="MIDI Velocity Sensitivity"
-                            />
+                                aria-label="Chord Notation"
+                            >
+                                <option value="roman">Roman Numerals (I, vi, IV)</option>
+                                <option value="name">Chord Names (C, Am, F)</option>
+                                <option value="nns">Nashville Numbers (1, 6-, 4)</option>
+                            </select>
                         </div>
                     </div>
-                </div>
 
-                {/* Actions Section */}
-                <div class="settings-section" style="border-bottom: none; padding-bottom: 0;">
-                    <h3>System Actions</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                        <button id="settingsExportMidiBtn" class="secondary-btn" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 0.5rem;">
-                            <span>🎹</span> Export MIDI
-                        </button>
-                        <button id="installAppBtn" class="secondary-btn" style="display: none; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 0.5rem;">
-                            <span>📲</span> Install App
-                        </button>
-                        <button id="resetSettingsBtn" class="secondary-btn" style="color: var(--error-color); background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); padding: 0.8rem 0.5rem;">
-                            <span>🗑️</span> Reset All
-                        </button>
-                        <button id="refreshAppBtn" class="secondary-btn" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 0.5rem;" onClick={() => window.location.reload()}>
-                            <span>🔄</span> Force Refresh
-                        </button>
+                    {/* Playback & Performance Section */}
+                    <div class="settings-section">
+                        <h3>Playback & Performance</h3>
+                        <div class="setting-item" style="margin-bottom: 1.5rem;">
+                            <label class="setting-label">
+                                <span>Master Volume</span>
+                            </label>
+                            <input 
+                                id="masterVolume"
+                                type="range" 
+                                min="0" 
+                                max="1" 
+                                step="0.05" 
+                                value={masterVolume || 0.5} 
+                                onInput={handleMasterVolume}
+                                style="width: 100%;" 
+                                aria-label="Master Volume"
+                            />
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem; display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input id="countInCheck" type="checkbox" checked={countIn} onChange={(e) => {
+                                    dispatch(ACTIONS.SET_PARAM, { module: 'playback', param: 'countIn', value: e.target.checked });
+                                    saveCurrentState();
+                                }} />
+                                <span>Count-in</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input id="metronomeCheck" type="checkbox" checked={metronome} onChange={(e) => {
+                                    dispatch(ACTIONS.SET_METRONOME, e.target.checked);
+                                    saveCurrentState();
+                                }} />
+                                <span>Metronome</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input id="visualFlashCheck" type="checkbox" checked={visualFlash} onChange={(e) => {
+                                    dispatch(ACTIONS.SET_PARAM, { module: 'playback', param: 'visualFlash', value: e.target.checked });
+                                    saveCurrentState();
+                                }} />
+                                <span>Visual Flash</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input id="hapticCheck" type="checkbox" checked={haptic} onChange={(e) => {
+                                    dispatch(ACTIONS.SET_PARAM, { module: 'playback', param: 'haptic', value: e.target.checked });
+                                    saveCurrentState();
+                                }} />
+                                <span>Haptic Feedback</span>
+                            </label>
+                        </div>
+
+                        <div class="performance-ending-section" style="background: rgba(0,0,0,0.1); padding: 1rem; border-radius: 8px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 500;">
+                                    <input 
+                                        id="sessionTimerCheck"
+                                        type="checkbox" 
+                                        checked={sessionTimer > 0} 
+                                        onChange={(e) => {
+                                            const val = e.target.checked ? 5 : 0;
+                                            dispatch(ACTIONS.SET_SESSION_TIMER, val);
+                                            saveCurrentState();
+                                        }}
+                                    />
+                                    <span>Session Timer</span>
+                                </label>
+                                
+                                <div id="sessionTimerDurationContainer" style={{
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '0.5rem', 
+                                    opacity: sessionTimer > 0 ? '1' : '0.4', 
+                                    pointerEvents: sessionTimer > 0 ? 'auto' : 'none',
+                                    transition: 'all 0.2s ease'
+                                }}>
+                                    <div id="sessionTimerStepper" class="stepper-control" style={{
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        background: 'var(--input-bg)', 
+                                        border: '1px solid var(--border-color)', 
+                                        borderRadius: '8px', 
+                                        overflow: 'hidden'
+                                    }}>
+                                        <button id="sessionTimerDec" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem;"
+                                            onClick={() => {
+                                                const next = Math.max(1, sessionTimer - 1);
+                                                dispatch(ACTIONS.SET_SESSION_TIMER, next);
+                                                saveCurrentState();
+                                            }}
+                                        >-</button>
+                                        <input id="sessionTimerInput" type="number" value={sessionTimer > 0 ? sessionTimer : 5} readonly style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;" />
+                                        <button id="sessionTimerInc" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem;"
+                                            onClick={() => {
+                                                const next = Math.min(20, sessionTimer + 1);
+                                                dispatch(ACTIONS.SET_SESSION_TIMER, next);
+                                                saveCurrentState();
+                                            }}
+                                        >+</button>
+                                    </div>
+                                    <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Minutes</span>
+                                </div>
+                            </div>
+                            <p class="performance-ending-footer" style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">The band will complete the current progression loop before performing the resolution.</p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="settings-help" style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem; border-top: none;">
-                    <details open>
-                        <summary style="cursor: pointer; font-weight: bold; color: var(--text-primary); list-style: none; display: flex; align-items: center; justify-content: space-between;">
-                            <span>Help & Instructions</span>
-                            <span style="font-size: 0.8em;">▼</span>
-                        </summary>
-                        <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
-                            <div style="margin-bottom: 1.5rem; background: rgba(59, 130, 246, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
-                                <h4 style="color: var(--accent-color); margin-top: 0; margin-bottom: 0.5rem;">Need more help?</h4>
-                                <p style="margin-bottom: 0.8rem;">For a deep dive into notation, soloing styles, and MIDI export, check out the full manual.</p>
-                                <a href="manual.html" target="_blank" rel="noopener noreferrer" style="color: white; background: var(--accent-color); padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Open User Manual</a>
+                    {/* Library & Presets Section */}
+                    <div class="settings-section">
+                        <h3>Library & Presets</h3>
+                        <div style="margin-bottom: 0;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="applyPresetSettingsCheck" checked={useEnsembleState(s => s.playback.applyPresetSettings)}
+                                    onChange={(e) => {
+                                        dispatch(ACTIONS.SET_PRESET_SETTINGS_MODE, e.target.checked);
+                                        saveCurrentState();
+                                    }}
+                                />
+                                <span>Auto-Apply Preset Settings</span>
+                            </label>
+                            <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; margin-left: 1.8rem;">
+                                Automatically update BPM and Style when loading a library preset.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* External Section (MIDI) */}
+                    <div class="settings-section">
+                        <h3>External (MIDI Output)</h3>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input id="midiEnableCheck" type="checkbox" checked={midiEnabled} onChange={handleMidiEnable} />
+                                <span>Enable Web MIDI Output</span>
+                            </label>
+                            <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; margin-left: 1.8rem;">
+                                Route notes to your DAW or external hardware.
+                            </p>
+                        </div>
+
+                        <div id="midiControls" style={{
+                            opacity: midiEnabled ? '1' : '0.5', 
+                            pointerEvents: midiEnabled ? 'auto' : 'none', 
+                            transition: 'opacity 0.2s'
+                        }}>
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                    <input id="midiMuteLocalCheck" type="checkbox" checked={midiMuteLocal}
+                                        onChange={(e) => {
+                                            dispatch(ACTIONS.SET_MIDI_CONFIG, { muteLocal: e.target.checked });
+                                            restoreGains();
+                                            saveCurrentState();
+                                        }}
+                                    />
+                                    <span>Mute Browser Audio</span>
+                                </label>
+                            </div>
+
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Output Port</label>
+                                <select id="midiOutputSelect" value={midiSelectedOutputId || ''} 
+                                    onChange={(e) => {
+                                        dispatch(ACTIONS.SET_MIDI_CONFIG, { selectedOutputId: e.target.value });
+                                        saveCurrentState();
+                                    }}
+                                    style="width: 100%;"
+                                >
+                                    {midiOutputs && midiOutputs.length > 0 ? 
+                                        midiOutputs.map(out => <option value={out.id}>{out.name}</option>) : 
+                                        <option value="">No outputs found</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                                {['Chords', 'Bass', 'Soloist', 'Harmony', 'Drums'].map(ch => (
+                                    <div class="midi-ch-group" key={ch}>
+                                        <label style="display: block; margin-bottom: 0.3rem; font-size: 0.75rem; color: #64748b;">{ch}</label>
+                                        <div style="display: flex; gap: 0.25rem;">
+                                            <input id={`midi${ch}Channel`} type="number" min="1" max="16" value={midiChannels[ch.toLowerCase()]}
+                                                onChange={(e) => {
+                                                    dispatch(ACTIONS.SET_MIDI_CONFIG, { [`${ch.toLowerCase()}Channel`]: parseInt(e.target.value) });
+                                                    saveCurrentState();
+                                                }}
+                                                style="width: 50%;" title="Channel" />
+                                            <input id={`midi${ch}Octave`} type="number" min="-2" max="2" value={midiOctaves[ch.toLowerCase()]}
+                                                onChange={(e) => {
+                                                    dispatch(ACTIONS.SET_MIDI_CONFIG, { [`${ch.toLowerCase()}Octave`]: parseInt(e.target.value) });
+                                                    saveCurrentState();
+                                                }}
+                                                style="width: 50%;" title="Octave Offset" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">
+                                    <span>Latency Offset</span>
+                                    <span id="midiLatencyValue" style="color: var(--accent-color);">{midiLatency}ms</span>
+                                </label>
+                                <input id="midiLatencySlider" type="range" min="-100" max="100" step="1" value={midiLatency}
+                                    onInput={(e) => {
+                                        dispatch(ACTIONS.SET_MIDI_CONFIG, { latency: parseInt(e.target.value) });
+                                        saveCurrentState();
+                                    }}
+                                    style="width: 100%;" aria-label="MIDI Latency Offset" />
+                            </div>
+
+                            <div style="margin-bottom: 0;">
+                                <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: #94a3b8;">
+                                    <span>Velocity Sensitivity</span>
+                                    <span id="midiVelocityValue" style="color: var(--accent-color);">{parseFloat(midiVelocity).toFixed(1)}</span>
+                                </label>
+                                <input id="midiVelocitySlider" type="range" min="0.5" max="2.0" step="0.1" value={midiVelocity}
+                                    onInput={(e) => {
+                                        dispatch(ACTIONS.SET_MIDI_CONFIG, { velocitySensitivity: parseFloat(e.target.value) });
+                                        saveCurrentState();
+                                    }}
+                                    style="width: 100%;" aria-label="MIDI Velocity Sensitivity" />
                             </div>
                         </div>
-                    </details>
-                    <div id="appVersion" style="text-align: center; margin-top: 1.5rem; color: var(--text-muted); font-size: 0.8rem; opacity: 0.7;">Ensemble v{APP_VERSION}</div>
+                    </div>
+
+                    {/* Actions Section */}
+                    <div class="settings-section" style="border-bottom: none; padding-bottom: 0;">
+                        <h3>System Actions</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <button id="settingsExportMidiBtn" class="secondary-btn" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 0.5rem;" onClick={openExportModal}>
+                                <span>🎹</span> Export MIDI
+                            </button>
+                            <button id="installAppBtn" class="secondary-btn" style="display: none; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 0.5rem;" onClick={handleInstall}>
+                                <span>📲</span> Install App
+                            </button>
+                            <button id="resetSettingsBtn" class="secondary-btn" style="color: var(--error-color); background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); padding: 0.8rem 0.5rem;" onClick={handleReset}>
+                                <span>🗑️</span> Reset All
+                            </button>
+                            <button id="refreshAppBtn" class="secondary-btn" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 0.5rem;" onClick={() => window.location.reload()}>
+                                <span>🔄</span> Force Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="settings-help" style="margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem; border-top: none;">
+                        <details open>
+                            <summary style="cursor: pointer; font-weight: bold; color: var(--text-primary); list-style: none; display: flex; align-items: center; justify-content: space-between;">
+                                <span>Help & Instructions</span>
+                                <span style="font-size: 0.8em;">▼</span>
+                            </summary>
+                            <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+                                <div style="margin-bottom: 1.5rem; background: rgba(59, 130, 246, 0.1); padding: 1rem; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                                    <h4 style="color: var(--accent-color); margin-top: 0; margin-bottom: 0.5rem;">Need more help?</h4>
+                                    <p style="margin-bottom: 0.8rem;">For a deep dive into notation, soloing styles, and MIDI export, check out the full manual.</p>
+                                    <a href="manual.html" target="_blank" rel="noopener noreferrer" style="color: white; background: var(--accent-color); padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Open User Manual</a>
+                                </div>
+                            </div>
+                        </details>
+                        <div id="appVersion" style="text-align: center; margin-top: 1.5rem; color: var(--text-muted); font-size: 0.8rem; opacity: 0.7;">Ensemble v{APP_VERSION}</div>
+                    </div>
                 </div>
             </div>
         </div>

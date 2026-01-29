@@ -1,15 +1,64 @@
 import { h } from 'preact';
+import React from 'preact/compat';
 import { ModalManager } from '../ui-modal-controller.js';
+import { useEnsembleState } from '../ui-bridge.js';
+import { arranger, dispatch } from '../state.js';
+import { generateSong } from '../song-generator.js';
+import { pushHistory } from '../history.js';
+import { normalizeKey } from '../utils.js';
+import { refreshArrangerUI, clearChordPresetHighlight, validateAndAnalyze, updateGroupingUI } from '../arranger-controller.js';
+import { showToast } from '../ui.js';
 
 export function GenerateSongModal() {
+    const isOpen = useEnsembleState(s => s.playback.modals.generateSong);
+
     const close = () => {
         const overlay = document.getElementById('generateSongOverlay');
         if (overlay) ModalManager.close(overlay);
     };
 
+    const handleConfirm = () => {
+        const key = document.getElementById('genKeySelect')?.value || 'Random';
+        const timeSignature = document.getElementById('genTimeSigSelect')?.value || 'Random';
+        const structure = document.getElementById('genStructureSelect')?.value || 'pop';
+
+        const newSections = generateSong({ key, timeSignature, structure });
+
+        pushHistory();
+
+        if (arranger.isDirty && arranger.sections.length > 1) {
+            if (!confirm("Replace current arrangement with generated song?")) return;
+        }
+
+        arranger.sections = newSections;
+        
+        if (newSections.length > 0) {
+            const first = newSections[0];
+            if (first.key && first.key !== 'Random') {
+                arranger.key = first.key;
+            }
+            if (first.timeSignature && first.timeSignature !== 'Random') {
+                arranger.timeSignature = first.timeSignature;
+                updateGroupingUI();
+            }
+        }
+
+        arranger.isMinor = false;
+        arranger.isDirty = true;
+        
+        clearChordPresetHighlight();
+        refreshArrangerUI();
+        validateAndAnalyze();
+        
+        close();
+        showToast("Generated new song!");
+    };
+
     return (
-        <div id="generateSongOverlay" class="modal-overlay">
-            <div class="modal-content settings-content">
+        <div id="generateSongOverlay" class={`modal-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+            if (e.target.id === 'generateSongOverlay') close();
+        }}>
+            <div class="modal-content settings-content" onClick={(e) => e.stopPropagation()}>
                 <button class="close-modal-btn" id="closeGenerateSongBtn" aria-label="Close Generator" onClick={close}>✕</button>
                 <h3>Song Generator</h3>
                 
@@ -41,7 +90,7 @@ export function GenerateSongModal() {
                     </div>
                 </div>
 
-                <button id="confirmGenerateSongBtn" class="primary-btn" style="width: 100%; margin-top: 1.5rem; padding: 1rem;">Generate Song</button>
+                <button id="confirmGenerateSongBtn" class="primary-btn" style="width: 100%; margin-top: 1.5rem; padding: 1rem;" onClick={handleConfirm}>Generate Song</button>
             </div>
         </div>
     );

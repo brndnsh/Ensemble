@@ -1,7 +1,12 @@
 import { h } from 'preact';
+import React from 'preact/compat';
 import { ModalManager } from '../ui-modal-controller.js';
+import { useEnsembleState } from '../ui-bridge.js';
+import { exportToMidi } from '../midi-export.js';
 
 export function ExportModal() {
+    const isOpen = useEnsembleState(s => s.playback.modals.export);
+
     const close = () => {
         const overlay = document.getElementById('exportOverlay');
         if (overlay) ModalManager.close(overlay);
@@ -29,9 +34,29 @@ export function ExportModal() {
         }
     };
 
+    const handleConfirmExport = () => {
+        const includedTracks = [];
+        if (document.getElementById('exportChordsCheck')?.checked) includedTracks.push('chords');
+        if (document.getElementById('exportBassCheck')?.checked) includedTracks.push('bass');
+        if (document.getElementById('exportSoloistCheck')?.checked) includedTracks.push('soloist');
+        if (document.getElementById('exportHarmoniesCheck')?.checked) includedTracks.push('harmonies');
+        if (document.getElementById('exportDrumsCheck')?.checked) includedTracks.push('drums');
+        
+        const loopMode = document.querySelector('input[name="exportMode"]:checked')?.value || 'once';
+        const targetDurationInput = document.getElementById('exportDurationInput');
+        const targetDuration = targetDurationInput ? parseFloat(targetDurationInput.value) : 1;
+        const filenameInput = document.getElementById('exportFilenameInput');
+        const filename = filenameInput ? filenameInput.value.trim() : "Ensemble Export";
+        
+        close();
+        exportToMidi({ includedTracks, loopMode, targetDuration, filename });
+    };
+
     return (
-        <div id="exportOverlay" class="settings-overlay">
-            <div class="settings-content">
+        <div id="exportOverlay" class={`settings-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+            if (e.target.id === 'exportOverlay') close();
+        }}>
+            <div class="settings-content" onClick={(e) => e.stopPropagation()}>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center;">
                     <h2>MIDI Export Options</h2>
                     <button id="closeExportBtn" class="primary-btn" style="padding: 0.4rem 1rem; font-size: 0.9rem; background: transparent; border: 1px solid var(--border-color); color: var(--text-color);" onClick={close}>Cancel</button>
@@ -96,7 +121,7 @@ export function ExportModal() {
                     </div>
 
                     <div style="margin-top: 1.5rem;">
-                        <button id="confirmExportBtn" class="primary-btn" style="width: 100%; padding: 1rem;">
+                        <button id="confirmExportBtn" class="primary-btn" style="width: 100%; padding: 1rem;" onClick={handleConfirmExport}>
                             Download MIDI
                         </button>
                     </div>
