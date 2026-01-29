@@ -12,3 +12,8 @@
 **Vulnerability:** Usage of `innerHTML` with dynamically formatted strings (like chord symbols) creates a potential XSS vector if input sanitization logic (e.g., regex checks) is bypassed or flawed in the future.
 **Learning:** Relying on input validation alone is "defense in hope". Secure-by-design requires using APIs that automatically handle escaping, such as `textContent` or `document.createElement`.
 **Prevention:** Replaced `innerHTML` usages in `ui-chord-visualizer.js` and `ui-controller.js` with safer DOM manipulation methods. Added `escapeHTML` utility for cases where HTML structure is required.
+
+## 2026-05-25 - LocalStorage DoS Protection
+**Vulnerability:** `JSON.parse` was called directly on `localStorage` values without error handling. Corrupted data (malformed JSON) caused the application to crash on startup, effectively creating a persistent Denial of Service state for the user.
+**Learning:** `localStorage` is an external input source and should be treated as untrusted. Users, browser glitches, or other scripts can corrupt it.
+**Prevention:** Always wrap `JSON.parse` calls involving `localStorage` (or any external input) in `try...catch` blocks and provide safe fallback values.
