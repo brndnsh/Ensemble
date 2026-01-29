@@ -4,16 +4,15 @@ import { renderMeasurePagination } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';
 import { validateProgression } from './chords.js';
-import { UnifiedVisualizer } from './visualizer.js';
-import { initWorker, syncWorker } from './worker-client.js';
+import { restoreState } from './state-hydration.js';
+import { setInstrumentControllerRefs, switchMeasure } from './instrument-controller.js';
+import { setAppControllerRefs, setBpm, togglePlay } from './app-controller.js';
+import { setArrangerControllerRefs, validateAndAnalyze } from './arranger-controller.js';
+import { syncWorker, initWorker } from './worker-client.js';
+import { saveCurrentState } from './persistence.js';
 import { initPWA } from './pwa.js';
-import { renderUserPresets, renderUserDrumPresets } from './persistence.js';
-import { analyzeFormUI, validateAndAnalyze, clearChordPresetHighlight } from './arranger-controller.js';
-import { switchMeasure, loadDrumPreset, setInstrumentControllerRefs, initializePowerButtons, getPowerConfig } from './instrument-controller.js';
-import { setupUIHandlers } from './ui-controller.js';
-import { draw } from './animation-loop.js';
-import { scheduler, togglePlay } from './scheduler-core.js';
-import { hydrateState, loadFromUrl } from './state-hydration.js';
+import { UnifiedVisualizer } from './visualizer.js';
+import { clearChordPresetHighlight } from './instrument-controller.js';
 
 let viz;
 
@@ -101,8 +100,6 @@ function init() {
             POWER_CONFIG: getPowerConfig() 
         });
 
-        renderUserPresets(validateAndAnalyze, clearChordPresetHighlight, () => togglePlay(viz));
-        renderUserDrumPresets(switchMeasure); 
         // renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         initializePowerButtons();
 

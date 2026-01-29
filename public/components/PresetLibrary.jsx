@@ -1,9 +1,10 @@
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
+import { useState, useEffect } from 'preact/hooks';
 import { useEnsembleState, useDispatch } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
 import { CHORD_PRESETS, DRUM_PRESETS } from '../presets.js';
-import { formatUnicodeSymbols, generateId } from '../utils.js';
-import { loadDrumPreset, flushBuffers } from '../instrument-controller.js';
+import { formatUnicodeSymbols, generateId, decompressSections } from '../utils.js';
+import { loadDrumPreset, flushBuffers, renderMeasurePagination, switchMeasure } from '../instrument-controller.js';
 import { validateAndAnalyze } from '../arranger-controller.js';
 import { saveCurrentState } from '../persistence.js';
 import { setBpm } from '../app-controller.js';
@@ -11,12 +12,26 @@ import { syncWorker } from '../worker-client.js';
 
 export function PresetLibrary({ type }) {
     const dispatch = useDispatch();
-    const { lastChordPreset, lastDrumPreset, isDirty, isPlaying } = useEnsembleState(s => ({
+    const { lastChordPreset, lastDrumPreset, isDirty } = useEnsembleState(s => ({
         lastChordPreset: s.arranger.lastChordPreset,
         lastDrumPreset: s.groove.lastDrumPreset,
-        isDirty: s.arranger.isDirty,
-        isPlaying: s.playback.isPlaying
+        isDirty: s.arranger.isDirty
     }));
+
+    const [userPresets, setUserPresets] = useState([]);
+
+    useEffect(() => {
+        const key = type === 'chord' ? 'ensemble_userPresets' : 'ensemble_userDrumPresets';
+        const load = () => {
+            const data = JSON.parse(localStorage.getItem(key) || '[]');
+            setUserPresets(data);
+        };
+        load();
+        
+        // Listen for internal storage events (from same window)
+        window.addEventListener('storage_sync', load);
+        return () => window.removeEventListener('storage_sync', load);
+    }, [type]);
 
     const presets = type === 'chord' 
         ? CHORD_PRESETS 
@@ -24,22 +39,24 @@ export function PresetLibrary({ type }) {
 
     const activeId = type === 'chord' ? lastChordPreset : lastDrumPreset;
 
-    const handleSelect = (item) => {
+    const handleSelect = (item, isUser = false) => {
         if (type === 'chord') {
             if (isDirty && !confirm("Discard your custom arrangement and load this preset?")) return;
             
-            // Note: togglePlay logic handled by caller or state if needed
-            
             import('../state.js').then(({ arranger, playback }) => {
-                arranger.sections = item.sections.map(s => ({
-                    id: generateId(),
-                    label: s.label,
-                    value: s.value,
-                    repeat: s.repeat || 1,
-                    key: s.key || '',
-                    timeSignature: s.timeSignature || '',
-                    seamless: !!s.seamless
-                }));
+                if (isUser) {
+                    arranger.sections = item.sections ? decompressSections(item.sections) : [{ id: generateId(), label: 'Main', value: item.prog }];
+                } else {
+                    arranger.sections = item.sections.map(s => ({
+                        id: generateId(),
+                        label: s.label,
+                        value: s.value,
+                        repeat: s.repeat || 1,
+                        key: s.key || '',
+                        timeSignature: s.timeSignature || '',
+                        seamless: !!s.seamless
+                    }));
+                }
                 
                 arranger.isDirty = false;
                 arranger.isMinor = item.isMinor || false;
@@ -60,31 +77,89 @@ export function PresetLibrary({ type }) {
                 saveCurrentState();
             });
         } else {
-            loadDrumPreset(item.name);
-            import('../state.js').then(({ groove }) => {
-                groove.lastDrumPreset = item.name;
-                syncWorker();
-                saveCurrentState();
-            });
+            if (isUser) {
+                import('../state.js').then(({ groove }) => {
+                    if (item.measures) {
+                        groove.measures = item.measures;
+                        groove.currentMeasure = 0;
+                        renderMeasurePagination(switchMeasure);
+                    }
+                    item.pattern.forEach(savedInst => {
+                        const inst = groove.instruments.find(i => i.name === savedInst.name);
+                        if (inst) {
+                            inst.steps.fill(0);
+                            savedInst.steps.forEach((v, i) => { if (i < 128) inst.steps[i] = v; });
+                        }
+                    });
+                    if (item.swing !== undefined) groove.swing = item.swing;
+                    if (item.swingSub) groove.swingSub = item.swingSub;
+                    groove.lastDrumPreset = item.name;
+                    syncWorker();
+                    saveCurrentState();
+                });
+            } else {
+                loadDrumPreset(item.name);
+                import('../state.js').then(({ groove }) => {
+                    groove.lastDrumPreset = item.name;
+                    syncWorker();
+                    saveCurrentState();
+                });
+            }
         }
     };
 
-    // Grouping logic similar to StyleSelector if needed, but simple list for now matches legacy
+    const handleDelete = (e, index) => {
+        e.stopPropagation();
+        if (!confirm(`Delete this ${type === 'chord' ? 'preset' : 'drum pattern'}?`)) return;
+
+        const key = type === 'chord' ? 'ensemble_userPresets' : 'ensemble_userDrumPresets';
+        const updated = [...userPresets];
+        updated.splice(index, 1);
+        localStorage.setItem(key, JSON.stringify(updated));
+        setUserPresets(updated);
+        // Trigger other components
+        window.dispatchEvent(new Event('storage_sync'));
+    };
+
     const sorted = [...presets].sort((a, b) => (a.category || '').localeCompare(b.category || ''));
 
     return (
-        <div className="presets-container">
-            {sorted.map(item => (
-                <button 
-                    key={item.id || item.name}
-                    className={`preset-chip ${type}-preset-chip ${activeId === (item.id || item.name) ? 'active' : ''}`}
-                    onClick={() => handleSelect(item)}
-                    data-id={item.id || item.name}
-                    data-category={item.category || 'Other'}
-                >
-                    {formatUnicodeSymbols(item.name)}
-                </button>
-            ))}
-        </div>
+        <Fragment>
+            <div className="presets-container">
+                {sorted.map(item => (
+                    <button 
+                        key={item.id || item.name}
+                        className={`preset-chip ${type}-preset-chip ${activeId === (item.id || item.name) ? 'active' : ''}`}
+                        onClick={() => handleSelect(item)}
+                        data-id={item.id || item.name}
+                        data-category={item.category || 'Other'}
+                    >
+                        {formatUnicodeSymbols(item.name)}
+                    </button>
+                ))}
+            </div>
+
+            {userPresets.length > 0 && (
+                <div className="user-presets-section" style="border-top: 1px solid #334155; padding-top: 0.5rem; margin-top: 0.5rem;">
+                    <label className="library-label" style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.4rem; display: block;">User</label>
+                    <div className="presets-container">
+                        {userPresets.map((item, idx) => (
+                            <button 
+                                key={`user-${idx}`}
+                                className={`preset-chip user-preset-chip ${type}-preset-chip ${activeId === item.name ? 'active' : ''}`}
+                                onClick={() => handleSelect(item, true)}
+                            >
+                                {item.name}
+                                <span 
+                                    className="delete-btn" 
+                                    onClick={(e) => handleDelete(e, idx)}
+                                    style="margin-left: 0.5rem; opacity: 0.5; font-size: 0.8rem;"
+                                >✕</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </Fragment>
     );
 }
