@@ -23,15 +23,26 @@ export function SectionCard({ section, index, totalSections }) {
 
     const handleDragEnd = (e) => {
         e.currentTarget.classList.remove('dragging');
+        document.querySelectorAll('.section-card').forEach(el => el.classList.remove('drag-over'));
+    };
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if (draggedId !== section.id) {
+            e.currentTarget.classList.add('drag-over');
+        }
+    };
+
+    const handleDragLeave = (e) => {
+        e.currentTarget.classList.remove('drag-over');
     };
 
     const handleDrop = (e) => {
         e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
         const draggedId = e.dataTransfer.getData('text/plain');
-        if (draggedId !== section.id) {
-            // We need the full sections list to reorder. 
-            // This might be better handled in the parent Arranger component.
-            // For now, we'll dispatch a custom event or use a prop-drilled reorder function.
+        if (draggedId && draggedId !== section.id) {
             const event = new CustomEvent('reorder-sections', { 
                 detail: { draggedId, targetId: section.id } 
             });
@@ -66,6 +77,8 @@ export function SectionCard({ section, index, totalSections }) {
             draggable={true}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
         >

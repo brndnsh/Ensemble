@@ -432,39 +432,17 @@ select, input[type="range"] {
 }
 
 .section-card.dragging {
-    opacity: 0.5;
-    transform: scale(0.98);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    border-style: dashed;
+    opacity: 0.4;
+    cursor: move;
 }
 
 .section-card.drag-over {
-    border-top: 2px solid var(--accent-color);
-}
-.section-card.active {
     border-color: var(--accent-color);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--accent-color), transparent 80%);
-    background: color-mix(in srgb, var(--accent-color), transparent 95%);
+    transform: scale(1.02);
+    box-shadow: 0 0 15px var(--accent-color-alpha);
+    z-index: 10;
 }
 
-.section-card.menu-active {
-    z-index: var(--z-overlay);
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-/* This is the 'actions' container in ui.js */
-.section-actions,
-.section-header > div:last-child {
-    position: relative;
-    display: flex;
-    gap: 0.5rem;
-    flex-shrink: 0;
-}
 .section-label-input {
     background: transparent;
     border: none;

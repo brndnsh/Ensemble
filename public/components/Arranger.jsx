@@ -30,7 +30,7 @@ export function Arranger() {
     if (!sections) return null;
 
     return (
-        <div class="section-list">
+        <div className="section-list">
             {sections.map((section, index) => (
                 <SectionCard 
                     key={section.id} 
