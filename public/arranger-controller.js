@@ -40,8 +40,15 @@ export function refreshArrangerUI() {
 
 export function onSectionUpdate(id, field, value) {
     if (field === 'reorder') {
-        const newSections = value.map(sid => arranger.sections.find(s => s.id === sid));
-        if (JSON.stringify(newSections.map(s => s.id)) !== JSON.stringify(arranger.sections.map(s => s.id))) {
+        const sectionMap = new Map(arranger.sections.map(s => [s.id, s]));
+        const newSections = value.map(sid => sectionMap.get(sid));
+
+        // Check for changes more efficiently than JSON.stringify
+        const currentIds = arranger.sections.map(s => s.id);
+        const hasChanged = value.length !== currentIds.length ||
+                           value.some((id, index) => id !== currentIds[index]);
+
+        if (hasChanged) {
             pushHistory();
             arranger.sections = newSections;
         } else {
