@@ -26,7 +26,7 @@ const ui = {
 /**
  * Initializes event handlers for the Song Generator modal.
  */
-export function setupGenerateSongHandlers() {
+export function setupSongGeneratorHandlers() {
     if (!ui.generateSongOverlay) return;
 
     ui.closeGenerateSongBtn?.addEventListener('click', () => {
