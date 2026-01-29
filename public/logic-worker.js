@@ -190,7 +190,9 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
                 const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4);
                 if (isBassActive(bass.style, step, stepInChord)) {
-                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bass.lastFreq, bass.octave, bass.style, chordData.chordIndex, step, stepInChord);
+                    // Extract section bounds from chordData for optimization
+                    const { sectionStart, sectionEnd } = chordData;
+                    const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bass.lastFreq, bass.octave, bass.style, chordData.chordIndex, step, stepInChord, { sectionStart, sectionEnd });
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
                         if (!bassResult.midi) bassResult.midi = getMidi(bassResult.freq);
                         if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
@@ -450,7 +452,8 @@ export function handleExport(options) {
                 }
 
                 if (includedTracks.includes('bass') && isBassActive(bass.style, globalStep, stepInChord)) {
-                    const res = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bass.lastFreq, bass.octave, bass.style, chordData.chordIndex, globalStep, stepInChord);
+                    const { sectionStart, sectionEnd } = chordData;
+                    const res = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bass.lastFreq, bass.octave, bass.style, chordData.chordIndex, globalStep, stepInChord, { sectionStart, sectionEnd });
                     if (res && res.midi) {
                         const noteTimeS = stepTimeS + (res.timingOffset || 0);
                         const notePulse = Math.max(0, toPulses(noteTimeS));
@@ -855,6 +858,7 @@ function handlePrime(steps) {
             // 1. Prime Bass (if enabled) to update bass.lastFreq
             if (bass.enabled) {
                 if (isBassActive(bass.style, s, stepInChord)) {
+                    const { sectionStart, sectionEnd } = chordData;
                     const centerMidi = bass.octave;
                     const bassResult = getBassNote(
                         chord, 
@@ -865,7 +869,8 @@ function handlePrime(steps) {
                         bass.style, 
                         chordData.chordIndex, 
                         s, 
-                        stepInChord
+                        stepInChord,
+                        { sectionStart, sectionEnd }
                     );
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
                          if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
