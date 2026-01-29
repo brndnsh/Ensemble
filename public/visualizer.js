@@ -261,6 +261,11 @@ export class UnifiedVisualizer {
 
         // Draw Keys (Batched for performance)
         // Pass 1: Backgrounds & Labels (Fills)
+        // Optimization: Set font properties once per frame
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+
         for (let m = startMidi; m <= endMidi; m++) {
             const y = getY(m);
             const noteInOctave = m % 12;
@@ -276,9 +281,6 @@ export class UnifiedVisualizer {
             if (noteInOctave === 0) {
                 ctx.fillStyle = labelColor;
                 if (this.activeNotes.has(m)) ctx.fillStyle = '#fff';
-                ctx.font = '10px sans-serif';
-                ctx.textAlign = 'right';
-                ctx.textBaseline = 'middle';
                 const octave = (m / 12) - 1;
                 ctx.fillText(`C${octave}`, this.pianoRollWidth - 4, y);
             }
