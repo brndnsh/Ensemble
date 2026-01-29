@@ -41,7 +41,7 @@ vi.mock('../../public/utils.js', () => ({
     createSoftClipCurve: vi.fn(() => new Float32Array(1024))
 }));
 
-import { initAudio } from '../../public/engine.js';
+import { initAudio, restoreGains } from '../../public/engine.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 
 describe('Mix & Signal Integrity Audit', () => {
@@ -92,6 +92,12 @@ describe('Mix & Signal Integrity Audit', () => {
         global.window.AudioContext = MockAudioContext;
         global.window.webkitAudioContext = MockAudioContext;
         playback.audio = null;
+
+        // Mock DOM element for master volume
+        const masterVolInput = document.createElement('input');
+        masterVolInput.id = 'masterVolume';
+        masterVolInput.value = '0.5';
+        document.body.appendChild(masterVolInput);
     });
 
     it('should correctly assemble the master chain (Gain -> Saturator -> Limiter -> Dest)', () => {
@@ -130,14 +136,6 @@ describe('Mix & Signal Integrity Audit', () => {
         initAudio();
         
         // Find the compressor in the bass chain
-        // gainNode -> weight(EQ) -> scoop(EQ) -> definition(EQ) -> comp -> masterGain
-        // In our mock, definition is the 3rd filter created for bass
-        // We look at what the 3rd filter (definition) connects to
-        
-        // The engine creates EQ for chords, then bass.
-        // Bass EQ nodes: weight, scoop, definition.
-        // We need to find the compressor node created for bass.
-        
         const compressors = playback.audio.createDynamicsCompressor.mock.results;
         const bassComp = compressors.find(r => r.value.threshold.setValueAtTime.mock.calls.some(c => c[0] === -16));
         
@@ -166,5 +164,37 @@ describe('Mix & Signal Integrity Audit', () => {
         
         expect(playback.saturator.curve).toBeDefined();
         expect(playback.saturator.oversample).toBe('4x');
+    });
+
+    it('should maintain cumulative gain below 1.0 before the limiter', () => {
+        initAudio();
+        restoreGains();
+
+        // Check cumulative gain from restoreGains (uses setTargetAtTime)
+        const drumGain = playback.drumsGain.gain.setTargetAtTime.mock.calls[0][0];
+        const bassGain = playback.bassGain.gain.setTargetAtTime.mock.calls[0][0];
+        const chordsGain = playback.chordsGain.gain.setTargetAtTime.mock.calls[0][0];
+        const soloistGain = playback.soloistGain.gain.setTargetAtTime.mock.calls[0][0];
+        const harmonyGain = playback.harmoniesGain.gain.setTargetAtTime.mock.calls[0][0];
+
+        const totalInstrumentGain = drumGain + bassGain + chordsGain + soloistGain + harmonyGain;
+
+        // Verification: The sum should be safe (~0.772 based on 0.5/0.45/etc volumes)
+        expect(totalInstrumentGain).toBeLessThan(1.0);
+        // Recalculating expected:
+        // Drums: 0.5 * 0.40 = 0.20
+        // Bass: 0.45 * 0.32 = 0.144
+        // Chords: 0.5 * 0.30 = 0.15
+        // Soloist: 0.5 * 0.38 = 0.19
+        // Harmony: 0.4 * 0.22 = 0.088
+        // Total = 0.772
+        expect(totalInstrumentGain).toBeCloseTo(0.772, 4);
+    });
+
+    it('should calculate master gain correctly (Headroom Check)', () => {
+        initAudio();
+        // Master Gain = ui.masterVol (0.5) * masterMultiplier (0.85) = 0.425
+        const masterGain = playback.masterGain.gain.exponentialRampToValueAtTime.mock.calls[0][0];
+        expect(masterGain).toBeCloseTo(0.425, 4);
     });
 });
