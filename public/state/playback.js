@@ -94,11 +94,20 @@ export const playback = {
     suspendTimeout: null,
     conductorVelocity: 1.0,
     masterLimiter: null,
-    masterVolume: 0.4
+    masterVolume: 0.4,
+    countIn: true,
+    visualFlash: true,
+    haptic: true
 };
 
 export function playbackReducer(action, payload) {
     switch (action) {
+        case ACTIONS.SET_PARAM:
+            if (payload.module === 'playback') {
+                playback[payload.param] = payload.value;
+                return true;
+            }
+            break;
         case ACTIONS.SET_BAND_INTENSITY:
             Object.assign(playback, { bandIntensity: Math.max(0, Math.min(1, payload)) });
             return true;
