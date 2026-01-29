@@ -82,7 +82,7 @@ export function isBassActive(style, step, stepInChord) {
     return false;
 }
 
-export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMidi, style, chordIndex, step, stepInChord) {
+export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMidi, style, chordIndex, step, stepInChord, context = {}) {
     if (!chord) return null;
 
     if (style === 'smart') {
@@ -102,7 +102,13 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
     const loopStep = step % (arranger.totalSteps || 1);
     
     let sectionProgress = 0;
-    if (arranger.stepMap && arranger.stepMap.length > 0) {
+
+    if (context.sectionStart !== undefined && context.sectionEnd !== undefined) {
+        // O(1) Optimization: Use provided context
+        const sectionLength = context.sectionEnd - context.sectionStart;
+        sectionProgress = sectionLength > 0 ? (loopStep - context.sectionStart) / sectionLength : 0;
+    } else if (arranger.stepMap && arranger.stepMap.length > 0) {
+        // Fallback: O(N) Lookup
         const entry = arranger.stepMap.find(e => loopStep >= e.start && loopStep < e.end);
         if (entry) {
             const currentSectionId = entry.chord.sectionId;
