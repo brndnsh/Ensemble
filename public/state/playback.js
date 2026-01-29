@@ -100,35 +100,35 @@ export const playback = {
 export function playbackReducer(action, payload) {
     switch (action) {
         case ACTIONS.SET_BAND_INTENSITY:
-            playback.bandIntensity = Math.max(0, Math.min(1, payload));
+            Object.assign(playback, { bandIntensity: Math.max(0, Math.min(1, payload)) });
             return true;
         case ACTIONS.SET_COMPLEXITY:
-            playback.complexity = Math.max(0, Math.min(1, payload));
+            Object.assign(playback, { complexity: Math.max(0, Math.min(1, payload)) });
             return true;
         case ACTIONS.SET_AUTO_INTENSITY:
-            playback.autoIntensity = !!payload;
+            Object.assign(playback, { autoIntensity: !!payload });
             return true;
         case ACTIONS.SET_METRONOME:
-            playback.metronome = payload;
+            Object.assign(playback, { metronome: payload });
             return true;
         case ACTIONS.SET_PRESET_SETTINGS_MODE:
-            playback.applyPresetSettings = payload;
+            Object.assign(playback, { applyPresetSettings: payload });
             return true;
         case ACTIONS.SET_SESSION_TIMER:
-            playback.sessionTimer = payload;
+            Object.assign(playback, { sessionTimer: payload });
             return true;
         case ACTIONS.SET_STOP_AT_END:
-            playback.stopAtEnd = payload;
+            Object.assign(playback, { stopAtEnd: payload });
             return true;
         case ACTIONS.SET_ENDING_PENDING:
-            playback.isEndingPending = payload;
+            Object.assign(playback, { isEndingPending: payload });
             return true;
         case ACTIONS.TRIGGER_EMERGENCY_LOOKAHEAD:
             if (playback.scheduleAheadTime < 0.4) {
-                playback.scheduleAheadTime *= 2.0;
+                Object.assign(playback, { scheduleAheadTime: playback.scheduleAheadTime * 2.0 });
                 console.warn(`[Performance] Emergency Lookahead Triggered: ${playback.scheduleAheadTime}s`);
                 setTimeout(() => {
-                    playback.scheduleAheadTime = 0.2;
+                    Object.assign(playback, { scheduleAheadTime: 0.2 });
                     console.log("[Performance] Lookahead reset to normal.");
                 }, 10000);
             }
@@ -136,7 +136,11 @@ export function playbackReducer(action, payload) {
         case ACTIONS.UPDATE_CONDUCTOR_DECISION:
             if (payload.velocity) playback.conductorVelocity = payload.velocity;
             if (payload.intent) Object.assign(playback.intent, payload.intent);
-            // Note: density is handled by instrument reducer
+            // We use Object.assign(playback, ...) to notify listeners in state.js 
+            // but the underlying object 'playback' is exported and shared.
+            // To be TRULY immutable we'd need to change how state.js handles exports.
+            // For now, Object.assign is enough to trigger the Proxy/Listener if we had one,
+            // but state.js just calls listeners(action, payload, stateMap).
             break;
     }
     return false;

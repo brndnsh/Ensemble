@@ -53,7 +53,7 @@ export const arranger = {
 export function arrangerReducer(action, payload) {
     switch (action) {
         case ACTIONS.SET_NOTATION:
-            arranger.notation = payload;
+            Object.assign(arranger, { notation: payload });
             return true;
     }
     return false;

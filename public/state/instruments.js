@@ -166,38 +166,48 @@ const instrumentStateMap = {
 export function instrumentReducer(action, payload) {
     switch (action) {
         case ACTIONS.SET_STYLE:
-            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].style = payload.style;
+            if (instrumentStateMap[payload.module]) {
+                Object.assign(instrumentStateMap[payload.module], { style: payload.style });
+            }
             return true;
         case ACTIONS.SET_DENSITY:
-            chords.density = payload;
+            Object.assign(chords, { density: payload });
             return true;
         case ACTIONS.SET_VOLUME:
-            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].volume = payload.value;
+            if (instrumentStateMap[payload.module]) {
+                Object.assign(instrumentStateMap[payload.module], { volume: payload.value });
+            }
             return true;
         case ACTIONS.SET_REVERB:
-            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].reverb = payload.value;
+            if (instrumentStateMap[payload.module]) {
+                Object.assign(instrumentStateMap[payload.module], { reverb: payload.value });
+            }
             return true;
         case ACTIONS.SET_OCTAVE:
-            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].octave = payload.value;
+            if (instrumentStateMap[payload.module]) {
+                Object.assign(instrumentStateMap[payload.module], { octave: payload.value });
+            }
             return true;
         case ACTIONS.SET_PIANO_ROOTS:
-            chords.pianoRoots = payload;
+            Object.assign(chords, { pianoRoots: payload });
             return true;
         case ACTIONS.SET_DOUBLE_STOPS:
-            soloist.doubleStops = !!payload;
+            Object.assign(soloist, { doubleStops: !!payload });
             return true;
         case ACTIONS.RESET_SESSION:
-            soloist.sessionSteps = 0;
+            Object.assign(soloist, { sessionSteps: 0 });
             return true;
         case ACTIONS.SET_SESSION_STEPS:
-            soloist.sessionSteps = payload;
+            Object.assign(soloist, { sessionSteps: payload });
             return true;
         case ACTIONS.UPDATE_CONDUCTOR_DECISION:
-            if (payload.density) chords.density = payload.density;
-            if (payload.hookProb) soloist.hookRetentionProb = payload.hookProb;
+            if (payload.density) Object.assign(chords, { density: payload.density });
+            if (payload.hookProb) Object.assign(soloist, { hookRetentionProb: payload.hookProb });
             return true;
         case ACTIONS.SET_ACTIVE_TAB:
-            if (instrumentStateMap[payload.module]) instrumentStateMap[payload.module].activeTab = payload.tab;
+            if (instrumentStateMap[payload.module]) {
+                Object.assign(instrumentStateMap[payload.module], { activeTab: payload.tab });
+            }
             return true;
         case ACTIONS.UPDATE_HB:
             Object.assign(harmony, payload);

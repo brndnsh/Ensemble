@@ -82,39 +82,41 @@ export const groove = {
 export function grooveReducer(action, payload, playback) {
     switch (action) {
         case ACTIONS.SET_SWING:
-            groove.swing = payload;
+            Object.assign(groove, { swing: payload });
             return true;
         case ACTIONS.SET_SWING_SUB:
-            groove.swingSub = payload;
+            Object.assign(groove, { swingSub: payload });
             return true;
         case ACTIONS.SET_HUMANIZE:
-            groove.humanize = payload;
+            Object.assign(groove, { humanize: payload });
             return true;
         case ACTIONS.SET_FOLLOW_PLAYBACK:
-            groove.followPlayback = payload;
+            Object.assign(groove, { followPlayback: payload });
             return true;
         case ACTIONS.SET_LARS_MODE:
-            groove.larsMode = !!payload;
+            Object.assign(groove, { larsMode: !!payload });
             return true;
         case ACTIONS.SET_LARS_INTENSITY:
-            groove.larsIntensity = Math.max(0, Math.min(1, payload));
+            Object.assign(groove, { larsIntensity: Math.max(0, Math.min(1, payload)) });
             return true;
         case ACTIONS.SET_GENRE_FEEL:
             if (playback.isPlaying) {
-                groove.pendingGenreFeel = payload;
+                Object.assign(groove, { pendingGenreFeel: payload });
             } else {
-                groove.genreFeel = payload.feel;
-                if (payload.swing !== undefined) groove.swing = payload.swing;
-                if (payload.sub !== undefined) groove.swingSub = payload.sub;
-                groove.pendingGenreFeel = null;
+                const updates = { genreFeel: payload.feel, pendingGenreFeel: null };
+                if (payload.swing !== undefined) updates.swing = payload.swing;
+                if (payload.sub !== undefined) updates.swingSub = payload.sub;
+                Object.assign(groove, updates);
             }
             return true;
         case ACTIONS.TRIGGER_FILL:
-            groove.fillSteps = payload.steps;
-            groove.fillActive = true;
-            groove.fillStartStep = payload.startStep;
-            groove.fillLength = payload.length;
-            groove.pendingCrash = !!payload.crash;
+            Object.assign(groove, {
+                fillSteps: payload.steps,
+                fillActive: true,
+                fillStartStep: payload.startStep,
+                fillLength: payload.length,
+                pendingCrash: !!payload.crash
+            });
             return true;
     }
     return false;

@@ -11,19 +11,15 @@ const localStateMap = { playback, chords, bass, soloist, harmony, groove, arrang
  */
 export function useEnsembleState(selector) {
     const [slice, setSlice] = useState(() => selector(localStateMap));
+    const [, setVersion] = useState(0);
 
     useEffect(() => {
         const update = (action, payload, updatedStateMap) => {
             const newSlice = selector(updatedStateMap);
-            setSlice(prev => {
-                if (prev === newSlice) return prev;
-                return newSlice;
-            });
+            setSlice(newSlice);
+            setVersion(v => v + 1);
         };
         
-        // Initial sync in case state changed between render and effect
-        update(null, null, localStateMap);
-
         const unsubscribe = subscribe(update);
         return unsubscribe;
     }, [selector]);
