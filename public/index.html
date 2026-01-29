@@ -99,7 +99,7 @@
                         <div id="sessionTimerDurationContainer" style="display: flex; align-items: center; gap: 0.5rem; opacity: 0.5; pointer-events: none; transition: all 0.2s ease;">
                              <div id="sessionTimerStepper" class="stepper-control" style="display: flex; align-items: center; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
                                 <button id="sessionTimerDec" aria-label="Decrease Session Timer" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">-</button>
-                                <input type="number" id="sessionTimerInput" value="5" min="1" max="20" readonly style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;">
+                                <input type="number" id="sessionTimerInput" aria-label="Session Timer Duration in Minutes" value="5" min="1" max="20" readonly style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;">
                                 <button id="sessionTimerInc" aria-label="Increase Session Timer" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
                              </div>
                              <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Minutes</span>
@@ -258,7 +258,7 @@
             <div class="settings-section">
                 <h3>File Info</h3>
                 <div class="setting-item">
-                    <label class="setting-label">
+                    <label class="setting-label" for="exportFilenameInput">
                         <span>Filename</span>
                     </label>
                     <input type="text" id="exportFilenameInput" value="Ensemble Export" style="width: 100%; padding: 0.5rem; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px;" spellcheck="false">
@@ -305,7 +305,7 @@
                     <div id="exportDurationContainer" style="margin-left: 1.8rem; opacity: 0.5; pointer-events: none; transition: opacity 0.2s;">
                          <div id="exportDurationStepper" class="stepper-control" style="display: flex; align-items: center; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; width: fit-content;">
                             <button id="exportDurationDec" aria-label="Decrease Duration" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">-</button>
-                            <input type="number" id="exportDurationInput" value="3" min="1" max="20" readonly style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;">
+                            <input type="number" id="exportDurationInput" aria-label="Export Duration in Minutes" value="3" min="1" max="20" readonly style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;">
                             <button id="exportDurationInc" aria-label="Increase Duration" class="stepper-btn" style="padding: 0.5rem 0.75rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
                          </div>
                     </div>

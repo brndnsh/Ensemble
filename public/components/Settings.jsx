@@ -235,6 +235,7 @@ export function Settings() {
                                         value={sessionTimer > 0 ? sessionTimer : 5} 
                                         readonly 
                                         style="width: 40px; text-align: center; background: transparent; border: none; font-weight: bold; color: var(--text-color); -moz-appearance: textfield; padding: 0;"
+                                        aria-label="Session Timer Duration in Minutes"
                                     />
                                     <button 
                                         id="sessionTimerInc"
