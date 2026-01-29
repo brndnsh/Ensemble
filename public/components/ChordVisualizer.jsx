@@ -1,12 +1,11 @@
 import { h, Fragment } from 'preact';
-import React from 'preact/compat';
+import React, { memo } from 'preact/compat';
 import { useMemo, useEffect, useRef } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { formatUnicodeSymbols } from '../utils.js';
 import { TIME_SIGNATURES } from '../config.js';
 
-function ChordCard({ chord, isActive, totalMeasures, isMaximized }) {
-    const notation = useEnsembleState(s => s.arranger.notation || 'roman');
+const ChordCard = memo(({ chord, isActive, totalMeasures, isMaximized, notation }) => {
     const disp = chord.display ? chord.display[notation] : null;
     
     const cardRef = useRef(null);
@@ -60,14 +59,15 @@ function ChordCard({ chord, isActive, totalMeasures, isMaximized }) {
             )}
         </div>
     );
-}
+});
 
 export function ChordVisualizer() {
-    const { progression, timeSignature, lastActiveChordIndex, sectionsState } = useEnsembleState(s => ({
+    const { progression, timeSignature, lastActiveChordIndex, sectionsState, notation } = useEnsembleState(s => ({
         progression: s.arranger.progression,
         timeSignature: s.arranger.timeSignature,
         lastActiveChordIndex: s.chords.lastActiveChordIndex,
-        sectionsState: s.arranger.sections
+        sectionsState: s.arranger.sections,
+        notation: s.arranger.notation || 'roman'
     }));
 
     const isMaximized = document.body.classList.contains('chord-maximized');
@@ -160,6 +160,7 @@ export function ChordVisualizer() {
                                             isActive={chord.globalIndex === lastActiveChordIndex}
                                             totalMeasures={totalMeasures}
                                             isMaximized={isMaximized}
+                                            notation={notation}
                                         />
                                     ))}
                                 </div>
