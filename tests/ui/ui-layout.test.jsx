@@ -10,6 +10,8 @@ import { ui, renderGrid, renderChordVisualizer } from '../../public/ui.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { ACTIONS } from '../../public/types.js';
 import { Arranger } from '../../public/components/Arranger.jsx';
+import { ChordVisualizer } from '../../public/components/ChordVisualizer.jsx';
+import { SequencerGrid } from '../../public/components/SequencerGrid.jsx';
 
 // Mock dependencies that we don't need for layout testing
 vi.mock('../../public/persistence.js', () => ({
@@ -26,6 +28,10 @@ vi.mock('../../public/arranger-controller.js', () => ({
 
 describe('UI Layout Integrity', () => {
     beforeEach(() => {
+        // Polyfill requestAnimationFrame for Preact hooks in happy-dom
+        global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
+        global.cancelAnimationFrame = (id) => clearTimeout(id);
+
         // Setup a minimal DOM for initUI to bind to
         document.body.innerHTML = `
             <div id="sectionList"></div>
@@ -70,16 +76,19 @@ describe('UI Layout Integrity', () => {
         });
     });
 
-    describe('renderChordVisualizer', () => {
-        it('should render correct number of chords and measures', () => {
+    describe('ChordVisualizer Component', () => {
+        it('should render correct number of chords and measures', async () => {
             arranger.timeSignature = '4/4';
             arranger.progression = [
                 { sectionId: 's1', sectionLabel: 'Intro', beats: 4, display: { roman: { root: 'I', suffix: '' } } },
                 { sectionId: 's1', sectionLabel: 'Intro', beats: 4, display: { roman: { root: 'V', suffix: '' } } }
             ];
             
-            renderChordVisualizer();
+            const container = document.getElementById('chordVisualizer');
+            render(<ChordVisualizer />, container);
             
+            await new Promise(r => setTimeout(r, 0));
+
             const cards = document.querySelectorAll('.chord-card');
             expect(cards.length).toBe(2);
             
@@ -90,15 +99,18 @@ describe('UI Layout Integrity', () => {
             expect(sections.length).toBe(1);
         });
 
-        it('should handle multi-chord measures correctly', () => {
+        it('should handle multi-chord measures correctly', async () => {
             arranger.timeSignature = '4/4';
             arranger.progression = [
                 { sectionId: 's1', sectionLabel: 'A', beats: 2, display: { roman: { root: 'I', suffix: '' } } },
                 { sectionId: 's1', sectionLabel: 'A', beats: 2, display: { roman: { root: 'IV', suffix: '' } } }
             ];
             
-            renderChordVisualizer();
+            const container = document.getElementById('chordVisualizer');
+            render(<ChordVisualizer />, container);
             
+            await new Promise(r => setTimeout(r, 0));
+
             const measures = document.querySelectorAll('.measure-box');
             expect(measures.length).toBe(1);
             
@@ -108,7 +120,7 @@ describe('UI Layout Integrity', () => {
     });
 
     describe('Arranger Component', () => {
-        it('should render the correct number of section cards', () => {
+        it('should render the correct number of section cards', async () => {
             arranger.sections = [
                 { id: '1', label: 'A', value: 'I' },
                 { id: '2', label: 'B', value: 'IV' }
@@ -117,6 +129,8 @@ describe('UI Layout Integrity', () => {
             const container = document.getElementById('sectionList');
             render(<Arranger />, container);
             
+            await new Promise(r => setTimeout(r, 0));
+
             const cards = document.querySelectorAll('.section-card');
             expect(cards.length).toBe(2);
         });
@@ -126,26 +140,26 @@ describe('UI Layout Integrity', () => {
             const container = document.getElementById('sectionList');
             render(<Arranger />, container);
             
+            await new Promise(r => setTimeout(r, 0));
             expect(document.querySelectorAll('.section-card').length).toBe(1);
 
-            // Replace with a NEW array reference to trigger useEnsembleState
             arranger.sections = [
                 { id: '1', label: 'A', value: 'I' },
                 { id: '2', label: 'B', value: 'IV' }
             ];
             dispatch('DUMMY_ACTION'); 
 
-            // Wait for Preact's async render cycle
             await new Promise(resolve => setTimeout(resolve, 50));
-
             expect(document.querySelectorAll('.section-card').length).toBe(2);
         });
 
-        it('should include correct sub-elements in each section card', () => {
+        it('should include correct sub-elements in each section card', async () => {
             arranger.sections = [{ id: '1', label: 'Verse', value: 'I' }];
             const container = document.getElementById('sectionList');
             render(<Arranger />, container);
             
+            await new Promise(r => setTimeout(r, 0));
+
             const card = document.querySelector('.section-card');
             expect(card.querySelector('.section-label-input')).not.toBeNull();
             expect(card.querySelector('.section-prog-input')).not.toBeNull();
@@ -153,9 +167,8 @@ describe('UI Layout Integrity', () => {
         });
     });
 
-    describe('renderGrid', () => {
-        it('should render the correct number of instruments and steps', () => {
-            // Setup groove state
+    describe('SequencerGrid Component', () => {
+        it('should render the correct number of instruments and steps', async () => {
             groove.instruments = [
                 { name: 'Kick', steps: new Array(128).fill(0) },
                 { name: 'Snare', steps: new Array(128).fill(0) }
@@ -163,28 +176,33 @@ describe('UI Layout Integrity', () => {
             groove.measures = 1;
             arranger.timeSignature = '4/4';
 
-            renderGrid();
+            const container = document.getElementById('sequencerGrid');
+            render(<SequencerGrid />, container);
+            
+            await new Promise(r => setTimeout(r, 0));
 
             const rows = document.querySelectorAll('.track:not(.label-row)');
             expect(rows.length).toBe(2);
 
-            // In 4/4, 1 measure has 16 steps
             const steps = rows[0].querySelectorAll('.step');
             expect(steps.length).toBe(16);
         });
 
-        it('should update step count when measures change', () => {
+        it('should update step count when measures change', async () => {
             groove.instruments = [{ name: 'Kick', steps: new Array(128).fill(0) }];
             groove.measures = 2;
             arranger.timeSignature = '4/4';
 
-            renderGrid();
+            const container = document.getElementById('sequencerGrid');
+            render(<SequencerGrid />, container);
+            
+            await new Promise(r => setTimeout(r, 0));
 
             const steps = document.querySelectorAll('.step');
             expect(steps.length).toBe(32);
         });
 
-        it('should not leak rows when re-rendering', () => {
+        it('should not leak rows when re-rendering', async () => {
             groove.instruments = [
                 { name: 'Kick', steps: new Array(128).fill(0) },
                 { name: 'Snare', steps: new Array(128).fill(0) }
@@ -192,20 +210,25 @@ describe('UI Layout Integrity', () => {
             groove.measures = 1;
             arranger.timeSignature = '4/4';
 
-            renderGrid();
-            renderGrid();
-            renderGrid();
+            const container = document.getElementById('sequencerGrid');
+            render(<SequencerGrid />, container);
+            await new Promise(r => setTimeout(r, 0));
+            render(<SequencerGrid />, container);
+            await new Promise(r => setTimeout(r, 0));
 
             const rows = document.querySelectorAll('.track:not(.label-row)');
             expect(rows.length).toBe(2);
         });
 
-        it('should render the correct number of subdivision labels', () => {
+        it('should render the correct number of subdivision labels', async () => {
             groove.instruments = [{ name: 'Kick', steps: new Array(128).fill(0) }];
             groove.measures = 1;
             arranger.timeSignature = '4/4';
 
-            renderGrid();
+            const container = document.getElementById('sequencerGrid');
+            render(<SequencerGrid />, container);
+            
+            await new Promise(r => setTimeout(r, 0));
 
             const labelRow = document.querySelector('.label-row');
             expect(labelRow).not.toBeNull();

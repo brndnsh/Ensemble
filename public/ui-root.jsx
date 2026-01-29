@@ -4,6 +4,8 @@ import { Transport } from './components/Transport.jsx';
 import { Settings } from './components/Settings.jsx';
 import { InstrumentSettings } from './components/InstrumentSettings.jsx';
 import { Arranger } from './components/Arranger.jsx';
+import { SequencerGrid } from './components/SequencerGrid.jsx';
+import { ChordVisualizer } from './components/ChordVisualizer.jsx';
 import { CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, HARMONY_STYLES } from './presets.js';
 
 export function mountComponents() {
@@ -64,5 +66,19 @@ export function mountComponents() {
     if (sectionList) {
         sectionList.innerHTML = '';
         render(<Arranger />, sectionList);
+    }
+
+    // 6. Sequencer Grid
+    const sequencerGrid = document.getElementById('sequencerGrid');
+    if (sequencerGrid) {
+        sequencerGrid.innerHTML = '';
+        render(<SequencerGrid />, sequencerGrid);
+    }
+
+    // 7. Chord Visualizer
+    const chordVisualizer = document.getElementById('chordVisualizer');
+    if (chordVisualizer) {
+        chordVisualizer.innerHTML = '';
+        render(<ChordVisualizer />, chordVisualizer);
     }
 }

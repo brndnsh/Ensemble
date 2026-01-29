@@ -5,10 +5,6 @@ import { saveCurrentState } from './persistence.js';
 import { syncWorker } from './worker-client.js';
 import { UIStore } from './ui-store.js';
 
-// Import Componentized Logic
-import { renderChordVisualizer as internalRenderChordVisualizer } from './ui-chord-visualizer.js';
-import { renderGrid as internalRenderGrid, renderGridState as internalRenderGridState, initSequencerHandlers as internalInitSequencerHandlers } from './ui-sequencer-grid.js';
-
 // Import UI Fragments
 import { songGeneratorModalHtml } from './ui/fragments/modals/song-generator.js';
 import { settingsModalHtml } from './ui/fragments/modals/settings.js';
@@ -284,25 +280,12 @@ export function updateOctaveLabel(labelEl, octave, headerEl) {
     if (headerEl) headerEl.textContent = `(C${octNum})`;
 }
 
-export function renderChordVisualizer() {
-    internalRenderChordVisualizer(ui);
-}
-
-export function renderSections() {
-    // Handled by Preact
-}
-
-export function renderGrid(skipScroll = false) {
-    internalRenderGrid(ui, skipScroll);
-}
-
-export function renderGridState() {
-    internalRenderGridState(ui);
-}
-
-export function initSequencerHandlers() {
-    internalInitSequencerHandlers(ui);
-}
+// Preact Migration Stubs (to be removed in Phase 5)
+export function renderChordVisualizer() {}
+export function renderSections() {}
+export function renderGrid() {}
+export function renderGridState() {}
+export function initSequencerHandlers() {}
 
 export function clearActiveVisuals(viz) {
     UIStore.cachedCards.forEach(c => c.classList.remove('active'));

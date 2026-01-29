@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { ui, showToast, renderChordVisualizer, renderGridState, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels, switchInstrumentTab } from './ui.js';
+import { ui, showToast, recalculateScrollOffsets, renderTemplates, updateRelKeyButton, updateKeySelectLabels, switchInstrumentTab } from './ui.js';
 import { playback, chords, bass, soloist, harmony, groove, arranger, dispatch, subscribe } from './state.js';
 import { saveCurrentState } from './persistence.js';
 import { restoreGains } from './engine.js';
@@ -426,14 +426,14 @@ export function setupUIHandlers(refs) {
         [ui.clearDrums, 'click', () => { 
             groove.instruments.forEach(i => i.steps.fill(0)); 
             clearDrumPresetHighlight();
-            renderGridState(); 
+            // renderGridState(); 
             saveCurrentState();
         }],
         [ui.maximizeChordBtn, 'click', () => {
             const isMax = document.body.classList.toggle('chord-maximized');
             ui.maximizeChordBtn.textContent = isMax ? '✕' : '⛶';
             ui.maximizeChordBtn.title = isMax ? 'Exit Maximize' : 'Maximize';
-            renderChordVisualizer();
+            // renderChordVisualizer();
         }]
     ];
     listeners.forEach(([el, evt, fn]) => el?.addEventListener(evt, fn));
@@ -638,7 +638,7 @@ export function setupUIHandlers(refs) {
         if (e.key === '[' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (groove.currentMeasure - 1 + groove.measures) % groove.measures; switchMeasure(next); }
         if (e.key === ']' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) { const next = (groove.currentMeasure + 1) % groove.measures; switchMeasure(next); }
         if (e.key === 'Escape') {
-            if (document.body.classList.contains('chord-maximized')) { document.body.classList.remove('chord-maximized'); ui.maximizeChordBtn.textContent = '⛶'; ui.maximizeChordBtn.title = 'Maximize'; renderChordVisualizer(); }
+            if (document.body.classList.contains('chord-maximized')) { document.body.classList.remove('chord-maximized'); ui.maximizeChordBtn.textContent = '⛶'; ui.maximizeChordBtn.title = 'Maximize'; /* renderChordVisualizer(); */ }
             if (ModalManager.activeModal) ModalManager.close();
         }
     });

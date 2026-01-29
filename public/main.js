@@ -1,6 +1,6 @@
 import { playback, chords, bass, soloist, harmony, groove, arranger, subscribe } from './state.js';
 import { mountComponents } from './ui-root.jsx';
-import { initializeDOM, renderChordVisualizer, renderGrid, initTabs, renderMeasurePagination, setupPanelMenus, initSequencerHandlers } from './ui.js';
+import { initializeDOM, initTabs, renderMeasurePagination, setupPanelMenus } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';
 import { validateProgression } from './chords.js';
@@ -86,8 +86,8 @@ function init() {
         setInstrumentControllerRefs(() => scheduler(), viz);
         initTabs(); 
         setupPanelMenus(); 
-        initSequencerHandlers();
-        renderGrid(); 
+        // initSequencerHandlers();
+        // renderGrid(); 
         renderMeasurePagination(switchMeasure);
         
         const hasDrumPattern = groove.instruments.some(inst => inst.steps.some(s => s > 0));
@@ -116,7 +116,7 @@ function init() {
             }
         });
 
-        validateProgression(() => { renderChordVisualizer(); analyzeFormUI(); });
+        validateProgression(() => { /* renderChordVisualizer(); */ analyzeFormUI(); });
         
         subscribe((action, payload) => syncWorker(action, payload));
         syncWorker(); 
