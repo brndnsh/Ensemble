@@ -9,13 +9,7 @@ import { generateId, normalizeKey } from './utils.js';
 import { pushHistory } from './history.js';
 import { analyzeForm } from './form-analysis.js';
 import { conductorState } from './conductor.js';
-import { KEY_ORDER, TIME_SIGNATURES } from './config.js';
-
-const GROUPING_OPTIONS = {
-    '5/4': [[3, 2], [2, 3]],
-    '7/8': [[2, 2, 3], [3, 2, 2], [2, 3, 2]],
-    '7/4': [[4, 3], [3, 4]]
-};
+import { KEY_ORDER } from './config.js';
 
 export function updateGroupingUI() {
     // No-op: handled by Preact

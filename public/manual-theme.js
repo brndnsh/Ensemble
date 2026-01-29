@@ -15,7 +15,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
     try {
         const savedState = JSON.parse(localStorage.getItem('ensemble_currentState') || '{}');
         if (!savedState.theme || savedState.theme === 'auto') applyTheme();
-    } catch (e) {
+    } catch {
         applyTheme();
     }
 });
