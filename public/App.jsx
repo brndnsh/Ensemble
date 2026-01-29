@@ -108,7 +108,9 @@ function ArrangerPanel() {
                 </div>
             </div>
 
-            <ChordVisualizer />
+            <div className="display-area" id="chordVisualizer">
+                <ChordVisualizer />
+            </div>
             
             <div id="activeSectionLabel" class="active-section-label"></div>
 
@@ -240,7 +242,9 @@ function GroovePanel() {
                     </div>
                     <div id="measurePagination" style="display: flex; gap: 0.4rem; margin-bottom: 1rem; align-items: center;"></div>
                     <button id="cloneMeasureBtn" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; margin-bottom: 1rem;">⧉ Copy to All</button>
-                    <SequencerGrid />
+                    <div className="sequencer-grid" id="sequencerGrid">
+                        <SequencerGrid />
+                    </div>
                 </div>
             </div>
 
