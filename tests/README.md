@@ -1,0 +1,45 @@
+# Ensemble Test Suite
+
+This directory contains the automated tests for the Ensemble application, powered by [Vitest](https://vitest.dev/).
+
+## Structure
+
+*   **`unit/`**: Tests for individual modules, functions, and logic.
+    *   *Examples:* Music theory rules in `chords.js`, synthesis logic in `synth-*.js`, or isolated component logic.
+    *   *Environment:* `happy-dom` (simulates browser APIs like `window`, `document`, `Canvas`).
+*   **`integration/`**: Tests that verify the interaction between multiple modules or the full system lifecycle.
+    *   *Examples:* "Song Creation to Playback" flows, Worker synchronization.
+*   **`perf/`**: Performance benchmarks and stress tests.
+    *   *Examples:* Measuring render loop times or high-frequency calculation overhead.
+*   **`standards/`**: Musical validity checks.
+    *   *Examples:* Ensuring generated bass lines adhere to genre rules (e.g., Reggae "One Drop") over thousands of measures.
+
+## Running Tests
+
+### Run All Tests
+```bash
+npm test
+```
+
+### Run Specific Tests
+You can filter by filename or test name using the `--` argument:
+
+```bash
+# Run only visualizer tests
+npm test -- visualizer
+
+# Run only standards tests
+npm test -- standards/
+```
+
+### Watch Mode
+To run tests in watch mode (re-run on file change):
+```bash
+npx vitest
+```
+
+## Writing Tests
+
+*   **Environment**: Most tests require a DOM environment. Add `// @vitest-environment happy-dom` to the top of your test file.
+*   **Mocking**: Use `vi.mock()` to isolate dependencies, especially for global state (`public/state.js`) or browser APIs (`AudioContext`).
+*   **Canvas**: For visualizer tests, mock the Canvas API and `ResizeObserver` as `happy-dom` support for these is limited.

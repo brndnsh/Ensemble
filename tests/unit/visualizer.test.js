@@ -2,13 +2,14 @@
 /**
  * @vitest-environment happy-dom
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { UnifiedVisualizer } from '../../public/visualizer.js';
 
 describe('UnifiedVisualizer', () => {
     let visualizer;
     let mockCtx;
     let mockCanvas;
+    let getPropertyValueSpy;
 
     beforeEach(() => {
         // Setup DOM
@@ -22,6 +23,7 @@ describe('UnifiedVisualizer', () => {
             lineTo: vi.fn(),
             stroke: vi.fn(),
             fill: vi.fn(),
+            closePath: vi.fn(),
             arc: vi.fn(),
             clearRect: vi.fn(),
             scale: vi.fn(),
@@ -33,7 +35,9 @@ describe('UnifiedVisualizer', () => {
             globalAlpha: 1.0,
             font: '',
             textAlign: '',
-            textBaseline: ''
+            textBaseline: '',
+            set lineCap(v) {},
+            set lineJoin(v) {},
         };
 
         // Create a REAL canvas element from happy-dom
@@ -51,6 +55,28 @@ describe('UnifiedVisualizer', () => {
             }
         });
 
+        // Mock matchMedia
+        window.matchMedia = vi.fn().mockImplementation(query => ({
+            matches: false,
+            media: query,
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+        }));
+
+        // Mock getComputedStyle with spy
+        getPropertyValueSpy = vi.fn((prop) => {
+             if (prop && prop.startsWith('--')) return '#123456';
+             return '#000000';
+        });
+
+        vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+            getPropertyValue: getPropertyValueSpy
+        });
+
         // Use a safer way to mock createElement to avoid recursion
         const originalCreateElement = document.createElement.bind(document);
         vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
@@ -61,6 +87,11 @@ describe('UnifiedVisualizer', () => {
 
         visualizer = new UnifiedVisualizer('viz-container');
         visualizer.resize({ width: 800, height: 600 });
+    });
+
+    afterEach(() => {
+        if (visualizer) visualizer.destroy();
+        vi.restoreAllMocks();
     });
 
     it('should initialize with a canvas and info layer', () => {
@@ -107,11 +138,6 @@ describe('UnifiedVisualizer', () => {
         visualizer.pushNote('bass', { time: 10, midi: 36, duration: 1.0 });
         visualizer.setBeatReference(0);
         
-        // Mock getComputedStyle for theme colors
-        vi.spyOn(window, 'getComputedStyle').mockReturnValue({
-            getPropertyValue: vi.fn().mockReturnValue('#000000')
-        });
-
         visualizer.render(10.5, 120, 4);
 
         // Verify background was drawn
@@ -137,8 +163,6 @@ describe('UnifiedVisualizer', () => {
 
     describe('Lifecycle', () => {
         it('should remove canvas and info layer on destroy', () => {
-            // We can check if `mockCanvas` is removed from `document.body` (or container)
-            // Container is 'viz-container'.
             const container = document.getElementById('viz-container');
             expect(container.contains(mockCanvas)).toBe(true);
 
@@ -152,6 +176,52 @@ describe('UnifiedVisualizer', () => {
             const disconnectSpy = vi.spyOn(visualizer.resizeObserver, 'disconnect');
             visualizer.destroy();
             expect(disconnectSpy).toHaveBeenCalled();
+        });
+    });
+
+    describe('Performance Optimizations', () => {
+        it('should have ZERO getPropertyValue calls during render loop (caching enabled)', () => {
+            // Setup scene
+            visualizer.addTrack('bass', 'var(--blue)');
+            visualizer.addTrack('drums', 'var(--green)');
+            visualizer.addTrack('melody', 'var(--red)');
+
+            visualizer.pushNote('bass', { time: 1, midi: 60, duration: 1 });
+            visualizer.pushNote('drums', { time: 1, midi: 36, duration: 1 });
+            visualizer.pushNote('melody', { time: 1, midi: 72, duration: 1 });
+
+            // Clear any calls from setup
+            getPropertyValueSpy.mockClear();
+
+            const iterations = 100;
+            for (let i = 0; i < iterations; i++) {
+                visualizer.render(1.5, 120);
+            }
+
+            // Assert: No CSS variable lookups in the hot loop
+            expect(getPropertyValueSpy.mock.calls.length).toBe(0);
+        });
+
+        it('should re-resolve colors when theme changes', async () => {
+            visualizer.addTrack('bass', 'var(--blue)');
+
+            // Clear calls from init
+            getPropertyValueSpy.mockClear();
+
+            // 1. Render should not trigger calls
+            visualizer.render(0, 120);
+            expect(getPropertyValueSpy.mock.calls.length).toBe(0);
+
+            // 2. Change Theme
+            document.documentElement.setAttribute('data-theme', 'dark');
+
+            // Wait for MutationObserver (async)
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // 3. Should have re-resolved colors
+            // Exact count depends on number of colors to resolve (chords x4 + tracks)
+            const callsAfterThemeChange = getPropertyValueSpy.mock.calls.length;
+            expect(callsAfterThemeChange).toBeGreaterThan(0);
         });
     });
 });
