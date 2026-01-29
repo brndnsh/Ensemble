@@ -12,6 +12,10 @@ function applyTheme() {
 }
 applyTheme();
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    const savedState = JSON.parse(localStorage.getItem('ensemble_currentState') || '{}');
-    if (!savedState.theme || savedState.theme === 'auto') applyTheme();
+    try {
+        const savedState = JSON.parse(localStorage.getItem('ensemble_currentState') || '{}');
+        if (!savedState.theme || savedState.theme === 'auto') applyTheme();
+    } catch (e) {
+        applyTheme();
+    }
 });

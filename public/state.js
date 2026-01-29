@@ -28,7 +28,12 @@ const stateMap = {
 export const storage = {
     get: (key) => {
         if (typeof localStorage === 'undefined') return [];
-        return JSON.parse(localStorage.getItem(`ensemble_${key}`) || '[]');
+        try {
+            return JSON.parse(localStorage.getItem(`ensemble_${key}`) || '[]');
+        } catch (e) {
+            console.error(`[State] Failed to load ${key} from storage:`, e);
+            return [];
+        }
     },
     save: (key, val) => {
         if (typeof localStorage === 'undefined') return;
