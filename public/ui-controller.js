@@ -71,10 +71,11 @@ export function setupPresets(refs = {}) {
         });
     };
 
-    renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', chords.style, (item) => updateStyle('chord', item.id));
-    renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', soloist.state?.style || soloist.style, (item) => updateStyle('soloist', item.id));
-    renderCategorized(ui.bassStylePresets, BASS_STYLES, 'bass-style', bass.state?.style || bass.style, (item) => updateStyle('bass', item.id));
-    renderCategorized(ui.harmonyStylePresets, HARMONY_STYLES, 'harmony-style', harmony.style, (item) => updateStyle('harmony', item.id));
+    // [Legacy] Styles now rendered via Preact in ui-root.js
+    // renderCategorized(ui.chordStylePresets, CHORD_STYLES, 'chord-style', chords.style, (item) => updateStyle('chord', item.id));
+    // renderCategorized(ui.soloistStylePresets, SOLOIST_STYLES, 'soloist-style', soloist.state?.style || soloist.style, (item) => updateStyle('soloist', item.id));
+    // renderCategorized(ui.bassStylePresets, BASS_STYLES, 'bass-style', bass.state?.style || bass.style, (item) => updateStyle('bass', item.id));
+    // renderCategorized(ui.harmonyStylePresets, HARMONY_STYLES, 'harmony-style', harmony.style, (item) => updateStyle('harmony', item.id));
 
     const drumPresetsArray = Object.keys(DRUM_PRESETS).map(name => ({
         name,
