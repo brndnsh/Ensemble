@@ -102,6 +102,22 @@ export const playback = {
 
 export function playbackReducer(action, payload) {
     switch (action) {
+        case ACTIONS.RESET_STATE:
+            Object.assign(playback, {
+                bpm: 100,
+                theme: 'auto',
+                bandIntensity: 0.5,
+                complexity: 0.3,
+                autoIntensity: true,
+                metronome: false,
+                countIn: true,
+                visualFlash: true,
+                haptic: true,
+                sessionTimer: 5,
+                applyPresetSettings: false,
+                conductorVelocity: 1.0
+            });
+            return true;
         case ACTIONS.SET_PARAM:
             if (payload.module === 'playback') {
                 playback[payload.param] = payload.value;

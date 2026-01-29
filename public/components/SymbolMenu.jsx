@@ -1,5 +1,3 @@
-/** @jsx h */
-/** @jsx h */
 import { h } from 'preact';
 
 export function SymbolMenu({ onSelect, onClose }) {

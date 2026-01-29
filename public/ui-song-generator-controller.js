@@ -12,6 +12,7 @@ import { ModalManager } from './ui-modal-controller.js';
 const ui = {
     get generateSongOverlay() { return globalUI.generateSongOverlay; },
     get confirmGenerateSongBtn() { return globalUI.confirmGenerateSongBtn; },
+    get closeGenerateSongBtn() { return globalUI.closeGenerateSongBtn; },
     get genKeySelect() { return globalUI.genKeySelect; },
     get genTimeSigSelect() { return globalUI.genTimeSigSelect; },
     get genStructureSelect() { return globalUI.genStructureSelect; },
@@ -27,6 +28,10 @@ const ui = {
  */
 export function setupGenerateSongHandlers() {
     if (!ui.generateSongOverlay) return;
+
+    ui.closeGenerateSongBtn?.addEventListener('click', () => {
+        ModalManager.close(ui.generateSongOverlay);
+    });
 
     ui.confirmGenerateSongBtn.addEventListener('click', () => {
         const key = ui.genKeySelect.value;

@@ -33,7 +33,7 @@ describe('Song Generator Modal', () => {
     beforeEach(() => {
         document.body.innerHTML = `
             <!-- Generate Song Modal -->
-            <div id="generateSongOverlay" class="settings-overlay">
+            <div id="generateSongOverlay" class="settings-overlay" aria-hidden="true">
                 <button id="closeGenerateSongBtn">Cancel</button>
                 <button id="confirmGenerateSongBtn">Generate</button>
                 <select id="genKeySelect"></select>
@@ -41,11 +41,11 @@ describe('Song Generator Modal', () => {
                 <select id="genStructureSelect"></select>
             </div>
 
-            <div id="settingsOverlay" class="settings-overlay"></div>
-            <div id="editorOverlay" class="settings-overlay"></div>
-            <div id="exportOverlay" class="settings-overlay"></div>
-            <div id="templatesOverlay" class="settings-overlay"></div>
-            <div id="analyzerOverlay" class="modal-overlay"></div>
+            <div id="settingsOverlay" class="settings-overlay" aria-hidden="true"></div>
+            <div id="editorOverlay" class="settings-overlay" aria-hidden="true"></div>
+            <div id="exportOverlay" class="settings-overlay" aria-hidden="true"></div>
+            <div id="templatesOverlay" class="settings-overlay" aria-hidden="true"></div>
+            <div id="analyzerOverlay" class="modal-overlay" aria-hidden="true"></div>
             
             <button id="arrangerActionTrigger">Actions</button>
             <div id="arrangerActionMenu"></div>

@@ -66,7 +66,7 @@ const setupMinimalDOM = () => {
             <button id="transDownBtn"></button>
             <button id="maximizeChordBtn"></button>
             <button id="templatesBtn"></button>
-            <div id="templatesOverlay"></div>
+            <div id="templatesOverlay" aria-hidden="true"></div>
             <div id="templateChips"></div>
             <button id="closeTemplatesBtn"></button>
             <div id="activeSectionLabel"></div>
@@ -92,13 +92,13 @@ const setupMinimalDOM = () => {
             <input id="humanizeSlider" value="0" />
             <button id="saveDrumBtn"></button>
             <div id="smartDrumPresets"></div>
-            <div id="settingsOverlay"></div>
+            <div id="settingsOverlay" aria-hidden="true"></div>
             <button id="settingsBtn"></button>
             <select id="themeSelect"></select>
             <input id="pianoRootsCheck" type="checkbox" />
             <button id="exportMidiBtn"></button>
             <button id="settingsExportMidiBtn"></button>
-            <div id="exportOverlay"></div>
+            <div id="exportOverlay" aria-hidden="true"></div>
             <button id="closeExportBtn"></button>
             <button id="confirmExportBtn"></button>
             <input id="exportChordsCheck" type="checkbox" />
@@ -114,7 +114,7 @@ const setupMinimalDOM = () => {
             <button id="installAppBtn"></button>
             <button id="resetSettingsBtn"></button>
             <button id="refreshAppBtn"></button>
-            <div id="editorOverlay"></div>
+            <div id="editorOverlay" aria-hidden="true"></div>
             <button id="editArrangementBtn"></button>
             <button id="closeEditorBtn"></button>
             <input id="sessionTimerCheck" type="checkbox" />
@@ -148,12 +148,13 @@ const setupMinimalDOM = () => {
             <div id="bpmControlGroup"></div>
             <div id="larsIndicator"></div>
             <button id="clearDrumsBtn"></button>
-            <div id="analyzerOverlay"></div>
+            <div id="analyzerOverlay" aria-hidden="true"></div>
             <div id="analyzerProgressBar"></div>
             <button id="liveListenBtn"></button>
             <div id="liveChordDisplay"></div>
             <button id="captureLiveHistoryBtn"></button>
             <div id="bpm-label"></div>
+            <div id="generateSongOverlay" aria-hidden="true"></div>
         </div>
     `;
 };

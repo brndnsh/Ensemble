@@ -41,7 +41,7 @@ export function initAudio() {
         };
 
         playback.masterGain = playback.audio.createGain();
-        const initMasterVol = (parseFloat(ui.masterVol.value) || 0.4) * MIXER_GAIN_MULTIPLIERS.master;
+        const initMasterVol = (parseFloat(ui.masterVolume?.value) || 0.4) * MIXER_GAIN_MULTIPLIERS.master;
         playback.masterGain.gain.setValueAtTime(0.0001, playback.audio.currentTime);
         playback.masterGain.gain.exponentialRampToValueAtTime(initMasterVol, playback.audio.currentTime + 0.04);
         

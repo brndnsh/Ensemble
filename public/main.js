@@ -10,7 +10,7 @@ import { initPWA } from './pwa.js';
 import { renderUserPresets, renderUserDrumPresets } from './persistence.js';
 import { analyzeFormUI, validateAndAnalyze, clearChordPresetHighlight } from './arranger-controller.js';
 import { switchMeasure, loadDrumPreset, setInstrumentControllerRefs, initializePowerButtons, getPowerConfig } from './instrument-controller.js';
-import { setupPresets, setupUIHandlers } from './ui-controller.js';
+import { setupUIHandlers } from './ui-controller.js';
 import { draw } from './animation-loop.js';
 import { scheduler, togglePlay } from './scheduler-core.js';
 import { hydrateState, loadFromUrl } from './state-hydration.js';
@@ -95,7 +95,6 @@ function init() {
         const hasDrumPattern = groove.instruments.some(inst => inst.steps.some(s => s > 0));
         if (!hasDrumPattern) loadDrumPreset(groove.lastDrumPreset || 'Basic Rock');
         
-        setupPresets({ togglePlay: () => togglePlay(viz) }); 
         setupUIHandlers({ 
             togglePlay: () => togglePlay(viz), 
             previewChord: window.previewChord, 

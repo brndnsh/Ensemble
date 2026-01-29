@@ -11,11 +11,19 @@ export const ModalManager = {
      * @param {HTMLElement} modal - The modal overlay element to open.
      */
     open(modal) {
-        if (!modal) return;
+        if (!modal) {
+            console.error("[ModalManager] Cannot open undefined modal.");
+            return;
+        }
         
+        const previousModal = this.activeModal;
+
         // Close current if any
-        if (this.activeModal) {
-            this.close(this.activeModal);
+        if (previousModal && previousModal !== modal) {
+            // We don't call this.close() here to avoid removing 'modal-open' from body
+            previousModal.classList.remove('active');
+            previousModal.setAttribute('aria-hidden', 'true');
+            previousModal.dispatchEvent(new CustomEvent('modal-closed', { bubbles: true }));
         }
 
         modal.classList.add('active');
@@ -26,18 +34,12 @@ export const ModalManager = {
         // Focus management: Find first focusable element
         const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         if (focusable.length > 0) {
-            // Delay slightly to ensure visibility for some browsers
-            setTimeout(() => focusable[0].focus(), 10);
+            setTimeout(() => focusable[0].focus(), 50);
         }
         
-        // Dispatch custom event for external listeners
         modal.dispatchEvent(new CustomEvent('modal-opened', { bubbles: true }));
     },
 
-    /**
-     * Closes a modal and cleans up side effects.
-     * @param {HTMLElement} modal - The modal overlay element to close.
-     */
     close(modal) {
         const target = modal || this.activeModal;
         if (!target) return;
@@ -45,14 +47,14 @@ export const ModalManager = {
         target.classList.remove('active');
         target.setAttribute('aria-hidden', 'true');
         
-        // Only remove body class if no other modals are active (though we usually have only one)
+        if (this.activeModal === target) {
+            this.activeModal = null;
+        }
+
+        // Check if any other modals are still active before removing body class
         const anyActive = document.querySelector('.modal-overlay.active, .settings-overlay.active');
         if (!anyActive) {
             document.body.classList.remove('modal-open');
-        }
-
-        if (this.activeModal === target) {
-            this.activeModal = null;
         }
 
         target.dispatchEvent(new CustomEvent('modal-closed', { bubbles: true }));

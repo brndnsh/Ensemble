@@ -1,6 +1,4 @@
-/** @jsx h */
 import { h, Fragment } from 'preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
 import { useEnsembleState } from './ui-bridge.js';
 import { Transport } from './components/Transport.jsx';
 import { Arranger } from './components/Arranger.jsx';
@@ -8,9 +6,9 @@ import { SequencerGrid } from './components/SequencerGrid.jsx';
 import { ChordVisualizer } from './components/ChordVisualizer.jsx';
 import { InstrumentSettings } from './components/InstrumentSettings.jsx';
 import { StyleSelector } from './components/StyleSelector.jsx';
-import { Settings } from './components/Settings.jsx';
+import { PresetLibrary } from './components/PresetLibrary.jsx';
+import { Modals } from './components/Modals.jsx';
 import { CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES, HARMONY_STYLES } from './presets.js';
-import { APP_VERSION } from './config.js';
 import { dispatch } from './state.js';
 import { ACTIONS } from './types.js';
 import { syncWorker } from './worker-client.js';
@@ -18,41 +16,34 @@ import { saveCurrentState } from './persistence.js';
 
 export function App() {
     const { 
-        isMinor, 
-        timeSignature, 
-        arrangerKey,
         vizEnabled,
         grooveMobileTab
     } = useEnsembleState(s => ({
-        isMinor: s.arranger.isMinor,
-        timeSignature: s.arranger.timeSignature,
-        arrangerKey: s.arranger.key,
         vizEnabled: s.vizState.enabled,
         grooveMobileTab: s.groove.mobileTab
     }));
 
     return (
-        <div class="app-container">
-            <Header />
-            <main class="app-main-layout loaded" id="dashboardGrid">
-                <div class="layout-column main-column" id="col-main">
-                    <ArrangerPanel />
-                    <VisualizerPanel enabled={vizEnabled} />
-                </div>
-                <div class="layout-column sidebar-column" id="col-sidebar">
-                    <Sidebar />
-                </div>
-            </main>
-            <MobileNav activeTab={grooveMobileTab} />
-            
-            {/* Modals - These remain in DOM for legacy CSS/JS access for now */}
-            <div id="settingsOverlay" class="settings-overlay">
-                <Settings />
+        <Fragment>
+            <div class="app-container">
+                <Header />
+                <main class="app-main-layout loaded" id="dashboardGrid">
+                    <div class="layout-column main-column" id="col-main">
+                        <ArrangerPanel />
+                        <VisualizerPanel enabled={vizEnabled} />
+                    </div>
+                    <div class="layout-column sidebar-column" id="col-sidebar">
+                        <Sidebar />
+                    </div>
+                </main>
+                <MobileNav activeTab={grooveMobileTab} />
             </div>
+
+            <Modals />
             
             {/* The rest of the modals are still legacy HTML fragments for now, 
                 we can migrate them one by one if they have complex logic */}
-        </div>
+        </Fragment>
     );
 }
 
@@ -75,7 +66,6 @@ function ArrangerPanel() {
                 <div class="panel-header-controls">
                     <div class="key-controls">
                         <button id="maximizeChordBtn" title="Maximize" class="header-btn" aria-label="Maximize Chords">⛶</button>
-                        {/* Legacy selects remain for now until Phase 5 completeness */}
                         <div class="time-sig-group">
                             <select id="timeSigSelect" aria-label="Time Signature">
                                 <option value="4/4">4/4</option>
@@ -126,7 +116,7 @@ function ArrangerPanel() {
 
             <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 100px;">
                 <label class="library-label">Library</label>
-                <div class="presets-container" id="chordPresets" style="margin-top: 0.5rem;"></div>
+                <PresetLibrary type="chord" />
                 <div class="presets-container" id="userPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
             </div>
         </div>
@@ -146,8 +136,6 @@ function VisualizerPanel({ enabled }) {
             <div class="viz-graph-area">
                 <div id="unifiedVizContainer"></div>
             </div>
-
-            {/* Legend Omitted for brevity, but should be included in final */}
         </div>
     );
 }
@@ -176,7 +164,6 @@ function InstrumentPanel({ id, module, title, styles }) {
         saveCurrentState();
     };
 
-    // Map module name to the CSS header class (e.g., 'chords' -> 'chord-panel-header')
     const headerClass = `${module === 'chords' ? 'chord' : (module === 'harmony' ? 'harmony' : module)}-panel-header`;
 
     return (
@@ -258,7 +245,7 @@ function GroovePanel() {
             <div id="groove-tab-classic" class={`instrument-tab-content ${activeTab === 'classic' ? 'active' : ''}`}>
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Style</label>
-                    <div class="presets-container" id="drumPresets"></div>
+                    <PresetLibrary type="drum" />
                     <div class="presets-container" id="userDrumPresetsContainer" style="border-top: 1px solid #334155; padding-top: 0.5rem; display: none;"></div>
                 </div>
                 <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; margin-bottom: 0;">
@@ -375,7 +362,6 @@ function GenreSelector() {
         import('./presets.js').then(({ SMART_GENRES }) => {
             const config = SMART_GENRES[genre];
             if (config) {
-                // Ensure state matches before dispatch
                 import('./state.js').then(({ groove }) => {
                     Object.assign(groove, { lastSmartGenre: genre });
                     dispatch(ACTIONS.SET_GENRE_FEEL, {
@@ -422,8 +408,7 @@ function GenreSelector() {
 
 function MobileNav({ activeTab }) {
     const switchMobileTab = (tab) => {
-        dispatch(ACTIONS.SET_ACTIVE_TAB, { module: 'groove', tab: 'mobile', target: tab }); // Follow legacy state schema if needed
-        // Actually, looking at ui.js legacy: groove.mobileTab = target;
+        dispatch(ACTIONS.SET_ACTIVE_TAB, { module: 'groove', tab: 'mobile', target: tab });
         import('./state.js').then(({ groove }) => {
             groove.mobileTab = tab;
             dispatch('MOBILE_TAB_SWITCH');
@@ -441,7 +426,7 @@ function MobileNav({ activeTab }) {
                 { id: 'soloist', label: 'Soloist', power: 'soloist' },
                 { id: 'harmonies', label: 'Harmony', power: 'harmony' }
             ].map(tab => {
-                const isActive = (activeTab === tab.id) || (activeTab === 'mobile' && tab.id === 'grooves'); // Handle legacy tab naming
+                const isActive = (activeTab === tab.id) || (activeTab === 'mobile' && tab.id === 'grooves');
                 return (
                     <div key={tab.id} class="tab-item">
                         <button 

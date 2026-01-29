@@ -1,5 +1,3 @@
-/** @jsx h */
-/** @jsx h */
 import { h, Fragment } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
@@ -7,7 +5,25 @@ import { SectionCard } from './SectionCard.jsx';
 import { onSectionUpdate } from '../arranger-controller.js';
 
 export function Arranger() {
-    const sections = useEnsembleState(s => s.arranger.sections);
+    const { sections, lastInteractedSectionId } = useEnsembleState(s => ({
+        sections: s.arranger.sections,
+        lastInteractedSectionId: s.arranger.lastInteractedSectionId
+    }));
+
+    useEffect(() => {
+        if (lastInteractedSectionId) {
+            const el = document.querySelector(`.section-card[data-id="${lastInteractedSectionId}"]`);
+            if (el) {
+                // Delay slightly to allow modal transition
+                setTimeout(() => {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight or focus the textarea
+                    const textarea = el.querySelector('textarea');
+                    if (textarea) textarea.focus();
+                }, 150);
+            }
+        }
+    }, [lastInteractedSectionId]);
 
     useEffect(() => {
         const handleReorder = (e) => {

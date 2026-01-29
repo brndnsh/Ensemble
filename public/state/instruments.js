@@ -165,6 +165,20 @@ const instrumentStateMap = {
 
 export function instrumentReducer(action, payload) {
     switch (action) {
+        case ACTIONS.RESET_STATE:
+            Object.assign(chords, {
+                enabled: true, volume: 0.5, reverb: 0.3, instrument: 'Clean', octave: 65, density: 'standard', pianoRoots: false, activeTab: 'smart'
+            });
+            Object.assign(bass, {
+                enabled: true, volume: 0.45, reverb: 0.05, octave: 38, style: 'smart', activeTab: 'smart'
+            });
+            Object.assign(soloist, {
+                enabled: false, volume: 0.5, reverb: 0.6, octave: 72, style: 'smart', activeTab: 'smart', doubleStops: false
+            });
+            Object.assign(harmony, {
+                enabled: false, volume: 0.4, reverb: 0.4, octave: 60, style: 'smart', complexity: 0.5, activeTab: 'smart'
+            });
+            return true;
         case ACTIONS.SET_STYLE:
             if (instrumentStateMap[payload.module]) {
                 Object.assign(instrumentStateMap[payload.module], { style: payload.style });

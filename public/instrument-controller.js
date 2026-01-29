@@ -224,13 +224,16 @@ export function togglePower(type) {
     const c = config[type];
     if (!c) return;
     
-    c.state.enabled = !c.state.enabled;
+    const newState = !c.state.enabled;
+    const moduleName = type === 'chord' ? 'chords' : (type === 'viz' ? 'vizState' : type);
+    
+    dispatch(ACTIONS.SET_PARAM, { module: moduleName, param: 'enabled', value: newState });
     
     c.els.forEach(el => {
-        if (el) el.classList.toggle('active', c.state.enabled);
+        if (el) el.classList.toggle('active', newState);
     });
     
-    if (!c.state.enabled && c.cleanup) {
+    if (!newState && c.cleanup) {
         c.cleanup();
     } 
     
@@ -242,7 +245,7 @@ export function togglePower(type) {
         restoreGains(); // Ensure newly enabled buses are audible
     }
 
-    if (c.state.enabled) {
+    if (newState) {
         if (c.onEnable) c.onEnable();
         restoreGains();
     }
@@ -251,72 +254,10 @@ export function togglePower(type) {
 }
 
 export function resetToDefaults() {
-    playback.bpm = 100;
-    arranger.notation = 'roman';
-    arranger.key = 'C';
-    arranger.timeSignature = '4/4';
+    dispatch(ACTIONS.RESET_STATE);
+    
     applyTheme('auto');
-    arranger.sections.forEach(s => s.color = '#3b82f6');
     
-    chords.volume = 0.5;
-    chords.reverb = 0.3;
-    chords.instrument = 'Clean';
-    chords.octave = 65;
-    chords.density = 'standard';
-    chords.pianoRoots = false;
-    chords.activeTab = 'smart';
-    
-    bass.volume = 0.45;
-    bass.reverb = 0.05;
-    bass.octave = 38;
-    bass.style = 'smart';
-    bass.activeTab = 'smart';
-    
-    soloist.volume = 0.5;
-    soloist.reverb = 0.6;
-    soloist.octave = 72;
-    soloist.style = 'smart';
-    soloist.activeTab = 'smart';
-    soloist.doubleStops = false;
-    
-    harmony.volume = 0.4;
-    harmony.reverb = 0.4;
-    harmony.octave = 60;
-    harmony.style = 'smart';
-    harmony.complexity = 0.5;
-    harmony.activeTab = 'smart';
-    
-    groove.volume = 0.5;
-    groove.reverb = 0.2;
-    groove.swing = 0;
-    groove.swingSub = '8th';
-    groove.genreFeel = 'Rock';
-    groove.activeTab = 'smart';
-
-    ui.bpmInput.value = 100;
-    ui.keySelect.value = 'C';
-    ui.timeSigSelect.value = '4/4';
-    ui.notationSelect.value = 'roman';
-    ui.densitySelect.value = 'standard';
-    ui.chordVol.value = 0.5;
-    ui.chordReverb.value = 0.3;
-    ui.bassVol.value = 0.45;
-    ui.bassReverb.value = 0.05;
-    ui.soloistVol.value = 0.5;
-    ui.soloistReverb.value = 0.6;
-    ui.harmonyVol.value = 0.4;
-    ui.harmonyReverb.value = 0.4;
-    ui.harmonyComplexity.value = 0.5;
-    if (ui.harmonyComplexityValue) ui.harmonyComplexityValue.textContent = '50%';
-    ui.drumVol.value = 0.5;
-    ui.drumReverb.value = 0.2;
-    ui.swingSlider.value = 0;
-    ui.swingBase.value = '8th';
-    ui.masterVol.value = 0.5;
-    ui.countIn.checked = true;
-    ui.metronome.checked = false;
-    ui.visualFlash.checked = false;
-    ui.hapticCheck.checked = false;
     if (playback.audio) {
         const time = playback.audio.currentTime;
         const rampTime = time + 0.04;
@@ -338,40 +279,11 @@ export function resetToDefaults() {
         });
     }
 
-    playback.bandIntensity = 0.5;
-    playback.complexity = 0.3;
-    playback.autoIntensity = true;
-    playback.conductorVelocity = 1.0;
-    if (ui.intensitySlider) {
-        ui.intensitySlider.value = 50;
-        if (ui.intensityValue) ui.intensityValue.textContent = '50%';
-        ui.intensitySlider.disabled = true;
-        ui.intensitySlider.style.opacity = 0.5;
-    }
-    if (ui.autoIntensityCheck) ui.autoIntensityCheck.checked = true;
-    if (ui.soloistDoubleStops) ui.soloistDoubleStops.checked = false;
-    if (ui.complexitySlider) {
-        ui.complexitySlider.value = 30;
-        if (ui.complexityValue) ui.complexityValue.textContent = 'Low';
-    }
-
-    // renderSections removed
     analyzeFormUI();
-    // renderChordVisualizer removed
     syncWorker();
     flushBuffers();
     
-    groove.instruments.forEach(inst => {
-        inst.steps = new Array(128).fill(0);
-        inst.muted = false;
-    });
-    loadDrumPreset('Standard');
-    // renderGrid removed 
-    initTabs();
-
-    document.querySelectorAll('.genre-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.genre === groove.genreFeel);
-    });
+    loadDrumPreset('Basic Rock');
 
     saveCurrentState();
     showToast("Settings reset");

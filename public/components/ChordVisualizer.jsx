@@ -1,4 +1,3 @@
-/** @jsx h */
 import { h, Fragment } from 'preact';
 import { useMemo, useEffect, useRef } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';

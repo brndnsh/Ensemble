@@ -1,4 +1,3 @@
-/** @jsx h */
 import { h, Fragment } from 'preact';
 import { memo } from 'preact/compat';
 import { useState, useMemo, useEffect, useRef } from 'preact/hooks';

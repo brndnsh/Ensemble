@@ -32,13 +32,13 @@ vi.mock('../../public/presets.js', () => ({
 describe('Modal Accessibility Focus', () => {
     beforeEach(() => {
         document.body.innerHTML = `
-            <div id="settingsOverlay" class="overlay">
+            <div id="settingsOverlay" class="overlay" aria-hidden="true">
                 <input id="testInput" type="checkbox">
             </div>
-            <div id="editorOverlay" class="overlay"></div>
-            <div id="exportOverlay" class="overlay"></div>
-            <div id="templatesOverlay" class="overlay"></div>
-            <div id="analyzerOverlay" class="overlay"></div>
+            <div id="editorOverlay" class="overlay" aria-hidden="true"></div>
+            <div id="exportOverlay" class="overlay" aria-hidden="true"></div>
+            <div id="templatesOverlay" class="overlay" aria-hidden="true"></div>
+            <div id="analyzerOverlay" class="overlay" aria-hidden="true"></div>
             
             <button id="playBtn">Play</button>
             <input id="bpmInput">

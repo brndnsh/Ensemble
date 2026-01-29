@@ -81,6 +81,12 @@ export const groove = {
 
 export function grooveReducer(action, payload, playback) {
     switch (action) {
+        case ACTIONS.RESET_STATE:
+            Object.assign(groove, {
+                enabled: true, volume: 0.5, reverb: 0.2, swing: 0, swingSub: '8th', genreFeel: 'Rock', activeTab: 'smart', lastSmartGenre: 'Rock', measures: 1, currentMeasure: 0
+            });
+            groove.instruments.forEach(inst => { inst.steps.fill(0); inst.muted = false; });
+            return true;
         case ACTIONS.SET_SWING:
             Object.assign(groove, { swing: payload });
             return true;

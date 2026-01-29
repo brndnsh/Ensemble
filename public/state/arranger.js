@@ -52,6 +52,18 @@ export const arranger = {
 
 export function arrangerReducer(action, payload) {
     switch (action) {
+        case ACTIONS.RESET_STATE:
+            Object.assign(arranger, {
+                sections: [{ id: 's1', label: 'Intro', value: 'I | V | vi | IV', color: '#3b82f6', repeat: 1 }],
+                key: 'C',
+                timeSignature: '4/4',
+                notation: 'roman',
+                isMinor: false,
+                isDirty: false,
+                history: [],
+                grouping: null
+            });
+            return true;
         case ACTIONS.SET_NOTATION:
             Object.assign(arranger, { notation: payload });
             return true;
