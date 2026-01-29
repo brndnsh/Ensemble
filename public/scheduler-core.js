@@ -1,6 +1,6 @@
 import { ACTIONS } from './types.js';
 import { playback, groove, chords, bass, soloist, harmony, arranger, vizState, dispatch } from './state.js';
-import { ui, updateGenreUI, triggerFlash, clearActiveVisuals } from './ui.js';
+import { ui, triggerFlash, clearActiveVisuals } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playHarmonyNote, killHarmonyNote, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getStepsPerMeasure, getStepInfo, getMidi, midiToNote } from './utils.js';
@@ -151,7 +151,9 @@ export function scheduler() {
             const stepsPerMeasure = getStepsPerMeasure(arranger.timeSignature);
             const stepsRemaining = stepsPerMeasure - (playback.step % stepsPerMeasure);
             const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
-            updateGenreUI(stepsRemaining, ts.stepsPerBeat);
+            if (stepsRemaining > 0 && stepsRemaining <= 16) {
+                // Pre-notify for genre changes
+            }
         }
 
         while (playback.nextNoteTime < playback.audio.currentTime + playback.scheduleAheadTime) {
@@ -209,7 +211,6 @@ function applyPendingGenre() {
     }
 
     groove.pendingGenreFeel = null;
-    updateGenreUI(0);
     
     playback.nextNoteTime = playback.unswungNextNoteTime;
 

@@ -1,4 +1,5 @@
-import { arranger, chords, playback, groove, bass, soloist, harmony } from './state.js';
+import { arranger, chords, playback, groove, bass, soloist, harmony, dispatch } from './state.js';
+import { ACTIONS } from './types.js';
 import { midiToNote, formatUnicodeSymbols } from './utils.js';
 import { UIStore } from './ui-store.js';
 
@@ -160,54 +161,17 @@ export const ui = {
     get exportOverlay() { return getEl('exportOverlay'); },
     get editorOverlay() { return getEl('editorOverlay'); },
     get templatesOverlay() { return getEl('templatesOverlay'); },
-    get flashOverlay() { return getEl('flashOverlay'); },
-    get closeSettings() { return getEl('closeSettingsBtn'); },
     get closeEditorBtn() { return getEl('closeEditorBtn'); },
     get closeTemplatesBtn() { return getEl('closeTemplatesBtn'); },
-    get closeExportBtn() { return getEl('closeExportBtn'); },
-    
-    // --- Form Inputs in Modals ---
-    get exportFilenameInput() { return getEl('exportFilenameInput'); },
-    get exportDurationInput() { return getEl('exportDurationInput'); },
-    get exportDurationContainer() { return getEl('exportDurationContainer'); },
-    get exportDurationStepper() { return getEl('exportDurationStepper'); },
-    get exportDurationDec() { return getEl('exportDurationDec'); },
-    get exportDurationInc() { return getEl('exportDurationInc'); },
-    get confirmExportBtn() { return getEl('confirmExportBtn'); },
-    get exportChordsCheck() { return getEl('exportChordsCheck'); },
-    get exportBassCheck() { return getEl('exportBassCheck'); },
-    get exportSoloistCheck() { return getEl('exportSoloistCheck'); },
-    get exportHarmoniesCheck() { return getEl('exportHarmoniesCheck'); },
-    get exportDrumsCheck() { return getEl('exportDrumsCheck'); },
-    
-    // --- System ---
-    get themeSelect() { return getEl('themeSelect'); },
-    get sessionTimerCheck() { return getEl('sessionTimerCheck'); },
-    get sessionTimerInput() { return getEl('sessionTimerInput'); },
-    get sessionTimerDurationContainer() { return getEl('sessionTimerDurationContainer'); },
-    get applyPresetSettings() { return getEl('applyPresetSettingsCheck'); },
-    get installAppBtn() { return getEl('installAppBtn'); },
-    get resetSettingsBtn() { return getEl('resetSettingsBtn'); },
-    get refreshAppBtn() { return getEl('refreshAppBtn'); },
-    get settingsExportMidiBtn() { return getEl('settingsExportMidiBtn'); }
+    get closeExportBtn() { return getEl('closeExportBtn'); }
 };
 
 export function showToast(msg) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.classList.add('show'), 10);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 2000);
+    dispatch(ACTIONS.SHOW_TOAST, msg);
 }
 
 export function triggerFlash(intensity = 0.25) {
-    if (!ui.flashOverlay) return;
-    ui.flashOverlay.style.opacity = intensity;
-    setTimeout(() => ui.flashOverlay.style.opacity = 0, 50);
+    dispatch(ACTIONS.TRIGGER_FLASH, intensity);
 }
 
 export function updateOctaveLabel(labelEl, octave, headerEl) {
@@ -321,136 +285,6 @@ export function updateActiveChordUI(index) {
             }
         }
     }
-}
-
-export function updateKeySelectLabels() {
-    if (!ui.keySelect) return;
-    const currentValue = ui.keySelect.value;
-    Array.from(ui.keySelect.options).forEach(opt => {
-        opt.textContent = `${formatUnicodeSymbols(opt.value)}${arranger.isMinor ? 'm' : ''}`;
-    });
-    ui.keySelect.value = currentValue;
-}
-
-export function updateRelKeyButton() {
-    if (ui.relKeyBtn) ui.relKeyBtn.textContent = arranger.isMinor ? 'min' : 'maj';
-}
-
-export function updateRelKeyButtonState() {
-    updateRelKeyButton();
-}
-
-/**
- * Updates genre buttons active/pending states.
- */
-export function updateGenreUI(stepsUntilNextMeasure = 0, stepsPerBeat = 4) {
-    const btns = document.querySelectorAll('.genre-btn');
-    const beatsRemaining = Math.ceil(stepsUntilNextMeasure / stepsPerBeat);
-    btns.forEach(btn => {
-        const isTarget = groove.pendingGenreFeel && btn.dataset.genre === groove.pendingGenreFeel.genreName;
-        if (isTarget) {
-            btn.classList.add('pending');
-            btn.dataset.countdown = beatsRemaining > 0 ? beatsRemaining : '';
-        } else {
-            btn.classList.remove('pending');
-            delete btn.dataset.countdown;
-        }
-        const isActive = btn.dataset.genre === groove.lastSmartGenre && !btn.classList.contains('pending');
-        btn.classList.toggle('active', isActive);
-        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    });
-    if (ui.pianoRootsCheck && ui.pianoRootsCheck.parentElement) {
-        ui.pianoRootsCheck.parentElement.style.display = bass.enabled ? 'none' : 'flex';
-        ui.pianoRootsCheck.checked = chords.pianoRoots;
-    }
-}
-
-export function recalculateScrollOffsets() {
-    UIStore.cardOffsets = UIStore.cachedCards.map(card => {
-        return card.offsetTop - (ui.chordVisualizer ? ui.chordVisualizer.offsetTop : 0);
-    });
-}
-
-export function switchInstrumentTab(module, target) {
-    const panelId = { 
-        chords: 'chord', bass: 'bass', soloist: 'soloist', harmony: 'harmony', groove: 'groove',
-        cb: 'chord', bb: 'bass', sb: 'soloist', hb: 'harmony', gb: 'groove',
-        chord: 'chord', grooves: 'groove', harmonies: 'harmony'
-    }[module];
-    
-    if (!panelId) return;
-
-    const buttons = document.querySelectorAll(`.instrument-tab-btn[data-module="${module}"]`);
-    buttons.forEach(b => b.classList.toggle('active', b.dataset.tab === target));
-    
-    const classicTab = document.getElementById(`${panelId}-tab-classic`);
-    const smartTab = document.getElementById(`${panelId}-tab-smart`);
-    
-    if (classicTab && smartTab) {
-        classicTab.classList.toggle('active', target === 'classic');
-        smartTab.classList.toggle('active', target === 'smart');
-    }
-    
-    const stateMap = { chords, bass, soloist, harmony, groove };
-    if (stateMap[module]) stateMap[module].activeTab = target;
-}
-
-export function initTabs() {
-    const mobileTabItems = document.querySelectorAll('.tab-item');
-    
-    const activateMobileTab = (item) => {
-        const btn = item.querySelector('.tab-btn');
-        if (!btn) return;
-        const target = btn.dataset.tab;
-        
-        document.querySelectorAll('.tab-item .tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.instrument-panel').forEach(c => c.classList.remove('active-mobile'));
-        
-        const content = document.getElementById(`panel-${target}`);
-        if (content) content.classList.add('active-mobile');
-        btn.classList.add('active');
-        groove.mobileTab = target;
-    };
-
-    mobileTabItems.forEach(item => {
-        item.onclick = () => {
-            activateMobileTab(item);
-            import('./worker-client.js').then(({ syncWorker }) => syncWorker());
-            import('./persistence.js').then(({ saveCurrentState }) => saveCurrentState());
-        };
-        
-        const btn = item.querySelector('.tab-btn');
-        if (btn && btn.dataset.tab === groove.mobileTab) {
-            activateMobileTab(item);
-        }
-    });
-}
-
-export function setupPanelMenus() {
-    document.querySelectorAll('.panel-menu-btn').forEach(trigger => {
-        trigger.onclick = (e) => {
-            e.stopPropagation();
-            const panel = trigger.closest('.panel');
-            const menu = panel.querySelector('.panel-settings-menu');
-            if (!menu) return;
-
-            const isOpen = menu.classList.contains('open');
-            document.querySelectorAll('.panel-settings-menu').forEach(m => m.classList.remove('open'));
-            document.querySelectorAll('.panel-menu-btn').forEach(b => b.classList.remove('active'));
-
-            if (!isOpen) {
-                menu.classList.add('open');
-                trigger.classList.add('active');
-            }
-        };
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.panel-settings-menu')) {
-            document.querySelectorAll('.panel-settings-menu').forEach(m => m.classList.remove('open'));
-            document.querySelectorAll('.panel-menu-btn').forEach(b => b.classList.remove('active'));
-        }
-    });
 }
 
 UIStore.initLateBounds(null, triggerFlash);

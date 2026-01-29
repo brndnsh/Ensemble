@@ -57,9 +57,7 @@ vi.mock('../../../public/ui.js', () => ({
         metronome: { checked: false },
         visualFlash: { checked: false }
     },
-    updateGenreUI: vi.fn(),
     triggerFlash: vi.fn(),
-    updateActiveChordUI: vi.fn(),
     clearActiveVisuals: vi.fn()
 }));
 

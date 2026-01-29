@@ -1,4 +1,4 @@
-import { ui as globalUI, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
+import { ui as globalUI, showToast } from './ui.js';
 import { arranger } from './state.js';
 import { generateSong } from './song-generator.js';
 import { pushHistory } from './history.js';
@@ -69,8 +69,6 @@ export function setupGenerateSongHandlers() {
             if (first.key && first.key !== 'Random') {
                 arranger.key = first.key;
                 ui.keySelect.value = normalizeKey(first.key);
-                updateKeySelectLabels();
-                updateRelKeyButton();
             }
             if (first.timeSignature && first.timeSignature !== 'Random') {
                 arranger.timeSignature = first.timeSignature;

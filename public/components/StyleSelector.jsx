@@ -6,7 +6,6 @@ import { flushBuffers } from '../instrument-controller.js';
 import { restoreGains } from '../engine.js';
 import { saveCurrentState } from '../persistence.js';
 import { formatUnicodeSymbols } from '../utils.js';
-import { switchInstrumentTab } from '../ui.js';
 
 export function StyleSelector({ module, styles }) {
     const dispatch = useDispatch();
@@ -25,8 +24,6 @@ export function StyleSelector({ module, styles }) {
 
         if (styleId !== 'smart') {
             dispatch(ACTIONS.SET_ACTIVE_TAB, { module, tab: 'classic' });
-            // Legacy UI update for tabs (until tabs are React-ified)
-            switchInstrumentTab(module, 'classic');
         }
         
         syncWorker();

@@ -4,7 +4,6 @@ import { ACTIONS } from '../types.js';
 import { CHORD_PRESETS, DRUM_PRESETS } from '../presets.js';
 import { formatUnicodeSymbols, generateId } from '../utils.js';
 import { loadDrumPreset, flushBuffers } from '../instrument-controller.js';
-import { updateRelKeyButton, updateKeySelectLabels } from '../ui.js';
 import { validateAndAnalyze } from '../arranger-controller.js';
 import { saveCurrentState } from '../persistence.js';
 import { setBpm } from '../app-controller.js';
@@ -56,8 +55,6 @@ export function PresetLibrary({ type }) {
                     }
                 }
 
-                updateRelKeyButton();
-                updateKeySelectLabels();
                 validateAndAnalyze();
                 flushBuffers();
                 saveCurrentState();

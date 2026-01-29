@@ -1,4 +1,4 @@
-import { ui as globalUI, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
+import { ui as globalUI, showToast } from './ui.js';
 import { arranger, playback } from './state.js';
 import { initAudio } from './engine.js';
 import { generateId, normalizeKey, escapeHTML, formatUnicodeSymbols } from './utils.js';
@@ -240,8 +240,6 @@ export function setupAnalyzerHandlers() {
                     if (ui.keySelect && key !== arranger.key) {
                         ui.keySelect.value = normalizeKey(key);
                         arranger.key = key;
-                        updateKeySelectLabels();
-                        updateRelKeyButton();
                     }
                 }
 

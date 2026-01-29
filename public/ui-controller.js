@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { ui, recalculateScrollOffsets, updateRelKeyButton, updateKeySelectLabels } from './ui.js';
+import { ui } from './ui.js';
 import { playback, chords, bass, soloist, harmony, groove, arranger, dispatch } from './state.js';
 import { saveCurrentState } from './persistence.js';
 import { syncWorker } from './worker-client.js';
@@ -132,9 +132,6 @@ export function setupUIHandlers(refs) {
             ui.arrangerActionTrigger?.classList.remove('active');
             shareProgression();
         }],
-        [ui.transUpBtn, 'click', () => transposeKey(1)],
-        [ui.transDownBtn, 'click', () => transposeKey(-1)],
-        [ui.relKeyBtn, 'click', () => switchToRelativeKey()],
         [ui.installAppBtn, 'click', async () => {
             if (await triggerInstall()) ui.installAppBtn.style.display = 'none';
         }],
@@ -164,31 +161,6 @@ export function setupUIHandlers(refs) {
         [ui.clearDrums, 'click', () => { 
             groove.instruments.forEach(i => i.steps.fill(0)); 
             clearDrumPresetHighlight();
-            saveCurrentState();
-        }],
-        [ui.maximizeChordBtn, 'click', () => {
-            const isMax = document.body.classList.toggle('chord-maximized');
-            ui.maximizeChordBtn.textContent = isMax ? '✕' : '⛶';
-            ui.maximizeChordBtn.title = isMax ? 'Exit Maximize' : 'Maximize';
-        }],
-        [ui.keySelect, 'change', () => {
-            arranger.key = ui.keySelect.value;
-            updateRelKeyButton();
-            updateKeySelectLabels();
-            validateAndAnalyze();
-            saveCurrentState();
-        }],
-        [ui.timeSigSelect, 'change', () => {
-            arranger.timeSignature = ui.timeSigSelect.value;
-            arranger.grouping = null; 
-            if (groove.lastDrumPreset) loadDrumPreset(groove.lastDrumPreset);
-            updateGroupingUI();
-            validateAndAnalyze();
-            saveCurrentState();
-        }],
-        [ui.notationSelect, 'change', () => {
-            arranger.notation = ui.notationSelect.value;
-            validateAndAnalyze();
             saveCurrentState();
         }],
         [ui.densitySelect, 'change', e => { 
@@ -226,7 +198,8 @@ export function setupUIHandlers(refs) {
         if (e.key === 'Escape') {
             if (document.body.classList.contains('chord-maximized')) {
                 document.body.classList.remove('chord-maximized');
-                ui.maximizeChordBtn.textContent = '⛶';
+                const btn = document.getElementById('maximizeChordBtn');
+                if (btn) btn.textContent = '⛶';
             }
             if (ModalManager.activeModal) ModalManager.close();
         }
@@ -235,7 +208,9 @@ export function setupUIHandlers(refs) {
     let resizeTimeout;
     window.addEventListener('resize', () => { 
         if (resizeTimeout) clearTimeout(resizeTimeout); 
-        resizeTimeout = setTimeout(() => recalculateScrollOffsets(), 150); 
+        resizeTimeout = setTimeout(() => {
+            // Future UI recalculations if needed
+        }, 150); 
     });
 
     setupAnalyzerHandlers();

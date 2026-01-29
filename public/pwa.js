@@ -1,48 +1,28 @@
-import { showToast } from './ui.js';
+import { dispatch } from './state.js';
+import { ACTIONS } from './types.js';
 
 let deferredPrompt;
+let newWorker;
 
 export function initPWA() {
     window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent Chrome 67 and earlier from automatically showing the prompt
         e.preventDefault();
-        // Stash the event so it can be triggered later.
         deferredPrompt = e;
-        // Update UI notify the user they can add to home screen
         const installBtn = document.getElementById('installAppBtn');
-        if (installBtn) {
-            installBtn.style.display = 'flex';
-        }
+        if (installBtn) installBtn.style.display = 'flex';
     });
 
     window.addEventListener('appinstalled', () => {
-        // Clear the deferredPrompt so it can be garbage collected
         deferredPrompt = null;
-        // Hide the install button
         const installBtn = document.getElementById('installAppBtn');
-        if (installBtn) {
-            installBtn.style.display = 'none';
-        }
-        showToast('App installed successfully!');
+        if (installBtn) installBtn.style.display = 'none';
+        dispatch(ACTIONS.SHOW_TOAST, 'App installed successfully!');
     });
 
     if ('serviceWorker' in navigator) {
-        let newWorker;
-        const updateBanner = document.getElementById('updateBanner');
-        const refreshBtn = document.getElementById('updateRefreshBtn');
-
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                if (newWorker) {
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                }
-            });
-        }
-
         navigator.serviceWorker.register('./sw.js').then(reg => {
             console.log('SW registered');
             
-            // Check for updates every hour
             setInterval(() => {
                 reg.update();
             }, 60 * 60 * 1000);
@@ -51,8 +31,7 @@ export function initPWA() {
                 newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // New update available
-                        if (updateBanner) updateBanner.classList.add('show');
+                        dispatch(ACTIONS.SET_UPDATE_AVAILABLE, true);
                     }
                 });
             });
@@ -64,6 +43,12 @@ export function initPWA() {
             window.location.reload();
             refreshing = true;
         });
+    }
+}
+
+export function skipWaiting() {
+    if (newWorker) {
+        newWorker.postMessage({ type: 'SKIP_WAITING' });
     }
 }
 

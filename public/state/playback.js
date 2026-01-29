@@ -97,7 +97,10 @@ export const playback = {
     masterVolume: 0.4,
     countIn: true,
     visualFlash: true,
-    haptic: true
+    haptic: true,
+    toasts: [],
+    flashIntensity: 0,
+    updateAvailable: false
 };
 
 export function playbackReducer(action, payload) {
@@ -115,8 +118,12 @@ export function playbackReducer(action, payload) {
                 haptic: true,
                 sessionTimer: 5,
                 applyPresetSettings: false,
-                conductorVelocity: 1.0
+                conductorVelocity: 1.0,
+                updateAvailable: false
             });
+            return true;
+        case ACTIONS.SET_UPDATE_AVAILABLE:
+            playback.updateAvailable = !!payload;
             return true;
         case ACTIONS.SET_PARAM:
             if (payload.module === 'playback') {
@@ -161,12 +168,24 @@ export function playbackReducer(action, payload) {
         case ACTIONS.UPDATE_CONDUCTOR_DECISION:
             if (payload.velocity) playback.conductorVelocity = payload.velocity;
             if (payload.intent) Object.assign(playback.intent, payload.intent);
-            // We use Object.assign(playback, ...) to notify listeners in state.js 
-            // but the underlying object 'playback' is exported and shared.
-            // To be TRULY immutable we'd need to change how state.js handles exports.
-            // For now, Object.assign is enough to trigger the Proxy/Listener if we had one,
-            // but state.js just calls listeners(action, payload, stateMap).
             break;
+        case ACTIONS.SHOW_TOAST:
+            const id = Math.random().toString(36).substr(2, 9);
+            playback.toasts = [...playback.toasts, { id, message: payload }];
+            setTimeout(() => {
+                playback.toasts = playback.toasts.filter(t => t.id !== id);
+                // We don't have a direct notify() here, but the standard subscribe mechanism in ui-bridge will pick it up on the next dispatch
+                // or we can dispatch an internal update action
+                import('../state.js').then(({ dispatch }) => dispatch('TOAST_EXPIRED'));
+            }, 2000);
+            return true;
+        case ACTIONS.TRIGGER_FLASH:
+            playback.flashIntensity = payload || 0.25;
+            setTimeout(() => {
+                playback.flashIntensity = 0;
+                import('../state.js').then(({ dispatch }) => dispatch('FLASH_EXPIRED'));
+            }, 50);
+            return true;
     }
     return false;
 }

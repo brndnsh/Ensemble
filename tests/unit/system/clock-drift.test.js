@@ -15,9 +15,7 @@ vi.mock('../../../public/ui.js', () => ({
         visualFlash: { checked: false },
         sequencerGrid: { scrollTo: vi.fn() }
     },
-    updateGenreUI: vi.fn(),
     triggerFlash: vi.fn(),
-    updateActiveChordUI: vi.fn(),
     clearActiveVisuals: vi.fn()
 }));
 

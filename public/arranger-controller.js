@@ -1,5 +1,5 @@
 import { arranger } from './state.js';
-import { ui, showToast, updateKeySelectLabels, updateRelKeyButton } from './ui.js';
+import { ui, showToast } from './ui.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
 import { restoreGains } from './engine.js';
@@ -200,8 +200,6 @@ export function transposeKey(delta) {
     arranger.isDirty = true;
     clearChordPresetHighlight();
     refreshArrangerUI();
-    updateRelKeyButton();
-    updateKeySelectLabels();
 }
 
 export function switchToRelativeKey() {
@@ -233,8 +231,6 @@ export function switchToRelativeKey() {
     });
     
     arranger.isDirty = true;
-    updateRelKeyButton();
-    updateKeySelectLabels();
     refreshArrangerUI();
     showToast(`Switched to Relative ${arranger.isMinor ? 'Minor' : 'Major'}: ${newKey}${arranger.isMinor ? 'm' : ''}`);
 }
