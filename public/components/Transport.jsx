@@ -38,7 +38,7 @@ export function Transport() {
     };
 
     return (
-        <div class="main-controls" style="display:contents">
+        <div class="main-controls">
             <button 
                 id="playBtn" 
                 class={`primary-btn ${isPlaying ? 'playing' : ''}`}
