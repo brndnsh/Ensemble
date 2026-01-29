@@ -1,7 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import { togglePlay } from '../scheduler-core.js';
 import { switchMeasure } from '../instrument-controller.js';
-import { ModalManager } from '../ui-modal-controller.js';
 import { playback, groove, dispatch } from '../state.js';
 import { ACTIONS } from '../types.js';
 
@@ -11,7 +10,7 @@ export function GlobalShortcuts() {
             const isTyping = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
 
             // Space: Toggle Play
-            const anyModalOpen = ModalManager.activeModal || Object.values(playback.modals).some(isOpen => isOpen);
+            const anyModalOpen = Object.values(playback.modals).some(isOpen => isOpen);
             if (e.key === ' ' && !isTyping && !anyModalOpen) {
                 e.preventDefault();
                 togglePlay(playback.viz);

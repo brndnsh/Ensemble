@@ -6,21 +6,11 @@ import { h, render } from 'preact';
 import React from 'preact/compat';
 import { GlobalShortcuts } from '../../public/components/GlobalShortcuts.jsx';
 import { togglePlay } from '../../public/scheduler-core.js';
-import { ModalManager } from '../../public/ui-modal-controller.js';
 import { ACTIONS } from '../../public/types.js';
 
 // Mock scheduler-core
 vi.mock('../../public/scheduler-core.js', () => ({
     togglePlay: vi.fn()
-}));
-
-// Mock ModalManager
-vi.mock('../../public/ui-modal-controller.js', () => ({
-    ModalManager: {
-        activeModal: null,
-        open: vi.fn(),
-        close: vi.fn()
-    }
 }));
 
 // Mock State
@@ -58,14 +48,6 @@ describe('Global Shortcuts', () => {
         const event = new KeyboardEvent('keydown', { key: ' ' });
         window.dispatchEvent(event);
         expect(togglePlay).toHaveBeenCalled();
-    });
-
-    it('should NOT toggle playback if modal is open via ModalManager', () => {
-        ModalManager.activeModal = document.createElement('div');
-        const event = new KeyboardEvent('keydown', { key: ' ' });
-        window.dispatchEvent(event);
-        expect(togglePlay).not.toHaveBeenCalled();
-        ModalManager.activeModal = null; // Reset
     });
 
     it('should NOT toggle playback if modal is open via state', async () => {

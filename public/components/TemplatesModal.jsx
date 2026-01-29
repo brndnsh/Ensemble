@@ -1,6 +1,6 @@
 import { h } from 'preact';
+import { useRef, useEffect } from 'preact/hooks';
 import React from 'preact/compat';
-import { ModalManager } from '../ui-modal-controller.js';
 import { useEnsembleState, useDispatch } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
 import { SONG_TEMPLATES } from '../presets.js';
@@ -13,6 +13,14 @@ import { showToast } from '../ui.js';
 export function TemplatesModal() {
     const dispatch = useDispatch();
     const isOpen = useEnsembleState(s => s.playback.modals.templates);
+    const overlayRef = useRef(null);
+
+    useEffect(() => {
+        if (isOpen && overlayRef.current) {
+            const focusable = overlayRef.current.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusable) setTimeout(() => focusable.focus(), 50);
+        }
+    }, [isOpen]);
 
     const close = () => {
         dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'templates', open: false });
@@ -58,7 +66,7 @@ export function TemplatesModal() {
     };
 
     return (
-        <div id="templatesOverlay" class={`modal-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+        <div id="templatesOverlay" ref={overlayRef} class={`modal-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
             if (e.target.id === 'templatesOverlay') close();
         }}>
             <div class="settings-content" onClick={(e) => e.stopPropagation()}>

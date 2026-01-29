@@ -1,7 +1,6 @@
 import { h } from 'preact';
-import { useState } from 'preact/hooks';
+import { useState, useRef, useEffect } from 'preact/hooks';
 import React from 'preact/compat';
-import { ModalManager } from '../ui-modal-controller.js';
 import { useEnsembleState, useDispatch } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
 import { arranger } from '../state.js';
@@ -14,6 +13,14 @@ import { showToast } from '../ui.js';
 export function GenerateSongModal() {
     const dispatch = useDispatch();
     const isOpen = useEnsembleState(s => s.playback.modals.generateSong);
+    const overlayRef = useRef(null);
+
+    useEffect(() => {
+        if (isOpen && overlayRef.current) {
+            const focusable = overlayRef.current.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusable) setTimeout(() => focusable.focus(), 50);
+        }
+    }, [isOpen]);
     
     // Internal component state for form values
     const [key, setKey] = useState('Random');
@@ -75,7 +82,7 @@ export function GenerateSongModal() {
     };
 
     return (
-        <div id="generateSongOverlay" class={`modal-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+        <div id="generateSongOverlay" ref={overlayRef} class={`modal-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
             if (e.target.id === 'generateSongOverlay') close();
         }}>
             <div class="modal-content settings-content" onClick={(e) => e.stopPropagation()}>

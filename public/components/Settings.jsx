@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import { useRef, useEffect } from 'preact/hooks';
 import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
@@ -8,7 +9,6 @@ import { applyTheme } from '../app-controller.js';
 import { initMIDI, panic } from '../midi-controller.js';
 import { restoreGains } from '../engine.js';
 import { MIXER_GAIN_MULTIPLIERS, APP_VERSION } from '../config.js';
-import { ModalManager } from '../ui-modal-controller.js';
 import { triggerInstall } from '../pwa.js';
 
 export function Settings() {
@@ -49,8 +49,7 @@ export function Settings() {
     const masterVolume = useEnsembleState(s => s.playback.masterVolume);
 
     const closeSettings = () => {
-        const overlay = document.getElementById('settingsOverlay');
-        if (overlay) ModalManager.close(overlay);
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'settings', open: false });
     };
 
     const handleMasterVolume = (e) => {
@@ -99,9 +98,17 @@ export function Settings() {
     };
 
     const isOpen = useEnsembleState(s => s.playback.modals.settings);
+    const overlayRef = useRef(null);
+
+    useEffect(() => {
+        if (isOpen && overlayRef.current) {
+            const focusable = overlayRef.current.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusable) setTimeout(() => focusable.focus(), 50);
+        }
+    }, [isOpen]);
 
     return (
-        <div id="settingsOverlay" class={`settings-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
+        <div id="settingsOverlay" ref={overlayRef} class={`settings-overlay ${isOpen ? 'active' : ''}`} aria-hidden={!isOpen ? 'true' : 'false'} onClick={(e) => {
             if (e.target.id === 'settingsOverlay') closeSettings();
         }}>
             <div class="settings-content" onClick={(e) => e.stopPropagation()}>
