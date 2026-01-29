@@ -15,9 +15,7 @@ export function TemplatesModal() {
     const isOpen = useEnsembleState(s => s.playback.modals.templates);
 
     const close = () => {
-        dispatch(ACTIONS.SET_MODAL, { modal: 'templates', open: false });
-        const overlay = document.getElementById('templatesOverlay');
-        if (overlay) ModalManager.close(overlay);
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'templates', open: false });
     };
 
     const applyTemplate = (template) => {

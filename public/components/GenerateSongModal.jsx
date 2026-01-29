@@ -23,9 +23,7 @@ export function GenerateSongModal() {
     const [seedType, setSeedType] = useState('Verse');
 
     const close = () => {
-        dispatch(ACTIONS.SET_MODAL, { modal: 'generateSong', open: false });
-        const overlay = document.getElementById('generateSongOverlay');
-        if (overlay) ModalManager.close(overlay);
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'generateSong', open: false });
     };
 
     const handleConfirm = () => {

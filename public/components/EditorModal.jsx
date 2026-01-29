@@ -17,8 +17,7 @@ export function EditorModal() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const closeEditor = () => {
-        const overlay = document.getElementById('editorOverlay');
-        if (overlay) ModalManager.close(overlay);
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: false });
     };
 
     useEffect(() => {
@@ -52,8 +51,8 @@ export function EditorModal() {
             // Close editor on mobile to show templates? 
             // The legacy logic opened templatesOverlay on top.
         }
-        const templatesOverlay = document.getElementById('templatesOverlay');
-        if (templatesOverlay) ModalManager.open(templatesOverlay);
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: false });
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'templates', open: true });
         
         // Template rendering logic is still legacy for now in ui-controller.js or ui.js
         // We'll trigger the rendering if needed, but it usually happens on open.
@@ -62,16 +61,14 @@ export function EditorModal() {
     const handleAnalyze = () => {
         setIsMenuOpen(false);
         if (window.resetAnalyzer) window.resetAnalyzer();
-        const analyzerOverlay = document.getElementById('analyzerOverlay');
-        if (analyzerOverlay) ModalManager.open(analyzerOverlay);
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: false });
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'analyzer', open: true });
     };
 
     const handleRandomize = () => {
         setIsMenuOpen(false);
-        const generateSongOverlay = document.getElementById('generateSongOverlay');
-        if (generateSongOverlay) {
-            setTimeout(() => ModalManager.open(generateSongOverlay), 10);
-        }
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'editor', open: false });
+        setTimeout(() => dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'generateSong', open: true }), 10);
     };
 
     const handleMutate = () => {

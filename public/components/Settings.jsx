@@ -81,18 +81,7 @@ export function Settings() {
 
     const openExportModal = () => {
         closeSettings();
-        
-        const exportOverlay = document.getElementById('exportOverlay');
-        if (!exportOverlay) return;
-
-        let defaultName = arranger.lastChordPreset || "Ensemble Export";
-        defaultName = defaultName.replace(/[^a-zA-Z0-9\s-_]/g, '').trim();
-        const filenameInput = document.getElementById('exportFilenameInput');
-        if (filenameInput) {
-            filenameInput.value = `${defaultName} - ${arranger.key} - ${playback.bpm}bpm`;
-        }
-        
-        ModalManager.open(exportOverlay);
+        dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'export', open: true });
     };
 
     const handleReset = () => {
