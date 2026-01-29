@@ -1,4 +1,5 @@
 import { h, Fragment } from 'preact';
+import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { PWAUpdateBanner } from './PWAUpdateBanner.jsx';
 

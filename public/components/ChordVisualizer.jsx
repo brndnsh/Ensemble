@@ -1,4 +1,5 @@
 import { h, Fragment } from 'preact';
+import React from 'preact/compat';
 import { useMemo, useEffect, useRef } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { formatUnicodeSymbols } from '../utils.js';

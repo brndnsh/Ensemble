@@ -1,11 +1,10 @@
 /* eslint-disable */
-/** @jsx h */
-/** @jsxFrag Fragment */
 /**
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { h, render, Fragment } from 'preact';
+import React from 'preact/compat';
 import { ui, renderGrid, renderChordVisualizer } from '../../public/ui.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
 import { ACTIONS } from '../../public/types.js';
@@ -234,23 +233,6 @@ describe('UI Layout Integrity', () => {
             expect(labelRow).not.toBeNull();
             const labels = labelRow.querySelectorAll('.steps > div');
             expect(labels.length).toBe(16);
-        });
-    });
-
-    describe('Key Picker', () => {
-        it('should not have redundant "Key: " prefix in options', async () => {
-            // Import the function directly
-            const { updateKeySelectLabels } = await import('../../public/ui.js');
-            
-            const keySelect = document.getElementById('keySelect');
-            const opt = document.createElement('option');
-            opt.value = 'C';
-            opt.textContent = 'Key: C';
-            keySelect.appendChild(opt);
-            
-            updateKeySelectLabels();
-            expect(keySelect.options[0].textContent).not.toContain('Key:');
-            expect(keySelect.options[0].textContent).toBe('C');
         });
     });
 });

@@ -1,4 +1,5 @@
 import { h, Fragment } from 'preact';
+import React from 'preact/compat';
 import { useEffect } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { SectionCard } from './SectionCard.jsx';

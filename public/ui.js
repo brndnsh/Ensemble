@@ -1,4 +1,4 @@
-import { arranger, chords, playback, groove, bass, soloist, harmony, dispatch } from './state.js';
+import { chords, playback, groove, dispatch } from './state.js';
 import { ACTIONS } from './types.js';
 import { midiToNote, formatUnicodeSymbols } from './utils.js';
 import { UIStore } from './ui-store.js';

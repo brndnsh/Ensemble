@@ -150,7 +150,6 @@ export function scheduler() {
         if (groove.pendingGenreFeel) {
             const stepsPerMeasure = getStepsPerMeasure(arranger.timeSignature);
             const stepsRemaining = stepsPerMeasure - (playback.step % stepsPerMeasure);
-            const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
             if (stepsRemaining > 0 && stepsRemaining <= 16) {
                 // Pre-notify for genre changes
             }

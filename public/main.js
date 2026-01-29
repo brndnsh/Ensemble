@@ -1,6 +1,6 @@
 import { playback, chords, bass, soloist, harmony, groove, arranger, subscribe } from './state.js';
 import { mountComponents } from './ui-root.jsx';
-import { renderMeasurePagination, setupPanelMenus } from './ui.js';
+import { renderMeasurePagination } from './ui.js';
 import { initAudio, playNote } from './engine.js';
 import { APP_VERSION } from './config.js';
 import { validateProgression } from './chords.js';

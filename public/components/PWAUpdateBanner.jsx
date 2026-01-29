@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { skipWaiting } from '../pwa.js';
 

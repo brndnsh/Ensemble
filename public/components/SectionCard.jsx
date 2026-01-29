@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import React from 'preact/compat';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { SymbolMenu } from './SymbolMenu.jsx';

@@ -1,4 +1,5 @@
 import { h, Fragment } from 'preact';
+import React from 'preact/compat';
 import { memo } from 'preact/compat';
 import { useState, useMemo, useEffect, useRef } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';

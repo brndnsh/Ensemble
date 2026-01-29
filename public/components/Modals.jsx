@@ -1,4 +1,5 @@
 import { h, Fragment } from 'preact';
+import React from 'preact/compat';
 import { Settings } from './Settings.jsx';
 import { EditorModal } from './EditorModal.jsx';
 import { GenerateSongModal } from './GenerateSongModal.jsx';
@@ -9,9 +10,7 @@ import { AnalyzerModal } from './AnalyzerModal.jsx';
 export function Modals() {
     return (
         <Fragment>
-            <div id="settingsOverlay" class="settings-overlay">
-                <Settings />
-            </div>
+            <Settings />
             <EditorModal />
             <GenerateSongModal />
             <ExportModal />

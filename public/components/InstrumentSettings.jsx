@@ -1,4 +1,5 @@
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
+import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
 import { dispatch, playback } from '../state.js';

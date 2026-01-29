@@ -1,3 +1,6 @@
+import { dispatch } from './state.js';
+import { ACTIONS } from './types.js';
+
 /**
  * ModalManager: Centralized controller for all modal interactions.
  * Handles opening, closing, accessibility (aria-hidden, focus trapping), 
@@ -5,6 +8,18 @@
  */
 export const ModalManager = {
     activeModal: null,
+
+    /**
+     * Map of HTML element IDs to state keys.
+     */
+    ID_MAP: {
+        'settingsOverlay': 'settings',
+        'editorOverlay': 'editor',
+        'exportOverlay': 'export',
+        'templatesOverlay': 'templates',
+        'analyzerOverlay': 'analyzer',
+        'generateSongOverlay': 'generateSong'
+    },
 
     /**
      * Opens a modal and handles side effects.
@@ -20,9 +35,12 @@ export const ModalManager = {
 
         // Close current if any
         if (previousModal && previousModal !== modal) {
-            // We don't call this.close() here to avoid removing 'modal-open' from body
             previousModal.classList.remove('active');
             previousModal.setAttribute('aria-hidden', 'true');
+            
+            const prevKey = this.ID_MAP[previousModal.id];
+            if (prevKey) dispatch(ACTIONS.SET_MODAL_OPEN, { modal: prevKey, open: false });
+
             previousModal.dispatchEvent(new CustomEvent('modal-closed', { bubbles: true }));
         }
 
@@ -30,6 +48,9 @@ export const ModalManager = {
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
         this.activeModal = modal;
+
+        const key = this.ID_MAP[modal.id];
+        if (key) dispatch(ACTIONS.SET_MODAL_OPEN, { modal: key, open: true });
 
         // Focus management: Find first focusable element
         const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
@@ -42,18 +63,29 @@ export const ModalManager = {
 
     close(modal) {
         const target = modal || this.activeModal;
-        if (!target) return;
+        if (!target) {
+            if (!document.querySelector('.modal-overlay.active, .settings-overlay.active')) {
+                document.body.classList.remove('modal-open');
+            }
+            return;
+        }
 
+        // Immediate DOM update for snappy responsiveness and testability
         target.classList.remove('active');
         target.setAttribute('aria-hidden', 'true');
         
+        const key = this.ID_MAP[target.id];
+        if (key) dispatch(ACTIONS.SET_MODAL_OPEN, { modal: key, open: false });
+
         if (this.activeModal === target) {
             this.activeModal = null;
         }
 
         // Check if any other modals are still active before removing body class
-        const anyActive = document.querySelector('.modal-overlay.active, .settings-overlay.active');
-        if (!anyActive) {
+        const anyActive = Array.from(document.querySelectorAll('.modal-overlay.active, .settings-overlay.active'))
+            .filter(el => el !== target);
+            
+        if (anyActive.length === 0) {
             document.body.classList.remove('modal-open');
         }
 

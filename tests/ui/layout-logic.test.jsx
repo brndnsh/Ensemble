@@ -1,9 +1,9 @@
-/** @jsx h */
 /**
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { h, render } from 'preact';
+import React from 'preact/compat';
 import { SequencerGrid } from '../../public/components/SequencerGrid.jsx';
 import { groove, arranger, dispatch } from '../../public/state.js';
 

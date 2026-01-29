@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { setupUIHandlers } from '../../public/ui-controller.js';
+import { ModalManager } from '../../public/ui-modal-controller.js';
 
 // Mock State
 vi.mock('../../public/state.js', () => ({
@@ -167,7 +168,7 @@ describe('Live Listen Spacebar Conflict', () => {
 
     it('should NOT toggle playback when space is pressed and analyzer IS active', () => {
         const analyzer = document.getElementById('analyzerOverlay');
-        analyzer.classList.add('active');
+        ModalManager.open(analyzer);
         
         const event = new KeyboardEvent('keydown', { key: ' ' });
         window.dispatchEvent(event);

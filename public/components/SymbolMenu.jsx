@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import React from 'preact/compat';
 
 export function SymbolMenu({ onSelect, onClose }) {
     const symbols = ['|', 'maj7', 'm7', '7', 'ø', 'o', 'aug', 'aug7', 'sus4', 'sus2', '#', 'b', ',', '-'];
