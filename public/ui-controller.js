@@ -2,7 +2,9 @@ import { ui } from './ui.js';
 import { groove } from './state.js';
 import { switchMeasure } from './instrument-controller.js';
 import { ModalManager } from './ui-modal-controller.js';
-import { setupAnalyzerHandlers } from './ui-analyzer-controller.js';
+import { pushHistory } from './history.js';
+import { setupSongGeneratorHandlers } from './ui-song-generator-controller.js';
+import { getStepsPerMeasure } from './utils.js';
 
 /**
  * Legacy UI Controller - Handles remaining imperative logic and global events.
@@ -45,7 +47,9 @@ export function setupUIHandlers(refs) {
         }, 150); 
     });
 
-    setupAnalyzerHandlers();
+    setupSongGeneratorHandlers();
+
+    // --- Arrangement Editor Buttons ---
 
     // Global event for opening the editor from Preact components
     document.addEventListener('open-editor', (e) => {

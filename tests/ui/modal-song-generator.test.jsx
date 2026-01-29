@@ -22,11 +22,8 @@ vi.mock('../../public/instrument-controller.js', () => ({
     updateMeasures: vi.fn(),
     cloneMeasure: vi.fn()
 }));
-vi.mock('../../public/ui-analyzer-controller.js', () => ({
-    setupAnalyzerHandlers: vi.fn()
-}));
 vi.mock('../../public/ui-song-generator-controller.js', () => ({
-    setupGenerateSongHandlers: vi.fn()
+    setupSongGeneratorHandlers: vi.fn()
 }));
 
 describe('Song Generator Modal', () => {

@@ -1,14 +1,192 @@
-import { h } from 'preact';
+import { h, Fragment } from 'preact';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import React from 'preact/compat';
 import { ModalManager } from '../ui-modal-controller.js';
-import { useEnsembleState } from '../ui-bridge.js';
+import { useEnsembleState, useDispatch } from '../ui-bridge.js';
+import { ACTIONS } from '../types.js';
+import { formatUnicodeSymbols, generateId } from '../utils.js';
+import { refreshArrangerUI } from '../arranger-controller.js';
+import { pushHistory } from '../history.js';
+import { showToast } from '../ui.js';
 
 export function AnalyzerModal() {
+    const dispatch = useDispatch();
     const isOpen = useEnsembleState(s => s.playback.modals.analyzer);
+    const arrangerKey = useEnsembleState(s => s.arranger.key);
+    
+    // View States: 'idle', 'live', 'trim', 'processing', 'results'
+    const [view, setView] = useState('idle');
+    const [mode, setMode] = useState('chords'); // 'chords' | 'melody'
+    const [forceKey, setForceKey] = useState(false);
+    const [stagedChords, setStagedChords] = useState([]);
+    const [currentStableChord, setCurrentStableChord] = useState(null);
+    const [detectedKey, setDetectedKey] = useState('--');
+    const [autoAdd, setAutoAdd] = useState(false);
+    const [replaceExisting, setReplaceExisting] = useState(true);
+    const [trimRange, setTrimRange] = useState({ start: 0, end: 0 });
+    const [audioBuffer, setAudioBuffer] = useState(null);
+    const [progress, setProgress] = useState(0);
+    const [analysisData, setAnalysisData] = useState(null);
+
+    // Audio / Analysis Refs
+    const audioCtxRef = useRef(null);
+    const streamRef = useRef(null);
+    const analyzerRef = useRef(null);
+    const harmonizerRef = useRef(null);
+    const stabilityRef = useRef({ lastChord: null, counter: 0 });
+    const autoAddTimerRef = useRef(null);
+    const canvasRef = useRef(null);
+
+    const STABILITY_THRESHOLD = 3;
+    const AUTO_ADD_DELAY = 1200;
+
+    // Waveform Drawing
+    useEffect(() => {
+        if (view === 'trim' && audioBuffer && canvasRef.current) {
+            const canvas = canvasRef.current;
+            const canvasCtx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            const data = audioBuffer.getChannelData(0);
+            const step = Math.ceil(data.length / width);
+            const amp = height / 2;
+
+            canvasCtx.fillStyle = 'rgba(59, 130, 246, 0.5)';
+            canvasCtx.clearRect(0, 0, width, height);
+            
+            canvasCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(0, amp);
+            canvasCtx.lineTo(width, amp);
+            canvasCtx.stroke();
+
+            for (let i = 0; i < width; i++) {
+                let min = 1.0, max = -1.0;
+                for (let j = 0; j < step; j++) {
+                    const datum = data[(i * step) + j];
+                    if (datum < min) min = datum;
+                    if (datum > max) max = datum;
+                }
+                canvasCtx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+            }
+        }
+    }, [view, audioBuffer]);
 
     const close = () => {
         const overlay = document.getElementById('analyzerOverlay');
         if (overlay) ModalManager.close(overlay);
+        stopLiveListen();
+        setAudioBuffer(null);
+        setView('idle');
+    };
+
+    const stopLiveListen = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
+        if (audioCtxRef.current) {
+            audioCtxRef.current.close();
+            audioCtxRef.current = null;
+        }
+        analyzerRef.current = null;
+        harmonizerRef.current = null;
+        if (autoAddTimerRef.current) clearTimeout(autoAddTimerRef.current);
+        
+        setCurrentStableChord(null);
+        setDetectedKey('--');
+        setView('idle');
+    };
+
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setView('processing');
+        setProgress(10);
+        
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            import('../state.js').then(async ({ playback }) => {
+                if (!playback.audio) {
+                    const { initAudio } = await import('../engine.js');
+                    initAudio();
+                }
+                const decoded = await playback.audio.decodeAudioData(arrayBuffer);
+                setAudioBuffer(decoded);
+                setTrimRange({ start: 0, end: Math.floor(decoded.duration) });
+                setView('trim');
+            });
+        } catch (err) {
+            console.error("[Analyzer] Load Error:", err);
+            showToast("Failed to load audio");
+            setView('idle');
+        }
+    };
+
+    const performAnalysis = async () => {
+        if (!audioBuffer) return;
+        setView('processing');
+        setProgress(20);
+
+        try {
+            const { ChordAnalyzerLite } = await import('../audio-analyzer-lite.js');
+            const { extractForm } = await import('../form-extractor.js');
+            const analyzer = new ChordAnalyzerLite();
+            
+            // Simplified Analysis Logic
+            const sampleRate = audioBuffer.sampleRate;
+            const startIdx = Math.floor(trimRange.start * sampleRate);
+            const endIdx = Math.floor(trimRange.end * sampleRate);
+            const slice = audioBuffer.getChannelData(0).slice(startIdx, endIdx);
+
+            setProgress(50);
+            const result = await analyzer.analyzeProgression(slice, sampleRate);
+            setProgress(80);
+            
+            const sections = extractForm(result.chords, result.pulse);
+            setAnalysisData({
+                summary: `Detected ${sections.length} sections`,
+                bpm: Math.round(result.pulse.bpm),
+                sections: sections
+            });
+            setView('results');
+        } catch (err) {
+            console.error("[Analyzer] Analysis Error:", err);
+            showToast("Analysis failed");
+            setView('trim');
+        }
+    };
+
+    const importResults = () => {
+        if (!analysisData) return;
+        pushHistory();
+        
+        const newSections = analysisData.sections.map(s => ({
+            id: generateId(),
+            label: s.label,
+            value: s.value,
+            repeat: s.repeat,
+            key: '',
+            timeSignature: '',
+            seamless: false
+        }));
+
+        import('../state.js').then(({ arranger }) => {
+            if (replaceExisting) arranger.sections = newSections;
+            else arranger.sections.push(...newSections);
+            
+            arranger.isDirty = true;
+            refreshArrangerUI();
+            close();
+            showToast(`Imported ${newSections.length} sections.`);
+        });
     };
 
     return (
@@ -19,137 +197,197 @@ export function AnalyzerModal() {
                 <button class="close-modal-btn" id="closeAnalyzerBtn" aria-label="Close Analyzer" onClick={close}>✕</button>
                 
                 <div class="analyzer-body">
-                    <h3>Audio Workbench</h3>
+                    <h3>{mode === 'melody' ? 'Melody Harmonizer' : 'Audio Chord Analyzer'}</h3>
                     
                     <div class="analyzer-mode-switch" style="display: flex; gap: 8px; margin: 1rem 0; background: var(--input-bg); padding: 4px; border-radius: 8px; border: 1px solid var(--border-color);">
-                        <label class="mode-option" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <input type="radio" name="analyzerMode" value="chords" checked class="sr-only" />
+                        <label class={`mode-option ${mode === 'chords' ? 'active' : ''}`} style={getModeStyle(mode === 'chords')}>
+                            <input type="radio" name="analyzerMode" value="chords" checked={mode === 'chords'} onChange={() => setMode('chords')} class="sr-only" />
                             <span style="font-size: 1.1rem;">🎼</span>
                             <span style="font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">Chords</span>
                         </label>
-                        <label class="mode-option" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                            <input type="radio" name="analyzerMode" value="melody" class="sr-only" />
+                        <label class={`mode-option ${mode === 'melody' ? 'active' : ''}`} style={getModeStyle(mode === 'melody')}>
+                            <input type="radio" name="analyzerMode" value="melody" checked={mode === 'melody'} onChange={() => setMode('melody')} class="sr-only" />
                             <span style="font-size: 1.1rem;">🎤</span>
                             <span style="font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">Melody</span>
                         </label>
                     </div>
 
-                    <label class="analyzer-drop-zone" id="analyzerDropZone" for="analyzerFileInput">
-                        <div class="drop-zone-content">
-                            <span class="drop-icon">🎵</span>
-                            <p>Drag & drop an audio file here</p>
-                            <p class="drop-subtext">Supports MP3, WAV, M4A, AAC</p>
-                            <input type="file" id="analyzerFileInput" accept="audio/*,.m4a,.aac" class="sr-only" />
-                        </div>
-                    </label>
-
-                    <div id="liveListenContainer" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                        <button id="liveListenBtn" class="primary-btn" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--green); color: white; border: none;">
-                            <span>🎤</span> Live Listen
-                        </button>
-                    </div>
-
-                    <div id="liveListenView" class="live-listen-view" style="display: none; text-align: center; padding: 2rem 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; border: 2px solid var(--green);">
-                        <div class="pulse-icon">🎤</div>
-                        <div id="liveKeyContainer" style="margin-bottom: 0.5rem; display: flex; justify-content: center; align-items: center; gap: 1rem;">
-                            <span id="liveKeyLabel" style="font-size: 1.1rem; color: var(--accent-color); font-weight: bold;">Key: --</span>
-                            <label style="font-size: 0.8rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
-                                <input type="checkbox" id="liveForceKeyCheck" /> Lock Key
+                    {view === 'idle' && (
+                        <Fragment>
+                            <label class="analyzer-drop-zone" id="analyzerDropZone" for="analyzerFileInput">
+                                <div class="drop-zone-content">
+                                    <span class="drop-icon">🎵</span>
+                                    <p>Drag & drop an audio file here</p>
+                                    <p class="drop-subtext">Supports MP3, WAV, M4A, AAC</p>
+                                    <input type="file" id="analyzerFileInput" accept="audio/*,.m4a,.aac" class="sr-only" onChange={handleFileUpload} />
+                                </div>
                             </label>
-                        </div>
 
-                        <h2 id="liveChordDisplay" style="font-size: 4rem; margin: 0.5rem 0 1rem 0; color: var(--green); text-shadow: 0 0 20px rgba(133, 153, 0, 0.4); min-height: 1.2em;">---</h2>
+                            <div id="liveListenContainer" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                                <button id="liveListenBtn" class="primary-btn" onClick={startLiveListen} style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--green); color: white; border: none;">
+                                    <span>🎤</span> Live Listen
+                                </button>
+                            </div>
+                        </Fragment>
+                    )}
 
-                        <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
-                            <button id="liveAddBtn" class="primary-btn" style="background: var(--green); color: white; border: none; padding: 0.8rem 2rem; font-size: 1.1rem;">
-                                Add Chord (Space)
-                            </button>
-                            <label style="font-size: 0.9rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px;">
-                                <input type="checkbox" id="liveAutoAddCheck" />
-                                <span>Auto-Add (Hold)</span>
-                            </label>
-                        </div>
+                    {view === 'live' && (
+                        <div id="liveListenView" class="live-listen-view" style="display: block; text-align: center; padding: 2rem 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; border: 2px solid var(--green);">
+                            <div class="pulse-icon">🎤</div>
+                            <div id="liveKeyContainer" style="margin-bottom: 0.5rem; display: flex; justify-content: center; align-items: center; gap: 1rem;">
+                                <span id="liveKeyLabel" style="font-size: 1.1rem; color: var(--accent-color); font-weight: bold;">Key: {formatUnicodeSymbols(detectedKey)}</span>
+                                <label style="font-size: 0.8rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 0.3rem;">
+                                    <input type="checkbox" checked={forceKey} onChange={(e) => setForceKey(e.target.checked)} /> Lock Key
+                                </label>
+                            </div>
 
-                        <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <label style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Your Progression</label>
-                                <div style="display: flex; gap: 0.5rem;">
-                                     <button id="liveUndoBtn" style="font-size: 0.8rem; padding: 0.3rem 0.6rem; background: rgba(255,255,255,0.1); border: none; border-radius: 4px; color: var(--text-color); cursor: pointer;">⎌ Undo</button>
-                                     <button id="liveClearBtn" style="font-size: 0.8rem; padding: 0.3rem 0.6rem; background: rgba(255,255,255,0.1); border: none; border-radius: 4px; color: var(--text-color); cursor: pointer;">🗑 Clear</button>
+                            <h2 id="liveChordDisplay" style="font-size: 4rem; margin: 0.5rem 0 1rem 0; color: var(--green); text-shadow: 0 0 20px rgba(133, 153, 0, 0.4); min-height: 1.2em;">
+                                {currentStableChord ? formatUnicodeSymbols(currentStableChord) : '---'}
+                            </h2>
+
+                            <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                                <button onClick={addCurrentChord} class="primary-btn" style="background: var(--green); color: white; border: none; padding: 0.8rem 2rem; font-size: 1.1rem;">
+                                    Add Chord (Space)
+                                </button>
+                                <label style="font-size: 0.9rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer;">
+                                    <input type="checkbox" checked={autoAdd} onChange={(e) => setAutoAdd(e.target.checked)} />
+                                    <span>Auto-Add</span>
+                                </label>
+                            </div>
+
+                            <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Your Progression</label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                         <button onClick={() => setStagedChords(prev => prev.slice(0, -1))} style="font-size: 0.8rem; padding: 0.3rem 0.6rem; background: rgba(255,255,255,0.1); border: none; border-radius: 4px; color: var(--text-color); cursor: pointer;">⎌ Undo</button>
+                                         <button onClick={() => setStagedChords([])} style="font-size: 0.8rem; padding: 0.3rem 0.6rem; background: rgba(255,255,255,0.1); border: none; border-radius: 4px; color: var(--text-color); cursor: pointer;">🗑 Clear</button>
+                                    </div>
+                                </div>
+                                <div id="liveStagedDisplay" style="font-family: monospace; font-size: 1.2rem; color: white; min-height: 1.5em; word-break: break-all; line-height: 1.6;">
+                                    {stagedChords.length > 0 ? stagedChords.join('') : (
+                                        <span style="color: var(--text-muted); font-style: italic;">Start playing to build a sequence...</span>
+                                    )}
                                 </div>
                             </div>
-                            <div id="liveStagedDisplay" style="font-family: monospace; font-size: 1.2rem; color: white; min-height: 1.5em; word-break: break-all; line-height: 1.6;">
-                                <span style="color: var(--text-muted); font-style: italic;">Start playing to build a sequence...</span>
+
+                            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                                <button onClick={captureLiveHistory} class="primary-btn" style={`flex: 2; background: var(--accent-color); color: white; border: none; ${stagedChords.length === 0 ? 'opacity: 0.5; pointer-events: none;' : ''}`}>Import Sequence</button>
+                                <button onClick={stopLiveListen} class="primary-btn" style="flex: 1; background: var(--error-color); color: white; border: none;">Stop</button>
                             </div>
                         </div>
+                    )}
 
-                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                            <button id="captureLiveHistoryBtn" class="primary-btn" style="flex: 2; background: var(--accent-color); color: white; border: none; opacity: 0.5; pointer-events: none;">Import Sequence</button>
-                            <button id="stopLiveListenBtn" class="primary-btn" style="flex: 1; background: var(--error-color); color: white; border: none;">Stop</button>
-                        </div>
-                    </div>
-
-                    <div id="analyzerTrimView" class="analyzer-trim-view" style="display: none;">
-                        <div class="waveform-container">
-                            <canvas id="analyzerWaveformCanvas"></canvas>
-                            <div id="analyzerSelectionOverlay" class="waveform-selection"></div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-                            <div class="setting-item">
-                                <label class="setting-label" for="analyzerStartInput">Start (sec)</label>
-                                <input type="number" id="analyzerStartInput" value="0" min="0" step="1" style="width: 100%;" />
+                    {view === 'trim' && (
+                        <div id="analyzerTrimView" class="analyzer-trim-view" style="display: block;">
+                            <div class="waveform-container">
+                                <canvas ref={canvasRef} id="analyzerWaveformCanvas"></canvas>
+                                <div id="analyzerSelectionOverlay" class="waveform-selection"></div>
                             </div>
-                            <div class="setting-item">
-                                <label class="setting-label" for="analyzerEndInput">End (sec)</label>
-                                <input type="number" id="analyzerEndInput" value="0" min="1" step="1" style="width: 100%;" />
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                                <div class="setting-item">
+                                    <label class="setting-label">Start (sec)</label>
+                                    <input 
+                                        type="number" 
+                                        value={trimRange.start} 
+                                        min="0" 
+                                        max={trimRange.end - 1}
+                                        step="1" 
+                                        onInput={(e) => setTrimRange(prev => ({ ...prev, start: parseInt(e.target.value) }))}
+                                        style="width: 100%;" 
+                                    />
+                                </div>
+                                <div class="setting-item">
+                                    <label class="setting-label">End (sec)</label>
+                                    <input 
+                                        type="number" 
+                                        value={trimRange.end} 
+                                        min={trimRange.start + 1} 
+                                        max={Math.floor(audioBuffer?.duration || 0)}
+                                        step="1" 
+                                        onInput={(e) => setTrimRange(prev => ({ ...prev, end: parseInt(e.target.value) }))}
+                                        style="width: 100%;" 
+                                    />
+                                </div>
+                            </div>
+                            <p id="analyzerDurationLabel" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">
+                                Duration: {(trimRange.end - trimRange.start).toFixed(1)}s
+                            </p>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-secondary); cursor: pointer;">
+                                    <input type="checkbox" checked={forceKey} onChange={(e) => setForceKey(e.target.checked)} />
+                                    <span>Use Arranger Key ({arrangerKey})</span>
+                                </label>
+                            </div>
+
+                            <button onClick={performAnalysis} class="primary-btn" style="width: 100%;">Analyze Selection</button>
+                        </div>
+                    )}
+
+                    {view === 'processing' && (
+                        <div id="analyzerProcessing" class="analyzer-processing" style="display: block;">
+                            <div class="spinner"></div>
+                            <p>Ensemble is listening...</p>
+                            <div class="progress-bar-container">
+                                <div id="analyzerProgressBar" class="progress-bar" style={`width: ${progress}%`}></div>
                             </div>
                         </div>
-                        <p id="analyzerDurationLabel" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+                    )}
 
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-secondary); cursor: pointer;">
-                                <input type="checkbox" id="analyzerForceKeyCheck" />
-                                <span>Use Arranger Key (<span id="analyzerCurrentKeyLabel">C</span>)</span>
-                            </label>
-                        </div>
-
-                        <button id="startAnalysisBtn" class="primary-btn" style="width: 100%;">Analyze Selection</button>
-                    </div>
-
-                    <div id="analyzerProcessing" class="analyzer-processing" style="display: none;">
-                        <div class="spinner"></div>
-                        <p>Ensemble is listening...</p>
-                        <div class="progress-bar-container">
-                            <div id="analyzerProgressBar" class="progress-bar"></div>
-                        </div>
-                    </div>
-
-                    <div id="analyzerResults" class="analyzer-results" style="display: none;">
-                        <h3>Analysis Complete</h3>
-                        <p id="analyzerSummary" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
-                        
-                        <div id="bpmCandidateContainer" style="margin-bottom: 1.5rem;">
-                            <label class="setting-label" style="display: block; margin-bottom: 0.5rem;">Select Tempo:</label>
-                            <div id="bpmChips" class="template-chips" style="justify-content: flex-start;"></div>
+                    {view === 'results' && analysisData && (
+                        <div id="analyzerResults" class="analyzer-results" style="display: block;">
+                            <h3>Analysis Complete</h3>
+                            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">{analysisData.summary}</p>
                             
-                            <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                                <span style="font-size: 0.85rem;">Sync project BPM (<span id="detectedBpmLabel">---</span>)</span>
-                                <input type="checkbox" id="analyzerSyncBpmCheck" checked />
+                            <div id="bpmCandidateContainer" style="margin-bottom: 1.5rem;">
+                                <label class="setting-label" style="display: block; margin-bottom: 0.5rem;">Detected Tempo:</label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <span style="font-size: 1.2rem; font-weight: bold; color: var(--accent-color);">{analysisData.bpm} BPM</span>
+                                </div>
+                                
+                                <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                                    <span style="font-size: 0.85rem;">Sync project BPM</span>
+                                    <input type="checkbox" checked={true} />
+                                </div>
+                            </div>
+
+                            <div class="suggested-sections-container">
+                                {analysisData.sections.map((s, idx) => (
+                                    <div key={idx} class="section-preview-chip">
+                                        <strong>{s.label}:</strong> {s.value}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div class="analyzer-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem; cursor: pointer;">
+                                    <input type="checkbox" checked={replaceExisting} onChange={(e) => setReplaceExisting(e.target.checked)} />
+                                    <span>Replace existing arrangement</span>
+                                </label>
+                                <button onClick={importResults} class="primary-btn" style="width: 100%;">Import Arrangement</button>
                             </div>
                         </div>
-
-                        <div id="suggestedSectionsContainer" class="suggested-sections-container"></div>
-
-                        <div class="analyzer-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem; cursor: pointer;">
-                                <input type="checkbox" id="analyzerReplaceCheck" checked />
-                                <span>Replace existing arrangement</span>
-                            </label>
-                            <button id="applyAnalysisBtn" class="primary-btn" style="width: 100%;">Import Arrangement</button>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
     );
+}
+
+function getModeStyle(isActive) {
+    return {
+        flex: 1,
+        textAlign: 'center',
+        padding: '10px',
+        cursor: 'pointer',
+        borderRadius: '6px',
+        transition: 'all 0.2s',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        background: isActive ? 'var(--accent-color)' : 'transparent',
+        color: isActive ? 'white' : 'var(--text-secondary)',
+        boxShadow: isActive ? '0 2px 4px rgba(0,0,0,0.2)' : 'none'
+    };
 }

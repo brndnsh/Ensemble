@@ -34,11 +34,8 @@ vi.mock('../../public/instrument-controller.js', () => ({
     handleTap: vi.fn(),
     togglePower: vi.fn()
 }));
-vi.mock('../../public/ui-analyzer-controller.js', () => ({
-    setupAnalyzerHandlers: vi.fn()
-}));
 vi.mock('../../public/ui-song-generator-controller.js', () => ({
-    setupGenerateSongHandlers: vi.fn()
+    setupSongGeneratorHandlers: vi.fn()
 }));
 
 describe('Modal Accessibility Focus', () => {

@@ -19,6 +19,10 @@ vi.mock('../../public/state.js', () => ({
     midi: { enabled: false, outputs: [], chordsChannel: 1, bassChannel: 2, soloistChannel: 3, harmonyChannel: 4, drumsChannel: 10 }
 }));
 
+vi.mock('../../public/ui-song-generator-controller.js', () => ({
+    setupSongGeneratorHandlers: vi.fn()
+}));
+
 // Mock Presets
 vi.mock('../../public/presets.js', () => ({
     CHORD_STYLES: [],
