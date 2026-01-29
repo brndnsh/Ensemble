@@ -109,10 +109,23 @@ export function grooveReducer(action, payload, playback) {
             if (playback.isPlaying) {
                 Object.assign(groove, { pendingGenreFeel: payload });
             } else {
-                const updates = { genreFeel: payload.feel, pendingGenreFeel: null };
+                const updates = { 
+                    genreFeel: payload.feel, 
+                    pendingGenreFeel: null, 
+                    activeTab: 'smart',
+                    // Create a fresh array reference to ensure UI components like SequencerGrid re-render
+                    instruments: groove.instruments.map(inst => ({ ...inst, steps: [...inst.steps] }))
+                };
                 if (payload.swing !== undefined) updates.swing = payload.swing;
                 if (payload.sub !== undefined) updates.swingSub = payload.sub;
                 Object.assign(groove, updates);
+                
+                // If a specific drum preset is linked, trigger it
+                if (payload.drum) {
+                    import('../instrument-controller.js').then(({ loadDrumPreset }) => {
+                        loadDrumPreset(payload.drum);
+                    });
+                }
             }
             return true;
         case ACTIONS.SET_ACTIVE_TAB:

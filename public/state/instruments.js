@@ -214,6 +214,13 @@ export function instrumentReducer(action, payload) {
         case ACTIONS.SET_SESSION_STEPS:
             Object.assign(soloist, { sessionSteps: payload });
             return true;
+        case ACTIONS.SET_GENRE_FEEL:
+            // When a smart genre is selected, update all instrument styles and switch to smart mode
+            if (payload.chord) Object.assign(chords, { style: payload.chord, activeTab: 'smart' });
+            if (payload.bass) Object.assign(bass, { style: payload.bass, activeTab: 'smart' });
+            if (payload.soloist) Object.assign(soloist, { style: payload.soloist, activeTab: 'smart' });
+            if (payload.harmony) Object.assign(harmony, { style: payload.harmony, activeTab: 'smart' });
+            return true;
         case ACTIONS.UPDATE_CONDUCTOR_DECISION:
             if (payload.density) Object.assign(chords, { density: payload.density });
             if (payload.hookProb) Object.assign(soloist, { hookRetentionProb: payload.hookProb });

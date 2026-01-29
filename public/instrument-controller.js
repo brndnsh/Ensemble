@@ -45,7 +45,7 @@ export function loadDrumPreset(name) {
         lastDrumPreset: name,
         measures: p.measures || 1,
         currentMeasure: 0,
-        instruments: newInstruments,
+        instruments: [...newInstruments], // Force new array reference
         swing: p.swing !== undefined ? p.swing : groove.swing,
         swingSub: p.sub || groove.swingSub
     });
