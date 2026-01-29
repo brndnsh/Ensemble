@@ -1,11 +1,11 @@
 import { groove, arranger, playback, chords, bass, soloist, harmony, vizState } from './state.js';
-import { ui, renderGrid, renderMeasurePagination, renderGridState, showToast, renderSections, renderChordVisualizer, initTabs } from './ui.js';
+import { ui, renderMeasurePagination, showToast, initTabs } from './ui.js';
 import { DRUM_PRESETS } from './presets.js';
 import { saveCurrentState } from './persistence.js';
 import { syncWorker, flushWorker } from './worker-client.js';
 import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { applyTheme } from './app-controller.js';
-import { onSectionUpdate, onSectionDelete, onSectionDuplicate, analyzeFormUI } from './arranger-controller.js';
+import { analyzeFormUI } from './arranger-controller.js';
 import { getStepsPerMeasure } from './utils.js';
 import { restoreGains, killChordBus, killBassBus, killSoloistBus, killHarmonyBus, killDrumBus, killAllPianoNotes, killSoloistNote, killHarmonyNote, killBassNote, killDrumNote } from './engine.js';
 
@@ -15,18 +15,17 @@ export function setInstrumentControllerRefs(scheduler, viz) {
     vizRef = viz;
 }
 
-export function switchMeasure(idx, skipScroll = false) {
+export function switchMeasure(idx) {
     if (groove.currentMeasure === idx) return;
     groove.currentMeasure = idx;
     renderMeasurePagination(switchMeasure);
-    renderGrid(skipScroll);
 }
 
 export function updateMeasures(val) {
     groove.measures = parseInt(val);
     if (groove.currentMeasure >= groove.measures) groove.currentMeasure = 0;
     renderMeasurePagination(switchMeasure);
-    renderGrid();
+    // renderGrid removed
     saveCurrentState();
 }
 
@@ -49,7 +48,7 @@ export function loadDrumPreset(name) {
         pattern.forEach((v, i) => { if (i < 128) inst.steps[i] = v; });
     });
     renderMeasurePagination(switchMeasure);
-    renderGrid();
+    // renderGrid removed
 }
 
 export function cloneMeasure() {
@@ -66,7 +65,7 @@ export function cloneMeasure() {
         }
     });
     showToast(`Measure ${groove.currentMeasure + 1} copied to all`);
-    renderGridState();
+    // renderGridState removed
 }
 
 export function clearDrumPresetHighlight() {
@@ -349,9 +348,9 @@ export function resetToDefaults() {
         if (ui.complexityValue) ui.complexityValue.textContent = 'Low';
     }
 
-    renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+    // renderSections removed
     analyzeFormUI();
-    renderChordVisualizer();
+    // renderChordVisualizer removed
     syncWorker();
     flushBuffers();
     
@@ -360,7 +359,7 @@ export function resetToDefaults() {
         inst.muted = false;
     });
     loadDrumPreset('Standard');
-    renderGrid(); 
+    // renderGrid removed 
     initTabs();
 
     document.querySelectorAll('.genre-btn').forEach(btn => {

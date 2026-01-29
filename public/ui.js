@@ -280,13 +280,6 @@ export function updateOctaveLabel(labelEl, octave, headerEl) {
     if (headerEl) headerEl.textContent = `(C${octNum})`;
 }
 
-// Preact Migration Stubs (to be removed in Phase 5)
-export function renderChordVisualizer() {}
-export function renderSections() {}
-export function renderGrid() {}
-export function renderGridState() {}
-export function initSequencerHandlers() {}
-
 export function clearActiveVisuals(viz) {
     UIStore.cachedCards.forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.step.playing').forEach(s => s.classList.remove('playing'));

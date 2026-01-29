@@ -8,7 +8,7 @@ import { UnifiedVisualizer } from './visualizer.js';
 import { initWorker, syncWorker } from './worker-client.js';
 import { initPWA } from './pwa.js';
 import { renderUserPresets, renderUserDrumPresets } from './persistence.js';
-import { analyzeFormUI, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, onSectionUpdate, onSectionDelete, onSectionDuplicate } from './arranger-controller.js';
+import { analyzeFormUI, validateAndAnalyze, clearChordPresetHighlight } from './arranger-controller.js';
 import { switchMeasure, loadDrumPreset, setInstrumentControllerRefs, initializePowerButtons, getPowerConfig } from './instrument-controller.js';
 import { setupPresets, setupUIHandlers } from './ui-controller.js';
 import { draw } from './animation-loop.js';
@@ -102,7 +102,7 @@ function init() {
             POWER_CONFIG: getPowerConfig() 
         });
 
-        renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, () => togglePlay(viz));
+        renderUserPresets(validateAndAnalyze, clearChordPresetHighlight, () => togglePlay(viz));
         renderUserDrumPresets(switchMeasure); 
         // renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
         initializePowerButtons();

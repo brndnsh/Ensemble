@@ -16,9 +16,6 @@ import { triggerInstall } from './pwa.js';
 import { exportToMidi } from './midi-export.js';
 import { ModalManager } from './ui-modal-controller.js';
 import { applyConductor, updateBpmUI } from './conductor.js';
-// import { initTransportHandlers } from './ui-transport-controller.js';
-// import { initMixerHandlers } from './ui-mixer-controller.js';
-// import { initSettingsHandlers, setupMIDIHandlers } from './ui-settings-controller.js';
 import { setupGenerateSongHandlers } from './ui-song-generator-controller.js';
 import { setupAnalyzerHandlers } from './ui-analyzer-controller.js';
 
@@ -147,12 +144,6 @@ export function setupUIHandlers(refs) {
         togglePlay, saveDrumPattern
     } = refs;
 
-    // --- UI REFACTOR PHASE 2: Legacy Handlers Disabled (Handled by Preact) ---
-    // initTransportHandlers(refs);
-    // initMixerHandlers();
-    // initSettingsHandlers();
-    // setupMIDIHandlers();
-    // -------------------------------------------------------------------------
     initArrangerHandlers();
 
     const openExportModal = () => {

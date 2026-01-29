@@ -1,5 +1,5 @@
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi } from './state.js';
-import { ui, createPresetChip, renderSections, renderMeasurePagination, renderGrid } from './ui.js';
+import { ui, createPresetChip, renderMeasurePagination } from './ui.js';
 import { decompressSections, generateId } from './utils.js';
 
 let saveTimeout;
@@ -65,7 +65,7 @@ export function debounceSaveState() {
     saveTimeout = setTimeout(saveCurrentState, 1000);
 }
 
-export function renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, togglePlay) {
+export function renderUserPresets(validateAndAnalyze, clearChordPresetHighlight, togglePlay) {
     const userPresets = storage.get('userPresets');
     ui.userPresetsContainer.innerHTML = '';
     if (userPresets.length === 0) { ui.userPresetsContainer.style.display = 'none'; return; }
@@ -75,13 +75,13 @@ export function renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDup
             if (confirm("Delete this preset?")) {
                 userPresets.splice(idx, 1);
                 storage.save('userPresets', userPresets);
-                renderUserPresets(onSectionUpdate, onSectionDelete, onSectionDuplicate, validateAndAnalyze, clearChordPresetHighlight, refreshArrangerUI, togglePlay);
+                renderUserPresets(validateAndAnalyze, clearChordPresetHighlight, togglePlay);
             }
         }, () => {
             if (playback.isPlaying && togglePlay) togglePlay();
             arranger.sections = p.sections ? decompressSections(p.sections) : [{ id: generateId(), label: 'Main', value: p.prog }];
             arranger.lastChordPreset = p.name;
-            renderSections(arranger.sections, onSectionUpdate, onSectionDelete, onSectionDuplicate);
+            // renderSections removed
             validateAndAnalyze();
             document.querySelectorAll('.chord-preset-chip, .user-preset-chip').forEach(c => c.classList.remove('active'));
             chip.classList.add('active');
@@ -110,7 +110,7 @@ export function renderUserDrumPresets(switchMeasure) {
                 groove.currentMeasure = 0;
                 ui.drumBarsSelect.value = p.measures;
                 renderMeasurePagination(switchMeasure);
-                renderGrid();
+                // renderGrid removed
             }
             p.pattern.forEach(savedInst => {
                 const inst = groove.instruments.find(i => i.name === savedInst.name);
