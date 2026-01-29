@@ -19,6 +19,14 @@ export class UnifiedVisualizer {
         // Optimization: Reuse Map to avoid per-frame GC
         this.activeNotes = new Map();
 
+        // Optimization: Pre-allocated batches to avoid per-frame GC
+        this.soloistBatches = {
+            default: [],
+            root: [],
+            fifth: [],
+            seventh: []
+        };
+
         this.initDOM();
         this.updateThemeCache();
 
@@ -474,12 +482,12 @@ export class UnifiedVisualizer {
             ctx.lineWidth = baseWidth;
             if (name === 'soloist') {
                 // For soloist, we need to batch by color category
-                const batches = {
-                    default: [],
-                    root: [],
-                    fifth: [],
-                    seventh: []
-                };
+                // Optimization: Reuse arrays and flatten data
+                const batches = this.soloistBatches;
+                batches.default.length = 0;
+                batches.root.length = 0;
+                batches.fifth.length = 0;
+                batches.seventh.length = 0;
 
                 for (const ev of track.history) {
                     const noteEnd = ev.time + (ev.duration || 0.25);
@@ -493,10 +501,15 @@ export class UnifiedVisualizer {
                     const y = Math.round(getY(ev.midi));
 
                     if (y >= -10 && y <= h + 10) {
-                        if (ev.noteType === 'arp') batches.fifth.push([x1, y, x2]);
-                        else if (ev.noteType === 'target') batches.root.push([x1, y, x2]);
-                        else if (ev.noteType === 'altered') batches.seventh.push([x1, y, x2]);
-                        else batches.default.push([x1, y, x2]);
+                        if (ev.noteType === 'arp') {
+                            batches.fifth.push(x1, y, x2);
+                        } else if (ev.noteType === 'target') {
+                            batches.root.push(x1, y, x2);
+                        } else if (ev.noteType === 'altered') {
+                            batches.seventh.push(x1, y, x2);
+                        } else {
+                            batches.default.push(x1, y, x2);
+                        }
 
                         if (ev.time <= currentTime && noteEnd >= currentTime) {
                             activeX = x2; activeY = y; isActive = true;
@@ -512,25 +525,37 @@ export class UnifiedVisualizer {
                 if (batches.default.length) {
                     ctx.strokeStyle = color;
                     ctx.beginPath();
-                    for (const [x1, y, x2] of batches.default) { ctx.moveTo(x1, y); ctx.lineTo(x2, y); }
+                    for (let i = 0; i < batches.default.length; i += 3) {
+                        ctx.moveTo(batches.default[i], batches.default[i+1]);
+                        ctx.lineTo(batches.default[i+2], batches.default[i+1]);
+                    }
                     ctx.stroke();
                 }
                 if (batches.root.length) {
                     ctx.strokeStyle = chordColors.root;
                     ctx.beginPath();
-                    for (const [x1, y, x2] of batches.root) { ctx.moveTo(x1, y); ctx.lineTo(x2, y); }
+                    for (let i = 0; i < batches.root.length; i += 3) {
+                        ctx.moveTo(batches.root[i], batches.root[i+1]);
+                        ctx.lineTo(batches.root[i+2], batches.root[i+1]);
+                    }
                     ctx.stroke();
                 }
                 if (batches.fifth.length) {
                     ctx.strokeStyle = chordColors.fifth;
                     ctx.beginPath();
-                    for (const [x1, y, x2] of batches.fifth) { ctx.moveTo(x1, y); ctx.lineTo(x2, y); }
+                    for (let i = 0; i < batches.fifth.length; i += 3) {
+                        ctx.moveTo(batches.fifth[i], batches.fifth[i+1]);
+                        ctx.lineTo(batches.fifth[i+2], batches.fifth[i+1]);
+                    }
                     ctx.stroke();
                 }
                 if (batches.seventh.length) {
                     ctx.strokeStyle = chordColors.seventh;
                     ctx.beginPath();
-                    for (const [x1, y, x2] of batches.seventh) { ctx.moveTo(x1, y); ctx.lineTo(x2, y); }
+                    for (let i = 0; i < batches.seventh.length; i += 3) {
+                        ctx.moveTo(batches.seventh[i], batches.seventh[i+1]);
+                        ctx.lineTo(batches.seventh[i+2], batches.seventh[i+1]);
+                    }
                     ctx.stroke();
                 }
 

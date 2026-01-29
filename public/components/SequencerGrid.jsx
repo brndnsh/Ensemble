@@ -1,7 +1,7 @@
 import { h, Fragment } from 'preact';
 import React from 'preact/compat';
 import { memo } from 'preact/compat';
-import { useState, useMemo, useEffect, useRef, useCallback } from 'preact/hooks';
+import { useState, useMemo, useEffect, useRef, useCallback, useLayoutEffect } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { getStepsPerMeasure, getStepInfo } from '../utils.js';
 import { TIME_SIGNATURES } from '../config.js';
@@ -48,6 +48,7 @@ export function SequencerGrid() {
     const [isDragging, setIsDragging] = useState(false);
     const [dragType, setDragType] = useState(0);
     const gridRef = useRef(null);
+    const stepCache = useRef(new Map());
 
     const spm = getStepsPerMeasure(timeSignature);
     const totalSteps = measures * spm;
@@ -58,6 +59,26 @@ export function SequencerGrid() {
         window.addEventListener('mouseup', handleMouseUp);
         return () => window.removeEventListener('mouseup', handleMouseUp);
     }, []);
+
+    // Optimization: Cache step elements to avoid thousands of querySelectorAll calls
+    useLayoutEffect(() => {
+        const grid = document.getElementById('sequencerGrid');
+        if (!grid) return;
+
+        stepCache.current.clear();
+        const steps = grid.getElementsByClassName('step');
+
+        for (let i = 0; i < steps.length; i++) {
+            const stepEl = steps[i];
+            const idx = parseInt(stepEl.getAttribute('data-step-idx'), 10);
+            if (!isNaN(idx)) {
+                if (!stepCache.current.has(idx)) {
+                    stepCache.current.set(idx, []);
+                }
+                stepCache.current.get(idx).push(stepEl);
+            }
+        }
+    }, [instruments, totalSteps]);
 
     // Optimized visual update loop
     useEffect(() => {
@@ -74,24 +95,26 @@ export function SequencerGrid() {
                     const grid = document.getElementById('sequencerGrid');
                     if (grid && grid.offsetParent !== null) {
                         if (lastStep !== -1) {
-                            // Use efficient class toggling
-                            const prev = grid.querySelectorAll(`.step[data-step-idx="${lastStep}"]`);
-                            for (let i = 0; i < prev.length; i++) {
-                                prev[i].classList.remove('playing');
+                            const prev = stepCache.current.get(lastStep);
+                            if (prev) {
+                                for (let i = 0; i < prev.length; i++) {
+                                    prev[i].classList.remove('playing');
+                                }
                             }
                         }
 
-                        const curr = grid.querySelectorAll(`.step[data-step-idx="${step}"]`);
-                        for (let i = 0; i < curr.length; i++) {
-                            curr[i].classList.add('playing');
+                        const curr = stepCache.current.get(step);
+                        if (curr) {
+                            for (let i = 0; i < curr.length; i++) {
+                                curr[i].classList.add('playing');
+                            }
                         }
                     }
                     lastStep = step;
                 }
             } else if (lastStep !== -1) {
-                const grid = document.getElementById('sequencerGrid');
-                if (grid) {
-                    const prev = grid.querySelectorAll(`.step[data-step-idx="${lastStep}"]`);
+                const prev = stepCache.current.get(lastStep);
+                if (prev) {
                     for (let i = 0; i < prev.length; i++) {
                         prev[i].classList.remove('playing');
                     }
