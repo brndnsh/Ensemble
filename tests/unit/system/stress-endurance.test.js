@@ -45,7 +45,8 @@ vi.mock('../../../public/state.js', () => ({
     harmony: { enabled: true, buffer: new Map(), octave: 60 },
     midi: { enabled: false },
     vizState: { enabled: true },
-    conductorState: { larsBpmOffset: 0 }
+    conductorState: { larsBpmOffset: 0 },
+    dispatch: vi.fn()
 }));
 
 vi.mock('../../../public/engine.js', () => ({
@@ -57,15 +58,7 @@ vi.mock('../../../public/engine.js', () => ({
 }));
 
 vi.mock('../../../public/ui.js', () => ({
-    ui: { 
-        visualFlash: { checked: true }, 
-        metronome: { checked: false },
-        intensitySlider: { value: '50' },
-        playBtn: { textContent: '' }
-    },
-    triggerFlash: vi.fn(),
-    updateActiveChordUI: vi.fn(),
-    clearActiveVisuals: vi.fn()
+    triggerFlash: vi.fn()
 }));
 
 vi.mock('../../../public/worker-client.js', () => ({

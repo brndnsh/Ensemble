@@ -1,14 +1,14 @@
 import { arranger, chords, groove, playback } from './state.js';
-import { ui, showToast } from './ui.js';
+import { showToast } from './ui.js';
 import { compressSections } from './utils.js';
 
 export function shareProgression() {
     try {
         const params = new URLSearchParams();
         params.set('s', compressSections(arranger.sections));
-        params.set('key', ui.keySelect.value);
+        params.set('key', arranger.key);
         params.set('ts', arranger.timeSignature);
-        params.set('bpm', ui.bpmInput.value);
+        params.set('bpm', playback.bpm);
         params.set('style', chords.style);
         params.set('genre', groove.genreFeel);
         params.set('int', playback.bandIntensity.toFixed(2));

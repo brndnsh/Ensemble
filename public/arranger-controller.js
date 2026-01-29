@@ -1,5 +1,5 @@
 import { arranger } from './state.js';
-import { ui, showToast } from './ui.js';
+import { showToast } from './ui.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
 import { restoreGains } from './engine.js';
@@ -17,38 +17,8 @@ const GROUPING_OPTIONS = {
     '7/4': [[4, 3], [3, 4]]
 };
 
-export function initArrangerHandlers() {
-    if (ui.groupingLabel) {
-        ui.groupingLabel.addEventListener('click', () => {
-            const ts = arranger.timeSignature;
-            const options = GROUPING_OPTIONS[ts];
-            if (!options) return;
-
-            const current = arranger.grouping || TIME_SIGNATURES[ts].grouping;
-            const currentIndex = options.findIndex(opt => opt.join('+') === current.join('+'));
-            const nextIndex = (currentIndex + 1) % options.length;
-            
-            arranger.grouping = options[nextIndex];
-            updateGroupingUI();
-            flushBuffers();
-            syncWorker();
-            saveCurrentState();
-        });
-    }
-}
-
 export function updateGroupingUI() {
-    if (!ui.groupingToggle || !ui.groupingLabel) return;
-    
-    const ts = arranger.timeSignature;
-    const hasOptions = GROUPING_OPTIONS[ts] !== undefined;
-    
-    ui.groupingToggle.style.display = hasOptions ? 'flex' : 'none';
-    
-    if (hasOptions) {
-        const current = arranger.grouping || TIME_SIGNATURES[ts].grouping;
-        ui.groupingLabel.textContent = current.join('+');
-    }
+    // No-op: handled by Preact
 }
 
 export function analyzeFormUI() {
@@ -154,13 +124,12 @@ export function addSection() {
 }
 
 export function transposeKey(delta) {
-    // Use arranger.key as the source of truth, fallback to UI if somehow missing
-    const currentKeyName = arranger.key || (ui.keySelect ? ui.keySelect.value : 'C');
+    // Use arranger.key as the source of truth
+    const currentKeyName = arranger.key || 'C';
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(currentKeyName));
     const newKey = KEY_ORDER[(currentIndex + delta + 12) % 12];
 
     arranger.key = newKey;
-    if (ui.keySelect) ui.keySelect.value = newKey;
     
     const isMusicalNotation = (part) => {
         return part.match(/^(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v|[1-7])/i) || 
@@ -210,12 +179,6 @@ export function switchToRelativeKey() {
     
     arranger.key = newKey;
     arranger.isMinor = !wasMinor;
-    
-    if (ui.keySelect) {
-        ui.keySelect.value = newKey;
-    } else {
-        console.warn("[Arranger] ui.keySelect not found in switchToRelativeKey");
-    }
     
     pushHistory();
     arranger.sections.forEach(section => {
