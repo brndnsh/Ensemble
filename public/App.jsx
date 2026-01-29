@@ -176,9 +176,12 @@ function InstrumentPanel({ id, module, title, styles }) {
         saveCurrentState();
     };
 
+    // Map module name to the CSS header class (e.g., 'chords' -> 'chord-panel-header')
+    const headerClass = `${module === 'chords' ? 'chord' : (module === 'harmony' ? 'harmony' : module)}-panel-header`;
+
     return (
         <div class={`panel dashboard-panel instrument-panel ${activeTab === 'smart' ? 'smart-active' : ''}`} id={id} data-id={module}>
-            <div class="panel-header">
+            <div class={`panel-header ${headerClass}`}>
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <h2>{title}</h2>
                 </div>
