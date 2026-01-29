@@ -19,6 +19,8 @@ let cbBufferHead = 0;
 let hbBufferHead = 0;
 let lastChordIndex = 0;
 let lastSectionIndex = 0;
+const mainCursor = { index: 0, sectionIndex: 0 };
+const lookaheadCursor = { index: 0, sectionIndex: 0 };
 const LOOKAHEAD = 64;
 
 // --- EXPORT HELPERS ---
@@ -114,24 +116,28 @@ class MidiTrack {
 
 // --- LOGIC ---
 
-export function getChordAtStep(step) {
+export function getChordAtStep(step, cursor = null) {
     if (arranger.totalSteps === 0) return null;
     const targetStep = step % arranger.totalSteps;
     
+    // Determine which state variables to use (cursor or global defaults)
+    let currentLastSectionIndex = cursor ? cursor.sectionIndex : lastSectionIndex;
+    let currentLastChordIndex = cursor ? cursor.index : lastChordIndex;
+
     let sectionData = null;
     if (arranger.sectionMap) {
         let startI = 0;
-        if (lastSectionIndex < arranger.sectionMap.length) {
-            const cached = arranger.sectionMap[lastSectionIndex];
+        if (currentLastSectionIndex < arranger.sectionMap.length) {
+            const cached = arranger.sectionMap[currentLastSectionIndex];
             if (targetStep >= cached.start) {
-                startI = lastSectionIndex;
+                startI = currentLastSectionIndex;
             }
         }
         for (let i = startI; i < arranger.sectionMap.length; i++) {
             const s = arranger.sectionMap[i];
             if (targetStep >= s.start && targetStep < s.end) {
                 sectionData = s;
-                lastSectionIndex = i;
+                currentLastSectionIndex = i;
                 break;
             }
             if (s.start > targetStep) break;
@@ -139,17 +145,27 @@ export function getChordAtStep(step) {
     }
 
     let startI = 0;
-    if (lastChordIndex < arranger.stepMap.length) {
-        const cached = arranger.stepMap[lastChordIndex];
+    if (currentLastChordIndex < arranger.stepMap.length) {
+        const cached = arranger.stepMap[currentLastChordIndex];
         if (targetStep >= cached.start) {
-            startI = lastChordIndex;
+            startI = currentLastChordIndex;
         }
     }
 
     for (let i = startI; i < arranger.stepMap.length; i++) {
         const entry = arranger.stepMap[i];
         if (targetStep >= entry.start && targetStep < entry.end) {
-            lastChordIndex = i;
+            currentLastChordIndex = i;
+
+            // Update the state variables
+            if (cursor) {
+                cursor.index = currentLastChordIndex;
+                cursor.sectionIndex = currentLastSectionIndex;
+            } else {
+                lastChordIndex = currentLastChordIndex;
+                lastSectionIndex = currentLastSectionIndex;
+            }
+
             return { 
                 chord: entry.chord, 
                 stepInChord: targetStep - entry.start, 
@@ -182,13 +198,13 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
     
     while (head < targetStep) {
         const step = head;
-        const chordData = getChordAtStep(step);
+        const chordData = getChordAtStep(step, mainCursor);
         
         // --- Bass ---
         if (bass.enabled && step >= bbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
-                const nextChordData = getChordAtStep(step + 4);
+                const nextChordData = getChordAtStep(step + 4, lookaheadCursor);
                 if (isBassActive(bass.style, step, stepInChord)) {
                     // Extract section bounds from chordData for optimization
                     const { sectionStart, sectionEnd } = chordData;
@@ -209,7 +225,7 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
         if (soloist.enabled && step >= sbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord, sectionStart, sectionEnd } = chordData;
-                const nextChordData = getChordAtStep(step + 4);
+                const nextChordData = getChordAtStep(step + 4, lookaheadCursor);
                 soloResult = getSoloistNote(chord, nextChordData?.chord, step, soloist.lastFreq, soloist.octave, soloist.style, stepInChord, false, { sectionStart, sectionEnd });
                 
                 if (soloResult) {
@@ -248,7 +264,7 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
         if (harmony.enabled && step >= hbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
-                const nextChordData = getChordAtStep(step + 4);
+                const nextChordData = getChordAtStep(step + 4, lookaheadCursor);
                 const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, step, harmony.octave, harmony.style, stepInChord, soloResult);
                 if (harmonyNotes.length > 0) {
                     harmonyNotes.forEach(n => {
@@ -287,6 +303,10 @@ export function handleExport(options) {
         let loopCount = (loopMode === 'once') ? 1 : Math.max(1, Math.min(100, Math.ceil((targetDuration * 60) / loopSeconds)));
         const totalStepsWithoutEnding = totalStepsOneLoop * loopCount;
         const totalStepsExport = totalStepsWithoutEnding + 16; // Add one resolution measure
+
+        // Independent cursors for export
+        const exportCursor = { index: 0, sectionIndex: 0 };
+        const exportLookaheadCursor = { index: 0, sectionIndex: 0 };
 
         // --- 1:1 TIMING MAP GENERATION ---
         const stepTimes = new Array(totalStepsExport + 128);
@@ -410,11 +430,11 @@ export function handleExport(options) {
 
             const measureStep = globalStep % stepsPerMeasure;
             const stepInfo = getStepInfo(globalStep, ts);
-            const chordData = getChordAtStep(globalStep);
+            const chordData = getChordAtStep(globalStep, exportCursor);
 
             if (chordData) {
                 const { chord, stepInChord } = chordData;
-                const nextChordData = getChordAtStep(globalStep + 4);
+                const nextChordData = getChordAtStep(globalStep + 4, exportLookaheadCursor);
 
                 if (includedTracks.includes('chords')) {
                     const notes = getAccompanimentNotes(chord, globalStep, stepInChord, measureStep, stepInfo);
@@ -765,6 +785,8 @@ if (typeof self !== 'undefined') {
                             arranger.sectionMap = syncData.arranger.sectionMap;
                             lastChordIndex = 0;
                             lastSectionIndex = 0;
+                            mainCursor.index = 0; mainCursor.sectionIndex = 0;
+                            lookaheadCursor.index = 0; lookaheadCursor.sectionIndex = 0;
                         }
                         if (syncData.chords) {
                             Object.assign(chords, syncData.chords);
@@ -842,17 +864,21 @@ function handlePrime(steps) {
     soloist.hookBuffer = [];
     soloist.isReplayingMotif = false;
 
+    // Local cursors for priming
+    const primeCursor = { index: 0, sectionIndex: 0 };
+    const primeLookaheadCursor = { index: 0, sectionIndex: 0 };
+
     const start = performance.now();
 
     // We simulate running through the progression (wrapping around)
     // ensuring that when we finish, the state is primed for Step 0.
     for (let i = 0; i < stepsToPrime; i++) {
         const s = i; 
-        const chordData = getChordAtStep(s);
+        const chordData = getChordAtStep(s, primeCursor);
         
         if (chordData) {
             const { chord, stepInChord } = chordData;
-            const nextChordData = getChordAtStep(s + 4);
+            const nextChordData = getChordAtStep(s + 4, primeLookaheadCursor);
             const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
 
             // 1. Prime Bass (if enabled) to update bass.lastFreq
