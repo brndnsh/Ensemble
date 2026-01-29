@@ -24,7 +24,7 @@ export function hydrateState() {
             metronome: false,
             visualFlash: savedState.visualFlash !== undefined ? savedState.visualFlash : false,
             haptic: savedState.haptic !== undefined ? savedState.haptic : false,
-            countIn: savedState.countIn !== undefined ? savedState.countIn : false,
+            countIn: savedState.countIn !== undefined ? savedState.countIn : true,
             sessionTimer: savedState.sessionTimer !== undefined ? savedState.sessionTimer : 5,
             applyPresetSettings: savedState.applyPresetSettings !== undefined ? savedState.applyPresetSettings : false,
             stopAtEnd: false
