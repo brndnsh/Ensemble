@@ -29,7 +29,7 @@ export function draw(viz) {
     lastFrameTime = nowFrame;
 
     if (!playback.audio) {
-        requestAnimationFrame(() => draw(viz));
+        playback.isDrawing = false;
         return;
     }
     if (!playback.isPlaying && playback.drawQueue.length === 0) {
@@ -61,7 +61,10 @@ export function draw(viz) {
         } else if (ev.type === 'bass_vis') {
             if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('bass', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
         } else if (ev.type === 'soloist_vis') {
-            if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('soloist', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+            if (viz && vizState.enabled && playback.isDrawing) {
+                viz.truncateNotes('soloist', ev.time);
+                viz.pushNote('soloist', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+            }
         } else if (ev.type === 'harmony_vis') {
             if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('harmony', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
         } else if (ev.type === 'drums_vis') {

@@ -100,10 +100,6 @@ function init() {
         subscribe((action, payload) => syncWorker(action, payload));
         syncWorker(); 
 
-        // Start animation loop
-        playback.isDrawing = true;
-        requestAnimationFrame(() => draw(viz));
-
     } catch (e) { console.error("Error during init:", e); }
 }
 
