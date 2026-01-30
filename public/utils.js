@@ -10,6 +10,23 @@ export function normalizeKey(k) {
 }
 
 /**
+ * Escapes unsafe HTML characters to prevent XSS.
+ * @param {string} str
+ * @returns {string}
+ */
+export function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    if (typeof str !== 'string') return String(str);
+
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
  * Converts a MIDI note number to a frequency in Hertz.
  * @param {number} midi - The MIDI note number.
  * @returns {number} The frequency in Hz.
@@ -75,19 +92,38 @@ export function compressSections(sections) {
  */
 export function decompressSections(str) {
     try {
+        if (!str || typeof str !== 'string') throw new Error("Invalid input");
+        // Limit input size to 100KB to prevent memory exhaustion
+        if (str.length > 102400) throw new Error("Payload too large");
+
         const binString = atob(str);
         const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
         const json = new TextDecoder().decode(bytes);
         const minified = JSON.parse(json);
-        return minified.map((s, i) => ({ 
-            id: generateId(), 
-            label: s.l || `Section ${i+1}`, 
-            value: s.v || '',
-            key: s.k || '',
-            repeat: s.r || 1,
-            timeSignature: s.t || '',
-            seamless: !!s.s
-        }));
+
+        if (!Array.isArray(minified)) throw new Error("Invalid format: expected array");
+        // Limit number of sections to prevent DoS
+        const safeMinified = minified.slice(0, 500);
+
+        return safeMinified.map((s, i) => {
+            // Sanitize label to prevent XSS (even though likely handled by UI framework, defense in depth)
+            let safeLabel = escapeHTML(s.l || `Section ${i+1}`);
+            if (safeLabel.length > 100) safeLabel = safeLabel.substring(0, 100);
+
+            // Clamp value length
+            let safeValue = typeof s.v === 'string' ? s.v : '';
+            if (safeValue.length > 1000) safeValue = safeValue.substring(0, 1000);
+
+            return {
+                id: generateId(),
+                label: safeLabel,
+                value: safeValue,
+                key: typeof s.k === 'string' ? escapeHTML(s.k) : '',
+                repeat: Math.min(Math.max(1, parseInt(s.r) || 1), 64), // Clamp repeats
+                timeSignature: typeof s.t === 'string' && s.t.length < 10 ? s.t : '',
+                seamless: !!s.s
+            };
+        });
     } catch (e) {
         console.error("Failed to decompress sections", e);
         return [{ id: generateId(), label: 'Intro', value: 'I | IV' }];
@@ -222,23 +258,6 @@ export function formatUnicodeSymbols(str) {
         .replace(/#/g, '♯')
         .replace(/([A-G])b/g, '$1♭')
         .replace(/b(?=[0-9IVivm\-/])/g, '♭');
-}
-
-/**
- * Escapes unsafe HTML characters to prevent XSS.
- * @param {string} str
- * @returns {string}
- */
-export function escapeHTML(str) {
-    if (str === null || str === undefined) return '';
-    if (typeof str !== 'string') return String(str);
-
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }
 
 /**
