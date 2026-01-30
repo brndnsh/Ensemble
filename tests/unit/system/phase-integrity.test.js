@@ -20,7 +20,8 @@ vi.mock('../../../public/state.js', () => ({
         masterGain: {},
         visualFlash: true,
         metronome: true,
-        countIn: true
+        countIn: true,
+        viz: {}
     },
     groove: { 
         enabled: true, 

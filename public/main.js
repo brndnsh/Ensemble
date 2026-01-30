@@ -9,7 +9,6 @@ import { analyzeFormUI } from './arranger-controller.js';
 import { syncWorker, initWorker } from './worker-client.js';
 import { initPWA } from './pwa.js';
 import { UnifiedVisualizer } from './visualizer.js';
-import { draw } from './animation-loop.js';
 
 let viz;
 

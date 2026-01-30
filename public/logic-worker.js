@@ -5,7 +5,7 @@ import { getAccompanimentNotes, compingState } from './accompaniment.js';
 import { generateResolutionNotes } from './resolution.js';
 import { arranger, chords, bass, soloist, groove, harmony, playback } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
-import { getMidi, getStepInfo } from './utils.js';
+import { getMidi, getStepInfo, getFrequency } from './utils.js';
 import { generateProceduralFill } from './fills.js';
 import { analyzeForm } from './form-analysis.js';
 import { WORKER_MSG, WORKER_RESP } from './worker-types.js';
