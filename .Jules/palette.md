@@ -9,3 +9,7 @@
 ## 2024-05-24 - Interactive Badges
 **Learning:** Small interactive elements (like "badges" or "chips") implemented as `span`s with `onclick` are inaccessible. Converting them to `<button>` elements with appropriate styling (removing borders/backgrounds) provides native keyboard support and accessibility without complex ARIA retrofitting.
 **Action:** Replace interactive spans with styled buttons (e.g., `.badge-btn`) to ensure accessibility.
+
+## 2024-05-25 - Slider Label Association
+**Learning:** `input[type="range"]` needs explicit `aria-valuetext` when the visual value is descriptive (e.g., "Low", "Medium") rather than numeric, as screen readers only announce the numeric value by default.
+**Action:** When implementing sliders with descriptive states, always add `aria-valuetext` and ensure programmatic label association via `for`/`id`.

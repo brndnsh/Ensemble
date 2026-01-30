@@ -108,7 +108,7 @@ function IntensitySlider() {
     return (
         <div class="smart-control-group" style="margin-bottom: 1.5rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
-                <label style="font-size: 0.9rem; color: #94a3b8;">Intensity (Global)</label>
+                <label htmlFor="intensitySlider" style="font-size: 0.9rem; color: #94a3b8;">Intensity (Global)</label>
                 <div style="display: flex; gap: 1rem; align-items: center;">
                     <label style="font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
                         <input
@@ -148,7 +148,7 @@ function ComplexitySlider() {
 
     return (
         <div class="smart-control-group" style="margin-bottom: 1rem;">
-            <label style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">
+            <label htmlFor="complexitySlider" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">
                 <span>Complexity</span>
                 <span style="color: var(--accent-color); font-weight: bold;">{label}</span>
             </label>
@@ -158,6 +158,7 @@ function ComplexitySlider() {
                 min="0"
                 max="100"
                 value={Math.round(complexity * 100)}
+                aria-valuetext={label}
                 onInput={(e) => {
                     dispatch(ACTIONS.SET_COMPLEXITY, parseInt(e.target.value) / 100);
                 }}
