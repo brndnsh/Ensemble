@@ -29,5 +29,13 @@ export default [
   {
     // Ignore build artifacts or vendor folders if any
     ignores: ["dist/**", "node_modules/**", ".gemini/tmp/**"],
+  },
+  {
+    files: ["tests/**"],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
   }
 ];
