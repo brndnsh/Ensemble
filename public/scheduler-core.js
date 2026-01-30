@@ -473,7 +473,9 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
 
 export function scheduleChordVisuals(chordData, t) {
     if (chordData.stepInChord === 0) {
-        playback.drawQueue.push({ type: 'chord_vis', time: t, index: chordData.chordIndex, chordNotes: chordData.chord.freqs.map(f => getMidi(f)), rootMidi: chordData.chord.rootMidi, intervals: chordData.chord.intervals, duration: chordData.chord.beats * (60/playback.bpm) });
+        if (vizState.enabled && playback.viz) {
+            playback.drawQueue.push({ type: 'chord_vis', time: t, index: chordData.chordIndex, chordNotes: chordData.chord.freqs.map(f => getMidi(f)), rootMidi: chordData.chord.rootMidi, intervals: chordData.chord.intervals, duration: chordData.chord.beats * (60/playback.bpm) });
+        }
         
         if (playback.visualFlash) {
             triggerFlash(0.1);
