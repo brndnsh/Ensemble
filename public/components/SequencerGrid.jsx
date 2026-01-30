@@ -38,11 +38,12 @@ const Step = memo(({ instIdx, stepIdx, value, instName, stepInfo, onToggle }) =>
 });
 
 export function SequencerGrid() {
-    const { instruments, measures, timeSignature, gridVersion } = useEnsembleState(s => ({
+    const { instruments, measures, timeSignature, gridVersion, isPlaying } = useEnsembleState(s => ({
         instruments: s.groove.instruments,
         measures: s.groove.measures,
         timeSignature: s.arranger.timeSignature,
-        gridVersion: s.groove.gridVersion
+        gridVersion: s.groove.gridVersion,
+        isPlaying: s.playback.isPlaying
     }));
 
     const [isDragging, setIsDragging] = useState(false);
@@ -82,51 +83,52 @@ export function SequencerGrid() {
 
     // Optimized visual update loop
     useEffect(() => {
+        if (!isPlaying) {
+            const grid = document.getElementById('sequencerGrid');
+            if (grid) {
+                const playingSteps = grid.getElementsByClassName('playing');
+                while (playingSteps.length > 0) {
+                    playingSteps[0].classList.remove('playing');
+                }
+            }
+            return;
+        }
+
         let lastStep = -1;
         let frameId;
 
         const loop = () => {
-            if (playbackState.isPlaying) {
-                // Determine current visible step based on lastPlayingStep (absolute) and totalSteps
-                // playbackState.lastPlayingStep comes from animation loop which processes visual events
-                const step = (playbackState.lastPlayingStep || 0) % totalSteps;
+            // Determine current visible step based on lastPlayingStep (absolute) and totalSteps
+            // playbackState.lastPlayingStep comes from animation loop which processes visual events
+            const step = (playbackState.lastPlayingStep || 0) % totalSteps;
 
-                if (step !== lastStep) {
-                    const grid = document.getElementById('sequencerGrid');
-                    if (grid && grid.offsetParent !== null) {
-                        if (lastStep !== -1) {
-                            const prev = stepCache.current.get(lastStep);
-                            if (prev) {
-                                for (let i = 0; i < prev.length; i++) {
-                                    prev[i].classList.remove('playing');
-                                }
-                            }
-                        }
-
-                        const curr = stepCache.current.get(step);
-                        if (curr) {
-                            for (let i = 0; i < curr.length; i++) {
-                                curr[i].classList.add('playing');
+            if (step !== lastStep) {
+                const grid = document.getElementById('sequencerGrid');
+                if (grid && grid.offsetParent !== null) {
+                    if (lastStep !== -1) {
+                        const prev = stepCache.current.get(lastStep);
+                        if (prev) {
+                            for (let i = 0; i < prev.length; i++) {
+                                prev[i].classList.remove('playing');
                             }
                         }
                     }
-                    lastStep = step;
-                }
-            } else if (lastStep !== -1) {
-                const prev = stepCache.current.get(lastStep);
-                if (prev) {
-                    for (let i = 0; i < prev.length; i++) {
-                        prev[i].classList.remove('playing');
+
+                    const curr = stepCache.current.get(step);
+                    if (curr) {
+                        for (let i = 0; i < curr.length; i++) {
+                            curr[i].classList.add('playing');
+                        }
                     }
                 }
-                lastStep = -1;
+                lastStep = step;
             }
             frameId = requestAnimationFrame(loop);
         };
 
         frameId = requestAnimationFrame(loop);
         return () => cancelAnimationFrame(frameId);
-    }, [totalSteps]);
+    }, [isPlaying, totalSteps]);
 
     const handleToggle = useCallback((e, instIdx, stepIdx) => {
         if (e.type === 'mouseover' && !isDragging) return;
