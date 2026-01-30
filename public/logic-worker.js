@@ -187,14 +187,16 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
     if (cbBufferHead < currentStep) cbBufferHead = currentStep;
     if (hbBufferHead < currentStep) hbBufferHead = currentStep;
     
-    let head = 999999;
-    if (bass.enabled) head = Math.min(head, bbBufferHead);
-    if (soloist.enabled) head = Math.min(head, sbBufferHead);
-    if (chords.enabled) head = Math.min(head, cbBufferHead);
-    if (harmony.enabled) head = Math.min(head, hbBufferHead);
+    let head = Math.min(
+        bass.enabled ? bbBufferHead : 999999,
+        soloist.enabled ? sbBufferHead : 999999,
+        chords.enabled ? cbBufferHead : 999999,
+        harmony.enabled ? hbBufferHead : 999999
+    );
     if (head === 999999) head = currentStep;
 
     const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
+    const stepsPerMeasure = ts.beats * ts.stepsPerBeat;
     
     while (head < targetStep) {
         const step = head;
@@ -204,14 +206,13 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
         if (bass.enabled && step >= bbBufferHead) {
             if (chordData) {
                 const { chord, stepInChord } = chordData;
-                const nextChordData = getChordAtStep(step + 4, lookaheadCursor);
                 if (isBassActive(bass.style, step, stepInChord)) {
-                    // Extract section bounds from chordData for optimization
+                    const nextChordData = getChordAtStep(step + 4, lookaheadCursor);
                     const { sectionStart, sectionEnd } = chordData;
                     const bassResult = getBassNote(chord, nextChordData?.chord, stepInChord / ts.stepsPerBeat, bass.lastFreq, bass.octave, bass.style, chordData.chordIndex, step, stepInChord, { sectionStart, sectionEnd });
                     if (bassResult && (bassResult.freq || bassResult.midi)) {
                         if (!bassResult.midi) bassResult.midi = getMidi(bassResult.freq);
-                        if (!bassResult.freq) bassResult.freq = 440 * Math.pow(2, (bassResult.midi - 69) / 12);
+                        if (!bassResult.freq) bassResult.freq = getFrequency(bassResult.midi);
                         bass.lastFreq = bassResult.freq;
                         notesToMain.push({ ...bassResult, step, module: 'bass' });
                     }
@@ -230,15 +231,15 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
                 
                 if (soloResult) {
                     const results = Array.isArray(soloResult) ? soloResult : [soloResult];
-                    results.forEach(res => {
+                    for (let i = 0; i < results.length; i++) {
+                        const res = results[i];
                         if (res.freq || res.midi) {
                             if (!res.midi) res.midi = getMidi(res.freq);
-                            if (!res.freq) res.freq = 440 * Math.pow(2, (res.midi - 69) / 12);
-                            // We only update lastFreq for the primary note (usually the first one)
+                            if (!res.freq) res.freq = getFrequency(res.midi);
                             if (!res.isDoubleStop) soloist.lastFreq = res.freq;
                             notesToMain.push({ ...res, step, module: 'soloist' });
                         }
-                    });
+                    }
                 }
             }
             sbBufferHead++;
@@ -249,12 +250,11 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
             if (chordData) {
                 const { chord, stepInChord } = chordData;
                 const stepInfo = getStepInfo(step, ts);
-                const chordNotes = getAccompanimentNotes(chord, step, stepInChord, step % (ts.beats * ts.stepsPerBeat), stepInfo);
-                if (chordNotes.length > 0) {
-                    chordNotes.forEach(n => {
-                        const freq = 440 * Math.pow(2, (n.midi - 69) / 12);
-                        notesToMain.push({ ...n, freq, step, module: 'chords' });
-                    });
+                const chordNotes = getAccompanimentNotes(chord, step, stepInChord, step % stepsPerMeasure, stepInfo);
+                for (let i = 0; i < chordNotes.length; i++) {
+                    const n = chordNotes[i];
+                    if (!n.freq) n.freq = getFrequency(n.midi);
+                    notesToMain.push({ ...n, step, module: 'chords' });
                 }
             }
             cbBufferHead++;
@@ -266,20 +266,10 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
                 const { chord, stepInChord } = chordData;
                 const nextChordData = getChordAtStep(step + 4, lookaheadCursor);
                 const harmonyNotes = getHarmonyNotes(chord, nextChordData?.chord, step, harmony.octave, harmony.style, stepInChord, soloResult);
-                if (harmonyNotes.length > 0) {
-                    harmonyNotes.forEach(n => {
-                        if (!n.freq) n.freq = 440 * Math.pow(2, (n.midi - 69) / 12);
-                        // Explicitly ensure all articulation props are passed
-                        notesToMain.push({ 
-                            ...n, 
-                            midi: n.midi, 
-                            step, 
-                            module: 'harmony',
-                            slideInterval: n.slideInterval,
-                            slideDuration: n.slideDuration,
-                            vibrato: n.vibrato
-                        });
-                    });
+                for (let i = 0; i < harmonyNotes.length; i++) {
+                    const n = harmonyNotes[i];
+                    if (!n.freq) n.freq = getFrequency(n.midi);
+                    notesToMain.push({ ...n, step, module: 'harmony' });
                 }
             }
             hbBufferHead++;
@@ -287,7 +277,7 @@ function fillBuffers(currentStep, requestTimestamp = null, processStartTime = nu
         
         head++;
     }
-    var workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
+    const workerProcessTime = processStartTime ? performance.now() - processStartTime : 0;
     if (notesToMain.length > 0) postMessage({ type: WORKER_RESP.NOTES, notes: notesToMain, requestTimestamp, workerProcessTime });
 }
 
