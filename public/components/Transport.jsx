@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
@@ -10,12 +10,36 @@ import { playback } from '../state.js'; // Direct access for viz, audio
 import { handleTap } from '../instrument-controller.js';
 
 export function Transport() {
-    const { isPlaying, bpm } = useEnsembleState(state => ({
+    const { isPlaying, bpm, sessionTimer, sessionStartTime } = useEnsembleState(state => ({
         isPlaying: state.playback.isPlaying,
-        bpm: state.playback.bpm
+        bpm: state.playback.bpm,
+        sessionTimer: state.playback.sessionTimer,
+        sessionStartTime: state.playback.sessionStartTime
     }));
 
     const [tapActive, setTapActive] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(null);
+
+    useEffect(() => {
+        let interval;
+        if (isPlaying && sessionTimer > 0 && sessionStartTime) {
+            const updateTimer = () => {
+                const elapsedMs = performance.now() - sessionStartTime;
+                const totalMs = sessionTimer * 60 * 1000;
+                const remainingMs = Math.max(0, totalMs - elapsedMs);
+
+                const mins = Math.floor(remainingMs / 60000);
+                const secs = Math.floor((remainingMs % 60000) / 1000);
+                setTimeLeft(`${mins}:${secs.toString().padStart(2, '0')}`);
+            };
+
+            updateTimer();
+            interval = setInterval(updateTimer, 1000);
+        } else {
+            setTimeLeft(null);
+        }
+        return () => clearInterval(interval);
+    }, [isPlaying, sessionTimer, sessionStartTime]);
 
     const onTogglePlay = () => {
         // Pass playback.viz as required by legacy togglePlay
@@ -44,7 +68,12 @@ export function Transport() {
                 class={`primary-btn ${isPlaying ? 'playing' : ''}`}
                 onClick={onTogglePlay}
             >
-                <span id="playBtnText">{isPlaying ? 'STOP' : 'START'}</span>
+                <span id="playBtnText">
+                    {isPlaying
+                        ? (timeLeft ? `STOP (${timeLeft})` : 'STOP')
+                        : 'START'
+                    }
+                </span>
             </button>
             
             <div class="control-group" id="bpmControlGroup">
