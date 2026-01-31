@@ -8,11 +8,6 @@ import { groove, grooveReducer } from './state/groove.js';
 import { midi, midiReducer } from './state/midi.js';
 import { vizState, vizReducer } from './state/visualizer.js';
 
-// Export everything for backward compatibility (DEPRECATED: Use getState() instead)
-export { 
-    playback, arranger, chords, bass, soloist, harmony, groove, midi, vizState 
-};
-
 // Central State Map for Generic PARAM Updates
 const stateMap = { 
     playback,
@@ -118,3 +113,10 @@ export function subscribe(listener) {
     listeners.add(listener);
     return () => listeners.delete(listener);
 }
+
+// --- LEGACY EXPORTS (DEPRECATED) ---
+// These are maintained strictly for backward compatibility with the test suite.
+// New source code MUST use getState().
+export { 
+    playback, arranger, chords, bass, soloist, harmony, groove, midi, vizState 
+};
