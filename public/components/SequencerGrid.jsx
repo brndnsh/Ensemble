@@ -33,6 +33,12 @@ const Step = memo(({ instIdx, stepIdx, value, instName, stepInfo, onToggle }) =>
             aria-label={`${instName}, step ${stepIdx + 1}, ${status}`}
             onMouseDown={(e) => onToggle(e, instIdx, stepIdx)}
             onMouseOver={(e) => onToggle(e, instIdx, stepIdx)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onToggle(e, instIdx, stepIdx);
+                }
+            }}
         />
     );
 });
@@ -136,13 +142,15 @@ export function SequencerGrid() {
         const inst = instruments[instIdx];
         let newType = dragType;
 
-        if (e.type === 'mousedown') {
+        if (e.type === 'mousedown' || e.type === 'keydown') {
             if (inst.steps[stepIdx] === 0) newType = 1;
             else if (inst.steps[stepIdx] === 1) newType = 2;
             else newType = 0;
             
-            setDragType(newType);
-            setIsDragging(true);
+            if (e.type === 'mousedown') {
+                setDragType(newType);
+                setIsDragging(true);
+            }
         }
 
         // Only update if changed (though dispatch handles logic too)
