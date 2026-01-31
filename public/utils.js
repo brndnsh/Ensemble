@@ -23,7 +23,21 @@ export function escapeHTML(str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+        .replace(/'/g, '&#39;')
+        .replace(/`/g, '&#96;');
+}
+
+/**
+ * Strips dangerous characters from musical input strings to prevent XSS.
+ * Allows common musical symbols but removes HTML/Script vectors.
+ * @param {string} str
+ * @returns {string}
+ */
+export function stripDangerousChars(str) {
+    if (!str) return '';
+    if (typeof str !== 'string') return String(str);
+    // Remove < > " ` (Keep ' and & for text validity, relying on escaping for those)
+    return str.replace(/[<>"=`]/g, '');
 }
 
 /**
@@ -113,6 +127,8 @@ export function decompressSections(str) {
             // Clamp value length
             let safeValue = typeof s.v === 'string' ? s.v : '';
             if (safeValue.length > 1000) safeValue = safeValue.substring(0, 1000);
+
+            safeValue = stripDangerousChars(safeValue);
 
             return {
                 id: generateId(),
