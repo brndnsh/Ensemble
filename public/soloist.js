@@ -213,6 +213,12 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         }
     }
 
+    // High BPM Damping (Anti-Shred Safety)
+    if (playback.bpm > 150) {
+        restProb += 0.15;
+        if (playback.bpm > 180) restProb += 0.15;
+    }
+
     // Phrase interlocking
     if (harmony.enabled && harmony.rhythmicMask > 0) {
         const ts = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
@@ -325,6 +331,16 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             pool = pool.filter(c => c[2] === 0);
         }
 
+        // High BPM Filtering: Reduce busy 16th patterns
+        if (activeStyle === 'bird' && playback.bpm > 160) {
+            // Remove 0 (16ths), 3 (Gallop), 7 (Bebop) if we need to chill
+            // Keep 1 (8ths) and add 2 (Quarters) or 6 (Syncopated)
+            pool = pool.filter(c => ![0, 3, 7].includes(RHYTHMIC_CELLS.indexOf(c)));
+            pool.push(RHYTHMIC_CELLS[1]); // Ensure 8ths are there
+            if (playback.bpm > 180) pool.push(RHYTHMIC_CELLS[2]); // Add quarters
+            if (pool.length === 0) pool = [RHYTHMIC_CELLS[1]];
+        }
+
         soloist.currentCell = pool[Math.floor(Math.random() * pool.length)];
     }
     if (soloist.currentCell && soloist.currentCell[stepInBeat] === 1) { /* hit */ } else return null;
@@ -332,6 +348,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     // --- 5. Pitch Selection ---
     let targetChord = currentChord;
     const isLateInChord = stepInChord >= (currentChord.beats * stepsPerBeat) - 2;
+    // Enhanced Anticipation for Voice Leading
+    const anticipationWindow = activeStyle === 'bird' ? 4 : 2;
+    const isApproachingChange = stepInChord >= (currentChord.beats * stepsPerBeat) - anticipationWindow;
+
     if (nextChord && isLateInChord && Math.random() < (config.anticipationProb || 0)) targetChord = nextChord;
 
     const scaleIntervals = getScaleForChord(targetChord, null, style);
@@ -354,6 +374,31 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     else soloist.stagnationCount = 0;
     const isStagnant = soloist.stagnationCount > 4;
 
+    // Voice Leading Target Calculation (Lookahead)
+    let voiceLeadingTarget = null;
+    if (isApproachingChange && nextChord && activeStyle === 'bird') {
+        // Find the nearest chord tone in the NEXT chord to our current position
+        const nextChordTones = nextChord.intervals.map(i => nextChord.rootMidi + i);
+        // Normalize to nearest octave relative to lastMidi
+        let bestTarget = null;
+        let minTargetDist = 999;
+
+        for (const tone of nextChordTones) {
+            const pc = tone % 12;
+            // Check octaves around lastMidi
+            const octaves = [Math.floor(lastMidi/12)*12, (Math.floor(lastMidi/12)-1)*12, (Math.floor(lastMidi/12)+1)*12];
+            for (const oct of octaves) {
+                const candidate = oct + pc;
+                const d = Math.abs(candidate - lastMidi);
+                if (d < minTargetDist) {
+                    minTargetDist = d;
+                    bestTarget = candidate;
+                }
+            }
+        }
+        voiceLeadingTarget = bestTarget;
+    }
+
     for (let m = Math.floor(minMidi); m <= Math.ceil(maxMidi); m++) {
         if (m < 0 || m > 127) continue;
         const pc = (m % 12 + 12) % 12;
@@ -373,6 +418,19 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
         if (isRoot) weight += 15;
         if (activeStyle === 'country' && isPentatonicColor) weight += 100;
 
+        // Stepwise Motion Bonus (Melodic Integrity)
+        if (dist > 0 && dist <= 2) weight += 50;
+        if (activeStyle === 'bird' && dist <= 2) weight += 100; // Prefer stepwise for bebop lines
+
+        // Voice Leading Bonus
+        if (voiceLeadingTarget !== null) {
+            // Check if this note leads smoothly to the target (stepwise)
+            const distToTarget = Math.abs(m - voiceLeadingTarget);
+            if (distToTarget <= 2 && distToTarget > 0) {
+                 weight += 500; // Strong pull towards voice leading target
+            }
+        }
+
         if (soloist.qaState === 'Answer') {
             const qaBonus = (activeStyle === 'minimal' ? 100 : 250) * effectiveIntensity;
             if (isRoot) weight += qaBonus;
@@ -385,6 +443,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
             weight *= 0.0001; // Force a move
             if (isStagnant) weight = 0; 
         }
+
+        // High BPM Interval Control (Prevent erratic jumps)
+        if (playback.bpm > 160 && dist > 4) {
+             weight *= 0.1; // Heavy penalty for jumps at high speeds
+        }
+        if (playback.bpm > 180 && dist > 3) {
+             weight *= 0.05; // Stricter
+        }
+
         if (historyLen > 12) {
             const count = historyCounts[m] || 0;
             const pcCount = pcCounts[pc] || 0;
@@ -434,7 +501,10 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const allowFlash = intensity > 0.5;
     const deviceBaseProb = config.deviceProb * (0.5 + playback.complexity * 1.0);
     
-    if (allowFlash && stepInBeat === 0 && Math.random() < (deviceBaseProb * 0.7 * warmupFactor)) {
+    // Throttle devices at high BPM
+    const bpmDeviceThrottle = playback.bpm > 160 ? 0.3 : 1.0;
+
+    if (allowFlash && stepInBeat === 0 && Math.random() < (deviceBaseProb * 0.7 * warmupFactor * bpmDeviceThrottle)) {
         const deviceType = config.allowedDevices ? config.allowedDevices[Math.floor(Math.random() * config.allowedDevices.length)] : null;
         const devBaseVel = 0.5 + (effectiveIntensity * 0.6);
         
@@ -564,4 +634,3 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
 
     return finalizeNote(finalResult);
 }
-

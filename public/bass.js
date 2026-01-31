@@ -43,7 +43,11 @@ export function isBassActive(style, step, stepInChord) {
         
         // Probabilistic eighth-note "skips" for walking bass feel
         // Complexity adds more "walking" rhythmic variety
-        const skipProb = 0.1 + (playback.bandIntensity * 0.25) + (playback.complexity * 0.2);
+        let skipProb = 0.1 + (playback.bandIntensity * 0.25) + (playback.complexity * 0.2);
+
+        // High BPM Safety: Remove skips to prevent muddy low end
+        if (playback.bpm > 165) skipProb = 0;
+
         if (isEighthSkip && Math.random() < skipProb) return true;
         
         return false;
@@ -52,7 +56,11 @@ export function isBassActive(style, step, stepInChord) {
         // Funk uses a combination of foundational 1/8ths and syncopated 1/16ths
         const stepInMeasure = step % 16;
         const isFoundational = [0, 4, 8, 12, 14].includes(stepInMeasure);
-        const ghostProb = 0.05 + (playback.bandIntensity * 0.3);
+        let ghostProb = 0.05 + (playback.bandIntensity * 0.3);
+
+        // High BPM Safety
+        if (playback.bpm > 150) ghostProb *= 0.5;
+
         if (isFoundational) return true;
         if (Math.random() < ghostProb) return true;
         return false;
@@ -506,7 +514,10 @@ export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMid
         if (stepInBeat === 1 || stepInBeat === 3) {
             // High probability of ghost notes to propel groove
             // Probability increases with intensity, but base is high (Rocco is busy)
-            const ghostProb = 0.6 + (intensity * 0.3);
+            let ghostProb = 0.6 + (intensity * 0.3);
+
+            // High BPM Safety
+            if (playback.bpm > 150) ghostProb *= 0.6;
 
             if (Math.random() < ghostProb) {
                 // Mostly muted/ghosts
