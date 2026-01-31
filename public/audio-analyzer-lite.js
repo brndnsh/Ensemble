@@ -495,37 +495,7 @@ export class ChordAnalyzerLite {
         const rawEndTime = options.endTime || audioBuffer.duration;
         let effectiveEndTime = rawEndTime;
 
-        // --- Intelligent Tail Compensation ---
-        // Users often have silence or a "ring-out" at the end.
-        // We find the true "musical end" to improve structural BPM math.
-        if (!options.endTime) {
-            const tailCheckSeconds = 2.0;
-            const windowSize = Math.floor(sampleRate * 0.1); 
-            const signalEnd = signal.length;
-            const startCheckIndex = Math.max(0, signalEnd - Math.floor(sampleRate * tailCheckSeconds));
-            
-            let maxEnergy = 0;
-            for (let i = 0; i < signal.length; i += 1000) {
-                const e = Math.abs(signal[i]);
-                if (e > maxEnergy) maxEnergy = e;
-            }
-            const silenceThreshold = maxEnergy * 0.05; 
-
-            for (let i = signalEnd - windowSize; i >= startCheckIndex; i -= windowSize) {
-                let windowEnergy = 0;
-                for (let j = 0; j < windowSize; j++) {
-                    windowEnergy += Math.abs(signal[i + j]);
-                }
-                windowEnergy /= windowSize;
-
-                if (windowEnergy > silenceThreshold) {
-                    effectiveEndTime = (i + windowSize) / sampleRate;
-                    break;
-                }
-            }
-        }
-
-        const duration = effectiveEndTime - startTime;
+        const durationRaw = rawEndTime - startTime;
 
         // If a valid BPM is provided, we skip the search and just find the downbeat
         const manualBpm = typeof options.bpm === 'number' && options.bpm > 0 ? options.bpm : 0;
@@ -535,8 +505,8 @@ export class ChordAnalyzerLite {
         const winSize = Math.floor(sampleRate * 0.02);
         const hopSize = Math.floor(sampleRate * 0.01); // 10ms hop
         
-        // Only analyze first 30s for pulse to save time
-        const pulseMaxSeconds = 30;
+        // Only analyze first 30s for pulse to save time (unless duration is close)
+        const pulseMaxSeconds = Math.max(30, durationRaw + 1);
         const numWindows = Math.floor(Math.min(signal.length, sampleRate * pulseMaxSeconds) / hopSize) - 2;
         
         const flux = new Float32Array(numWindows);
@@ -567,6 +537,7 @@ export class ChordAnalyzerLite {
             }
         };
 
+        let lastActiveHop = 0;
         for (let w = 0; w < numWindows; w++) {
             if (w % 500 === 0) await yieldToMain();
 
@@ -581,8 +552,19 @@ export class ChordAnalyzerLite {
                 if (diff > 0) sum += diff;
             }
             flux[w] = sum;
+            if (sum > 0.001) lastActiveHop = w; // Track last activity
             lastSpectrum.set(currentSpectrum);
         }
+
+        // --- Flux-Based Tail Compensation ---
+        // Use the last detected transient to determine the musical end.
+        // We add a small buffer (0.5s) to the last transient.
+        effectiveEndTime = Math.min(rawEndTime, (lastActiveHop * hopSize + winSize) / sampleRate + 0.5);
+        
+        // If the trimmed duration is very close to the raw duration, don't trim.
+        if (rawEndTime - effectiveEndTime < 0.2) effectiveEndTime = rawEndTime;
+
+        const duration = effectiveEndTime - startTime;
 
         // Half-wave rectification and normalization of flux
         const maxFlux = Math.max(...flux);
@@ -599,7 +581,11 @@ export class ChordAnalyzerLite {
         commonBarCounts.forEach(bars => {
             commonMeters.forEach(meter => {
                 const totalBeats = bars * meter;
-                const bpm = (totalBeats * 60) / duration;
+                let bpm = (totalBeats * 60) / duration;
+                
+                // Favor integers for structural targets if very close
+                if (Math.abs(bpm - Math.round(bpm)) < 0.1) bpm = Math.round(bpm);
+
                 if (bpm >= 50 && bpm <= 200) {
                     structuralCandidates.push({ bpm, bars, meter, lag: Math.round(60 / (bpm * 0.01)) });
                 }
@@ -712,37 +698,36 @@ export class ChordAnalyzerLite {
         bestLag = checkHarmonic(bestLag);
 
         // --- Final Snap to Structural Grid ---
-        let primaryBPM = Math.round((60 / (bestLag * 0.01)));
-        const snapThresholdBPM = 1.5; // Snap if within 1.5 BPM of a structural target
+        let primaryBPM = 60 / (bestLag * 0.01);
+        const snapThresholdBPM = 2.5; // Snap if within 2.5 BPM of a structural target
         let bestStructuralMatch = null;
         
-        // 1. Check if the RAW primary BPM already matches a structural anchor for the FULL duration
-        // This prevents tail-trimming from breaking perfectly trimmed loops.
-        const fullDuration = rawEndTime - startTime;
-        const structuralCandidatesFull = [];
-        [4, 8, 12, 16, 24, 32, 48, 64].forEach(bars => {
-            [4, 3].forEach(meter => {
-                const bpm = (bars * meter * 60) / fullDuration;
-                if (bpm >= 50 && bpm <= 200) structuralCandidatesFull.push({ bpm, bars, meter });
-            });
-        });
-
-        bestStructuralMatch = structuralCandidatesFull
+        // 1. Check for a structural match using the EFFECTIVE (tail-trimmed) duration
+        // This is preferred as it ignores silent tails.
+        bestStructuralMatch = structuralCandidates
             .filter(c => Math.abs(c.bpm - primaryBPM) < snapThresholdBPM)
             .sort((a, b) => Math.abs(a.bpm - primaryBPM) - Math.abs(b.bpm - primaryBPM))[0];
 
         if (bestStructuralMatch) {
-            // console.log(`[Pulse] Snapping to FULL duration anchor: ${bestStructuralMatch.bpm.toFixed(2)}`);
             primaryBPM = parseFloat(bestStructuralMatch.bpm.toFixed(2));
             bestLag = Math.round(60 / (primaryBPM * 0.01));
         } else {
-            // 2. Otherwise, check for a structural match using the EFFECTIVE (tail-trimmed) duration
-            bestStructuralMatch = structuralCandidates
+            // 2. Otherwise, check if the RAW primary BPM matches a structural anchor for the FULL duration
+            // This handles perfectly trimmed loops where tail-trimming might be too aggressive.
+            const fullDuration = rawEndTime - startTime;
+            const structuralCandidatesFull = [];
+            [4, 8, 12, 16, 24, 32, 48, 64].forEach(bars => {
+                [4, 3].forEach(meter => {
+                    const bpm = (bars * meter * 60) / fullDuration;
+                    if (bpm >= 50 && bpm <= 200) structuralCandidatesFull.push({ bpm, bars, meter });
+                });
+            });
+
+            bestStructuralMatch = structuralCandidatesFull
                 .filter(c => Math.abs(c.bpm - primaryBPM) < snapThresholdBPM)
                 .sort((a, b) => Math.abs(a.bpm - primaryBPM) - Math.abs(b.bpm - primaryBPM))[0];
 
             if (bestStructuralMatch) {
-                // console.log(`[Pulse] Snapping to EFFECTIVE duration anchor: ${bestStructuralMatch.bpm.toFixed(2)}`);
                 primaryBPM = parseFloat(bestStructuralMatch.bpm.toFixed(2));
                 bestLag = Math.round(60 / (primaryBPM * 0.01));
             }
@@ -762,7 +747,11 @@ export class ChordAnalyzerLite {
 
         const candidates = Array.from(candidatesMap.entries()).map(([bpm, score]) => ({ bpm, score }));
         const primaryCandidate = candidates.find(c => c.bpm === primaryBPM);
-        if (primaryCandidate) primaryCandidate.score *= 3.0; 
+        
+        // If we have a structural match, give it an overwhelming score boost to ensure it wins
+        if (primaryCandidate) {
+            primaryCandidate.score *= (bestStructuralMatch ? 100.0 : 3.0); 
+        }
         candidates.sort((a, b) => b.score - a.score);
 
         // 4. Meter Detection (3/4 vs 4/4)
@@ -801,9 +790,15 @@ export class ChordAnalyzerLite {
 
         lastSpectrum = null;
 
+        let finalBpm = candidates[0]?.bpm || primaryBPM;
+        // Near-integer rounding (e.g. 119.78 -> 120)
+        if (Math.abs(finalBpm - Math.round(finalBpm)) < 0.3) {
+            finalBpm = Math.round(finalBpm);
+        }
+
         return {
-            bpm: candidates[0]?.bpm || primaryBPM,
-            candidates: candidates.length > 0 ? candidates : [{ bpm: primaryBPM, score: 1 }],
+            bpm: finalBpm,
+            candidates: candidates.length > 0 ? candidates : [{ bpm: finalBpm, score: 1 }],
             beatsPerMeasure,
             downbeatOffset: bestPhase * 0.01
         };
