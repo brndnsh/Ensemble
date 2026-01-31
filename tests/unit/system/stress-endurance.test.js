@@ -5,8 +5,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Unified mock for state and context
-vi.mock('../../../public/state.js', () => ({
-    playback: { 
+vi.mock('../../../public/state.js', () => {
+    const mockPlayback = { 
         audio: { 
             currentTime: 0,
             createOscillator: () => ({ connect: vi.fn(), start: vi.fn(), stop: vi.fn(), frequency: { setValueAtTime: vi.fn() } }),
@@ -23,8 +23,8 @@ vi.mock('../../../public/state.js', () => ({
         bandIntensity: 0.5,
         isDrawing: true,
         masterGain: {}
-    },
-    groove: { 
+    };
+    const mockGroove = { 
         enabled: true, 
         genreFeel: 'Rock',
         humanize: 0,
@@ -32,22 +32,40 @@ vi.mock('../../../public/state.js', () => ({
         measures: 1,
         fillActive: false,
         followPlayback: false
-    },
-    arranger: {
+    };
+    const mockArranger = {
         timeSignature: '4/4',
         stepMap: [{ start: 0, end: 100000, chord: { freqs: [261.63], rootMidi: 60, intervals: [0], beats: 4 } }],
         totalSteps: 16,
         measureMap: []
-    },
-    bass: { enabled: true, buffer: new Map(), octave: 38 },
-    soloist: { enabled: true, buffer: new Map(), octave: 72 },
-    chords: { enabled: true, buffer: new Map(), octave: 60 },
-    harmony: { enabled: true, buffer: new Map(), octave: 60 },
-    midi: { enabled: false },
-    vizState: { enabled: true },
-    conductorState: { larsBpmOffset: 0 },
-    dispatch: vi.fn()
-}));
+    };
+    const mockBass = { enabled: true, buffer: new Map(), octave: 38 };
+    const mockSoloist = { enabled: true, buffer: new Map(), octave: 72 };
+    const mockChords = { enabled: true, buffer: new Map(), octave: 60 };
+    const mockHarmony = { enabled: true, buffer: new Map(), octave: 60 };
+    const mockMidi = { enabled: false };
+    const mockVizState = { enabled: true };
+    const mockConductorState = { larsBpmOffset: 0 };
+    
+    const mockStateMap = {
+        playback: mockPlayback,
+        groove: mockGroove,
+        arranger: mockArranger,
+        bass: mockBass,
+        soloist: mockSoloist,
+        chords: mockChords,
+        harmony: mockHarmony,
+        midi: mockMidi,
+        vizState: mockVizState,
+        conductorState: mockConductorState
+    };
+
+    return {
+        ...mockStateMap,
+        getState: () => mockStateMap,
+        dispatch: vi.fn()
+    };
+});
 
 vi.mock('../../../public/engine.js', () => ({
     getVisualTime: () => 0,

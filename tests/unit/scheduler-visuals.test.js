@@ -18,18 +18,24 @@ const { mockPlayback, mockVizState, mockChords } = vi.hoisted(() => ({
     }
 }));
 
-vi.mock('../../public/state.js', () => ({
-    playback: mockPlayback,
-    vizState: mockVizState,
-    chords: mockChords,
-    bass: { buffer: new Map() },
-    soloist: { buffer: new Map() },
-    harmony: { buffer: new Map() },
-    groove: { buffer: new Map(), instruments: [] },
-    arranger: { stepMap: [], totalSteps: 16 },
-    midi: { enabled: false },
-    dispatch: vi.fn(),
-}));
+vi.mock('../../public/state.js', () => {
+    const mockStateMap = {
+        playback: mockPlayback,
+        vizState: mockVizState,
+        chords: mockChords,
+        bass: { buffer: new Map() },
+        soloist: { buffer: new Map() },
+        harmony: { buffer: new Map() },
+        groove: { buffer: new Map(), instruments: [] },
+        arranger: { stepMap: [], totalSteps: 16 },
+        midi: { enabled: false },
+        dispatch: vi.fn(),
+    };
+    return {
+        ...mockStateMap,
+        getState: () => mockStateMap,
+    };
+});
 
 vi.mock('../../public/utils.js', () => ({
     getMidi: () => 60,

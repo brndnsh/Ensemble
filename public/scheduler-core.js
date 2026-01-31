@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { playback, groove, chords, bass, soloist, harmony, arranger, vizState, dispatch } from './state.js';
+import { getState, dispatch } from './state.js';
 import { triggerFlash } from './ui.js';
 import { initAudio, playNote, playDrumSound, playBassNote, playSoloNote, playHarmonyNote, killHarmonyNote, updateSustain, restoreGains, killAllNotes } from './engine.js';
 import { TIME_SIGNATURES } from './config.js';
@@ -10,7 +10,6 @@ import { applyGrooveOverrides, calculatePocketOffset } from './groove-engine.js'
 import { loadDrumPreset, flushBuffers } from './instrument-controller.js';
 import { draw } from './animation-loop.js';
 import { sendMIDINote, sendMIDIDrum, sendMIDICC, normalizeMidiVelocity, panic, sendMIDITransport } from './midi-controller.js';
-import { midi as midiState } from './state.js';
 import { initPlatform, unlockAudio, lockAudio, activateWakeLock, deactivateWakeLock } from './platform.js';
 
 const DRUM_VIS_PITCHES = {
@@ -26,6 +25,7 @@ let isResolutionTriggered = false;
 initPlatform();
 
 export function togglePlay(viz, fromDispatch = false) {
+    const { playback, arranger, chords } = getState();
     const activeViz = viz || playback.viz;
     
     // Determine if we are STARTING or STOPPING based on current state.
@@ -98,6 +98,7 @@ export function togglePlay(viz, fromDispatch = false) {
 }
 
 function triggerResolution(time) {
+    const { playback } = getState();
     // 1. Tell worker to generate resolution
     requestResolution(playback.step);
 
@@ -110,6 +111,7 @@ function triggerResolution(time) {
 }
 
 function scheduleResolution(time) {
+    const { playback, bass, soloist, chords, harmony, groove } = getState();
     // Schedule the final resolution measure (Tonic chord, Kick+Crash, etc.)
     const effectiveBpm = playback.bpm + (conductorState.larsBpmOffset || 0);
     const spb = 60.0 / effectiveBpm;
@@ -147,6 +149,7 @@ export function scheduler() {
     isScheduling = true;
 
     try {
+        const { playback, groove, arranger } = getState();
         requestBuffer(playback.step);
         
         // Update genre UI (countdowns)
@@ -200,6 +203,7 @@ export function scheduler() {
 }
 
 function applyPendingGenre() {
+    const { groove, playback } = getState();
     const payload = groove.pendingGenreFeel;
     if (!payload) return;
 
@@ -221,6 +225,7 @@ function applyPendingGenre() {
 }
 
 function advanceCountIn() {
+    const { playback, arranger } = getState();
     const effectiveBpm = playback.bpm + (conductorState.larsBpmOffset || 0);
     const beatDuration = 60.0 / effectiveBpm;
     playback.nextNoteTime += beatDuration;
@@ -234,6 +239,7 @@ function advanceCountIn() {
 }
 
 function scheduleCountIn(beat, time) {
+     const { playback, arranger } = getState();
      if (playback.visualFlash) playback.drawQueue.push({ type: 'flash', time: time, intensity: 0.3, beat: 1 });
      const osc = playback.audio.createOscillator();
      const gain = playback.audio.createGain();
@@ -263,6 +269,7 @@ function scheduleCountIn(beat, time) {
 }
 
 function advanceGlobalStep() {
+    const { playback, groove, arranger } = getState();
     updateLarsTempo(playback.step);
     const effectiveBpm = playback.bpm + (conductorState.larsBpmOffset || 0);
     const sixteenth = 0.25 * (60.0 / effectiveBpm);
@@ -282,6 +289,7 @@ function advanceGlobalStep() {
 }
 
 function getChordAtStep(step) {
+    const { arranger } = getState();
     if (arranger.totalSteps === 0) return null;
     const targetStep = step % arranger.totalSteps;
     for (let i = 0; i < arranger.stepMap.length; i++) {
@@ -294,6 +302,7 @@ function getChordAtStep(step) {
 }
 
 export function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, absoluteStep, isGroupStart) {
+    const { playback, groove, vizState, midi } = getState();
     const conductorVel = playback.conductorVelocity || 1.0;
     const finalTime = time + calculatePocketOffset(playback, groove);
     
@@ -318,10 +327,10 @@ export function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, abs
                         playDrumSound(note.name, finalTime, note.vel * conductorVel);
                         
                         if (vizState.enabled && playback.viz) {
-                            const midi = DRUM_VIS_PITCHES[note.name] || 36;
+                            const midiNum = DRUM_VIS_PITCHES[note.name] || 36;
                             playback.drawQueue.push({ 
                                 type: 'drums_vis', 
-                                midi, 
+                                midi: midiNum, 
                                 time: finalTime, 
                                 velocity: note.vel * conductorVel,
                                 duration: 0.1
@@ -347,22 +356,23 @@ export function scheduleDrums(step, time, isDownbeat, isQuarter, isBackbeat, abs
                     playDrumSound(soundName, playTime, velocity * conductorVel);
                     
                     if (vizState.enabled && playback.viz) {
-                        const midi = DRUM_VIS_PITCHES[soundName] || 36;
+                        const midiNum = DRUM_VIS_PITCHES[soundName] || 36;
                         playback.drawQueue.push({ 
                             type: 'drums_vis', 
-                            midi, 
+                            midi: midiNum, 
                             time: playTime, 
                             velocity: velocity * conductorVel,
                             duration: 0.1
                         });
                     }
 
-                    sendMIDIDrum(soundName, playTime, Math.min(1.0, velocity * conductorVel), midiState.drumsOctave);
+                    sendMIDIDrum(soundName, playTime, Math.min(1.0, velocity * conductorVel), midi.drumsOctave);
                 }
     });
 }
 
 export function scheduleDrumsFromBuffer(step, time) {
+    const { groove, playback, vizState, midi } = getState();
     const notes = groove.buffer.get(step);
     groove.buffer.delete(step);
     
@@ -376,22 +386,23 @@ export function scheduleDrumsFromBuffer(step, time) {
             playDrumSound(name, playTime, velocity * conductorVel);
             
             if (vizState.enabled && playback.viz) {
-                const midi = DRUM_VIS_PITCHES[name] || 36;
+                const midiNum = DRUM_VIS_PITCHES[name] || 36;
                 playback.drawQueue.push({ 
                     type: 'drums_vis', 
-                    midi, 
+                    midi: midiNum, 
                     time: playTime, 
                     velocity: velocity * conductorVel,
                     duration: 0.1
                 });
             }
 
-            sendMIDIDrum(name, playTime, Math.min(1.0, velocity * conductorVel), midiState.drumsOctave);
+            sendMIDIDrum(name, playTime, Math.min(1.0, velocity * conductorVel), midi.drumsOctave);
         });
     }
 }
 
 export function scheduleBass(chordData, step, time) {
+    const { bass, playback, vizState, midi } = getState();
     const noteEntry = bass.buffer.get(step);
     bass.buffer.delete(step);
     if (noteEntry && noteEntry.freq) {
@@ -399,24 +410,25 @@ export function scheduleBass(chordData, step, time) {
         const { chord } = chordData;
         const adjustedTime = time + (timingOffset || 0);
         bass.lastPlayedFreq = freq;
-        const midi = getMidi(freq);
-        const { name, octave } = midiToNote(midi);
+        const midiNum = getMidi(freq);
+        const { name, octave } = midiToNote(midiNum);
         const spb = 60.0 / playback.bpm;
         const duration = (durationSteps || 4) * 0.25 * spb;
         const finalVel = (velocity || 1.0) * (playback.conductorVelocity || 1.0);
         if (vizState.enabled && playback.viz) {
             playback.viz.truncateNotes('bass', adjustedTime);
-            playback.drawQueue.push({ type: 'bass_vis', name, octave, midi, time: adjustedTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration });
+            playback.drawQueue.push({ type: 'bass_vis', name, octave, midi: midiNum, time: adjustedTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration });
         }
         playBassNote(freq, adjustedTime, duration, finalVel, muted);
         if (!muted) {
             // Bass is strictly monophonic, so we force Mono mode to kill previous notes
-            sendMIDINote(midiState.bassChannel, midi + (midiState.bassOctave * 12), normalizeMidiVelocity(finalVel), adjustedTime, duration, true);
+            sendMIDINote(midi.bassChannel, midiNum + (midi.bassOctave * 12), normalizeMidiVelocity(finalVel), adjustedTime, duration, true);
         }
     }
 }
 
 export function scheduleSoloist(chordData, step, time, unswungTime) {
+    const { soloist, playback, vizState, midi } = getState();
     const notes = soloist.buffer.get(step);
     soloist.buffer.delete(step);
     
@@ -444,8 +456,8 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
                     soloist.lastPlayedFreq = freq;
                 }
                 
-                const midi = noteEntry.midi || getMidi(freq);
-                const { name, octave } = midiToNote(midi);
+                const midiNum = noteEntry.midi || getMidi(freq);
+                const { name, octave } = midiToNote(midiNum);
                 const spb = 60.0 / playback.bpm;
                 const duration = (durationSteps || 4) * 0.25 * spb;
                 const baseVel = (velocity || 1.0) * (playback.conductorVelocity || 1.0);
@@ -465,13 +477,13 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
                     bend = Math.round(-(bendStartInterval / 2) * 8192);
                 }
 
-                sendMIDINote(midiState.soloistChannel, midi + (midiState.soloistOctave * 12), normalizeMidiVelocity(vel), playTime, duration, { isMono, bend });
+                sendMIDINote(midi.soloistChannel, midiNum + (midi.soloistOctave * 12), normalizeMidiVelocity(vel), playTime, duration, { isMono, bend });
                 
                 if (vizState.enabled && playback.viz) {
                     if (isMono) {
                         playback.viz.truncateNotes('soloist', playTime);
                     }
-                    playback.drawQueue.push({ type: 'soloist_vis', name, octave, midi, time: playTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration, noteType });
+                    playback.drawQueue.push({ type: 'soloist_vis', name, octave, midi: midiNum, time: playTime, chordNotes: chord.freqs.map(f => getMidi(f)), duration, noteType });
                 }
                 soloist.lastNoteEnd = playTime + duration;
             }
@@ -480,6 +492,7 @@ export function scheduleSoloist(chordData, step, time, unswungTime) {
 }
 
 export function scheduleChordVisuals(chordData, t) {
+    const { playback } = getState();
     if (chordData.stepInChord === 0) {
         // Push visual event for UI highlighting, even if canvas viz is disabled
         playback.drawQueue.push({ type: 'chord_vis', time: t, index: chordData.chordIndex, chordNotes: chordData.chord.freqs.map(f => getMidi(f)), rootMidi: chordData.chord.rootMidi, intervals: chordData.chord.intervals, duration: chordData.chord.beats * (60/playback.bpm) });
@@ -491,6 +504,7 @@ export function scheduleChordVisuals(chordData, t) {
 }
 
 export function scheduleChords(chordData, step, time) {
+    const { chords, playback, midi } = getState();
     const notes = chords.buffer.get(step);
     chords.buffer.delete(step);
     
@@ -512,7 +526,7 @@ export function scheduleChords(chordData, step, time) {
                        const isSustain = cc.value >= 64;
                        const ccTime = playTime + (cc.timingOffset || 0); 
                        updateSustain(isSustain, ccTime);
-                       sendMIDICC(midiState.chordsChannel, 64, cc.value, ccTime);
+                       sendMIDICC(midi.chordsChannel, 64, cc.value, ccTime);
                    }
                });
             }
@@ -526,13 +540,14 @@ export function scheduleChords(chordData, step, time) {
                    dry: dry,
                    numVoices: numVoices
                });
-               sendMIDINote(midiState.chordsChannel, getMidi(freq) + (midiState.chordsOctave * 12), normalizeMidiVelocity(velocity), playTime, duration);
+               sendMIDINote(midi.chordsChannel, getMidi(freq) + (midi.chordsOctave * 12), normalizeMidiVelocity(velocity), playTime, duration);
             }
         });
     }
 }
 
 export function scheduleHarmonies(chordData, step, time) {
+    const { harmony, playback, vizState, midi } = getState();
     const notes = harmony.buffer.get(step);
     harmony.buffer.delete(step);
     
@@ -555,9 +570,9 @@ export function scheduleHarmonies(chordData, step, time) {
         const polyphonyComp = 1 / Math.sqrt(Math.max(1, numVoices));
 
         notes.forEach(n => {
-            const { freq, velocity, timingOffset, durationSteps, midi, style, slideInterval, slideDuration, vibrato } = n;
+            const { freq, velocity, timingOffset, durationSteps, midi: noteMidi, style, slideInterval, slideDuration, vibrato } = n;
             const playTime = time + (timingOffset || 0);
-            const m = midi || getMidi(freq);
+            const m = noteMidi || getMidi(freq);
 
             if (freq || m) {
                 const duration = (durationSteps || 1) * 0.25 * spb;
@@ -565,7 +580,7 @@ export function scheduleHarmonies(chordData, step, time) {
                 const finalVel = baseVel * polyphonyComp;
                 
                 playHarmonyNote(freq || 440, playTime, duration, finalVel, style, m, slideInterval, slideDuration, vibrato);
-                sendMIDINote(midiState.harmonyChannel, m + (midiState.harmonyOctave * 12), normalizeMidiVelocity(finalVel), playTime, duration);
+                sendMIDINote(midi.harmonyChannel, m + (midi.harmonyOctave * 12), normalizeMidiVelocity(finalVel), playTime, duration);
                 
                 if (vizState.enabled && playback.viz) {
                     const { name, octave } = midiToNote(m);
@@ -577,6 +592,7 @@ export function scheduleHarmonies(chordData, step, time) {
 }
 
 export function scheduleGlobalEvent(step, swungTime) {
+    const { arranger, playback, groove, soloist, midi, chords, bass, harmony } = getState();
     const globalTS = TIME_SIGNATURES[arranger.timeSignature] || TIME_SIGNATURES['4/4'];
     const stepInfo = getStepInfo(step, globalTS, arranger.measureMap, TIME_SIGNATURES);
     const ts = TIME_SIGNATURES[stepInfo.tsName] || globalTS;
@@ -604,14 +620,14 @@ export function scheduleGlobalEvent(step, swungTime) {
     checkSectionTransition(step, spm);
     
     // MIDI Automation
-    if (midiState.enabled && midiState.selectedOutputId && step % 4 === 0) {
+    if (midi.enabled && midi.selectedOutputId && step % 4 === 0) {
         const intensityCC = Math.floor(playback.bandIntensity * 127);
         const soloistTensionCC = Math.floor(soloist.tension * 127);
         
-        sendMIDICC(midiState.soloistChannel, 1, soloistTensionCC, swungTime);
-        sendMIDICC(midiState.soloistChannel, 11, intensityCC, swungTime);
-        sendMIDICC(midiState.chordsChannel, 11, intensityCC, swungTime);
-        sendMIDICC(midiState.bassChannel, 11, intensityCC, swungTime);
+        sendMIDICC(midi.soloistChannel, 1, soloistTensionCC, swungTime);
+        sendMIDICC(midi.soloistChannel, 11, intensityCC, swungTime);
+        sendMIDICC(midi.chordsChannel, 11, intensityCC, swungTime);
+        sendMIDICC(midi.bassChannel, 11, intensityCC, swungTime);
     }
 
     const drumStep = step % (groove.measures * spm);
@@ -667,6 +683,7 @@ export function scheduleGlobalEvent(step, swungTime) {
 }
 
 export function syncAndFlushWorker(step) {
+    const { arranger, chords, bass, soloist, harmony, groove, playback } = getState();
     const syncData = {
         arranger: { 
             progression: arranger.progression, 
