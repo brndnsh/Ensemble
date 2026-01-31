@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // 1. Mock the State with mutable properties using vi.hoisted
-const { playbackState, soloistState, grooveState, arrangerState } = vi.hoisted(() => ({
+const { playbackState, soloistState } = vi.hoisted(() => ({
     playbackState: {
         bpm: 120,
         bandIntensity: 0.5,
@@ -23,14 +23,6 @@ const { playbackState, soloistState, grooveState, arrangerState } = vi.hoisted((
         lastInterval: 0,
         stagnationCount: 0,
         doubleStops: false
-    },
-    grooveState: {
-        genreFeel: 'Jazz',
-        lastDrumPreset: 'Jazz'
-    },
-    arrangerState: {
-        timeSignature: '4/4',
-        totalSteps: 64
     }
 }));
 
