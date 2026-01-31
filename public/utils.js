@@ -161,7 +161,24 @@ export function getStepInfo(step, tsConfig, measureMap, allTSConfigs) {
     let isMeasureStart = false;
 
     if (measureMap && measureMap.length > 0) {
-        const measure = measureMap.find(m => step >= m.start && step < m.end);
+        // Binary search for O(log N) lookup instead of O(N) find
+        let measure = null;
+        let low = 0;
+        let high = measureMap.length - 1;
+
+        while (low <= high) {
+            const mid = (low + high) >>> 1;
+            const m = measureMap[mid];
+            if (step >= m.start && step < m.end) {
+                measure = m;
+                break;
+            } else if (step < m.start) {
+                high = mid - 1;
+            } else {
+                low = mid + 1;
+            }
+        }
+
         if (measure) {
             tsName = measure.ts;
             currentTS = allTSConfigs ? allTSConfigs[tsName] : tsConfig;
