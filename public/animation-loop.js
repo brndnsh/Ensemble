@@ -57,18 +57,28 @@ export function draw(viz) {
                 chords.lastActiveChordIndex = ev.index;
                 dispatch('VIS_UPDATE', { type: 'chord', index: ev.index });
             }
-            if (viz && vizState.enabled && playback.isDrawing) viz.pushChord({ time: ev.time, notes: ev.chordNotes, rootMidi: ev.rootMidi, intervals: ev.intervals, duration: ev.duration });
+            if (viz && vizState.enabled && playback.isDrawing) {
+                ev.notes = ev.chordNotes;
+                viz.pushChord(ev);
+            }
         } else if (ev.type === 'bass_vis') {
-            if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('bass', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+            if (viz && vizState.enabled && playback.isDrawing) {
+                ev.noteName = ev.name;
+                viz.pushNote('bass', ev);
+            }
         } else if (ev.type === 'soloist_vis') {
             if (viz && vizState.enabled && playback.isDrawing) {
                 viz.truncateNotes('soloist', ev.time);
-                viz.pushNote('soloist', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+                ev.noteName = ev.name;
+                viz.pushNote('soloist', ev);
             }
         } else if (ev.type === 'harmony_vis') {
-            if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('harmony', { midi: ev.midi, time: ev.time, noteName: ev.name, octave: ev.octave, duration: ev.duration });
+            if (viz && vizState.enabled && playback.isDrawing) {
+                ev.noteName = ev.name;
+                viz.pushNote('harmony', ev);
+            }
         } else if (ev.type === 'drums_vis') {
-            if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('drums', { midi: ev.midi, time: ev.time, velocity: ev.velocity, duration: ev.duration });
+            if (viz && vizState.enabled && playback.isDrawing) viz.pushNote('drums', ev);
         } else if (ev.type === 'fill_active') {
             if (viz && vizState.enabled && playback.isDrawing) viz.isFillActive = ev.active;
         }

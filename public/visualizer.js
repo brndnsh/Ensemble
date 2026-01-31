@@ -165,19 +165,19 @@ export class UnifiedVisualizer {
         if (event.noteName && event.octave) {
             this.tracks[name].label.textContent = `${event.noteName}${event.octave}`;
         }
-        if (this.tracks[name].history.length > 150) {
-            this.tracks[name].history = this.tracks[name].history.slice(-100);
+        // Optimization: Use shift instead of slice to avoid array allocation
+        while (this.tracks[name].history.length > 100) {
+            this.tracks[name].history.shift();
         }
     }
 
     pushChord(event) {
-        this.chordEvents.push({
-            ...event,
-            notes: event.notes ? [...event.notes] : [],
-            intervals: event.intervals ? [...event.intervals] : []
-        });
-        if (this.chordEvents.length > 60) {
-            this.chordEvents = this.chordEvents.slice(-40);
+        // Optimization: Avoid allocation by using event object directly.
+        // The caller is responsible for passing an owned object.
+        this.chordEvents.push(event);
+
+        while (this.chordEvents.length > 40) {
+            this.chordEvents.shift();
         }
     }
 

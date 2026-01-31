@@ -9,3 +9,7 @@
 ## 2024-05-24 - Garbage Collection Jitter in Canvas Visualizers
 **Learning:** Allocating temporary arrays (like `[x1, y, x2]`) or objects inside a canvas render loop creates significant Garbage Collection pressure, causing frame drops (jitter).
 **Action:** Use pre-allocated "batch" arrays (class properties) and clear them (`length = 0`) each frame. Store data in flat arrays (e.g., `[x1, y, x2, x3, y, x4]`) instead of arrays of arrays to further reduce object count.
+
+## 2024-05-24 - Object Allocation in High-Frequency Event Loops
+**Learning:** Creating new object literals (e.g., `{ time: ev.time, ... }`) inside the animation loop for every visual event (drums, notes) generates thousands of short-lived objects per session, triggering frequent minor GCs.
+**Action:** Reuse the event objects coming from the scheduler queue. Alias properties if necessary (e.g., `ev.noteName = ev.name`) instead of creating new adapter objects.
