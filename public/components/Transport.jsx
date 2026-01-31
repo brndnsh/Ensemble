@@ -4,8 +4,6 @@ import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
 import { dispatch } from '../state.js';
-import { setBpm } from '../app-controller.js';
-import { togglePlay } from '../scheduler-core.js';
 import { playback } from '../state.js'; // Direct access for viz, audio
 import { handleTap } from '../instrument-controller.js';
 
@@ -42,16 +40,15 @@ export function Transport() {
     }, [isPlaying, sessionTimer, sessionStartTime]);
 
     const onTogglePlay = () => {
-        // Pass playback.viz as required by legacy togglePlay
-        togglePlay(playback.viz);
+        dispatch(ACTIONS.TOGGLE_PLAY, { viz: playback.viz });
     };
 
     const onBpmInput = (e) => {
-        setBpm(e.target.value, playback.viz);
+        dispatch(ACTIONS.SET_BPM, e.target.value);
     };
 
     const onTap = (e) => {
-        handleTap((val) => setBpm(val, playback.viz));
+        handleTap((val) => dispatch(ACTIONS.SET_BPM, val));
         
         setTapActive(true);
         setTimeout(() => setTapActive(false), 100);

@@ -15,23 +15,31 @@ export function applyTheme(theme) {
     }
 }
 
-export function setBpm(val, viz) {
+export function setBpm(val, viz, fromDispatch = false, oldBpmParam = null) {
     const newBpm = Math.max(40, Math.min(240, parseInt(val)));
-    if (newBpm === playback.bpm) return;
+    const currentBpm = fromDispatch ? (oldBpmParam || playback.bpm) : playback.bpm;
+    
+    if (!fromDispatch && newBpm === currentBpm) return;
     
     if (playback.isPlaying && playback.audio) {
-        const now = playback.audio.currentTime, ratio = playback.bpm / newBpm;
+        const now = playback.audio.currentTime;
+        const ratio = currentBpm / newBpm;
         const noteTimeRemaining = playback.nextNoteTime - now;
         if (noteTimeRemaining > 0) playback.nextNoteTime = now + (noteTimeRemaining * ratio);
         
-        const unswungNoteTimeRemaining = playback.unswungNextNoteTime - now;
-        if (unswungNoteTimeRemaining > 0) playback.unswungNextNoteTime = now + (unswungNoteTimeRemaining * ratio);
+        const unswungNextNoteTimeRemaining = playback.unswungNextNoteTime - now;
+        if (unswungNextNoteTimeRemaining > 0) playback.unswungNextNoteTime = now + (unswungNextNoteTimeRemaining * ratio);
     }
-    playback.bpm = newBpm; 
+    
+    if (!fromDispatch) {
+        playback.bpm = newBpm;
+    }
     
     syncWorker();
     saveCurrentState();
-    dispatch('BPM_CHANGE');
+    if (!fromDispatch) {
+        dispatch('BPM_CHANGE');
+    }
 
     if (viz && playback.isPlaying && playback.audio) {
         const secondsPerBeat = 60.0 / playback.bpm;

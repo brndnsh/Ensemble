@@ -44,20 +44,21 @@ describe('Global Shortcuts', () => {
         vi.clearAllMocks();
     });
 
-    it('should toggle playback on Space', () => {
+    it('should toggle playback on Space', async () => {
+        const { dispatch } = await import('../../public/state.js');
         const event = new KeyboardEvent('keydown', { key: ' ' });
         window.dispatchEvent(event);
-        expect(togglePlay).toHaveBeenCalled();
+        expect(dispatch).toHaveBeenCalledWith(ACTIONS.TOGGLE_PLAY, expect.anything());
     });
 
     it('should NOT toggle playback if modal is open via state', async () => {
-        const { playback } = await import('../../public/state.js');
+        const { playback, dispatch } = await import('../../public/state.js');
         playback.modals.editor = true;
 
         const event = new KeyboardEvent('keydown', { key: ' ' });
         window.dispatchEvent(event);
 
-        expect(togglePlay).not.toHaveBeenCalled();
+        expect(dispatch).not.toHaveBeenCalledWith(ACTIONS.TOGGLE_PLAY, expect.anything());
         playback.modals.editor = false; // Reset
     });
 

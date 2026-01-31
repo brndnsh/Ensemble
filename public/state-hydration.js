@@ -1,6 +1,6 @@
 import { ACTIONS } from './types.js';
 import { playback, chords, bass, soloist, harmony, groove, arranger, vizState, storage, dispatch } from './state.js';
-import { applyTheme, setBpm } from './app-controller.js';
+import { applyTheme } from './app-controller.js';
 import { decompressSections, generateId, normalizeKey } from './utils.js';
 
 export function hydrateState() {
@@ -145,7 +145,7 @@ export function loadFromUrl(viz) {
     if (hasParams) clearChordPresetHighlight();
     if (params.get('key')) { arranger.key = normalizeKey(params.get('key')); }
     if (params.get('ts')) { arranger.timeSignature = params.get('ts'); }
-    if (params.get('bpm')) { setBpm(params.get('bpm'), viz); }
+    if (params.get('bpm')) { dispatch(ACTIONS.SET_BPM, params.get('bpm')); }
     if (params.get('style')) {
         // Dispatch style update instead of direct UI manipulation
         dispatch(ACTIONS.SET_STYLE, { module: 'chords', style: params.get('style') });

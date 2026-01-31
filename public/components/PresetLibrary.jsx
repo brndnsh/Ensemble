@@ -7,7 +7,6 @@ import { formatUnicodeSymbols, generateId, decompressSections } from '../utils.j
 import { loadDrumPreset, flushBuffers, switchMeasure } from '../instrument-controller.js';
 import { validateAndAnalyze } from '../arranger-controller.js';
 import { saveCurrentState } from '../persistence.js';
-import { setBpm } from '../app-controller.js';
 import { syncWorker } from '../worker-client.js';
 
 export function PresetLibrary({ type }) {
@@ -64,7 +63,7 @@ export function PresetLibrary({ type }) {
 
                 if (item.settings) {
                     if (playback.applyPresetSettings) {
-                        if (item.settings.bpm) setBpm(item.settings.bpm, null);
+                        if (item.settings.bpm) dispatch(ACTIONS.SET_BPM, item.settings.bpm);
                         if (item.settings.style) dispatch(ACTIONS.SET_STYLE, { module: 'chords', style: item.settings.style });
                     }
                     if (item.settings.timeSignature) {

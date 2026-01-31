@@ -52,6 +52,7 @@ const listeners = new Set();
  */
 export function dispatch(action, payload) {
     let handled = false;
+    const oldBpm = playback.bpm;
 
     // 1. Generic Param Handling (Legacy/Dynamic)
     if (action === ACTIONS.SET_PARAM) {
@@ -73,6 +74,27 @@ export function dispatch(action, payload) {
 
     // Notify listeners
     listeners.forEach(listener => listener(action, payload, stateMap));
+
+    // 3. Side Effects (Middleware)
+    handleEffects(action, payload, { oldBpm });
+}
+
+/**
+ * Handle side effects for specific actions.
+ */
+async function handleEffects(action, payload, context = {}) {
+    switch (action) {
+        case ACTIONS.TOGGLE_PLAY: {
+            const { togglePlay } = await import('./scheduler-core.js');
+            togglePlay(payload?.viz, true); 
+            break;
+        }
+        case ACTIONS.SET_BPM: {
+            const { setBpm } = await import('./app-controller.js');
+            setBpm(payload, payload?.viz, true, context.oldBpm);
+            break;
+        }
+    }
 }
 
 /**

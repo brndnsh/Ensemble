@@ -25,10 +25,15 @@ let isResolutionTriggered = false;
 // Initialize platform-specific hacks (iOS Audio, WakeLock state)
 initPlatform();
 
-export function togglePlay(viz) {
+export function togglePlay(viz, fromDispatch = false) {
     const activeViz = viz || playback.viz;
-    if (playback.isPlaying) {
-        playback.isPlaying = false;
+    
+    // Determine if we are STARTING or STOPPING based on current state.
+    // If fromDispatch is true, isPlaying ALREADY reflects the target state.
+    const isStopping = fromDispatch ? !playback.isPlaying : playback.isPlaying;
+
+    if (isStopping) {
+        if (!fromDispatch) playback.isPlaying = false;
         stopWorker();
         lockAudio();
         deactivateWakeLock();
@@ -39,7 +44,7 @@ export function togglePlay(viz) {
         dispatch('VIS_RESET');
         killAllNotes();
         panic(true); // Full MIDI reset
-        sendMIDITransport('stop', playback.audio.currentTime);
+        sendMIDITransport('stop', playback.audio?.currentTime || 0);
         flushBuffers();
         
         if (playback.audio) {
@@ -56,12 +61,15 @@ export function togglePlay(viz) {
             playback.audio.resume();
         }
 
-        playback.isPlaying = true;
+        if (!fromDispatch) {
+            playback.isPlaying = true;
+            playback.sessionStartTime = performance.now();
+        }
+        
         playback.step = 0;
         isResolutionTriggered = false;
         dispatch(ACTIONS.RESET_SESSION); // Reset warm-up counters
         dispatch(ACTIONS.SET_ENDING_PENDING, false);
-        playback.sessionStartTime = performance.now();
         syncWorker(); 
         const primeSteps = (arranger.totalSteps > 0) ? arranger.totalSteps * 2 : 0;
         flushBuffers(primeSteps);
@@ -130,7 +138,7 @@ function scheduleResolution(time) {
 
     // 4. Stop playback after the full ring-out (2 bars)
     setTimeout(() => {
-        if (playback.isPlaying) togglePlay(); 
+        if (playback.isPlaying) dispatch(ACTIONS.TOGGLE_PLAY); 
     }, measureDuration * 1000);
 }
 

@@ -1,7 +1,7 @@
 # Modernization Roadmap
 
 ## High Priority
-- [ ] **Standardize Action Pattern:** Refactor `togglePlay` and `setBpm` to be triggered via `dispatch(ACTIONS.TOGGLE_PLAY)` and `dispatch(ACTIONS.SET_BPM)`.
+- [x] **Standardize Action Pattern:** Refactor `togglePlay` and `setBpm` to be triggered via `dispatch(ACTIONS.TOGGLE_PLAY)` and `dispatch(ACTIONS.SET_BPM)`.
     - Create a "Middleware" or "Effect Listener" in `state.js` that listens for these actions and calls the audio engine logic.
     - Remove direct imports of `scheduler-core.js` and `app-controller.js` from `Transport.jsx` and other UI components.
 

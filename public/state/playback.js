@@ -133,6 +133,15 @@ export function playbackReducer(action, payload) {
         case ACTIONS.SET_UPDATE_AVAILABLE:
             playback.updateAvailable = !!payload;
             return true;
+        case ACTIONS.TOGGLE_PLAY:
+            playback.isPlaying = !playback.isPlaying;
+            if (playback.isPlaying) {
+                playback.sessionStartTime = performance.now();
+            }
+            return true;
+        case ACTIONS.SET_BPM:
+            playback.bpm = Math.max(40, Math.min(240, parseInt(payload)));
+            return true;
         case ACTIONS.SET_MODAL_OPEN:
             if (Object.prototype.hasOwnProperty.call(playback.modals, payload.modal)) {
                 playback.modals[payload.modal] = !!payload.open;

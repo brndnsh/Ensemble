@@ -1,5 +1,4 @@
 import { useEffect } from 'preact/hooks';
-import { togglePlay } from '../scheduler-core.js';
 import { switchMeasure } from '../instrument-controller.js';
 import { playback, groove, dispatch } from '../state.js';
 import { ACTIONS } from '../types.js';
@@ -13,7 +12,7 @@ export function GlobalShortcuts() {
             const anyModalOpen = Object.values(playback.modals).some(isOpen => isOpen);
             if (e.key === ' ' && !isTyping && !anyModalOpen) {
                 e.preventDefault();
-                togglePlay(playback.viz);
+                dispatch(ACTIONS.TOGGLE_PLAY, { viz: playback.viz });
             }
 
             // 'E': Toggle Editor

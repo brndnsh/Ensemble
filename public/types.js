@@ -17,6 +17,8 @@ export const ACTIONS = {
     SET_UPDATE_AVAILABLE: 'SET_UPDATE_AVAILABLE',
     SET_MODAL_OPEN: 'SET_MODAL_OPEN',
     SET_VIZ_ENABLED: 'SET_VIZ_ENABLED',
+    TOGGLE_PLAY: 'TOGGLE_PLAY',
+    SET_BPM: 'SET_BPM',
 
     // --- Instrument Settings ---
     SET_STYLE: 'SET_STYLE',
