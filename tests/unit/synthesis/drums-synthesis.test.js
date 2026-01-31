@@ -77,7 +77,8 @@ vi.mock('../../../public/utils.js', () => ({
 }));
 
 import { playDrumSound } from '../../../public/synth-drums.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 
 describe('Drum Synthesis', () => {
     beforeEach(() => {

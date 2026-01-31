@@ -27,7 +27,8 @@ vi.mock('../../../public/state.js', () => {
     };
 });
 
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 
 // We need to import syncWorker and initWorker AFTER we mock the global Worker
 let lastWorkerInstance = null;

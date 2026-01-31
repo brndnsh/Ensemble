@@ -6,7 +6,8 @@ import { SymbolMenu } from './SymbolMenu.jsx';
 import { KEY_ORDER, TIME_SIGNATURES } from '../config.js';
 import { formatUnicodeSymbols } from '../utils.js';
 import { onSectionUpdate, onSectionDelete, onSectionDuplicate } from '../arranger-controller.js';
-import { arranger } from '../state.js';
+import { getState } from '../state.js';
+const { arranger } = getState();
 
 export function SectionCard({ section, index, totalSections }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);

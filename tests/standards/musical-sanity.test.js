@@ -4,16 +4,21 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock state.js to include a working dispatch for intensity updates
+import { getAccompanimentNotes, compingState } from '../../public/accompaniment.js';
+import { dispatch, getState, storage } from '../../public/state.js';
+import { getMidi, getFrequency } from '../../public/utils.js';
+import { conductorState, checkSectionTransition } from '../../public/conductor.js';
+
+// Mock state.js
 vi.mock('../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
     
     // Create distinct mock objects
-    const mockPlayback = { ...actual.playback };
-    const mockArranger = { ...actual.arranger };
+    const mockPlayback = { ...actual.playback, intent: { anticipation: 0, syncopation: 0, layBack: 0 } };
+    const mockArranger = { ...actual.arranger, sections: [] };
     const mockGroove = { ...actual.groove };
     const mockHarmony = { enabled: false, buffer: new Map() };
-    const mockChords = { ...actual.chords };
+    const mockChords = { ...actual.chords, enabled: true };
     const mockBass = { ...actual.bass };
     const mockSoloist = { ...actual.soloist };
     const mockConductorState = { ...actual.conductorState };
@@ -58,18 +63,25 @@ vi.mock('../../public/fills.js', () => ({
     generateProceduralFill: vi.fn(() => ({}))
 }));
 
-import { getAccompanimentNotes, compingState } from '../../public/accompaniment.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
-import { getMidi, getFrequency } from '../../public/utils.js';
-import { conductorState, checkSectionTransition } from '../../public/conductor.js';
-
 describe('Musical Sanity & Collision Detection', () => {
+    let arranger, playback, chords, bass, soloist, harmony, groove;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        const state = getState();
+        arranger = state.arranger;
+        playback = state.playback;
+        chords = state.chords;
+        bass = state.bass;
+        soloist = state.soloist;
+        harmony = state.harmony;
+        groove = state.groove;
+
         playback.bandIntensity = 0.5;
         playback.complexity = 0.5;
         groove.genreFeel = 'Jazz';
         harmony.enabled = false;
+        chords.enabled = true;
         chords.style = 'smart';
         bass.enabled = true;
         soloist.enabled = false;
@@ -95,7 +107,8 @@ describe('Musical Sanity & Collision Detection', () => {
 
             // Try multiple times to ensure we get a hit (it's probabilistic)
             let notes = [];
-            for (let i = 0; i < 20; i++) {
+            playback.bandIntensity = 0.6; // Higher intensity for more reliable hits
+            for (let i = 0; i < 1000; i++) {
                 compingState.lockedUntil = 0;
                 notes = getAccompanimentNotes(chord, i * 16, 0, 0, { isBeatStart: true, isGroupStart: true });
                 if (notes.some(n => n.midi > 0)) break;

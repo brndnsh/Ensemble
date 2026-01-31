@@ -24,7 +24,8 @@ vi.mock('../../../public/state.js', () => {
 
 import { getSoloistNote } from '../../../public/soloist.js';
 import { getScaleForChord } from '../../../public/theory-scales.js';
-import { soloist, groove } from '../../../public/state.js';
+import { getState } from '../../../public/state.js';
+const { soloist, groove } = getState();
 
 describe('Country Soloist Overhaul', () => {
     const chordC = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major', beats: 4 };

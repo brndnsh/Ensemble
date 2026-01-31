@@ -3,7 +3,8 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
+import { dispatch, getState, storage } from '../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import { scheduleGlobalEvent } from '../../public/scheduler-core.js';
 import { initAudio } from '../../public/engine.js';
 import { getTimerWorker, initWorker } from '../../public/worker-client.js';

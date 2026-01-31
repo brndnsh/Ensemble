@@ -57,7 +57,8 @@ vi.mock('../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() }
 import { getScaleForChord } from '../../public/theory-scales.js';
 import { getBassNote } from '../../public/bass.js';
 import { validateProgression } from '../../public/chords.js';
-import { arranger } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { arranger } = getState();
 import { KEY_ORDER } from '../../public/config.js';
 
 describe('Multi-Key Integration: Autumn Leaves', () => {

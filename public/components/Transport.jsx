@@ -4,7 +4,8 @@ import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
 import { dispatch } from '../state.js';
-import { playback } from '../state.js'; // Direct access for viz, audio
+import { getState } from '../state.js';
+const { playback } = getState(); // Direct access for viz, audio
 import { handleTap } from '../instrument-controller.js';
 
 export function Transport() {

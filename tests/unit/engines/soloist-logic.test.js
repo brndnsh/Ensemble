@@ -43,7 +43,8 @@ import { getSoloistNote } from '../../../public/soloist.js';
 import { getScaleForChord } from '../../../public/theory-scales.js';
 import { clearHarmonyMemory } from '../../../public/harmonies.js';
 import { getFrequency, getMidi } from '../../../public/utils.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 
 describe('Soloist Engine Logic', () => {
     const chordC = { rootMidi: 60, intervals: [0, 4, 7, 10], quality: '7', beats: 4 };

@@ -35,15 +35,21 @@ vi.mock('../../../public/ui-bridge.js', () => ({
     useDispatch: () => mockDispatch
 }));
 
-vi.mock('../../../public/state.js', () => ({
-    dispatch: mockDispatch,
-    ACTIONS: {
-        STEP_TOGGLE: 'STEP_TOGGLE'
-    },
-    playback: {
-        lastPlayingStep: 0
-    }
-}));
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        dispatch: mockDispatch,
+        ACTIONS: {
+            STEP_TOGGLE: 'STEP_TOGGLE'
+        },
+        playback: {
+            lastPlayingStep: 0
+        }
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../../public/types.js', () => ({
     ACTIONS: {

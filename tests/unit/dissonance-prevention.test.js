@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getScaleForChord } from '../../public/theory-scales.js';
-import { arranger, soloist, groove } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { arranger, soloist, groove } = getState();
 
 describe('Dissonance Prevention', () => {
     beforeEach(() => {

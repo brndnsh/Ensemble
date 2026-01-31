@@ -81,7 +81,8 @@ vi.mock('../../../public/history.js', () => ({
 }));
 
 import { addSection, onSectionUpdate, onSectionDelete, onSectionDuplicate, transposeKey, switchToRelativeKey } from '../../../public/arranger-controller.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import { ui } from '../../../public/ui.js';
 import { transformRelativeProgression } from '../../../public/chords.js';
 

@@ -1,7 +1,8 @@
 
 import { describe, it } from 'vitest';
 import { getAccompanimentNotes, compingState } from '../../public/accompaniment.js';
-import { arranger, playback, chords } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { arranger, playback, chords } = getState();
 
 describe('Accompaniment Performance', () => {
     it('measures getAccompanimentNotes performance with sticky genre logic', () => {

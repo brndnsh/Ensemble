@@ -119,7 +119,8 @@ vi.mock('../../../public/midi-controller.js', () => ({
 }));
 
 import { scheduler } from '../../../public/scheduler-core.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 
 describe('Phase Integrity (Audio/Visual Sync)', () => {
     beforeEach(() => {

@@ -48,7 +48,8 @@ vi.mock('../../../public/form-analysis.js', () => ({
     analyzeForm: vi.fn(() => ({ sequence: 'A', sections: [] }))
 }));
 
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import { handleExport } from '../../../public/logic-worker.js';
 
 describe('Velocity Normalization & MIDI Limits', () => {

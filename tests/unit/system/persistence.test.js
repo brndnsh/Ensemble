@@ -3,7 +3,7 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
 import { saveCurrentState } from '../../../public/persistence.js';
 
 // Mock storage
@@ -13,12 +13,19 @@ vi.mock('../../../public/state.js', async (importOriginal) => {
         save: vi.fn(),
         get: vi.fn()
     };
-    const mockHarmony = { enabled: false, buffer: new Map() };
     
     const mockStateMap = {
-        ...actual,
-        harmony: mockHarmony,
-        storage: mockStorage
+        playback: { ...actual.playback },
+        arranger: { ...actual.arranger, sections: [], key: 'C', timeSignature: '4/4' },
+        groove: { ...actual.groove, enabled: true, instruments: [{ name: 'Kick', steps: new Array(16).fill(0) }] },
+        chords: { ...actual.chords, enabled: true, pianoRoots: true },
+        bass: { ...actual.bass, enabled: true },
+        soloist: { ...actual.soloist, enabled: true },
+        harmony: { ...actual.harmony, enabled: false },
+        vizState: { ...actual.vizState },
+        midi: { ...actual.midi },
+        storage: mockStorage,
+        dispatch: vi.fn()
     };
 
     return {
@@ -29,8 +36,14 @@ vi.mock('../../../public/state.js', async (importOriginal) => {
 });
 
 describe('Persistence Integrity', () => {
+    let arranger, playback, groove;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        const state = getState();
+        arranger = state.arranger;
+        playback = state.playback;
+        groove = state.groove;
     });
 
     it('should save the complete state accurately', () => {

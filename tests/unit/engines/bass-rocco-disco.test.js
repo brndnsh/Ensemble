@@ -58,7 +58,8 @@ vi.mock('../../../public/config.js', () => ({
 }));
 
 import { getBassNote, isBassActive } from '../../../public/bass.js';
-import { bass, playback } from '../../../public/state.js';
+import { getState } from '../../../public/state.js';
+const { bass, playback } = getState();
 
 describe('Bass Engine - Rocco & Disco', () => {
     const chordC = { rootMidi: 48, intervals: [0, 4, 7, 10], quality: '7', beats: 4, sectionId: 's1', bassMidi: null };

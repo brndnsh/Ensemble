@@ -5,7 +5,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { h, render } from 'preact';
 import React from 'preact/compat';
 import { Transport } from '../../public/components/Transport.jsx';
-import { playback, dispatch } from '../../public/state.js';
+import { dispatch, getState } from '../../public/state.js';
+const { playback } = getState();
 import { setBpm } from '../../public/app-controller.js';
 
 // Mock state

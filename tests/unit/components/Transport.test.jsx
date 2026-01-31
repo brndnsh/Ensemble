@@ -12,11 +12,17 @@ vi.mock('../../../public/ui-bridge.js', () => ({
     useEnsembleState: (selector) => mockUseEnsembleState(selector)
 }));
 
-vi.mock('../../../public/state.js', () => ({
-    dispatch: vi.fn(),
-    playback: { viz: {} },
-    ACTIONS: { SET_MODAL_OPEN: 'SET_MODAL_OPEN' }
-}));
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        dispatch: vi.fn(),
+        playback: { viz: {} },
+        ACTIONS: { SET_MODAL_OPEN: 'SET_MODAL_OPEN' }
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../../public/app-controller.js', () => ({
     setBpm: vi.fn(),

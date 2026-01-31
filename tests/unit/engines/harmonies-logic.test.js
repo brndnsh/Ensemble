@@ -42,9 +42,9 @@ vi.mock('../../../public/chords.js', async (importOriginal) => {
 });
 
 import { getHarmonyNotes, clearHarmonyMemory, getGuideTones, getSafeVoicings, generateCompingPattern } from '../../../public/harmonies.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import { getBestInversion } from '../../../public/chords.js';
-import * as State from '../../../public/state.js'; // Alias for compatibility with copied tests
 
 describe('Harmony Engine Logic', () => {
     const chordC = { rootMidi: 60, intervals: [0, 4, 7], quality: 'major', beats: 4, sectionId: 'A' };
@@ -59,12 +59,6 @@ describe('Harmony Engine Logic', () => {
         soloist.enabled = true;
         soloist.isResting = true;
         soloist.notesInPhrase = 0;
-
-        // Reset state values that might be modified
-        State.playback.bandIntensity = 0.5;
-        State.groove.genreFeel = 'Funk';
-        State.soloist.enabled = true;
-        State.harmony.complexity = 0.5;
     });
 
     // Helper to check intervals requested from chords.js
@@ -101,9 +95,9 @@ describe('Harmony Engine Logic', () => {
         });
 
         it('should use guide tones at low complexity/intensity', () => {
-            State.playback.bandIntensity = 0.3;
-            State.harmony.complexity = 0.3;
-            State.groove.genreFeel = 'Pop'; // Ensure activeStyle resolves to 'strings' for min polyphony 2
+            playback.bandIntensity = 0.3;
+            harmony.complexity = 0.3;
+            groove.genreFeel = 'Pop'; // Ensure activeStyle resolves to 'strings' for min polyphony 2
             const chord = { rootMidi: 60, intervals: [0, 4, 7, 10, 14], sectionId: 's1', beats: 4 };
 
             getHarmonyNotes(chord, null, 0, 60, 'smart', 0);
@@ -117,10 +111,10 @@ describe('Harmony Engine Logic', () => {
         });
 
         it('should restrict to safe voicings when soloist is active', () => {
-            State.playback.bandIntensity = 0.8;
-            State.soloist.enabled = true;
-            State.soloist.isResting = false;
-            State.soloist.notesInPhrase = 5; // Busy
+            playback.bandIntensity = 0.8;
+            soloist.enabled = true;
+            soloist.isResting = false;
+            soloist.notesInPhrase = 5; // Busy
 
             const chord = { rootMidi: 60, intervals: [0, 4, 7, 14, 18], sectionId: 's1', beats: 4 }; // 9, #11
 
@@ -158,10 +152,10 @@ describe('Harmony Engine Logic', () => {
     describe('Dynamic Intensity', () => {
         it('should play more notes at higher intensity for Funk', () => {
              const chord = { rootMidi: 60, intervals: [0, 4, 7], sectionId: 'funk-test', beats: 4 };
-             State.groove.genreFeel = 'Funk';
+             groove.genreFeel = 'Funk';
 
              // 1. Low Intensity -> Fewer notes
-             State.playback.bandIntensity = 0.2;
+             playback.bandIntensity = 0.2;
              let lowIntNotesCount = 0;
              for(let i=0; i<16; i++) {
                  const n = getHarmonyNotes(chord, null, i, 60, 'smart', i);
@@ -169,7 +163,7 @@ describe('Harmony Engine Logic', () => {
              }
 
              // 2. High Intensity -> More notes
-             State.playback.bandIntensity = 0.9;
+             playback.bandIntensity = 0.9;
              let highIntNotesCount = 0;
              for(let i=0; i<16; i++) {
                  const n = getHarmonyNotes(chord, null, i, 60, 'smart', i);

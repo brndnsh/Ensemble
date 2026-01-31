@@ -95,7 +95,8 @@ vi.mock('../../../public/conductor.js', () => ({
 
 import { scheduler } from '../../../public/scheduler-core.js';
 import { draw } from '../../../public/animation-loop.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import * as engine from '../../../public/engine.js';
 
 describe('Long-Session Stress & Endurance', () => {

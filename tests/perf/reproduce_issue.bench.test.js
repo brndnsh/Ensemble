@@ -1,7 +1,8 @@
 
 import { describe, it, beforeEach } from 'vitest';
 import { getChordAtStep } from '../../public/logic-worker.js';
-import { arranger } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { arranger } = getState();
 
 describe('Worker Oscillation Performance', () => {
     const numSections = 1000;

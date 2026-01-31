@@ -62,7 +62,8 @@ vi.mock('../../public/utils.js', () => ({
 }));
 
 import { initAudio, restoreGains } from '../../public/engine.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
+import { dispatch, getState, storage } from '../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 
 describe('Mix & Signal Integrity Audit', () => {
     

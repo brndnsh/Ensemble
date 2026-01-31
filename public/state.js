@@ -113,10 +113,3 @@ export function subscribe(listener) {
     listeners.add(listener);
     return () => listeners.delete(listener);
 }
-
-// --- LEGACY EXPORTS (DEPRECATED) ---
-// These are maintained strictly for backward compatibility with the test suite.
-// New source code MUST use getState().
-export { 
-    playback, arranger, chords, bass, soloist, harmony, groove, midi, vizState 
-};

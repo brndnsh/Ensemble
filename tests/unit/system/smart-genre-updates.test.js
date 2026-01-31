@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { dispatch, chords, bass, soloist, harmony, groove, playback } from '../../../public/state.js';
+import { dispatch, getState } from '../../../public/state.js';
+const { chords, bass, soloist, harmony, groove, playback } = getState();
 import { ACTIONS } from '../../../public/types.js';
 
 describe('Smart Genre State Updates', () => {

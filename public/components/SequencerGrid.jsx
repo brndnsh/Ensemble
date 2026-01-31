@@ -7,7 +7,8 @@ import { getStepsPerMeasure, getStepInfo } from '../utils.js';
 import { TIME_SIGNATURES } from '../config.js';
 import { ACTIONS } from '../types.js';
 import { clearDrumPresetHighlight } from '../instrument-controller.js';
-import { playback as playbackState } from '../state.js';
+import { getState } from '../state.js';
+const { playback: playbackState } = getState();
 
 const Step = memo(({ instIdx, stepIdx, value, instName, stepInfo, onToggle }) => {
     // Optimization: Removed per-step subscription to playback state.

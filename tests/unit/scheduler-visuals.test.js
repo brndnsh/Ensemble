@@ -110,7 +110,8 @@ vi.mock('../../public/ui.js', () => ({
 }));
 
 import { scheduleChordVisuals } from '../../public/scheduler-core.js';
-import { playback, vizState } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { playback, vizState } = getState();
 
 describe('Scheduler Visuals', () => {
     beforeEach(() => {

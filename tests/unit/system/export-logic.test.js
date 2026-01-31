@@ -52,7 +52,8 @@ vi.mock('../../../public/config.js', () => ({
     MIXER_GAIN_MULTIPLIERS: { chords: 0.22, bass: 0.35, soloist: 0.32, harmonies: 0.28, drums: 0.45, master: 0.85 }
 }));
 
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import { handleResolution, handleExport } from '../../../public/logic-worker.js';
 
 describe('Export and Resolution Logic Validation', () => {

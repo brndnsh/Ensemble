@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, it, vi, beforeEach } from 'vitest';
 import { onSectionUpdate } from '../../public/arranger-controller.js';
-import { arranger } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { arranger } = getState();
 
 // Mock dependencies to isolate performance of the reorder logic
 vi.mock('../../public/history.js', () => ({ pushHistory: vi.fn() }));

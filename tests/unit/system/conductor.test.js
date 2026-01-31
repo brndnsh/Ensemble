@@ -4,14 +4,14 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { conductorState, updateAutoConductor, checkSectionTransition, applyConductor } from '../../../public/conductor.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
 
 vi.mock('../../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
     
     // Create distinct mock objects so we can control them
     const mockPlayback = { ...actual.playback };
-    const mockArranger = { ...actual.arranger };
+    const mockArranger = { ...actual.arranger, sections: [] };
     const mockConductorState = { ...actual.conductorState };
     const mockGroove = { ...actual.groove };
     const mockSoloist = { ...actual.soloist };
@@ -57,8 +57,15 @@ vi.mock('../../../public/fills.js', () => ({
 }));
 
 describe('Conductor Logic', () => {
+    let arranger, playback, groove;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        const state = getState();
+        arranger = state.arranger;
+        playback = state.playback;
+        groove = state.groove;
+
         playback.autoIntensity = true;
         playback.isPlaying = true;
         playback.bandIntensity = 0.5;

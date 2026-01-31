@@ -4,7 +4,8 @@ import { getAccompanimentNotes } from '../../public/accompaniment.js';
 import { getBassNote } from '../../public/bass.js';
 import { getScaleForChord } from '../../public/theory-scales.js';
 import { DRUM_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES } from '../../public/presets.js';
-import { chords, groove } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { chords, groove } = getState();
 
 // Mock state
 vi.mock('../../public/state.js', () => {

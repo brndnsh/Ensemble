@@ -7,7 +7,8 @@ import { getScaleForChord } from '../../../public/theory-scales.js';
 import { getHarmonyNotes } from '../../../public/harmonies.js';
 import { getAccompanimentNotes } from '../../../public/accompaniment.js';
 import { validateProgression } from '../../../public/chords.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import { getMidi } from '../../../public/utils.js';
 
 // Mock UI and Worker

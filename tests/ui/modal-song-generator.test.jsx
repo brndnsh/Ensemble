@@ -26,6 +26,24 @@ vi.mock('../../public/ui-song-generator-controller.js', () => ({
     setupSongGeneratorHandlers: vi.fn()
 }));
 
+vi.mock('../../public/state.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    const mockState = {
+        ...actual,
+        playback: { 
+            ...actual.playback, 
+            modals: { generateSong: false, editor: true } 
+        },
+        arranger: { ...actual.arranger, totalSteps: 64 },
+    };
+    return {
+        ...mockState,
+        getState: () => mockState,
+        dispatch: actual.dispatch,
+        ACTIONS: actual.ACTIONS
+    };
+});
+
 describe('Song Generator Modal', () => {
     beforeEach(() => {
         vi.clearAllMocks();

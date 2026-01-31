@@ -1,4 +1,5 @@
-import { arranger } from './state.js';
+import { getState } from './state.js';
+const { arranger } = getState();
 import { showToast } from './ui.js';
 
 // We need some function references that are usually in main.js

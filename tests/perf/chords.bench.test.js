@@ -1,7 +1,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { validateProgression } from '../../public/chords.js';
-import { arranger } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { arranger } = getState();
 
 describe('Chords Logic Performance', () => {
     it('measures validateProgression performance avoiding redundant parsing', () => {

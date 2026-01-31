@@ -37,7 +37,8 @@ vi.mock('../../../public/config.js', () => ({
 }));
 
 import { getChordDetails, getIntervals, transformRelativeProgression, getBestInversion, validateProgression } from '../../../public/chords.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 
 describe('Chords & Voicing Logic', () => {
     

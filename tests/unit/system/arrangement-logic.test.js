@@ -64,7 +64,8 @@ vi.mock('../../../public/history.js', () => ({ pushHistory: vi.fn() }));
 import { validateProgression, updateProgressionCache } from '../../../public/chords.js';
 import { onSectionUpdate, addSection } from '../../../public/arranger-controller.js';
 import { getSectionEnergy, analyzeForm } from '../../../public/form-analysis.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 
 describe('Arrangement Logic & Mixed Meter', () => {
     

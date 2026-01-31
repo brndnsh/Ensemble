@@ -6,7 +6,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { h, render } from 'preact';
 import React from 'preact/compat';
 import { Arranger } from '../../public/components/Arranger.jsx';
-import { arranger } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { arranger } = getState();
 
 // Mock dependencies
 vi.mock('../../public/persistence.js', () => ({

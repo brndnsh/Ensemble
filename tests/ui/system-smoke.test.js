@@ -194,7 +194,8 @@ vi.mock('../../public/persistence.js', () => ({
     debounceSaveState: vi.fn()
 }));
 
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
+import { dispatch, getState, storage } from '../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import { addSection, onSectionUpdate } from '../../public/arranger-controller.js';
 import { togglePlay } from '../../public/scheduler-core.js';
 import { validateProgression } from '../../public/chords.js';

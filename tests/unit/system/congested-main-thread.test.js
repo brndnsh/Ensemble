@@ -78,7 +78,8 @@ vi.mock('../../../public/ui.js', () => ({
     clearActiveVisuals: vi.fn()
 }));
 
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import { scheduler } from '../../../public/scheduler-core.js';
 
 describe('Main Thread Congestion Resilience', () => {

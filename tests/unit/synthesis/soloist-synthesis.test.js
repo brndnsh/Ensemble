@@ -84,7 +84,8 @@ vi.mock('../../../public/utils.js', () => ({
 }));
 
 import { playSoloNote } from '../../../public/synth-soloist.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 
 describe('Soloist Synthesis', () => {
     beforeEach(() => {

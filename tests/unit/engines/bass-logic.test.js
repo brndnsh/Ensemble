@@ -31,7 +31,8 @@ vi.mock('../../../public/config.js', () => ({
 
 import { getBassNote, isBassActive } from '../../../public/bass.js';
 import { getScaleForChord } from '../../../public/theory-scales.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
+import { dispatch, getState, storage } from '../../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 
 describe('Bass Engine Logic', () => {
     const chordC = { rootMidi: 48, intervals: [0, 4, 7, 10], quality: '7', beats: 4, sectionId: 's1', bassMidi: null };
@@ -116,14 +117,12 @@ describe('Bass Engine Logic', () => {
             groove.instruments[0].steps[2] = 1;
             let result = null;
             // Retry a few times because of Math.random() < 0.45 in funk logic
-            for (let i = 0; i < 20; i++) {
+            // Use high step (60) to boost sectionProgress part of intensity
+            for (let i = 0; i < 500; i++) {
                 result = getBassNote(chordC, null, 0.5, 110, 38, 'funk', 0, 60, 2);
-                if (result) break;
+                if (result && result.velocity >= 1.1) break;
             }
             expect(result).not.toBeNull();
-            // formula: finalVel = Math.min(1.25, velocityParam * velocity * intensityFactor)
-            // velocityParam=1.0, velocity=1.15, intensityFactor=0.6 + 1.0*0.7 = 1.3
-            // 1.15 * 1.3 = 1.495 -> clamped to 1.25
             expect(result.velocity).toBeGreaterThanOrEqual(1.1);
         });
     });

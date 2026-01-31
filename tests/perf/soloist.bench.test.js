@@ -61,7 +61,8 @@ vi.mock('../../public/theory-scales.js', () => ({
 }));
 
 import { getSoloistNote } from '../../public/soloist.js';
-import { soloist } from '../../public/state.js';
+import { getState } from '../../public/state.js';
+const { soloist } = getState();
 
 describe('Soloist Performance Benchmark', () => {
     it('measures getSoloistNote loop performance', () => {

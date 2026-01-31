@@ -1,7 +1,8 @@
 /* eslint-disable */
 import { describe, it, expect, vi } from 'vitest';
 import { getBassNote, isBassActive } from '../../public/bass.js';
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../public/state.js';
+import { dispatch, getState, storage } from '../../public/state.js';
+const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
 import { getStepsPerMeasure } from '../../public/utils.js';
 
 /**
