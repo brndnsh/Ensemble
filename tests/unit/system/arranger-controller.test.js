@@ -5,22 +5,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies
-vi.mock('../../../public/state.js', () => ({
-    arranger: {
-        sections: [],
-        key: 'C',
-        isMinor: false,
-        progression: [],
-        stepMap: [], // Added to prevent analyzeForm crashes
-        lastChordPreset: null
-    },
-    chords: {},
-    playback: {},
-    soloist: { enabled: true },
-    harmony: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
-    groove: { genreFeel: 'Rock', enabled: true },
-    conductorState: {}
-}));
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        arranger: {
+            sections: [],
+            key: 'C',
+            isMinor: false,
+            progression: [],
+            stepMap: [], // Added to prevent analyzeForm crashes
+            lastChordPreset: null
+        },
+        chords: {},
+        playback: {},
+        soloist: { enabled: true },
+        harmony: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
+        groove: { genreFeel: 'Rock', enabled: true },
+        conductorState: {},
+        vizState: {},
+        midi: {},
+        dispatch: vi.fn()
+    };
+    return { ...mockState, getState: () => mockState };
+});
 
 vi.mock('../../../public/form-analysis.js', () => ({
     analyzeForm: vi.fn(() => ({ sequence: 'A', sections: [] }))

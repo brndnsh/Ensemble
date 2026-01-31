@@ -14,27 +14,43 @@ vi.stubGlobal('CustomEvent', class { constructor(type, detail) { this.type = typ
 
 vi.mock('../../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
+    
+    const mockArranger = { stepMap: [], sections: [], totalSteps: 0, timeSignature: '4/4', measureMap: new Map() };
+    const mockPlayback = { 
+        audio: { currentTime: 0 },
+        unswungNextNoteTime: 0,
+        currentKey: '',
+        conductorVelocity: 1.0,
+        bandIntensity: 0.5,
+        drawQueue: [],
+        visualFlash: false,
+        metronome: false,
+        countIn: false
+    };
+    const mockGroove = { genreFeel: 'Rock', instruments: [], humanize: 0, measures: 1 };
+    const mockMidi = { enabled: false };
+    const mockSoloist = { style: 'scalar' };
+    const mockVizState = { enabled: false };
+    const mockBass = { enabled: false };
+    const mockChords = { enabled: false };
+    const mockHarmony = { enabled: false };
+
+    const mockStateMap = {
+        arranger: mockArranger,
+        playback: mockPlayback,
+        groove: mockGroove,
+        midi: mockMidi,
+        soloist: mockSoloist,
+        vizState: mockVizState,
+        bass: mockBass,
+        chords: mockChords,
+        harmony: mockHarmony
+    };
+
     return {
         ...actual,
-        arranger: { stepMap: [], sections: [], totalSteps: 0, timeSignature: '4/4', measureMap: new Map() },
-        playback: { 
-            audio: { currentTime: 0 },
-            unswungNextNoteTime: 0,
-            currentKey: '',
-            conductorVelocity: 1.0,
-            bandIntensity: 0.5,
-            drawQueue: [],
-            visualFlash: false,
-            metronome: false,
-            countIn: false
-        },
-        groove: { genreFeel: 'Rock', instruments: [], humanize: 0, measures: 1 },
-        midi: { enabled: false },
-        soloist: { style: 'scalar' },
-        vizState: { enabled: false },
-        bass: { enabled: false },
-        chords: { enabled: false },
-        harmony: { enabled: false }
+        ...mockStateMap,
+        getState: () => mockStateMap
     };
 });
 

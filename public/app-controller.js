@@ -1,9 +1,10 @@
-import { playback, arranger, dispatch } from './state.js';
+import { getState, dispatch } from './state.js';
 import { syncWorker } from './worker-client.js';
 import { saveCurrentState } from './persistence.js';
 import { getStepsPerMeasure } from './utils.js';
 
 export function applyTheme(theme) {
+    const { playback } = getState();
     playback.theme = theme;
     if (theme === 'auto') {
         const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -16,6 +17,7 @@ export function applyTheme(theme) {
 }
 
 export function setBpm(val, viz, fromDispatch = false, oldBpmParam = null) {
+    const { playback, arranger } = getState();
     const newBpm = Math.max(40, Math.min(240, parseInt(val)));
     const currentBpm = fromDispatch ? (oldBpmParam || playback.bpm) : playback.bpm;
     

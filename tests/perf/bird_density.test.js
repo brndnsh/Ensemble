@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // 1. Mock the State with mutable properties using vi.hoisted
 const { playbackState, soloistState, grooveState, arrangerState } = vi.hoisted(() => ({

@@ -1,4 +1,4 @@
-import { arranger } from './state.js';
+import { getState } from './state.js';
 import { showToast } from './ui.js';
 import { validateProgression, transformRelativeProgression } from './chords.js';
 import { flushBuffers } from './instrument-controller.js';
@@ -39,6 +39,7 @@ export function refreshArrangerUI() {
 }
 
 export function onSectionUpdate(id, field, value) {
+    const { arranger } = getState();
     if (field === 'reorder') {
         const sectionMap = new Map(arranger.sections.map(s => [s.id, s]));
         const newSections = value.map(sid => sectionMap.get(sid));
@@ -86,6 +87,7 @@ export function onSectionUpdate(id, field, value) {
 }
 
 export function onSectionDelete(id) {
+    const { arranger } = getState();
     if (arranger.sections.length <= 1) return;
     
     const section = arranger.sections.find(s => s.id === id);
@@ -101,6 +103,7 @@ export function onSectionDelete(id) {
 }
 
 export function onSectionDuplicate(id) {
+    const { arranger } = getState();
     const section = arranger.sections.find(s => s.id === id);
     if (!section) return;
     pushHistory();
@@ -115,6 +118,7 @@ export function onSectionDuplicate(id) {
 }
 
 export function addSection() {
+    const { arranger } = getState();
     arranger.sections = [...arranger.sections, { id: generateId(), label: `Section ${arranger.sections.length + 1}`, value: 'I', repeat: 1 }];
     arranger.isDirty = true;
     clearChordPresetHighlight();
@@ -122,6 +126,7 @@ export function addSection() {
 }
 
 export function transposeKey(delta) {
+    const { arranger } = getState();
     // Use arranger.key as the source of truth
     const currentKeyName = arranger.key || 'C';
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(currentKeyName));
@@ -170,6 +175,7 @@ export function transposeKey(delta) {
 }
 
 export function switchToRelativeKey() {
+    const { arranger } = getState();
     const wasMinor = !!arranger.isMinor;
     let currentIndex = KEY_ORDER.indexOf(normalizeKey(arranger.key));
     const shift = wasMinor ? 3 : -3;

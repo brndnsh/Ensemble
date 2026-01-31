@@ -5,23 +5,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock State
-vi.mock('../../../public/state.js', () => ({
-    chords: { enabled: true, octave: 60 },
-    harmony: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
-    arranger: { 
-        key: 'C', 
-        isMinor: false, 
-        progression: [],
-        totalSteps: 0,
-        stepMap: [],
-        timeSignature: '4/4'
-    },
-    groove: { enabled: true, genreFeel: 'Rock' },
-    bass: { enabled: false },
-    soloist: { enabled: false },
-    playback: { isPlaying: false, bandIntensity: 0.5, complexity: 0.3 },
-    dispatch: vi.fn()
-}));
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        chords: { enabled: true, octave: 60 },
+        harmony: { enabled: false, style: 'smart', octave: 60, volume: 0.4, complexity: 0.5, buffer: new Map() },
+        arranger: { 
+            key: 'C', 
+            isMinor: false, 
+            progression: [],
+            totalSteps: 0,
+            stepMap: [],
+            timeSignature: '4/4'
+        },
+        groove: { enabled: true, genreFeel: 'Rock' },
+        bass: { enabled: false },
+        soloist: { enabled: false },
+        playback: { isPlaying: false, bandIntensity: 0.5, complexity: 0.3 },
+        dispatch: vi.fn(),
+        midi: {},
+        vizState: {}
+    };
+    return { ...mockState, getState: () => mockState };
+});
 
 // Mock Config
 vi.mock('../../../public/config.js', () => ({

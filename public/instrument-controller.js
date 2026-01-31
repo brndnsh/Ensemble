@@ -1,4 +1,4 @@
-import { groove, arranger, playback, chords, bass, soloist, harmony, vizState, dispatch } from './state.js';
+import { getState, dispatch } from './state.js';
 import { showToast } from './ui.js';
 import { ACTIONS } from './types.js';
 import { DRUM_PRESETS } from './presets.js';
@@ -17,18 +17,21 @@ export function setInstrumentControllerRefs(scheduler, viz) {
 }
 
 export function switchMeasure(idx) {
+    const { groove } = getState();
     if (groove.currentMeasure === idx) return;
     groove.currentMeasure = idx;
     dispatch('MEASURE_SWITCH');
 }
 
 export function updateMeasures(val) {
+    const { groove } = getState();
     groove.measures = parseInt(val);
     if (groove.currentMeasure >= groove.measures) groove.currentMeasure = 0;
     saveCurrentState();
 }
 
 export function loadDrumPreset(name) {
+    const { groove, arranger } = getState();
     let p = DRUM_PRESETS[name];
     if (p[arranger.timeSignature]) {
         p = { ...p, ...p[arranger.timeSignature] };
@@ -54,6 +57,7 @@ export function loadDrumPreset(name) {
 }
 
 export function cloneMeasure() {
+    const { groove, arranger } = getState();
     const spm = getStepsPerMeasure(arranger.timeSignature);
     const sourceOffset = groove.currentMeasure * spm;
     const newInstruments = groove.instruments.map(inst => {
@@ -96,6 +100,7 @@ export function handleTap(setBpmRef) {
 }
 
 export function flushBuffers(primeSteps = 0) {
+    const { groove, arranger, playback, chords, bass, soloist, harmony } = getState();
     // 1. Clear local buffers
     bass.buffer.clear();
     soloist.buffer.clear();
@@ -146,6 +151,7 @@ export function flushBuffers(primeSteps = 0) {
 }
 
 export function flushBuffer(type, primeSteps = 0) {
+    const { groove, playback, chords, bass, soloist, harmony } = getState();
     if (type === 'bass' || type === 'all') {
         if (bass.lastPlayedFreq !== null) bass.lastFreq = bass.lastPlayedFreq;
         bass.buffer.clear();
@@ -181,6 +187,7 @@ export function flushBuffer(type, primeSteps = 0) {
 }
 
 export function togglePower(type) {
+    const { groove, vizState, chords, bass, soloist, harmony } = getState();
     const normalizedType = type === 'chords' ? 'chord' : (type === 'harmonies' ? 'harmony' : type);
     
     const stateMap = {
@@ -221,6 +228,7 @@ export function togglePower(type) {
 }
 
 export function resetToDefaults() {
+    const { playback } = getState();
     dispatch(ACTIONS.RESET_STATE);
     
     applyTheme('auto');

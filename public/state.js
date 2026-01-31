@@ -8,7 +8,7 @@ import { groove, grooveReducer } from './state/groove.js';
 import { midi, midiReducer } from './state/midi.js';
 import { vizState, vizReducer } from './state/visualizer.js';
 
-// Export everything for backward compatibility
+// Export everything for backward compatibility (DEPRECATED: Use getState() instead)
 export { 
     playback, arranger, chords, bass, soloist, harmony, groove, midi, vizState 
 };
@@ -21,8 +21,20 @@ const stateMap = {
     soloist,
     groove,
     harmony,
-    arranger, vizState, midi 
+    arranger,
+    vizState,
+    midi 
 };
+
+/**
+ * Unified getter for global state.
+ * Use this instead of importing individual state slices to ensure
+ * easier refactoring and better type safety in the future.
+ * @returns {typeof stateMap}
+ */
+export function getState() {
+    return stateMap;
+}
 
 // Persistence Helpers
 export const storage = {
