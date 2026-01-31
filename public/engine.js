@@ -1,4 +1,4 @@
-import { playback, groove, chords, bass, soloist, harmony, midi } from './state.js';
+import { getState } from './state.js';
 import { MIXER_GAIN_MULTIPLIERS } from './config.js';
 import { createReverbImpulse, createSoftClipCurve } from './utils.js';
 import { audioWatchdog } from './audio-recovery.js';
@@ -24,6 +24,7 @@ export function _resetChromiumCheck() { isChromium = null; }
  * Must be called in response to a user gesture.
  */
 export function initAudio() {
+    const { playback, groove, chords, bass, soloist, harmony, midi } = getState();
     if (!playback.audio || playback.audio.state === 'closed') {
         if (navigator.audioSession) {
             navigator.audioSession.type = 'playback';
@@ -207,6 +208,7 @@ export function initAudio() {
  * Diagnostic: Monitors the master limiter's gain reduction.
  */
 export function monitorMasterLimiter() {
+    const { playback } = getState();
     if (playback.masterLimiter && playback.masterLimiter.reduction.value < -0.1) {
         // console.log(`[DSP] Master Limiting: ${playback.masterLimiter.reduction.value.toFixed(2)}dB`);
     }
@@ -216,6 +218,7 @@ export function monitorMasterLimiter() {
  * Diagnostic: Bypasses the visual updates to isolate UI-induced audio glitches.
  */
 window.bypassVisuals = (shouldBypass) => {
+    const { playback } = getState();
     playback.isDrawing = !shouldBypass;
     // console.log(`[DSP] Visual Updates ${shouldBypass ? 'DISABLED' : 'ENABLED'}`);
 };
@@ -224,6 +227,7 @@ window.bypassVisuals = (shouldBypass) => {
  * Diagnostic: Bypasses the mastering chain (Saturator + Limiter).
  */
 window.bypassMaster = (shouldBypass) => {
+    const { playback } = getState();
     if (!playback.audio || !playback.masterGain) return;
     playback.masterGain.disconnect();
     if (shouldBypass) {
@@ -236,6 +240,7 @@ window.bypassMaster = (shouldBypass) => {
 };
 
 export function killChordBus() {
+    const { playback } = getState();
     if (playback.chordsGain) {
         playback.chordsGain.gain.cancelScheduledValues(playback.audio.currentTime);
         playback.chordsGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
@@ -243,6 +248,7 @@ export function killChordBus() {
 }
 
 export function killBassBus() {
+    const { playback } = getState();
     if (playback.bassGain) {
         playback.bassGain.gain.cancelScheduledValues(playback.audio.currentTime);
         playback.bassGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
@@ -250,6 +256,7 @@ export function killBassBus() {
 }
 
 export function killSoloistBus() {
+    const { playback } = getState();
     if (playback.soloistGain) {
         playback.soloistGain.gain.cancelScheduledValues(playback.audio.currentTime);
         playback.soloistGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
@@ -257,6 +264,7 @@ export function killSoloistBus() {
 }
 
 export function killHarmonyBus() {
+    const { playback } = getState();
     if (playback.harmoniesGain) {
         playback.harmoniesGain.gain.cancelScheduledValues(playback.audio.currentTime);
         playback.harmoniesGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
@@ -264,6 +272,7 @@ export function killHarmonyBus() {
 }
 
 export function killDrumBus() {
+    const { playback } = getState();
     if (playback.drumsGain) {
         playback.drumsGain.gain.cancelScheduledValues(playback.audio.currentTime);
         playback.drumsGain.gain.setTargetAtTime(0, playback.audio.currentTime, 0.005);
@@ -293,6 +302,7 @@ export async function killAllNotes() {
  * Restores instrument buses to their state-defined volumes.
  */
 export function restoreGains() {
+    const { playback, chords, bass, soloist, harmony, groove, midi } = getState();
     if (!playback.audio) return;
     const t = playback.audio.currentTime;
     const modules = [
@@ -316,6 +326,7 @@ let lastAudioTime = 0;
 let lastPerfTime = 0;
 
 export function getVisualTime() {
+    const { playback } = getState();
     if (!playback.audio) return 0;
     
     const audioTime = playback.audio.currentTime;

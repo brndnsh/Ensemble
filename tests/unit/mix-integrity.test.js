@@ -5,8 +5,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global modules
-vi.mock('../../public/state.js', () => ({
-    playback: {
+vi.mock('../../public/state.js', () => {
+    const mockPlayback = {
         audio: null,
         masterGain: null,
         saturator: null,
@@ -18,14 +18,34 @@ vi.mock('../../public/state.js', () => ({
         harmoniesGain: null,
         drumsGain: null,
         isPlaying: false
-    },
-    chords: { volume: 0.5, enabled: true, reverb: 0.2 },
-    bass: { volume: 0.45, enabled: true, reverb: 0.05 },
-    soloist: { volume: 0.5, enabled: true, reverb: 0.6 },
-    harmony: { volume: 0.4, enabled: true, reverb: 0.4 },
-    groove: { volume: 0.5, enabled: true, reverb: 0.2, audioBuffers: { noise: {} } },
-    midi: { enabled: false, muteLocal: false }
-}));
+    };
+    const mockChords = { volume: 0.5, enabled: true, reverb: 0.2 };
+    const mockBass = { volume: 0.45, enabled: true, reverb: 0.05 };
+    const mockSoloist = { volume: 0.5, enabled: true, reverb: 0.6 };
+    const mockHarmony = { volume: 0.4, enabled: true, reverb: 0.4 };
+    const mockGroove = { volume: 0.5, enabled: true, reverb: 0.2, audioBuffers: { noise: {} } };
+    const mockMidi = { enabled: false, muteLocal: false };
+    const mockArranger = {};
+    const mockVizState = {};
+
+    const mockStateMap = {
+        playback: mockPlayback,
+        chords: mockChords,
+        bass: mockBass,
+        soloist: mockSoloist,
+        harmony: mockHarmony,
+        groove: mockGroove,
+        midi: mockMidi,
+        arranger: mockArranger,
+        vizState: mockVizState
+    };
+
+    return {
+        ...mockStateMap,
+        getState: () => mockStateMap,
+        dispatch: vi.fn()
+    };
+});
 
 // Mock UI
 vi.mock('../../public/ui.js', () => ({
