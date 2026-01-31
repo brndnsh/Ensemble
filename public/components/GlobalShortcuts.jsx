@@ -1,6 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { switchMeasure } from '../instrument-controller.js';
-import { playback, groove, dispatch } from '../state.js';
+import { dispatch, getState } from '../state.js';
+const { playback, groove } = getState();
 import { ACTIONS } from '../types.js';
 
 export function GlobalShortcuts() {

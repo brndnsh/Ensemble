@@ -3,7 +3,8 @@ import React from 'preact/compat';
 import { useEffect, useState, useRef } from 'preact/hooks';
 import { useEnsembleState } from '../ui-bridge.js';
 import { exportToMidi } from '../midi-export.js';
-import { arranger, playback, dispatch } from '../state.js';
+import { dispatch, getState } from '../state.js';
+const { arranger, playback } = getState();
 import { ACTIONS } from '../types.js';
 
 export function ExportModal() {

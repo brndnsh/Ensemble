@@ -2,7 +2,8 @@ import { h, Fragment } from 'preact';
 import React from 'preact/compat';
 import { useEnsembleState } from '../ui-bridge.js';
 import { ACTIONS } from '../types.js';
-import { dispatch, playback } from '../state.js';
+import { dispatch, getState } from '../state.js';
+const { playback } = getState();
 import { MIXER_GAIN_MULTIPLIERS } from '../config.js';
 import { saveCurrentState } from '../persistence.js';
 
