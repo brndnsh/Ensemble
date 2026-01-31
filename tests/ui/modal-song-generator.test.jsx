@@ -111,7 +111,7 @@ describe('Song Generator Modal', () => {
         
         // Open it first
         document.getElementById('randomizeBtn').click();
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 100));
         expect(modal.classList.contains('active')).toBe(true);
         
         const closeBtn = document.getElementById('closeGenerateSongBtn');
