@@ -151,7 +151,7 @@ export function flushBuffers(primeSteps = 0) {
 }
 
 export function flushBuffer(type, primeSteps = 0) {
-    const { groove, playback, chords, bass, soloist, harmony } = getState();
+    const { playback, chords, bass, soloist, harmony } = getState();
     if (type === 'bass' || type === 'all') {
         if (bass.lastPlayedFreq !== null) bass.lastFreq = bass.lastPlayedFreq;
         bass.buffer.clear();
