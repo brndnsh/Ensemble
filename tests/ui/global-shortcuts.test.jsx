@@ -14,14 +14,21 @@ vi.mock('../../public/scheduler-core.js', () => ({
 }));
 
 // Mock State
-vi.mock('../../public/state.js', () => ({
-    playback: {
-        viz: {},
-        modals: { editor: false, settings: false }
-    },
-    groove: { currentMeasure: 0, measures: 4 },
-    dispatch: vi.fn()
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        playback: {
+            viz: {},
+            modals: { editor: false, settings: false }
+        },
+        groove: { currentMeasure: 0, measures: 4 },
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState,
+        dispatch: mockState.dispatch
+    };
+});
 
 // Mock instrument-controller
 vi.mock('../../public/instrument-controller.js', () => ({
