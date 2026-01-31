@@ -93,7 +93,11 @@ export function applyGrooveOverrides({ step, inst, stepVal, playback, groove, is
             if (isSubdivision) {
                 const kickInst = groove.instruments.find(i => i.name === 'Kick');
                 const kickPlaying = kickInst && kickInst.steps[step] > 0;
-                if (!kickPlaying && Math.random() < (playback.complexity * 0.5)) { 
+
+                let ghostProb = playback.complexity * 0.5;
+                if (playback.bpm > 160) ghostProb *= 0.4; // Reduce clutter at high BPM
+
+                if (!kickPlaying && Math.random() < ghostProb) {
                     shouldPlay = true;
                     velocity = 0.15 + (Math.random() * 0.1); 
                 }
@@ -170,9 +174,19 @@ export function applyGrooveOverrides({ step, inst, stepVal, playback, groove, is
         if (inst.name === 'Open') {
             shouldPlay = false;
             if ([0, 4, 6, 8, 12, 14].includes(loopStep)) {
-                shouldPlay = true;
-                if (loopStep % 4 === 0) velocity = 1.15; 
-                else velocity = 0.75; 
+                // High BPM: Flatten the swing pattern to reduce wash
+                if (playback.bpm > 170 && (loopStep === 6 || loopStep === 14)) {
+                     // Mute the "a" of "1, 2-a" occasionally or lower velocity
+                     if (Math.random() < 0.5) shouldPlay = true;
+                     else shouldPlay = false;
+                } else {
+                    shouldPlay = true;
+                }
+
+                if (shouldPlay) {
+                    if (loopStep % 4 === 0) velocity = 1.15;
+                    else velocity = 0.75;
+                }
             }
         } else if (inst.name === 'HiHat') {
             shouldPlay = false;
@@ -183,17 +197,29 @@ export function applyGrooveOverrides({ step, inst, stepVal, playback, groove, is
         } else if (inst.name === 'Kick') {
             shouldPlay = false;
             if (loopStep % 4 === 0) { shouldPlay = true; velocity = 0.35; }
-            const bombProb = playback.bandIntensity * 0.3;
+            let bombProb = playback.bandIntensity * 0.3;
+            if (playback.bpm > 165) bombProb *= 0.5; // Fewer bombs at fast swing
+
             if (Math.random() < bombProb) {
                 if ([10, 14, 15].includes(loopStep)) { shouldPlay = true; velocity = 0.9 + (Math.random() * 0.2); }
             }
         } else if (inst.name === 'Snare') {
             shouldPlay = false;
-            if (Math.random() < 0.08) { shouldPlay = true; velocity = 0.25; }
+            let compProb = 0.08;
+            if (playback.bpm > 165) compProb = 0.04;
+
+            if (Math.random() < compProb) { shouldPlay = true; velocity = 0.25; }
+
+            // Comping logic
             if (loopStep === 14) {
                 if (Math.random() < 0.6 + (playback.bandIntensity * 0.3)) { shouldPlay = true; velocity = 0.85; }
             } else if (loopStep === 6) {
                 if (Math.random() < 0.3 + (playback.bandIntensity * 0.3)) { shouldPlay = true; velocity = 0.8; }
+            }
+
+            // High BPM Comping Throttling
+            if (playback.bpm > 175 && shouldPlay && velocity > 0.5 && Math.random() < 0.3) {
+                 shouldPlay = false; // Thin out the comping
             }
         }
     }
