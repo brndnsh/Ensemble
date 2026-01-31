@@ -201,7 +201,17 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const phraseBars = soloist.currentPhraseSteps / stepsPerMeasure;
     let restProb = (config.restBase * (3.0 - effectiveIntensity * 2.0)) + (phraseBars * config.restGrowth);
     restProb += (1.0 - warmupFactor) * 0.4; // Conservative start
-    if (intensity < 0.35) restProb += 0.3;
+
+    // Low intensity damping
+    if (intensity < 0.35) {
+        if (activeStyle === 'bird') {
+             // Bird should stay busy. Counteract the low-intensity rest growth.
+             restProb -= 0.1;
+        } else {
+             // Others back off significantly to prevent busyness
+             restProb += 0.4;
+        }
+    }
 
     // Phrase interlocking
     if (harmony.enabled && harmony.rhythmicMask > 0) {
@@ -306,7 +316,15 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     if (stepInBeat === 0) {
         let pool = RHYTHMIC_CELLS.filter((_, idx) => config.cells.includes(idx));
         if (playback.complexity > 0.7 && !config.cells.includes(1)) pool.push(RHYTHMIC_CELLS[1]);
-        if (intensity < 0.4) pool = pool.filter(c => c[1] === 0 && c[3] === 0);
+
+        // Intensity-based filtering
+        if (intensity < 0.4 && activeStyle !== 'bird') pool = pool.filter(c => c[1] === 0 && c[3] === 0);
+
+        // Very low intensity: Restrict to quarter notes (no 8th notes) for non-busy styles
+        if (intensity < 0.25 && activeStyle !== 'bird') {
+            pool = pool.filter(c => c[2] === 0);
+        }
+
         soloist.currentCell = pool[Math.floor(Math.random() * pool.length)];
     }
     if (soloist.currentCell && soloist.currentCell[stepInBeat] === 1) { /* hit */ } else return null;
@@ -514,7 +532,7 @@ export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, 
     const baseVelocity = 0.5 + (effectiveIntensity * 0.7);
     const stepVelocity = isImportantStep ? baseVelocity * 1.15 : baseVelocity;
 
-    if (intensity < 0.4) {
+    if (intensity < 0.4 && activeStyle !== 'bird') {
         durationSteps = Math.random() < 0.6 ? 4 : 8;
     } else if (isImportantStep && (activeStyle === 'neo' || activeStyle === 'blues' || activeStyle === 'minimal' || activeStyle === 'bossa')) {
         durationSteps = Math.random() < (0.4 + maturityFactor * 0.2) ? 8 : 4;
