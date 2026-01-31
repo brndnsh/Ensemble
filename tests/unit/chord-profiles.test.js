@@ -81,12 +81,8 @@ describe('Comprehensive Chord Recognition', () => {
         });
 
         it('should identify C/G (2nd Inversion)', async () => {
-            // Bass G2 (43) is outside default bass range (24-42)??
-            // wait, 24 is C1. 36 is C2. 42 is F#2.
-            // G2 is 43. So G2 is NOT in bassChroma range!
-            // This is a potential bug or limitation.
-            // Let's test G1 (31).
-            const buffer = createChordBuffer(['G1', 'C4', 'E4', 'C5']);
+            // Testing G2 (43) which was previously outside default bass range (24-42)
+            const buffer = createChordBuffer(['G2', 'C4', 'E4', 'C5']);
             const { results } = await analyzer.analyze(buffer, { bpm: 120 });
             expect(results[0].chord).toBe('C/G');
         });

@@ -253,7 +253,7 @@ export class ChordAnalyzerLite {
 
         const bassChromaOptions = {
             minMidi: 24,
-            maxMidi: 42,
+            maxMidi: 47,
             suppressHarmonics: false,
             step: step,
             buffers: sharedBuffers
