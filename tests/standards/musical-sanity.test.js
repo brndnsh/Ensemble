@@ -7,11 +7,34 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock state.js to include a working dispatch for intensity updates
 vi.mock('../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
+    
+    // Create distinct mock objects
+    const mockPlayback = { ...actual.playback };
+    const mockArranger = { ...actual.arranger };
+    const mockGroove = { ...actual.groove };
+    const mockHarmony = { enabled: false, buffer: new Map() };
+    const mockChords = { ...actual.chords };
+    const mockBass = { ...actual.bass };
+    const mockSoloist = { ...actual.soloist };
+    const mockConductorState = { ...actual.conductorState };
+
+    const mockStateMap = {
+        playback: mockPlayback,
+        arranger: mockArranger,
+        groove: mockGroove,
+        harmony: mockHarmony,
+        chords: mockChords,
+        bass: mockBass,
+        soloist: mockSoloist,
+        conductorState: mockConductorState
+    };
+
     return {
         ...actual,
-        harmony: { enabled: false, buffer: new Map() },
+        ...mockStateMap,
+        getState: () => mockStateMap,
         dispatch: vi.fn((action, payload) => {
-            if (action === 'SET_BAND_INTENSITY') actual.playback.bandIntensity = payload;
+            if (action === 'SET_BAND_INTENSITY') mockPlayback.bandIntensity = payload;
         })
     };
 });

@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { playback, soloist, groove, arranger, chords, bass, harmony, dispatch } from './state.js';
+import { getState, dispatch } from './state.js';
 import { getSectionEnergy } from './form-analysis.js';
 import { debounceSaveState } from './persistence.js';
 import { generateProceduralFill } from './fills.js';
@@ -15,6 +15,7 @@ export const conductorState = {
 };
 
 export function applyConductor() {
+    const { playback, soloist, groove, chords, bass, harmony } = getState();
     const intensity = playback.bandIntensity; // 0.0 - 1.0
     const complexity = playback.complexity;   // 0.0 - 1.0
 
@@ -108,6 +109,7 @@ export function applyConductor() {
  * Updates auto-intensity and monitors the band's "conversation".
  */
 export function updateAutoConductor() {
+    const { playback } = getState();
     if (!playback.autoIntensity || !playback.isPlaying) return;
 
     if (Math.abs(playback.bandIntensity - conductorState.target) > 0.001) {
@@ -128,6 +130,7 @@ export function updateAutoConductor() {
  * Calculates and applies tempo drift for "Lars Mode".
  */
 export function updateLarsTempo(currentStep) {
+    const { groove, playback, arranger } = getState();
     if (!groove.larsMode || !playback.isPlaying) {
         if (conductorState.larsBpmOffset !== 0) {
             conductorState.larsBpmOffset = 0;
@@ -178,6 +181,7 @@ export function updateLarsTempo(currentStep) {
 }
 
 export function updateBpmUI() {
+    const { groove, playback } = getState();
     const bpmInput = document.getElementById('bpmInput');
     const bpmControlGroup = document.getElementById('bpmControlGroup');
     const bpmLabel = document.getElementById('bpmLabel');
@@ -227,6 +231,7 @@ export function updateBpmUI() {
 }
 
 export function checkSectionTransition(currentStep, stepsPerMeasure) {
+    const { groove, arranger, playback } = getState();
     if (!groove.enabled) return;
     
     // Find where we are

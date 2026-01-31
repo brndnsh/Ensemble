@@ -9,16 +9,38 @@ import { ACTIONS } from '../../../public/types.js';
 
 vi.mock('../../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
+    
+    // Create distinct mock objects
+    const mockPlayback = { ...actual.playback };
+    const mockArranger = { 
+        ...actual.arranger,
+        sections: [{ id: 's1', label: 'Main' }, { id: 's2', label: 'Turnaround' }]
+    };
+    const mockConductorState = { ...actual.conductorState };
+    const mockGroove = { ...actual.groove };
+    const mockHarmony = { enabled: false, buffer: new Map() };
+    const mockChords = { ...actual.chords };
+    const mockBass = { ...actual.bass };
+    const mockSoloist = { ...actual.soloist };
+
+    const mockStateMap = {
+        playback: mockPlayback,
+        arranger: mockArranger,
+        conductorState: mockConductorState,
+        groove: mockGroove,
+        harmony: mockHarmony,
+        chords: mockChords,
+        bass: mockBass,
+        soloist: mockSoloist
+    };
+
     return {
         ...actual,
-        harmony: { enabled: false, buffer: new Map() },
+        ...mockStateMap,
+        getState: () => mockStateMap,
         dispatch: vi.fn((action, payload) => {
-            if (action === 'SET_BAND_INTENSITY') playback.bandIntensity = payload;
-        }),
-        arranger: {
-            ...actual.arranger,
-            sections: [{ id: 's1', label: 'Main' }, { id: 's2', label: 'Turnaround' }]
-        }
+            if (action === 'SET_BAND_INTENSITY') mockPlayback.bandIntensity = payload;
+        })
     };
 });
 
