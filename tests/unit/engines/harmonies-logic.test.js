@@ -1,26 +1,25 @@
 /* eslint-disable */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock state and global config
-vi.mock('../../../public/state.js', () => ({
-    harmony: { 
-        enabled: true, volume: 0.4, complexity: 0.5, octave: 60, style: 'smart',
-        motifBuffer: [], rhythmicMask: 0, lastMidis: []
-    },
-    chords: { enabled: true, octave: 60, density: 'standard', rhythmicMask: 0 },
-    bass: { enabled: true, octave: 36 },
-    soloist: { enabled: true, isResting: false, notesInPhrase: 0, sessionSteps: 0, isReplayingMotif: false },
-    playback: { bandIntensity: 0.5, bpm: 120 },
-    arranger: { 
-        key: 'C', 
-        isMinor: false, 
-        progression: [],
-        totalSteps: 64,
-        stepMap: [],
-        timeSignature: '4/4'
-    },
-    groove: { genreFeel: 'Rock', snareMask: 0 }
-}));
+// Mock state
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        playback: { bandIntensity: 0.5, bpm: 120 },
+        groove: { genreFeel: 'Rock' },
+        harmony: { enabled: true, style: 'smart', volume: 0.5, complexity: 0.5, lastMidis: [] },
+        soloist: { enabled: false, busySteps: 0, notesInPhrase: 0, isResting: true },
+        arranger: { timeSignature: '4/4' },
+        chords: {},
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../../public/config.js', () => ({
     KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'],

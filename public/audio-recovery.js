@@ -1,4 +1,4 @@
-import { playback } from './state.js';
+import { getState } from './state.js';
 import { initAudio, restoreGains, killAllNotes } from './engine.js';
 
 /**
@@ -34,6 +34,7 @@ class AudioHealthMonitor {
     }
 
     attachToMaster(masterNode) {
+        const { playback } = getState();
         if (!playback.audio) return;
         
         try {
@@ -53,6 +54,7 @@ class AudioHealthMonitor {
     }
 
     async healthCheck() {
+        const { playback } = getState();
         if (!playback.audio) return;
         if (this.isRecovering) return;
 
@@ -98,6 +100,7 @@ class AudioHealthMonitor {
     }
 
     async triggerDSPReset() {
+        const { playback } = getState();
         this.isRecovering = true;
         this.crashCount++;
 

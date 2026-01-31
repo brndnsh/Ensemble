@@ -3,21 +3,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock dependencies
-vi.mock('../../public/state.js', () => ({
-    soloist: { tension: 0.5 },
-    chords: { density: 'standard', octave: 60, pianoRoots: true },
-    playback: { bandIntensity: 0.5, bpm: 120 },
-    arranger: { 
-        key: 'C', 
-        isMinor: false,
-        progression: [],
-        timeSignature: '4/4'
-    },
-    groove: { genreFeel: 'Jazz' },
-    bass: { enabled: true },
-    harmony: { enabled: false },
-    dispatch: vi.fn()
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        soloist: { tension: 0.5 },
+        chords: { density: 'standard', octave: 60, pianoRoots: true },
+        playback: { bandIntensity: 0.5, bpm: 120 },
+        arranger: { 
+            key: 'C', 
+            isMinor: false,
+            progression: [],
+            timeSignature: '4/4'
+        },
+        groove: { genreFeel: 'Jazz' },
+        bass: { enabled: true },
+        harmony: { enabled: false },
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../public/config.js', async (importOriginal) => {
     const actual = await importOriginal();

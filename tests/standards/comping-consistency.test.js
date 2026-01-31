@@ -2,18 +2,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the state modules
-vi.mock('../../public/state.js', () => ({
-    playback: { bandIntensity: 0.5, bpm: 120, intent: { syncopation: 0, anticipation: 0, layBack: 0 } },
-    arranger: { 
-        timeSignature: '4/4', 
-        progression: []
-    },
-    chords: { enabled: true, style: 'smart', density: 'standard', octave: 60 },
-    bass: { enabled: true },
-    soloist: { enabled: false, busySteps: 0 },
-    groove: { genreFeel: 'Jazz' },
-    harmony: { enabled: false, buffer: new Map() }
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        playback: { bandIntensity: 0.5, bpm: 120, intent: { syncopation: 0, anticipation: 0, layBack: 0 } },
+        arranger: { 
+            timeSignature: '4/4', 
+            progression: []
+        },
+        chords: { enabled: true, style: 'smart', density: 'standard', octave: 60 },
+        bass: { enabled: true },
+        soloist: { enabled: false, busySteps: 0 },
+        groove: { genreFeel: 'Jazz' },
+        harmony: { enabled: false, buffer: new Map() },
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 // Mock config
 vi.mock('../../public/config.js', () => ({
     TIME_SIGNATURES: {

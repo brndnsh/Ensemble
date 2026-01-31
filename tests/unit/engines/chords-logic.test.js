@@ -4,15 +4,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock dependencies
 vi.mock('../../../public/ui.js', () => ({ ui: { updateProgressionDisplay: vi.fn() } }));
 vi.mock('../../../public/worker-client.js', () => ({ syncWorker: vi.fn() }));
-vi.mock('../../../public/state.js', () => ({
-    playback: { bandIntensity: 0.5 },
-    chords: { density: 'standard', octave: 60, pianoRoots: true },
-    arranger: { timeSignature: '4/4', key: 'C', isMinor: false, notation: 'roman', sections: [] },
-    groove: { genreFeel: 'Rock' },
-    bass: { enabled: true },
-    harmony: { enabled: false },
-    dispatch: vi.fn()
-}));
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        playback: { bandIntensity: 0.5 },
+        chords: { density: 'standard', octave: 60, pianoRoots: true },
+        arranger: { timeSignature: '4/4', key: 'C', isMinor: false, notation: 'roman', sections: [] },
+        groove: { genreFeel: 'Rock' },
+        bass: { enabled: true },
+        harmony: { enabled: false },
+        soloist: {},
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../../public/config.js', () => ({
     KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'],

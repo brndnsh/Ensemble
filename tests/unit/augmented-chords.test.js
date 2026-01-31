@@ -2,13 +2,25 @@ import { describe, it, expect, vi } from 'vitest';
 import { getChordDetails, getIntervals } from '../../public/chords.js';
 
 // Mock state
-vi.mock('../../public/state.js', () => ({
-    playback: { bandIntensity: 0.5 },
-    chords: { density: 'standard', octave: 60, pianoRoots: true },
-    arranger: { timeSignature: '4/4', key: 'C', isMinor: false, notation: 'roman' },
-    groove: { genreFeel: 'Rock' },
-    bass: { enabled: true }
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        playback: { bandIntensity: 0.5 },
+        chords: { density: 'standard', octave: 60, pianoRoots: true },
+        arranger: { timeSignature: '4/4', key: 'C', isMinor: false, notation: 'roman' },
+        groove: { genreFeel: 'Rock' },
+        bass: { enabled: true },
+        soloist: {},
+        harmony: {},
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 describe('Augmented Chords Support', () => {
     describe('getChordDetails', () => {

@@ -1,4 +1,4 @@
-import { playback, arranger, chords, bass, soloist, groove, harmony } from './state.js';
+import { getState } from './state.js';
 import { getMidi, getFrequency } from './utils.js';
 import { TIME_SIGNATURES } from './config.js';
 
@@ -27,6 +27,7 @@ const STICKY_GENRES = ['Funk', 'Soul', 'Reggae', 'Neo-Soul'];
  * Replaces static PIANO_CELLS table to save space and increase variety.
  */
 export function generateCompingPattern(genre, vibe, length = 16) {
+    const { playback } = getState();
     const pattern = new Array(length).fill(0);
     const intensity = playback.bandIntensity;
     
@@ -162,6 +163,7 @@ export function generateCompingPattern(genre, vibe, length = 16) {
 }
 
 function updateRhythmicIntent(step, soloistBusy, spm = 16, sectionId = null) {
+    const { playback, chords, groove } = getState();
     
     // --- Section Change Detection ---
     if (sectionId && compingState.lastSectionId !== sectionId) {
@@ -303,6 +305,7 @@ function handleSustainEvents(step, measureStep, chordIndex, intensity, genre, st
  * Returns an array of standardized Note Objects.
  */
 export function getAccompanimentNotes(chord, step, stepInChord, measureStep, stepInfo) {
+    const { playback, arranger, chords, bass, soloist, groove, harmony } = getState();
     if (!chords.enabled || !chord) return [];
 
     const notes = [];

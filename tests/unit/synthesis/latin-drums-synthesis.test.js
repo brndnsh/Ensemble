@@ -2,8 +2,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global modules
-vi.mock('../../../public/state.js', () => ({
-    playback: {
+vi.mock('../../../public/state.js', () => {
+    const mockPlayback = {
         audio: {
             currentTime: 0,
             createOscillator: vi.fn(() => ({
@@ -44,14 +44,33 @@ vi.mock('../../../public/state.js', () => ({
             sampleRate: 44100
         },
         drumsGain: { connect: vi.fn() }
-    },
-    groove: { 
+    };
+    const mockGroove = { 
         humanize: 20, 
         audioBuffers: { noise: {} },
         lastHatGain: null 
-    },
-    harmony: { enabled: false }
-}));
+    };
+    const mockHarmony = { enabled: false };
+
+    const mockStateMap = {
+        playback: mockPlayback,
+        groove: mockGroove,
+        harmony: mockHarmony
+    };
+
+    return {
+        ...mockStateMap,
+        getState: () => mockStateMap,
+        arranger: {},
+        chords: {},
+        bass: {},
+        soloist: {},
+        vizState: {},
+        storage: {},
+        midi: {},
+        dispatch: vi.fn()
+    };
+});
 
 // Mock utils
 vi.mock('../../../public/utils.js', () => ({

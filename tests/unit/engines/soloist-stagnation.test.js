@@ -17,29 +17,25 @@ vi.mock('../../../public/config.js', () => ({
 }));
 
 // Mock state
-vi.mock('../../../public/state.js', () => ({
-    soloist: {
-        enabled: true,
-        busySteps: 0,
-        currentPhraseSteps: 0,
-        notesInPhrase: 0,
-        qaState: 'Question',
-        isResting: false,
-        motifBuffer: [],
-        motifReplayCount: 0,
-        sessionSteps: 0,
-        lastFreq: 440,
-        lastInterval: 0,
-        stagnationCount: 0,
-        deviceBuffer: [],
-        doubleStops: false,
-        pitchHistory: []
-    },
-    playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.5 },
-    groove: { genreFeel: 'Rock' },
-    arranger: { timeSignature: '4/4', totalSteps: 64 },
-    harmony: { enabled: false }
-}));
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.5 },
+        soloist: { busySteps: 0, tension: 0, doubleStops: false, sessionSteps: 1000, pitchHistory: [], motifBuffer: [], deviceBuffer: [] },
+        groove: { genreFeel: 'Jazz' },
+        arranger: { timeSignature: '4/4', totalSteps: 64 },
+        chords: {},
+        bass: {},
+        harmony: {},
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../../public/utils.js', () => ({
     getFrequency: (m) => 440 * Math.pow(2, (m - 69) / 12),

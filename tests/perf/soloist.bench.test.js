@@ -2,29 +2,40 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock state and global config
-vi.mock('../../public/state.js', () => ({
-    soloist: {
-        enabled: true, busySteps: 0, currentPhraseSteps: 10, notesInPhrase: 5,
-        qaState: 'Question', isResting: false, contourSteps: 0,
-        melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
-        lastFreq: 440, lastInterval: 0, hookRetentionProb: 0.5, doubleStops: true,
-        sessionSteps: 1000, deviceBuffer: [], deterministic: false,
-        pitchHistory: new Array(128).fill(0).map((_, i) => 60 + (i % 12)) // Pre-populate history to force loops
-    },
-    chords: { enabled: true },
-    bass: { enabled: true },
-    harmony: { enabled: true, rhythmicMask: 0, complexity: 0.5 },
-    playback: { bandIntensity: 0.5, bpm: 120, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
-    arranger: {
-        key: 'C',
-        isMinor: false,
-        progression: new Array(16).fill({}),
-        totalSteps: 64,
-        stepMap: [{start: 0, end: 64, chord: {sectionId: 'A'}}],
-        timeSignature: '4/4'
-    },
-    groove: { genreFeel: 'Rock' }
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        soloist: {
+            enabled: true,
+            busySteps: 0,
+            currentPhraseSteps: 0,
+            notesInPhrase: 0,
+            qaState: 'Question',
+            isResting: false,
+            contourSteps: 0,
+            melodicTrend: 'Static',
+            tension: 0,
+            motifBuffer: [],
+            hookBuffer: [],
+            lastFreq: 440,
+            pitchHistory: [],
+            deviceBuffer: []
+        },
+        groove: { genreFeel: 'Jazz' },
+        playback: { bandIntensity: 0.5, bpm: 120 },
+        arranger: { timeSignature: '4/4', totalSteps: 64 },
+        chords: {},
+        bass: {},
+        harmony: {},
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../public/config.js', () => {
     const STYLE_CONFIG = {

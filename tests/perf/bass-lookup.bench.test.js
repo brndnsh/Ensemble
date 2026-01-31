@@ -34,33 +34,43 @@ const { mockArranger, stepMap, TOTAL_SECTIONS, STEPS_PER_SECTION } = vi.hoisted(
     };
 });
 
-vi.mock('../../public/state.js', () => ({
-    bass: {
-        enabled: true,
-        busySteps: 0,
-        lastFreq: 440,
-        volume: 0.5,
-        pocketOffset: 0,
-        buffer: new Map(),
-        style: 'rock'
-    },
-    soloist: {
-        enabled: true,
-        busySteps: 0,
-        tension: 0,
-        buffer: new Map()
-    },
-    groove: {
-        genreFeel: 'Rock',
-        measures: 1,
-        lastDrumPreset: 'Standard',
-        instruments: []
-    },
-    playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.3 },
-    chords: { pianoRoots: true },
-    harmony: { enabled: false, buffer: new Map() },
-    arranger: mockArranger
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        bass: {
+            enabled: true,
+            busySteps: 0,
+            lastFreq: 440,
+            volume: 0.5,
+            pocketOffset: 0,
+            buffer: new Map(),
+            style: 'rock'
+        },
+        soloist: {
+            enabled: true,
+            busySteps: 0,
+            tension: 0,
+            buffer: new Map()
+        },
+        groove: {
+            genreFeel: 'Rock',
+            measures: 1,
+            lastDrumPreset: 'Standard',
+            instruments: []
+        },
+        playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.3 },
+        chords: { pianoRoots: true },
+        harmony: { enabled: false, buffer: new Map() },
+        arranger: mockArranger,
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../public/config.js', () => ({
     KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'],

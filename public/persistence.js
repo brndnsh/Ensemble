@@ -1,8 +1,9 @@
-import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi } from './state.js';
+import { getState, storage } from './state.js';
 
 let saveTimeout;
 
 export function saveCurrentState() {
+    const { arranger, playback, chords, bass, soloist, harmony, groove, vizState, midi } = getState();
     if (saveTimeout) clearTimeout(saveTimeout);
     const data = {
         sections: arranger.sections,

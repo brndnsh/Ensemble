@@ -13,24 +13,35 @@ vi.stubGlobal('self', {
 });
 
 // Mock state
-vi.mock('../../../public/state.js', () => ({
-    soloist: { 
-        enabled: true, lastFreq: 440, busySteps: 0, sessionSteps: 1000
-    },
-    chords: { enabled: true },
-    bass: { enabled: true, lastFreq: 110, pocketOffset: 0 },
-    harmony: { enabled: true, volume: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
-    playback: { bandIntensity: 0.5, bpm: 120, intent: {}, audio: { currentTime: 0 } },
-    arranger: { 
-        key: 'C', 
-        isMinor: false, 
-        progression: [],
-        totalSteps: 64,
-        stepMap: [],
-        timeSignature: '4/4'
-    },
-    groove: { genreFeel: 'Rock', enabled: true, instruments: [], audioBuffers: { noise: {} } }
-}));
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        soloist: { 
+            enabled: true, lastFreq: 440, busySteps: 0, sessionSteps: 1000,
+            motifBuffer: [], deviceBuffer: []
+        },
+        chords: { enabled: true },
+        bass: { enabled: true, lastFreq: 110, pocketOffset: 0 },
+        harmony: { enabled: true, volume: 0.4, complexity: 0.5, motifBuffer: [], buffer: new Map() },
+        playback: { bandIntensity: 0.5, bpm: 120, intent: {}, audio: { currentTime: 0 } },
+        arranger: { 
+            key: 'C', 
+            isMinor: false, 
+            progression: [],
+            totalSteps: 64,
+            stepMap: [],
+            timeSignature: '4/4'
+        },
+        groove: { genreFeel: 'Rock', enabled: true, instruments: [], audioBuffers: { noise: {} } },
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../../public/config.js', () => ({
     KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'],

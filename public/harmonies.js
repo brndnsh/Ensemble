@@ -1,5 +1,5 @@
 import { getBestInversion } from './chords.js';
-import * as State from './state.js';
+import { getState } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
 
 /**
@@ -14,7 +14,7 @@ let lastPlayedStep = -1;
  * Clears the internal motif memory. Used for section changes or testing.
  */
 export function clearHarmonyMemory() {
-    const { harmony, soloist } = State;
+    const { harmony, soloist } = getState();
     motifCache.clear();
     harmony.lastMidis = [];
     lastPlayedStep = -1;
@@ -137,7 +137,7 @@ export function getHarmonyNotes(chord, nextChord, step, octave, style, stepInCho
     if (!chord) return [];
 
     // Destructure state here to avoid ReferenceError during evaluation
-    const { playback, groove, harmony, soloist, arranger } = State;
+    const { playback, groove, harmony, soloist, arranger } = getState();
 
     // Internal Style Config
     const STYLE_CONFIG = {

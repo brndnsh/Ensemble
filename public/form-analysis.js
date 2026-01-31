@@ -1,4 +1,4 @@
-import { arranger } from './state.js';
+import { getState } from './state.js';
 
 export const SECTION_ENERGY_MAP = {
     'intro': 0.4, 'verse': 0.5, 'pre-chorus': 0.6, 'build': 0.7,
@@ -49,6 +49,7 @@ function calculateHarmonicFlux(sectionSteps) {
  * Analyzes the arranger's progression to detect musical form and assign functional roles.
  */
 export function analyzeForm() {
+    const { arranger } = getState();
     if (!arranger.stepMap.length) return null;
     
     // 1. Group by Sections

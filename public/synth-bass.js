@@ -1,7 +1,8 @@
-import { playback, bass, groove } from './state.js';
+import { getState } from './state.js';
 import { safeDisconnect, createSoftClipCurve } from './utils.js';
 
 export function killBassNote() {
+    const { playback, bass } = getState();
     if (bass.lastBassGain) {
         try {
             const g = bass.lastBassGain.gain;
@@ -26,6 +27,7 @@ const mixState = {
  * 3. Impact: Sine 'Click' transient
  */
 export function playBassNote(freq, time, duration, velocity = 1.0, muted = false) {
+    const { playback, bass, groove } = getState();
     if (!Number.isFinite(freq) || !Number.isFinite(time) || !Number.isFinite(duration)) return;
     if (freq < 10 || freq > 24000) return;
     try {

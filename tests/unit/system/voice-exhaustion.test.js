@@ -3,35 +3,45 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Unified mock for state.js to ensure internal synthesis logic sees consistent state
 vi.mock('../../../public/state.js', () => {
-    return {
-        playback: { 
-            audio: { 
-                currentTime: 0, 
-                createOscillator: vi.fn(() => ({
-                    connect: vi.fn(), start: vi.fn(), stop: vi.fn(), 
-                    setPeriodicWave: vi.fn(), frequency: { setValueAtTime: vi.fn() },
-                    detune: { setValueAtTime: vi.fn() }
-                })),
-                createGain: vi.fn(() => ({
-                    connect: vi.fn(), 
-                    gain: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() }
-                })),
-                createBiquadFilter: vi.fn(() => ({
-                    connect: vi.fn(), frequency: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn() },
-                    Q: { setValueAtTime: vi.fn() }, type: 'lowpass'
-                })),
-                createPeriodicWave: vi.fn(() => ({})),
-                createBufferSource: vi.fn(() => ({ 
-                    connect: vi.fn(), start: vi.fn(), stop: vi.fn(), buffer: null 
-                }))
-            },
-            bandIntensity: 0.5,
-            sustainActive: true,
-            chordsGain: {},
-            audioBuffers: { noise: {} }
+    const mockPlayback = { 
+        audio: { 
+            currentTime: 0, 
+            createOscillator: vi.fn(() => ({
+                connect: vi.fn(), start: vi.fn(), stop: vi.fn(), 
+                setPeriodicWave: vi.fn(), frequency: { setValueAtTime: vi.fn() },
+                detune: { setValueAtTime: vi.fn() }
+            })),
+            createGain: vi.fn(() => ({
+                connect: vi.fn(), 
+                gain: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() }
+            })),
+            createBiquadFilter: vi.fn(() => ({
+                connect: vi.fn(), frequency: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn() },
+                Q: { setValueAtTime: vi.fn() }, type: 'lowpass'
+            })),
+            createPeriodicWave: vi.fn(() => ({})),
+            createBufferSource: vi.fn(() => ({ 
+                connect: vi.fn(), start: vi.fn(), stop: vi.fn(), buffer: null 
+            }))
         },
-        groove: { audioBuffers: { noise: {} } },
-        chords: {}
+        bandIntensity: 0.5,
+        sustainActive: true,
+        chordsGain: {},
+        audioBuffers: { noise: {} }
+    };
+    const mockGroove = { audioBuffers: { noise: {} } };
+    const mockChords = {};
+
+    const mockStateMap = {
+        playback: mockPlayback,
+        groove: mockGroove,
+        chords: mockChords
+    };
+
+    return {
+        ...mockStateMap,
+        getState: () => mockStateMap,
+        dispatch: vi.fn()
     };
 });
 

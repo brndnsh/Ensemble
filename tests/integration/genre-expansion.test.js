@@ -7,28 +7,38 @@ import { DRUM_PRESETS, CHORD_STYLES, BASS_STYLES, SOLOIST_STYLES } from '../../p
 import { chords, groove } from '../../public/state.js';
 
 // Mock state
-vi.mock('../../public/state.js', () => ({
-    arranger: {
-        timeSignature: '4/4',
-        progression: [],
-        key: 'C',
-        isMinor: false
-    },
-    groove: {
-        genreFeel: 'Country',
-        lastDrumPreset: 'Country (Two-Step)',
-        instruments: []
-    },
-    chords: { enabled: true, style: 'strum-country' },
-    bass: { enabled: true, pocketOffset: 0 },
-    soloist: { enabled: true, tension: 0, busySteps: 0, motifBuffer: [] },
-    harmony: { enabled: false }, dispatch: vi.fn(),
-    playback: {
-        bandIntensity: 0.5,
-        complexity: 0.5,
-        intent: { anticipation: 0, layBack: 0 }
-    }
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        arranger: {
+            timeSignature: '4/4',
+            progression: [],
+            key: 'C',
+            isMinor: false
+        },
+        groove: {
+            genreFeel: 'Country',
+            lastDrumPreset: 'Country (Two-Step)',
+            instruments: []
+        },
+        chords: { enabled: true, style: 'strum-country' },
+        bass: { enabled: true, pocketOffset: 0 },
+        soloist: { enabled: true, tension: 0, busySteps: 0, motifBuffer: [] },
+        harmony: { enabled: false },
+        playback: {
+            bandIntensity: 0.5,
+            complexity: 0.5,
+            intent: { anticipation: 0, layBack: 0 }
+        },
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 describe('Genre Expansion Integration', () => {
     

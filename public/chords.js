@@ -1,7 +1,6 @@
 import { KEY_ORDER, ROMAN_VALS, NNS_OFFSETS, INTERVAL_TO_NNS, INTERVAL_TO_ROMAN, TIME_SIGNATURES } from './config.js';
 import { normalizeKey, getFrequency } from './utils.js';
-import * as stateModule from './state.js';
-import { dispatch } from './state.js';
+import { getState, dispatch } from './state.js';
 
 const ROMAN_REGEX = /^([#b])?(III|II|IV|I|VII|VI|V|iii|ii|iv|i|vii|vi|v)/;
 const NNS_REGEX = /^([#b])?([1-7])/;
@@ -66,7 +65,7 @@ export function getChordDetails(symbol) {
  * @returns {number[]} - Optimized MIDI notes for the chord.
  */
 export function getBestInversion(rootMidi, intervals, previousMidis, isPivot = false, anchor = null, min = 40, max = 80, style = 'stabs') {
-    const { chords } = stateModule;
+    const { chords } = getState();
     const homeAnchor = anchor || chords.octave || 60;
     
     // Organ needs more aggressive correction back to the anchor to avoid mud
@@ -364,7 +363,7 @@ export function resolveChordRoot(part, keyRootMidi, baseOctave) {
  * Omits root and often the 5th to focus on 3rd, 7th, and extensions.
  */
 function getRootlessVoicing(quality, is7th, isRich) {
-    const { groove } = stateModule;
+    const { groove } = getState();
     const genre = groove.genreFeel;
     // Basic types
     const isMinor = quality.startsWith('m') && !quality.startsWith('maj');
@@ -421,7 +420,7 @@ function getRootlessVoicing(quality, is7th, isRich) {
 }
 
 export function getIntervals(quality, is7th, density, genre = 'Rock', bassEnabled = true) {
-    const { playback, groove } = stateModule;
+    const { playback, groove } = getState();
     const isRich = density === 'rich';
     const intensity = playback.bandIntensity;
 
@@ -615,7 +614,7 @@ export function getFormattedChordNames(rootName, rootNNS, rootRomanBase, quality
  * @returns {{chords: Array, finalMidis: number[]}}
  */
 function parseProgressionPart(input, key, timeSignature, initialMidis) {
-    const { chords, groove, bass } = stateModule;
+    const { chords, groove, bass } = getState();
     const parsed = [];
     const baseOctave = Math.floor(chords.octave / 12) * 12;
     const keyRootMidi = baseOctave + KEY_ORDER.indexOf(normalizeKey(key));
@@ -743,7 +742,7 @@ function parseProgressionPart(input, key, timeSignature, initialMidis) {
  * @param {Function} renderCallback - Callback to trigger visual update.
  */
 export function validateProgression(renderCallback) {
-    const { arranger } = stateModule;
+    const { arranger } = getState();
     let allChords = [];
     let lastMidis = [];
 
@@ -782,7 +781,7 @@ export function validateProgression(renderCallback) {
  * Caches progression metadata to avoid redundant calculations in the scheduler.
  */
 export function updateProgressionCache() {
-    const { arranger } = stateModule;
+    const { arranger } = getState();
     if (!arranger.progression.length) {
         Object.assign(arranger, {
             totalSteps: 0,

@@ -9,13 +9,22 @@ import { saveCurrentState } from '../../../public/persistence.js';
 // Mock storage
 vi.mock('../../../public/state.js', async (importOriginal) => {
     const actual = await importOriginal();
-    return {
+    const mockStorage = {
+        save: vi.fn(),
+        get: vi.fn()
+    };
+    const mockHarmony = { enabled: false, buffer: new Map() };
+    
+    const mockStateMap = {
         ...actual,
-        harmony: { enabled: false, buffer: new Map() },
-        storage: {
-            save: vi.fn(),
-            get: vi.fn()
-        }
+        harmony: mockHarmony,
+        storage: mockStorage
+    };
+
+    return {
+        ...mockStateMap,
+        getState: () => mockStateMap,
+        storage: mockStorage
     };
 });
 

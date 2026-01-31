@@ -1,9 +1,10 @@
-import { playback, groove } from './state.js';
+import { getState } from './state.js';
 import { safeDisconnect } from './utils.js';
 
 const RIGHT_PANNED_INSTRUMENTS = new Set(['HiHat', 'Open', 'Crash', 'Shaker', 'Agogo', 'Perc', 'Guiro', 'Clave']);
 
 export function killDrumNote() {
+    const { playback, groove } = getState();
     if (groove.lastHatGain) {
         try {
             const g = groove.lastHatGain.gain;
@@ -22,6 +23,7 @@ const mixState = {
 };
 
 export function playDrumSound(name, time, velocity = 1.0) {
+    const { playback, groove } = getState();
     if (!name) return;
     const now = playback.audio.currentTime;
     

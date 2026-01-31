@@ -2,42 +2,52 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
-vi.mock('../../../public/state.js', () => ({
-    bass: {
-        enabled: true,
-        busySteps: 0,
-        lastFreq: 440,
-        volume: 0.5,
-        pocketOffset: 0,
-        buffer: new Map(),
-        style: 'smart'
-    },
-    soloist: {
-        enabled: true,
-        busySteps: 0,
-        tension: 0,
-        buffer: new Map()
-    },
-    groove: {
-        genreFeel: 'Funk',
-        measures: 1,
-        lastDrumPreset: 'Standard',
-        instruments: [
-            { name: 'Kick', steps: new Array(16).fill(0), muted: false }
-        ]
-    },
-    playback: { bandIntensity: 0.8, bpm: 120, complexity: 0.5 },
-    chords: { pianoRoots: true },
-    harmony: { enabled: false, buffer: new Map() },
-    arranger: {
-        key: 'C',
-        isMinor: false,
-        progression: new Array(16).fill({}),
-        totalSteps: 64,
-        timeSignature: '4/4',
-        stepMap: [{ start: 0, end: 64, chord: { sectionId: 's1', rootMidi: 48, quality: '7', beats: 4 } }]
-    }
-}));
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        bass: {
+            enabled: true,
+            busySteps: 0,
+            lastFreq: 440,
+            volume: 0.5,
+            pocketOffset: 0,
+            buffer: new Map(),
+            style: 'smart'
+        },
+        soloist: {
+            enabled: true,
+            busySteps: 0,
+            tension: 0,
+            buffer: new Map()
+        },
+        groove: {
+            genreFeel: 'Funk',
+            measures: 1,
+            lastDrumPreset: 'Standard',
+            instruments: [
+                { name: 'Kick', steps: new Array(16).fill(0), muted: false }
+            ]
+        },
+        playback: { bandIntensity: 0.8, bpm: 120, complexity: 0.5 },
+        chords: { pianoRoots: true },
+        harmony: { enabled: false, buffer: new Map() },
+        arranger: {
+            key: 'C',
+            isMinor: false,
+            progression: new Array(16).fill({}),
+            totalSteps: 64,
+            timeSignature: '4/4',
+            stepMap: [{ start: 0, end: 64, chord: { sectionId: 's1', rootMidi: 48, quality: '7', beats: 4 } }]
+        },
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../../public/config.js', () => ({
     KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'],

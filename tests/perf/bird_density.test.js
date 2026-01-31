@@ -34,15 +34,40 @@ const { playbackState, soloistState, grooveState, arrangerState } = vi.hoisted((
     }
 }));
 
-vi.mock('../../public/state.js', () => ({
-    playback: playbackState,
-    soloist: soloistState,
-    groove: grooveState,
-    arranger: arrangerState,
-    harmony: { enabled: true, rhythmicMask: 0, complexity: 0 },
-    chords: { enabled: true },
-    bass: { enabled: true }
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        soloist: {
+            enabled: true,
+            busySteps: 0,
+            currentPhraseSteps: 0,
+            notesInPhrase: 0,
+            qaState: 'Question',
+            isResting: false,
+            contourSteps: 0,
+            melodicTrend: 'Static',
+            tension: 0,
+            motifBuffer: [],
+            hookBuffer: [],
+            lastFreq: 440,
+            pitchHistory: [],
+            deviceBuffer: []
+        },
+        groove: { genreFeel: 'Jazz' },
+        playback: { bandIntensity: 0.5, bpm: 120 },
+        arranger: { timeSignature: '4/4', totalSteps: 64 },
+        chords: {},
+        bass: {},
+        harmony: {},
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 // 2. Mock Config (TIME_SIGNATURES needed)
 vi.mock('../../public/config.js', () => ({

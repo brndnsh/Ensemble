@@ -3,6 +3,30 @@
  * @vitest-environment happy-dom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+// Mock state
+vi.mock('../../../public/state.js', () => {
+    const playback = { bpm: 100, bandIntensity: 0.5, audio: { currentTime: 0 } };
+    const arranger = { progression: [], stepMap: [], sectionMap: [], totalSteps: 0, key: 'C', isMinor: false, timeSignature: '4/4' };
+    const chords = { enabled: true, style: 'smart', octave: 0, density: 0.5, volume: 1.0 };
+    const bass = { enabled: true, style: 'basic', octave: 0, volume: 1.0 };
+    const soloist = { enabled: true, style: 'jazz', octave: 0, volume: 1.0, doubleStops: false, sessionSteps: 0, hookRetentionProb: 0.5 };
+    const harmony = { enabled: true, style: 'pad', octave: 0, volume: 1.0, complexity: 0.5 };
+    const groove = { enabled: true, genreFeel: 'Rock', swing: 0, swingSub: '8th', instruments: [{ name: 'Kick', steps: [1,0,0,0], muted: false }], volume: 1.0 };
+    const vizState = {};
+    const midi = {};
+
+    const stateMap = {
+        playback, arranger, chords, bass, soloist, harmony, groove, vizState, midi
+    };
+
+    return {
+        ...stateMap,
+        getState: () => stateMap,
+        dispatch: vi.fn(),
+        subscribe: vi.fn()
+    };
+});
+
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';
 
 // We need to import syncWorker and initWorker AFTER we mock the global Worker

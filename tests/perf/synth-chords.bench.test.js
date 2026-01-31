@@ -8,73 +8,60 @@ vi.mock('../../public/utils.js', () => ({
 
 // Mock state
 vi.mock('../../public/state.js', () => {
-    const audioContextMock = {
-        currentTime: 0,
-        sampleRate: 44100,
-        createStereoPanner: () => ({
-            pan: { setValueAtTime: () => {} },
-            connect: () => {}
-        }),
-        createGain: () => ({
-            gain: {
-                value: 0,
-                setValueAtTime: () => {},
-                setTargetAtTime: () => {},
-                linearRampToValueAtTime: () => {},
-                cancelScheduledValues: () => {}
-            },
-            connect: () => {}
-        }),
-        createOscillator: () => ({
-            frequency: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {}, setTargetAtTime: () => {} },
-            detune: { setValueAtTime: () => {} },
-            start: () => {},
-            stop: () => {},
-            connect: () => {},
-            type: 'sine',
-            setPeriodicWave: () => {},
-            onended: null
-        }),
-        createBufferSource: () => ({
-            buffer: null,
-            playbackRate: { value: 1 },
-            start: () => {},
-            stop: () => {},
-            connect: () => {},
-            loop: false,
-            onended: null
-        }),
-        createBiquadFilter: () => ({
-            frequency: { value: 0, setValueAtTime: () => {}, setTargetAtTime: () => {} },
-            Q: { value: 0, setValueAtTime: () => {} },
-            connect: () => {},
-            type: 'lowpass'
-        }),
-        createWaveShaper: () => ({
-            curve: null,
-            oversample: 'none',
-            connect: () => {}
-        }),
-        createPeriodicWave: () => ({}),
-        createBuffer: (channels, length) => ({
-            getChannelData: () => new Float32Array(length)
-        })
+    const mockPlayback = {
+        audio: {
+            currentTime: 0,
+            createOscillator: vi.fn(() => ({
+                type: '',
+                frequency: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn() },
+                detune: { setValueAtTime: vi.fn() },
+                setPeriodicWave: vi.fn(),
+                connect: vi.fn(),
+                start: vi.fn(),
+                stop: vi.fn(),
+                onended: null
+            })),
+            createGain: vi.fn(() => ({
+                gain: {
+                    value: 1,
+                    setValueAtTime: vi.fn(),
+                    setTargetAtTime: vi.fn(),
+                    cancelScheduledValues: vi.fn()
+                },
+                connect: vi.fn()
+            })),
+            createBiquadFilter: vi.fn(() => ({
+                type: '',
+                frequency: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn() },
+                Q: { setValueAtTime: vi.fn() },
+                connect: vi.fn()
+            })),
+            createBufferSource: vi.fn(() => ({
+                buffer: null,
+                connect: vi.fn(),
+                start: vi.fn(),
+                stop: vi.fn(),
+                onended: null
+            })),
+            createPeriodicWave: vi.fn(() => ({}))
+        },
+        chordsGain: { connect: vi.fn() },
+        sustainActive: false,
+        bandIntensity: 0.5
+    };
+    const mockGroove = { audioBuffers: { noise: {} } };
+    
+    const mockStateMap = {
+        playback: mockPlayback,
+        groove: mockGroove,
+        chords: {},
+        harmony: {}
     };
 
     return {
-        playback: {
-            audio: audioContextMock,
-            chordsGain: { gain: { value: 1 }, connect: () => {} },
-            heldNotes: new Set(),
-            bandIntensity: 0.9, // Trigger the optimization path (>= 0.8)
-            sustainActive: false
-        },
-        groove: {
-            audioBuffers: {
-                noise: {},
-            },
-            humanize: 10
-        }
+        ...mockStateMap,
+        getState: () => mockStateMap,
+        dispatch: vi.fn()
     };
 });
 

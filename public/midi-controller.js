@@ -1,5 +1,5 @@
 import { ACTIONS } from './types.js';
-import { playback, midi, dispatch } from './state.js';
+import { getState, dispatch } from './state.js';
 
 let midiAccess = null;
 
@@ -15,6 +15,7 @@ const activeNotes = new Set();
  * Handles incoming MIDI messages from controllers.
  */
 function handleMIDIMessage(event) {
+    const { midi } = getState();
     if (!midi.enabled) return;
     
     const [status, data1, data2] = event.data;
@@ -80,6 +81,7 @@ export function syncMIDIOutputs() {
  * @param {number} time - AudioContext time
  */
 export function sendMIDINoteOn(channel, note, velocity, time) {
+    const { playback, midi } = getState();
     if (!midi.enabled || !midi.selectedOutputId || !midiAccess) return;
     const output = midiAccess.outputs.get(midi.selectedOutputId);
     if (!output) return;
@@ -98,6 +100,7 @@ export function sendMIDINoteOn(channel, note, velocity, time) {
  * @param {number} time - AudioContext time
  */
 export function sendMIDINoteOff(channel, note, time) {
+    const { playback, midi } = getState();
     if (!midi.enabled || !midi.selectedOutputId || !midiAccess) return;
     const output = midiAccess.outputs.get(midi.selectedOutputId);
     if (!output) return;
@@ -117,6 +120,7 @@ export function sendMIDINoteOff(channel, note, time) {
  * @param {number} time - AudioContext time
  */
 export function sendMIDICC(channel, controller, value, time) {
+    const { playback, midi } = getState();
     if (!midi.enabled || !midi.selectedOutputId || !midiAccess) return;
     const output = midiAccess.outputs.get(midi.selectedOutputId);
     if (!output) return;
@@ -133,6 +137,7 @@ export function sendMIDICC(channel, controller, value, time) {
  * @returns {number} 0-127
  */
 export function normalizeMidiVelocity(internalVel) {
+    const { midi } = getState();
     if (internalVel <= 0.01) return 1; // Minimum audibility for non-zero internal
 
     // We treat 1.5 as the "theoretical maximum" for internal accents.
@@ -155,6 +160,7 @@ export function normalizeMidiVelocity(internalVel) {
  * @param {number} time - AudioContext time
  */
 export function sendMIDIPitchBend(channel, value, time) {
+    const { playback, midi } = getState();
     if (!midi.enabled || !midi.selectedOutputId || !midiAccess) return;
     const output = midiAccess.outputs.get(midi.selectedOutputId);
     if (!output) return;
@@ -181,6 +187,7 @@ export function sendMIDIPitchBend(channel, value, time) {
  * @param {boolean|Object} [options=false] - If true, enforces monophony. Or pass object { isMono, bend }
  */
 export function sendMIDINote(channel, note, velocity, time, duration, options = false) {
+    const { playback, midi } = getState();
     const isMono = typeof options === 'boolean' ? options : !!options.isMono;
     const bend = typeof options === 'object' ? options.bend : 0;
 
@@ -314,6 +321,7 @@ const DRUM_MAP = {
  * Specifically handles drum scheduling for MIDI.
  */
 export function sendMIDIDrum(instrumentName, time, velocity, octaveOffset = 0) {
+    const { midi } = getState();
     const note = (DRUM_MAP[instrumentName] || 36) + (octaveOffset * 12);
     const vel = normalizeMidiVelocity(velocity);
     // Drums are usually short triggers, so we'll send a note off shortly after
@@ -326,6 +334,7 @@ export function sendMIDIDrum(instrumentName, time, velocity, octaveOffset = 0) {
  * @param {number} time - AudioContext time
  */
 export function sendMIDITransport(type, time) {
+    const { playback, midi } = getState();
     if (!midi.enabled || !midi.selectedOutputId || !midiAccess) return;
     const output = midiAccess.outputs.get(midi.selectedOutputId);
     if (!output) return;
@@ -340,6 +349,7 @@ export function sendMIDITransport(type, time) {
  * @param {boolean} resetAll - If true, sends Reset All Controllers (CC 121) to all channels.
  */
 export function panic(resetAll = false) {
+    const { midi } = getState();
     // 1. Clear future Note Offs (they are no longer needed as we'll kill now)
     for (const [, value] of activeNoteOffs) {
         clearTimeout(value.id);

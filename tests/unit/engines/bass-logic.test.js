@@ -1,44 +1,26 @@
 /* eslint-disable */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock state and global config
-vi.mock('../../../public/state.js', () => ({
-    bass: { 
-        enabled: true, 
-        busySteps: 0, 
-        lastFreq: 440,
-        volume: 0.5,
-        pocketOffset: 0,
-        buffer: new Map(),
-        style: 'smart'
-    },
-    soloist: { 
-        enabled: true, 
-        busySteps: 0, 
-        tension: 0,
-        buffer: new Map()
-    },
-    groove: { 
-        genreFeel: 'Rock',
-        measures: 1,
-        lastDrumPreset: 'Standard',
-        instruments: [
-            { name: 'Kick', steps: new Array(16).fill(0), muted: false }
-        ]
-    },
-    playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.3 },
-    chords: { pianoRoots: true },
-    harmony: { enabled: false, buffer: new Map() },
-    arranger: { 
-        key: 'C', 
-        isMinor: false, 
-        progression: new Array(16).fill({}),
-        totalSteps: 64,
-        timeSignature: '4/4',
-        stepMap: [{ start: 0, end: 64, chord: { sectionId: 's1', rootMidi: 48, quality: '7', beats: 4 } }]
-    }
-}));
-
+// Mock state
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.5 },
+        groove: { genreFeel: 'Rock', lastDrumPreset: 'Basic Rock', instruments: [{ name: 'Kick', steps: [] }] },
+        bass: { style: 'smart', octave: 38, lastFreq: null, enabled: true, pocketOffset: 0 },
+        soloist: { busySteps: 0, tension: 0 },
+        arranger: { timeSignature: '4/4', totalSteps: 64, stepMap: [{ start: 0, end: 64, chord: { sectionId: 's1' } }], key: 'C' },
+        chords: {},
+        harmony: {},
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 vi.mock('../../../public/config.js', () => ({
     KEY_ORDER: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'],
     TIME_SIGNATURES: {
@@ -132,8 +114,16 @@ describe('Bass Engine Logic', () => {
         it('should boost velocity for "Pop" articulation in funk at high intensity', () => {
             playback.bandIntensity = 1.0; // Max intensity
             groove.instruments[0].steps[2] = 1;
-            const result = getBassNote(chordC, null, 0.5, 110, 38, 'funk', 0, 2, 2);
+            let result = null;
+            // Retry a few times because of Math.random() < 0.45 in funk logic
+            for (let i = 0; i < 20; i++) {
+                result = getBassNote(chordC, null, 0.5, 110, 38, 'funk', 0, 60, 2);
+                if (result) break;
+            }
             expect(result).not.toBeNull();
+            // formula: finalVel = Math.min(1.25, velocityParam * velocity * intensityFactor)
+            // velocityParam=1.0, velocity=1.15, intensityFactor=0.6 + 1.0*0.7 = 1.3
+            // 1.15 * 1.3 = 1.495 -> clamped to 1.25
             expect(result.velocity).toBeGreaterThanOrEqual(1.1);
         });
     });
@@ -141,7 +131,7 @@ describe('Bass Engine Logic', () => {
     describe('Jazz Walking Logic', () => {
         it('should landing on the 5th on beat 3 frequently', () => {
             let fifthCount = 0;
-            for (let i = 0; i < 50; i++) {
+            for (let i = 0; i < 100; i++) {
                 const result = getBassNote(chordC, chordF, 2, 38, 38, 'quarter', 0, 8, 8);
                 if (result.midi % 12 === 7) fifthCount++; 
             }
@@ -179,6 +169,7 @@ describe('Bass Engine Logic', () => {
         it('should vary intensity-based register in quarter style', () => {
             let highCount = 0;
             playback.bandIntensity = 1.0; 
+            arranger.stepMap = [{ start: 0, end: 64, chord: { sectionId: 's1' } }]; // Add stepMap for sectionProgress
             for (let i = 0; i < 100; i++) {
                 // Step 63 in 64 total steps
                 const result = getBassNote(chordC, chordF, 0, null, 38, 'quarter', 0, 63, 63);

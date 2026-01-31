@@ -2,29 +2,26 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getSoloistNote } from '../../../public/soloist.js';
 import { soloist } from '../../../public/state.js';
 
-// Mock state and global config
-vi.mock('../../../public/state.js', () => ({
-    soloist: { 
-        enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
-        qaState: 'Question', isResting: false, contourSteps: 0,
-        melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
-        lastFreq: 440, lastInterval: 0, hookRetentionProb: 0.5, doubleStops: false,
-        sessionSteps: 1000, deviceBuffer: [], deterministic: false
-    },
-    chords: { enabled: true },
-    bass: { enabled: true },
-    harmony: { enabled: true, rhythmicMask: 0, complexity: 0.5 },
-    playback: { bandIntensity: 0.5, bpm: 120, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
-    arranger: { 
-        key: 'C', 
-        isMinor: false, 
-        progression: new Array(16).fill({}),
-        totalSteps: 64,
-        stepMap: [{start: 0, end: 64, chord: {sectionId: 'A'}}],
-        timeSignature: '4/4'
-    },
-    groove: { genreFeel: 'Rock' }
-}));
+// Mock state
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.5 },
+        soloist: { busySteps: 0, tension: 0, doubleStops: false, sessionSteps: 1000, pitchHistory: [], motifBuffer: [], deviceBuffer: [] },
+        groove: { genreFeel: 'Rock' },
+        arranger: { timeSignature: '4/4', totalSteps: 64 },
+        chords: {},
+        bass: {},
+        harmony: {},
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../../public/config.js', () => {
     const STYLE_CONFIG = {

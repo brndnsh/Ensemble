@@ -1,4 +1,4 @@
-import { playback, harmony, groove } from './state.js';
+import { getState } from './state.js';
 import { safeDisconnect, clampFreq } from './utils.js';
 
 /**
@@ -7,6 +7,7 @@ import { safeDisconnect, clampFreq } from './utils.js';
  */
 
 export function killHarmonyNote(fadeTime = 0.05) {
+    const { playback, harmony } = getState();
     if (harmony.activeVoices && harmony.activeVoices.length > 0) {
         harmony.activeVoices.forEach(voice => {
             try {
@@ -23,6 +24,7 @@ export function killHarmonyNote(fadeTime = 0.05) {
  * Plays a harmony note with genre-specific synthesis and articulations.
  */
 export function playHarmonyNote(freq, time, duration, vol = 0.4, style = 'stabs', midi = null, slideInterval = 0, slideDuration = 0, vibrato = { rate: 0, depth: 0 }) {
+    const { playback, harmony, groove } = getState();
     if (!Number.isFinite(freq) || !playback.audio) return;
     
     const now = playback.audio.currentTime;

@@ -1,9 +1,10 @@
 import { ACTIONS } from './types.js';
-import { playback, chords, bass, soloist, harmony, groove, arranger, vizState, storage, dispatch } from './state.js';
+import { getState, storage, dispatch } from './state.js';
 import { applyTheme } from './app-controller.js';
 import { decompressSections, generateId, normalizeKey } from './utils.js';
 
 export function hydrateState() {
+    const { playback, chords, bass, soloist, harmony, groove, arranger, vizState } = getState();
     const savedState = storage.get('currentState');
     if (savedState && savedState.sections) {
         Object.assign(arranger, {
@@ -138,6 +139,7 @@ export function hydrateState() {
 }
 
 export function loadFromUrl() {
+    const { arranger, groove } = getState();
     const params = new URLSearchParams(window.location.search); 
     let hasParams = false;
     if (params.get('s')) { arranger.sections = decompressSections(params.get('s')); hasParams = true; }

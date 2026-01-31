@@ -1,24 +1,26 @@
 /* eslint-disable */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock state and global modules
-vi.mock('../../../public/state.js', () => ({
-    arranger: { 
-        timeSignature: '4/4', 
-        progression: []
-    },
-    groove: { genreFeel: 'Rock' },
-    playback: { 
-        bandIntensity: 0.5, 
-        complexity: 0.5,
-        intent: { anticipation: 0, syncopation: 0, layBack: 0 }
-    },
-    chords: { enabled: true, style: 'smart' },
-    bass: { enabled: false },
-    soloist: { enabled: false, busySteps: 0 },
-    harmony: { enabled: false, buffer: new Map() }
-}));
-
+// Mock state
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        playback: { bandIntensity: 0.5, bpm: 120, complexity: 0.5, intent: { syncopation: 0, anticipation: 0, layBack: 0 } },
+        groove: { genreFeel: 'Rock', lastDrumPreset: 'Basic Rock' },
+        chords: { enabled: true, style: 'smart', density: 'standard', octave: 60 },
+        bass: { enabled: true },
+        soloist: { enabled: false, busySteps: 0 },
+        arranger: { timeSignature: '4/4', progression: [] },
+        harmony: {},
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 vi.mock('../../../public/config.js', () => ({
     TIME_SIGNATURES: {
         '4/4': { beats: 4, stepsPerBeat: 4, subdivision: '16th', pulse: [0, 4, 8, 12], grouping: [2, 2] },

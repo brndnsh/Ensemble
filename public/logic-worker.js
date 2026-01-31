@@ -3,12 +3,14 @@ import { getSoloistNote } from './soloist.js';
 import { getHarmonyNotes } from './harmonies.js';
 import { getAccompanimentNotes, compingState } from './accompaniment.js';
 import { generateResolutionNotes } from './resolution.js';
-import { arranger, chords, bass, soloist, groove, harmony, playback } from './state.js';
+import { getState } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getMidi, getStepInfo, getFrequency } from './utils.js';
 import { generateProceduralFill } from './fills.js';
 import { analyzeForm } from './form-analysis.js';
 import { WORKER_MSG, WORKER_RESP } from './worker-types.js';
+
+const { arranger, chords, bass, soloist, groove, harmony, playback } = getState();
 
 // --- WORKER STATE ---
 let timerID = null;

@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
-import { subscribe, dispatch as internalDispatch, playback, chords, bass, soloist, harmony, groove, arranger, vizState, midi } from './state.js';
-
-// Reconstruct the map locally since it's not exported directly, though it is passed to listeners
-const localStateMap = { playback, chords, bass, soloist, harmony, groove, arranger, vizState, midi };
+import { subscribe, dispatch as internalDispatch, getState } from './state.js';
 
 function shallowEqual(objA, objB) {
     if (Object.is(objA, objB)) return true;
@@ -25,7 +22,7 @@ export function useEnsembleState(selector) {
     const selectorRef = useRef(selector);
     selectorRef.current = selector;
 
-    const [slice, setSlice] = useState(() => selector(localStateMap));
+    const [slice, setSlice] = useState(() => selector(getState()));
 
     useEffect(() => {
         const update = (action, payload, updatedStateMap) => {

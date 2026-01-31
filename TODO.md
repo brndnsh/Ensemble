@@ -1,12 +1,12 @@
 # Modernization Roadmap
 
 ## High Priority
-- [ ] **Decouple Tests from State Exports:** Create a centralized state mocking utility for tests to allow refactoring the `public/state.js` export signature without breaking the suite.
 
 ## Medium Priority
-- [ ] **Strict State Access:**
-    - Deprecate the direct export of `playback` and other state slices from `state.js`.
-    - Force all logic (including controllers) to access state via a unified `getState()` or passed arguments to ensure reactivity consistency.
+- [ ] **Strict State Access (Phase 2):**
+    - Refactor `public/ui.js` and remaining utility files.
+    - Deprecate and remove direct exports (`playback`, etc.) from `state.js` once all consumers are updated.
+    - Update test suite to strictly use `getState()` without named export fallbacks.
 - [ ] **Unified Test Config:**
     - Consider moving `eslint.config.js` globals definition to a dedicated `tests/.eslintrc` if the flat config allows, to keep the root config cleaner.
 

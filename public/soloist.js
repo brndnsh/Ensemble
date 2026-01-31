@@ -1,5 +1,5 @@
 import { getFrequency, getMidi } from './utils.js';
-import { playback, groove, soloist, harmony, arranger } from './state.js';
+import { getState } from './state.js';
 import { TIME_SIGNATURES } from './config.js';
 import { getScaleForChord } from './theory-scales.js';
 
@@ -121,6 +121,7 @@ const STYLE_CONFIG = {
  * @returns {Object|Object[]|null} A note object, an array of note objects (for double stops), or null if resting.
  */
 export function getSoloistNote(currentChord, nextChord, step, prevFreq, octave, style, stepInChord, isPriming) {
+    const { playback, groove, soloist, harmony, arranger } = getState();
     if (!currentChord) return null;
     
     let activeStyle = style;

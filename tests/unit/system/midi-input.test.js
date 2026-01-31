@@ -5,12 +5,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state
-vi.mock('../../../public/state.js', () => ({
-    midi: { enabled: true },
-    dispatch: vi.fn(),
-    playback: { audio: { currentTime: 0 } },
-    harmony: { enabled: false, buffer: new Map() }
-}));
+vi.mock('../../../public/state.js', () => {
+    const mockState = {
+        midi: { enabled: true },
+        dispatch: vi.fn(),
+        playback: { audio: { currentTime: 0 } },
+        harmony: { enabled: false, buffer: new Map() },
+        arranger: {},
+        chords: {},
+        bass: {},
+        soloist: {},
+        groove: {},
+        vizState: {},
+        storage: {}
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 import { initMIDI } from '../../../public/midi-controller.js';
 import { arranger, playback, chords, bass, soloist, harmony, groove, vizState, storage, midi, dispatch } from '../../../public/state.js';

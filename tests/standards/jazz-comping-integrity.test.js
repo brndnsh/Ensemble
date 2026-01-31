@@ -2,24 +2,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
-vi.mock('../../public/state.js', () => ({
-    soloist: { 
-        enabled: true, busySteps: 0, lastFreq: 440
-    },
-    chords: { enabled: true, style: 'smart', density: 'standard', octave: 60 },
-    playback: { bandIntensity: 0.5, complexity: 0.5, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
-    arranger: { 
-        key: 'Bb', 
-        isMinor: false,
-        progression: [],
-        totalSteps: 0,
-        stepMap: [],
-        timeSignature: '4/4'
-    },
-    groove: { genreFeel: 'Jazz' },
-    bass: { enabled: true, lastFreq: 65.41 }, // C2
-    harmony: { enabled: false }, dispatch: vi.fn()
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        soloist: { 
+            enabled: true, busySteps: 0, lastFreq: 440
+        },
+        chords: { enabled: true, style: 'smart', density: 'standard', octave: 60, currentCell: new Array(16).fill(0) },
+        playback: { bandIntensity: 0.5, complexity: 0.5, audio: { currentTime: 0 }, intent: { anticipation: 0, syncopation: 0, layBack: 0 } },
+        arranger: { 
+            key: 'Bb', 
+            isMinor: false,
+            progression: [],
+            totalSteps: 0,
+            stepMap: [],
+            timeSignature: '4/4'
+        },
+        groove: { genreFeel: 'Jazz' },
+        bass: { enabled: true, lastFreq: 65.41 }, // C2
+        harmony: { enabled: false },
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../public/config.js', async (importOriginal) => {
     return {

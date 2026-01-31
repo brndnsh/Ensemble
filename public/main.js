@@ -1,4 +1,4 @@
-import { playback, chords, bass, soloist, harmony, groove, arranger, subscribe } from './state.js';
+import { getState, subscribe } from './state.js';
 import { mountComponents } from './ui-root.jsx';
 import { initAudio, playNote } from './engine.js';
 import { validateProgression } from './chords.js';
@@ -16,11 +16,13 @@ let viz;
  * Diagnostic: Enables detailed logging of worker/scheduler interactions.
  */
 window.enableWorkerLogging = (enabled) => {
+    const { playback } = getState();
     playback.workerLogging = enabled;
     console.log(`[Worker] Logging ${enabled ? 'ENABLED' : 'DISABLED'}`);
 };
 
 function init() {
+    const { playback, chords, bass, soloist, harmony, groove } = getState();
     try {
         // --- HYDRATE STATE FIRST ---
         // Ensure state is populated BEFORE the UI mounts so components initialize with correct data.
@@ -103,6 +105,7 @@ function init() {
 }
 
 window.previewChord = (index) => {
+    const { playback, arranger } = getState();
     if (playback.isPlaying) return; 
     initAudio(); 
     const chord = arranger.progression[index]; 

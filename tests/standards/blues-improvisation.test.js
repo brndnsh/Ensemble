@@ -2,29 +2,39 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock state and global config
-vi.mock('../../public/state.js', () => ({
-    soloist: { 
-        enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
-        qaState: 'Question', isResting: false, contourSteps: 0,
-        melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
-        lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
-        sessionSteps: 1000
-    },
-    chords: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
-    playback: { bandIntensity: 0.5, bpm: 100, audio: { currentTime: 0 } },
-    arranger: { 
-        key: 'F', 
-        isMinor: false,
-        progression: [],
-        totalSteps: 0,
-        stepMap: [],
-        timeSignature: '4/4',
-        sections: []
-    },
-    groove: { genreFeel: 'Blues' },
-    bass: { enabled: true },
-    harmony: { enabled: false }, dispatch: vi.fn()
-}));
+vi.mock('../../public/state.js', () => {
+    const mockState = {
+        soloist: { 
+            enabled: true, busySteps: 0, currentPhraseSteps: 0, notesInPhrase: 0,
+            qaState: 'Question', isResting: false, contourSteps: 0,
+            melodicTrend: 'Static', tension: 0, motifBuffer: [], hookBuffer: [],
+            lastFreq: 440, hookRetentionProb: 0.5, doubleStops: true,
+            sessionSteps: 1000
+        },
+        chords: { enabled: true, octave: 60, density: 'standard', pianoRoots: true },
+        playback: { bandIntensity: 0.5, bpm: 120, audio: { currentTime: 0 } },
+        arranger: { 
+            key: 'F', 
+            isMinor: false,
+            progression: [],
+            totalSteps: 0,
+            stepMap: [],
+            timeSignature: '4/4',
+            sections: []
+        },
+        groove: { genreFeel: 'Blues' },
+        bass: { enabled: true },
+        harmony: { enabled: false },
+        vizState: {},
+        midi: {},
+        storage: {},
+        dispatch: vi.fn()
+    };
+    return {
+        ...mockState,
+        getState: () => mockState
+    };
+});
 
 vi.mock('../../public/config.js', async (importOriginal) => {
     const actual = await importOriginal();

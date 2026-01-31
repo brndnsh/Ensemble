@@ -8,64 +8,64 @@ vi.mock('../../public/utils.js', () => ({
 
 // Mock state
 vi.mock('../../public/state.js', () => {
-    const audioContextMock = {
-        currentTime: 0,
-        sampleRate: 44100,
-        createStereoPanner: () => ({
-            pan: { setValueAtTime: () => {} },
-            connect: () => {}
-        }),
-        createGain: () => ({
-            gain: {
-                value: 0,
-                setValueAtTime: () => {},
-                setTargetAtTime: () => {},
-                linearRampToValueAtTime: () => {},
-                cancelScheduledValues: () => {}
-            },
-            connect: () => {}
-        }),
-        createOscillator: () => ({
-            frequency: { setValueAtTime: () => {}, exponentialRampToValueAtTime: () => {}, setTargetAtTime: () => {} },
-            start: () => {},
-            stop: () => {},
-            connect: () => {},
-            type: 'sine',
-            onended: null
-        }),
-        createBufferSource: () => ({
-            buffer: null,
-            playbackRate: { value: 1 },
-            start: () => {},
-            stop: () => {},
-            connect: () => {},
-            loop: false,
-            onended: null
-        }),
-        createBiquadFilter: () => ({
-            frequency: { value: 0, setValueAtTime: () => {}, setTargetAtTime: () => {} },
-            Q: { value: 0, setValueAtTime: () => {} },
-            connect: () => {},
-            type: 'lowpass'
-        }),
-        createBuffer: (channels, length) => ({
-            getChannelData: () => new Float32Array(length)
-        })
+    const mockPlayback = {
+        audio: {
+            currentTime: 0,
+            createOscillator: vi.fn(() => ({
+                type: '',
+                frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(), setTargetAtTime: vi.fn() },
+                connect: vi.fn(),
+                start: vi.fn(),
+                stop: vi.fn()
+            })),
+                        createGain: vi.fn(() => ({
+                            gain: { 
+                                value: 1, 
+                                setValueAtTime: vi.fn(), 
+                                exponentialRampToValueAtTime: vi.fn(), 
+                                setTargetAtTime: vi.fn(),
+                                linearRampToValueAtTime: vi.fn(),
+                                cancelScheduledValues: vi.fn()
+                            },
+                            connect: vi.fn()
+                        })),            createBiquadFilter: vi.fn(() => ({
+                type: '',
+                frequency: { value: 0, setValueAtTime: vi.fn(), setTargetAtTime: vi.fn() },
+                Q: { value: 0, setValueAtTime: vi.fn() },
+                connect: vi.fn()
+            })),
+            createBufferSource: vi.fn(() => ({
+                buffer: null,
+                connect: vi.fn(),
+                start: vi.fn(),
+                stop: vi.fn(),
+                onended: null,
+                playbackRate: { value: 1 }
+            })),
+            createBuffer: vi.fn(() => ({
+                getChannelData: vi.fn(() => new Float32Array(100))
+            })),
+            sampleRate: 44100
+        },
+        drumsGain: { connect: vi.fn() }
+    };
+    const mockGroove = {
+        humanize: 20,
+        audioBuffers: { noise: {} },
+        lastHatGain: null
+    };
+
+    const mockStateMap = {
+        playback: mockPlayback,
+        groove: mockGroove,
+        chords: {},
+        harmony: {}
     };
 
     return {
-        playback: {
-            audio: audioContextMock,
-            drumsGain: { gain: { value: 1 } } // Destination
-        },
-        groove: {
-            lastHatGain: null,
-            audioBuffers: {
-                noise: {}, // Mock buffer
-                hihatMetal: null
-            },
-            humanize: 10
-        }
+        ...mockStateMap,
+        getState: () => mockStateMap,
+        dispatch: vi.fn()
     };
 });
 

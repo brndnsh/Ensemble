@@ -1,5 +1,5 @@
 import { getFrequency, getMidi } from './utils.js';
-import { playback, groove, bass, soloist, arranger } from './state.js';
+import { getState } from './state.js';
 import { TIME_SIGNATURES, REGGAE_RIDDIMS } from './config.js';
 import { getScaleForChord } from './theory-scales.js';
 
@@ -18,6 +18,7 @@ const BOSSA_STEPS = [0, 6, 8, 14];
 // (Old getScaleForBass removed, using imported version)
 
 export function isBassActive(style, step, stepInChord) {
+    const { playback, groove, arranger } = getState();
     if (style === 'smart') {
         const mapping = { 'Rock': 'rock', 'Jazz': 'quarter', 'Funk': 'funk', 'Disco': 'disco', 'Reggae': 'dub', 'Neo-Soul': 'neo', 'Bossa Nova': 'bossa' };
         style = mapping[groove.genreFeel] || mapping[groove.lastDrumPreset] || 'rock';
@@ -91,6 +92,7 @@ export function isBassActive(style, step, stepInChord) {
 }
 
 export function getBassNote(chord, nextChord, beatInMeasure, prevFreq, centerMidi, style, chordIndex, step, stepInChord, context = {}) {
+    const { playback, groove, bass, soloist, arranger } = getState();
     if (!chord) return null;
 
     if (style === 'smart') {

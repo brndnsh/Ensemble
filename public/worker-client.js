@@ -1,4 +1,4 @@
-import { arranger, chords, bass, soloist, harmony, groove, playback } from './state.js';
+import { getState } from './state.js';
 import { WORKER_MSG, WORKER_RESP } from './worker-types.js';
 
 let timerWorker = null;
@@ -71,6 +71,7 @@ export function primeWorker(steps = 32) {
 
 export function syncWorker(action, payload) {
     if (!timerWorker) return;
+    const { arranger, chords, bass, soloist, harmony, groove, playback } = getState();
 
     let data = {};
 

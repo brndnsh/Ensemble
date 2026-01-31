@@ -1,8 +1,9 @@
-import { arranger, chords, groove, playback } from './state.js';
+import { getState } from './state.js';
 import { showToast } from './ui.js';
 import { compressSections } from './utils.js';
 
 export function shareProgression() {
+    const { arranger, chords, groove, playback } = getState();
     try {
         const params = new URLSearchParams();
         params.set('s', compressSections(arranger.sections));

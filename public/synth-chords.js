@@ -1,4 +1,4 @@
-import { playback, groove } from './state.js';
+import { getState } from './state.js';
 import { safeDisconnect } from './utils.js';
 
 /**
@@ -45,6 +45,7 @@ let cachedShaperDrive = -1;
  * Updates the sustain pedal state, precisely scheduled.
  */
 export function updateSustain(active, time = null) {
+    const { playback } = getState();
     const scheduleTime = time !== null ? time : (playback.audio?.currentTime || 0);
     playback.sustainActive = active;
     
@@ -61,6 +62,7 @@ export function updateSustain(active, time = null) {
  * Forcefully kills all ringing piano notes (panic button).
  */
 export function killAllPianoNotes() {
+    const { playback } = getState();
     const now = playback.audio?.currentTime || 0;
     if (playback.heldNotes) {
         playback.heldNotes.forEach(note => {
@@ -86,6 +88,7 @@ export function killAllPianoNotes() {
  * @param {number} [options.numVoices=1] - Total voices in the chord for normalization.
  */
 export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrument = 'Piano', muted = false, numVoices = 1 } = {}) {
+    const { playback, groove } = getState();
     if (!Number.isFinite(freq)) return;
     
     // Normalize volume based on chord density (Anti-Clutter Scaling)
@@ -243,6 +246,7 @@ export function playNote(freq, time, duration, { vol = 0.1, index = 0, instrumen
  * @param {number} vol - Volume multiplier.
  */
 export function playChordScratch(time, vol = 0.1) {
+    const { playback, groove } = getState();
     try {
         const randomizedVol = vol * (0.8 + Math.random() * 0.4);
         const gain = playback.audio.createGain();

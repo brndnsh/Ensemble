@@ -1,7 +1,8 @@
-import { playback, soloist } from './state.js';
+import { getState } from './state.js';
 import { safeDisconnect, clampFreq } from './utils.js';
 
 export function killSoloistNote() {
+    const { playback, soloist } = getState();
     if (soloist.activeVoices && soloist.activeVoices.length > 0) {
         soloist.activeVoices.forEach(voice => {
             try {
@@ -23,6 +24,7 @@ export function killSoloistNote() {
 }
 
 export function playSoloNote(freq, time, duration, vol = 0.4, bendStartInterval = 0, style = 'scalar') {
+    const { playback, soloist } = getState();
     if (!Number.isFinite(freq)) return;
     
     const now = playback.audio.currentTime;
