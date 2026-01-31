@@ -25,7 +25,7 @@ function init() {
         // --- HYDRATE STATE FIRST ---
         // Ensure state is populated BEFORE the UI mounts so components initialize with correct data.
         hydrateState();
-        loadFromUrl(viz);
+        loadFromUrl();
         validateProgression(); 
 
         // --- ASSEMBLE UI ---

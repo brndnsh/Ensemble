@@ -137,7 +137,7 @@ export function hydrateState() {
     dispatch('HYDRATE'); // Notify UI of all changes
 }
 
-export function loadFromUrl(viz) {
+export function loadFromUrl() {
     const params = new URLSearchParams(window.location.search); 
     let hasParams = false;
     if (params.get('s')) { arranger.sections = decompressSections(params.get('s')); hasParams = true; }

@@ -105,7 +105,7 @@ describe('Sharing & Hydration Round-trip', () => {
         
         // 4. Simulate Load from that URL
         vi.stubGlobal('location', new URL(urlString));
-        loadFromUrl(null); 
+        loadFromUrl(); 
         
         // 5. Verify restored state
         expect(arranger.key).toBe('F');
