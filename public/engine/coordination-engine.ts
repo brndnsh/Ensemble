@@ -1,7 +1,7 @@
 import { getSectionEnergy } from '../song/form-analysis.js';
 import type { Chord, SoloistHook, SoloistQaHang, SoloistSessionSeed, StepInfo } from '../types.js';
 import type { DropMuteStyle } from './drop-mechanic.js';
-import { scrambleHash } from './hash-utils.js';
+import { scrambleHash, stringHash33 } from './hash-utils.js';
 
 /**
  * Coordination Context Management and Contract Enforcement
@@ -290,6 +290,22 @@ export interface SharedCatch {
 
 export type SoloistQaResponseOwner = 'chords' | 'bass';
 
+export type RockTransitionOwner = 'drums' | 'bass' | 'ordinary';
+
+export function selectRockTransitionOwner(
+    seed: string,
+    boundary: number,
+    foundationAvailable: boolean,
+): RockTransitionOwner {
+    // Permission, not a new fill trigger: keep each player's existing gesture gates.
+    if (!foundationAvailable) {
+        return 'ordinary';
+    }
+    return scrambleHash(stringHash33(seed) ^ Math.imul(boundary, 0x9e3779b1) ^ 0x714ac39b) < 0.5
+        ? 'drums'
+        : 'bass';
+}
+
 /**
  * Pick one responder for a Rock Q&A window. The window's absolute start and
  * seed-derived salt make the choice stable for every tick in the window while
@@ -357,6 +373,9 @@ export function createCoordinationContext(
         // writer: drums-tick.ts from the effective per-section lane gate
         // readable-after: creation (chord/harmony register-space policy)
         bassEffectiveEnabled: false,
+        // writer: runDrumTick structural preamble; readable-after: drum preamble
+        // null leaves non-pilot transitions unchanged; ordinary permits neither feature.
+        rockTransitionOwner: null as RockTransitionOwner | null,
         // writer: drums-tick.ts from the effective per-section lane gate
         // readable-after: creation (comp interlocking policy)
         harmonyEffectiveEnabled: false,

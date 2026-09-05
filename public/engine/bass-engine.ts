@@ -94,6 +94,8 @@ export function isRockQaBassResponseStep(
     return Boolean(
         state.groove.genreFeel === 'Rock' &&
             coordination?.soloistQaResponseOwner === 'bass' &&
+            coordination?.rockTransitionOwner !== 'drums' &&
+            coordination?.rockTransitionOwner !== 'ordinary' &&
             coordination?.soloistQaHang?.echoStep === step &&
             coordination?.isFinalMeasure !== true,
     );
@@ -1762,6 +1764,9 @@ export function getBassNote(
             // A drawn `fifth` re-voices a lift, so there has to be a lift for it to act on.
             pumpForcesLift: pump.forcesLift(),
             bassDraw,
+            allowRockPickup:
+                context?.stepCoordination?.rockTransitionOwner !== 'drums' &&
+                context?.stepCoordination?.rockTransitionOwner !== 'ordinary',
         },
         ts,
         stepsPerMeasure,
