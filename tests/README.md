@@ -82,6 +82,41 @@ Rock at 118 BPM (`C | G`, then `Am | F`), Jazz at 138 BPM (`Dm7 | G7`, then
   evidence does not establish subjective practice usability or replace a required
   pre-merge listening gate.
 
+### Soloist Dynamic Headroom (#1135)
+
+`standards/soloist-dynamic-headroom.test.ts` compares the shipped clamp with reserved
+base-weight headroom on identical `PRACTICE_RELIABILITY` phrases: all 13 genres,
+120 BPM, `C | G` (Verse) then `Am | F` (Chorus), guitar mode, intensity 0.3/0.6/1,
+two complete seeded macro-forms with advancing arrangement loops. All non-velocity
+events, including empty steps and secondary notes, must match. The high-energy
+apex envelope retains its authored 15% lift; metric lean/release and secondary
+ratios are separately guarded. Existing envelope, intensity and seam critiques
+remain unchanged.
+
+The selected curve compresses the base BEFORE the envelope, retaining at least
+one third of base-weight differences. Its knee is derived from the available
+headroom, including the extra Country snap only when polyphony permits it.
+Post-envelope compression was rejected: even a variant passing the older critiques
+left too little contrast in the formerly clipped range and weakened double-stops.
+Uniform normalization was rejected for lowering quiet velocities by about 29%.
+
+Measured event-velocity means (old -> new, not PCM loudness): Rock low 0.686 ->
+0.670 and high 0.849 -> 0.770; Jazz low 0.676 -> 0.665 and high 0.851 -> 0.779;
+Country low 0.703 -> 0.668 and high 0.871 -> 0.750. Increasing intensity still
+increases weight; high-energy ordinary notes leave space for the crest.
+
+`browser/soloist-dynamic-headroom.browser.test.ts` sends generated apex velocities
+through the real scheduler, synth/loaded sax pack and complete audio graph, using
+matched C5 quarter-second probes with humanize off. The 15% crest must retain at
+least 10% amplitude contrast in PCM. Measured low/high contrasts: synth 1.27/1.11 dB,
+sax 1.21/1.21 dB. This isolates delivery, not full-mix masking or subjective feel.
+
+Practice comparison: use the chart/seed/tempo above at low and high energy with
+normal humanization, first synth then sax, and Country guitar for double-stops.
+Mute the part being practiced. Listen for quiet lead presence, clearer loud-phrase
+crests/releases, and unchanged pulse, arrivals and rests. Record old/new build
+revisions and the listener's verdict; the measured probes are not a listening claim.
+
 *   **Environment**: Most tests require a DOM environment. Add `// @vitest-environment happy-dom` to the top of your test file.
 *   **Mocking**: Use `vi.mock()` to isolate dependencies, especially for global state (`public/state.ts`) or browser APIs (`AudioContext`).
 *   **Canvas**: For visualizer tests, mock the Canvas API and `ResizeObserver` as `happy-dom` support for these is limited.

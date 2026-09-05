@@ -77,6 +77,26 @@ export function soloistIntensityGain(bandIntensity: number | undefined): number 
 }
 
 /**
+ * Reserve phrase headroom without flattening accents at high energy (#1135).
+ * Reserve room BEFORE the envelope so its 15% crest / 6% lean / 9% release,
+ * and the secondary voice ratios, survive even at maximum energy. The largest
+ * base is seed .9 + apex .12 + band .08 + entry .07. Its ceiling must leave
+ * room for the apex envelope (1.15), plus the Country snap (1.05) when enabled.
+ *
+ * Retain at least a THIRD of base-weight changes: the .07 rising-entry lift
+ * still clears the existing .02 seam contrast contract. With that upper slope,
+ * continuity and the ceiling determine the knee; quieter bases stay unchanged.
+ * The non-apex Country hold has base <=1.05: after shaping it is <=.789, so
+ * even its maximum envelope 1.06*1.05 and harmony 1.1 remain below unity.
+ */
+export function reserveSoloistHeadroom(base: number, secondaryAccent = 1): number {
+    const maximumBase = 0.9 + 0.12 + 0.08 + 0.07;
+    const ceiling = 1 / (1.15 * secondaryAccent);
+    const knee = (3 * ceiling - maximumBase) / 2;
+    return base <= knee ? base : knee + (base - knee) / 3;
+}
+
+/**
  * The conductor's BAND-WIDE velocity law: `0.7 + 0.45·I`, the value
  * `applyConductor` (`conductor.ts`) publishes as `playback.conductorVelocity`
  * and `scheduler-core.ts` multiplies onto the drums, chords, soloist and

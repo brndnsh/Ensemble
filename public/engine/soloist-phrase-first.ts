@@ -21,6 +21,7 @@ import { resolveSoloistStyle } from './soloist-config.js';
 import { consonantDoubleStopInterval, guitarDoubleStopVoice } from './soloist-devices.js';
 import { allowsSoloistPolyphony } from './soloist-mode-policy.js';
 import { chordTargetTones } from './soloist-pitch-engine.js';
+import { reserveSoloistHeadroom } from './velocity-shaping.js';
 
 /**
  * Phrase-first soloist engine — THE soloist engine
@@ -1194,11 +1195,8 @@ export function getSoloistNotePhraseFirst(
     // Genre-neutral first pass: no per-genre contour tables yet (§4.6 leaves those for
     // a later slice). `nextStrongStep`/`isStrongBeat`/`apexStepInLoop`/`stepInLoop` are
     // all already loop-relative, so no #923 wrap is needed here.
-    // KNOWN LIMITATION (#1006): the envelope is multiplicative-then-clamped, so when
-    // the additive base already sits near 1.0 (late loops / high band energy) the swell
-    // terms clamp and only the release dip stays audible — the "lean in" fades exactly
-    // when the band is loudest. Acceptable for a genre-neutral first pass; a bipolar
-    // shape around a slightly-lowered center (reserving pre-clamp headroom) is a later slice.
+    // Reserve base-weight headroom BEFORE the envelope, leaving its full accent /
+    // release ratios intact instead of squeezing the completed phrase's contrasts.
     let velocityEnvelope = 1.0;
     if (SOLOIST_VELOCITY_ENVELOPE.enabled) {
         // The last eighth before a beat is the "pickup" window that swells into it.
@@ -1231,9 +1229,13 @@ export function getSoloistNotePhraseFirst(
         }
     }
 
+    // Resolve raw 'smart' once for headroom and the genre-gated expression devices.
+    const resolvedStyle = resolveSoloistStyle(style, state.groove?.genreFeel);
     const velocity = clamp01(
-        ((primary.velocity ?? 0.8) * (0.7 + 0.3 * activity) + apexBoost + bandVel + seamVel) *
-            velocityEnvelope,
+        reserveSoloistHeadroom(
+            (primary.velocity ?? 0.8) * (0.7 + 0.3 * activity) + apexBoost + bandVel + seamVel,
+            allowsSoloistPolyphony(soloist.mode) && resolvedStyle === 'country' ? 1.05 : 1,
+        ) * velocityEnvelope,
     );
 
     // --- Clamp duration to the next note that sounds (monophonic lead) ---
@@ -1278,11 +1280,6 @@ export function getSoloistNotePhraseFirst(
     //     gets a vibrato it has no room to voice.
     const EXPRESSIVE_RADIUS = 12; // steps each side of the peak (~¾ bar) = flurry zone
     const inFlurry = Math.abs(stepInLoop - apexStepInLoop) <= EXPRESSIVE_RADIUS;
-    // `style` arrives raw (often 'smart'); resolve to the genre profile once — the
-    // same resolution the seeder does — and reuse it for every genre-gated device
-    // below (cry, country grace-slide, country chicken-pick) or those gates would
-    // never fire in production.
-    const resolvedStyle = resolveSoloistStyle(style, state.groove?.genreFeel);
     let bendStartInterval = 0;
     if (isApexStep) {
         bendStartInterval = -2; // whole-step reach UP into the money note
