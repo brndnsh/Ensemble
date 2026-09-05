@@ -607,6 +607,7 @@ export function getBassNoteStyle(
         pumpForcesLift: boolean;
         /** Pass-aware emission draws; style salts start at 101, engine salts below 100. */
         bassDraw: (salt: number) => number;
+        allowRockPickup: boolean;
     },
     ts: { stepsPerBeat: number; beats: number },
     stepsPerMeasure: number,
@@ -1062,7 +1063,8 @@ export function getBassNoteStyle(
                       ? 0.5 // why: penultimate bar — approach window, a build not the landing
                       : 0.15; // why: no boundary imminent — rare, spontaneous feel
             const pushProb = (0.1 + intensity * 0.15) * sectionGateMult;
-            const isPushPoint = intBeat === ts.beats - 1 && bassDraw(110) < pushProb;
+            const isPushPoint =
+                context.allowRockPickup && intBeat === ts.beats - 1 && bassDraw(110) < pushProb;
             if (isPushPoint && isChordChangeApproach(nextChord, chord)) {
                 // why: migrated from rootMidi-only comparison to isChordChangeApproach so
                 // slash chords (e.g. G/B → C) are detected correctly — the old predicate

@@ -1,4 +1,4 @@
-import type { TIME_SIGNATURES } from '../config.js';
+import { resolveMappedStyle, SMART_BASS_STYLE_MAP, type TIME_SIGNATURES } from '../config.js';
 import { getEffectiveMeterAtStep, getSectionPhaseStep } from '../meter.js';
 import { getSectionEnergy } from '../song/form-analysis.js';
 import type { EnsembleState, Mutable } from '../types.js';
@@ -15,17 +15,100 @@ import {
     createCoordinationContext,
     getAltPitchClasses,
     isTensionChordForSoloist,
+    type RockTransitionOwner,
+    selectRockTransitionOwner,
 } from './coordination-engine.js';
 import { dropMuteStyleFor, shouldFireDropMute } from './drop-mechanic.js';
 import {
     applyGrooveOverrides,
     getAudibleSnareCatchAtStep,
+    getSoloistAccentAtStep,
     isSectionReturnActive,
     isSectionReturnPracticeFold,
 } from './groove-engine.js';
 import { isInstrumentActiveAtStep } from './section-overrides.js';
 import type { DrumHitInfo, TickCursors } from './tick-types.js';
 import { type ChordAtStep, getChordAtStep } from './worker-utils.js';
+
+function rockTransitionOwnerAt(state: EnsembleState, step: number): RockTransitionOwner | null {
+    const { arranger, groove, playback } = state;
+    if (groove.genreFeel !== 'Rock') {
+        return null;
+    }
+    const { chartStep, stepInfo, ts } = getEffectiveMeterAtStep(arranger, step);
+    const data = getChordAtStep(step, arranger);
+    const barLength = ts.beats * ts.stepsPerBeat;
+    if (
+        !data ||
+        ts.beats !== 4 ||
+        ts.stepsPerBeat !== 4 ||
+        data.sectionEnd >= arranger.totalSteps ||
+        data.sectionEnd - chartStep > barLength ||
+        data.sectionEnd - data.sectionStart < barLength ||
+        (state.bass.style === 'smart'
+            ? resolveMappedStyle(SMART_BASS_STYLE_MAP, groove.genreFeel, groove.lastDrumPreset)
+            : state.bass.style) !== 'rock'
+    ) {
+        return null;
+    }
+    const next = getChordAtStep(data.sectionEnd, arranger);
+    const arrival = arranger.sections?.find((section) => section.id === next?.chord.sectionId);
+    if (!arrival || arrival.seamless) {
+        return null;
+    }
+
+    const section = getSectionContext(arranger, step);
+    const available = {
+        bass: isInstrumentActiveAtStep(state, 'bass', step),
+        chords: isInstrumentActiveAtStep(state, 'chords', step),
+        harmony: isInstrumentActiveAtStep(state, 'harmony', step),
+        soloist: isInstrumentActiveAtStep(state, 'soloist', step),
+    };
+    const subtracted = getSubtractionMutes(
+        section.label,
+        section.occurrence,
+        section.totalOccurrences,
+        groove.genreFeel,
+        available,
+    );
+    let protectedWindow =
+        isIntroSectionLabel(data.chord.sectionLabel) ||
+        isOutroSectionLabel(data.chord.sectionLabel) ||
+        shouldFireDropMute(
+            groove.genreFeel,
+            0,
+            next?.chord.sectionLabel ?? null,
+            getSectionEnergy(next?.chord.sectionLabel) - getSectionEnergy(data.chord.sectionLabel),
+            // A drop threshold crossed anywhere in this bar protects the whole window.
+            (data.sectionEnd - 1) / arranger.totalSteps,
+        );
+    // Reserve the whole bar for catch intent, not the post-fill audible probe.
+    const barStart = step - stepInfo.mStep;
+    for (let offset = 0; offset < barLength; offset++) {
+        if (
+            getSoloistAccentAtStep(
+                groove,
+                barStart + offset,
+                true,
+                isSectionReturnPracticeFold(playback),
+            )
+        ) {
+            protectedWindow = true;
+        }
+    }
+    const foundationAvailable =
+        available.bass &&
+        isInstrumentActiveAtStep(state, 'groove', step) &&
+        !subtracted.includes('bass') &&
+        ['Kick', 'Snare', 'HiHat'].every((name) =>
+            groove.instruments.some((inst) => inst.name === name && !inst.muted),
+        );
+    return selectRockTransitionOwner(
+        arranger.seed || '',
+        step - chartStep + data.sectionEnd,
+        foundationAvailable && !protectedWindow,
+    );
+}
 
 /**
  * Shared per-tick context produced by the drum preamble + drum block. The lane
@@ -414,7 +497,15 @@ export function runDrumTick(
         typeof rawSectionSeed === 'number' && Number.isFinite(rawSectionSeed) ? rawSectionSeed : 0;
 
     // --- Calculate Turnaround State ---
-    const isTurnaround = isSectionTurnaround(chartStep, arranger.sectionMap, stepsPerBar, 1);
+    let isTurnaround = isSectionTurnaround(chartStep, arranger.sectionMap, stepsPerBar, 1);
+
+    coordination.rockTransitionOwner = rockTransitionOwnerAt(state, step);
+    const holdDrumFoundation =
+        coordination.rockTransitionOwner === 'bass' ||
+        coordination.rockTransitionOwner === 'ordinary';
+    if (holdDrumFoundation) {
+        isTurnaround = false;
+    }
 
     let fillPlayed = false;
 
@@ -466,7 +557,7 @@ export function runDrumTick(
     // with the re-entry on the very next downbeat. James Brown said it on the *Funky
     // Drummer* break itself: "you don't have to do no soloing, brother, just keep what
     // you got." (A drum FEATURE is a different, multi-bar gesture — not this one.)
-    if (!dropMuteActive && groove.fillActive) {
+    if (!dropMuteActive && !holdDrumFoundation && groove.fillActive) {
         const fillStep = step - (groove.fillStartStep || 0);
 
         if (fillStep >= 0 && fillStep < (groove.fillLength || 0)) {
@@ -492,8 +583,11 @@ export function runDrumTick(
                 }
             }
         } else if (fillStep === groove.fillLength) {
+            // Why: the pending crash belongs to the previous fill, not the new bar.
+            // Recompute its permission without persisting or syncing a lifecycle flag.
+            const previousOwner = rockTransitionOwnerAt(state, step - 1);
             // @worker-mutation (handled in tick-logic transition usually, but just in case for stateless generation)
-            if (groove.pendingCrash) {
+            if (groove.pendingCrash && previousOwner !== 'bass' && previousOwner !== 'ordinary') {
                 const inst = groove.instruments.find((i) => i.name === 'Crash') || {
                     name: 'Crash',
                     muted: false,
