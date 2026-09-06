@@ -1,4 +1,5 @@
 import { Fragment } from 'preact';
+import { refreshArrangerUI } from '../controllers/arranger-controller.js';
 import { autoVoiceForGenre } from '../data/genre-sound-map.js';
 import { packsForInstrument } from '../data/sound-packs.js';
 import { hydrateVoice, isPackInstalled } from '../engine/instrument-registry.js';
@@ -151,6 +152,7 @@ function InstrumentSoundSource({ module }: { module: InstrumentModule }) {
         return { voice: m.voice, autoSound: m.autoSound };
     });
     const currentGenre = useEnsembleState((s) => s.groove.lastSmartGenre) as string | undefined;
+    const chordStyle = useEnsembleState((s) => (module === 'chords' ? s.chords.style : undefined));
 
     const catalogPacks = packsForInstrument(module);
     if (catalogPacks.length === 0) {
@@ -161,7 +163,7 @@ function InstrumentSoundSource({ module }: { module: InstrumentModule }) {
     // so the Select always represents the current selection. (Discover + install
     // more in Settings → Packs.)
     const packs = catalogPacks.filter((p) => isPackInstalled(p.id) || voice === `pack:${p.id}`);
-    const autoTarget = autoVoiceForGenre(currentGenre, module, isPackInstalled);
+    const autoTarget = autoVoiceForGenre(currentGenre, module, isPackInstalled, chordStyle);
     const autoTargetLabel =
         autoTarget === 'synth'
             ? 'Synth'
@@ -180,7 +182,7 @@ function InstrumentSoundSource({ module }: { module: InstrumentModule }) {
         if (val === 'auto') {
             dispatch(ACTIONS.SET_INSTRUMENT_VOICE, {
                 module,
-                voice: autoVoiceForGenre(currentGenre, module, isPackInstalled),
+                voice: autoVoiceForGenre(currentGenre, module, isPackInstalled, chordStyle),
                 auto: true,
             });
         } else {
@@ -203,7 +205,7 @@ function InstrumentSoundSource({ module }: { module: InstrumentModule }) {
                 options={options}
             />
             <p class="text-mini-muted instrument-sound-source-note">
-                {autoSound ? `Following the genre → ${autoTargetLabel}` : 'Pinned to this sound'}
+                {autoSound ? `Following the part → ${autoTargetLabel}` : 'Pinned to this sound'}
                 {hasUninstalled && ' · More in Settings → Packs'}
             </p>
         </SettingGroup>
@@ -244,25 +246,65 @@ interface ChordsControlsProps {
 }
 
 function ChordsControls({ state }: ChordsControlsProps) {
+    const genre = useEnsembleState((s) => s.groove.lastSmartGenre);
+    const acoustic = genre === 'Acoustic' || state.style === 'acoustic-strum';
+    const hasPlayerChoice = acoustic || genre === 'Jazz' || state.style === 'modern-piano';
+    const playerOptions = [
+        ...(acoustic
+            ? [
+                  { value: 'arp', label: 'Piano arpeggio' },
+                  { value: 'acoustic-strum', label: 'Acoustic guitar strum' },
+              ]
+            : [{ value: 'jazz', label: 'Jazz comping' }]),
+        { value: 'modern-piano', label: 'Modern jazz piano' },
+    ];
     return (
-        <SettingRow
-            label="Density"
-            id="densitySelect"
-            description="Notes per chord — thinner or fuller voicings."
-        >
-            <Select
-                id="densitySelect"
-                value={state.density || 'standard'}
-                onChange={(val) => {
-                    dispatch(ACTIONS.SET_DENSITY, val);
-                }}
-                options={[
-                    { value: 'thin', label: 'Thin (3 notes)' },
-                    { value: 'standard', label: 'Standard (4 notes)' },
-                    { value: 'rich', label: 'Rich (5+ notes)' },
-                ]}
-            />
-        </SettingRow>
+        <Fragment>
+            {hasPlayerChoice && (
+                <SettingRow
+                    label="Playing style"
+                    id="chordPlayerSelect"
+                    description="Choose the accompaniment's phrasing. Auto sound follows the part."
+                >
+                    <Select
+                        id="chordPlayerSelect"
+                        value={state.style}
+                        onChange={(style) => {
+                            dispatch(ACTIONS.SET_STYLE, { module: 'chords', style });
+                            // Rebuild and sync before flushing: the new player must be in
+                            // the snapshot used to refill the live lookahead buffer.
+                            refreshArrangerUI();
+                        }}
+                        options={[
+                            ...(!playerOptions.some((option) => option.value === state.style)
+                                ? [{ value: state.style, label: 'Current style' }]
+                                : []),
+                            ...playerOptions,
+                        ]}
+                    />
+                </SettingRow>
+            )}
+            {state.style !== 'acoustic-strum' && (
+                <SettingRow
+                    label="Density"
+                    id="densitySelect"
+                    description="Notes per chord — thinner or fuller voicings."
+                >
+                    <Select
+                        id="densitySelect"
+                        value={state.density || 'standard'}
+                        onChange={(val) => {
+                            dispatch(ACTIONS.SET_DENSITY, val);
+                        }}
+                        options={[
+                            { value: 'thin', label: 'Thin (3 notes)' },
+                            { value: 'standard', label: 'Standard (4 notes)' },
+                            { value: 'rich', label: 'Rich (5+ notes)' },
+                        ]}
+                    />
+                </SettingRow>
+            )}
+        </Fragment>
     );
 }
 

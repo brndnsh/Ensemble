@@ -135,14 +135,11 @@ export function getChordDetails(symbol: string): ChordDetails {
         quality = 'm11';
     } else if (suffix === 'm9') {
         quality = 'm9';
-    } else if (
-        suffix === 'm7b5' ||
-        suffix === 'ø7' ||
-        suffix === 'ø' ||
-        suffix === 'h7' ||
-        symbol.includes('7b5')
-    ) {
+    } else if (suffix === 'm7b5' || suffix === 'ø7' || suffix === 'ø' || suffix === 'h7') {
         quality = 'halfdim';
+    } else if (suffix === '7b5') {
+        // A dominant flat-five retains its major third; m7b5 alone is half-diminished.
+        quality = '7b5';
     } else if (suffix === 'm6') {
         quality = 'm6';
     } else if (suffix === 'm7' || suffix === 'min' || suffix === 'm' || suffix === '-') {
@@ -779,6 +776,10 @@ export function getFormattedChordNames(
         absSuffix = '7b13';
         nnsSuffix = '7b13';
         romSuffix = '7b13';
+    } else if (quality === '7b5') {
+        absSuffix = '7b5';
+        nnsSuffix = '7b5';
+        romSuffix = '7b5';
     } else if (quality === '5') {
         absSuffix = '5';
         nnsSuffix = '5';
@@ -801,6 +802,7 @@ export function getFormattedChordNames(
             '7alt',
             '7#11',
             '7b13',
+            '7b5',
             '9',
             '11',
             '13',

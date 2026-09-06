@@ -108,6 +108,9 @@ export function getRootlessVoicing(
         if (quality === '7#11') {
             return isRich ? [4, 10, 14, 18, 21] : [4, 10, 14, 18]; // 3, b7, 9, #11
         }
+        if (quality === '7b5') {
+            return isRich ? [4, 6, 10, 14] : [4, 6, 10]; // 3, b5, b7, (9)
+        }
 
         // Characteristic dominant extensions
         if (quality === '13' || isRich) {

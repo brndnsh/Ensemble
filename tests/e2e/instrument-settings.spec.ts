@@ -62,6 +62,104 @@ test.describe('Instrument settings — desktop @ui', () => {
         await gotoHydrated(page);
     });
 
+    test('Acoustic player selection survives reload and switches back to piano', async ({
+        page,
+    }) => {
+        await gotoHydrated(page, '/?genre=Acoustic&prog=C%20%7C%20G%20%7C%20Am%20%7C%20F');
+        let surface = await openInstrumentSettings(page, 'Chords');
+        const player = surface.locator('#chordPlayerSelect');
+        await expect(player).toHaveValue('arp');
+        await player.selectOption('acoustic-strum');
+        await expect(player).toHaveValue('acoustic-strum');
+        await expect(surface.locator('#densitySelect')).toHaveCount(0);
+        // Remove URL genre authority: the next boot must restore the saved style.
+        await page.evaluate(() => history.replaceState(null, '', '/'));
+        await page.reload();
+        await page.waitForSelector('html[data-hydrated="true"]');
+        surface = await openInstrumentSettings(page, 'Chords');
+        await expect(surface.locator('#chordPlayerSelect')).toHaveValue('acoustic-strum');
+        await surface.locator('#chordPlayerSelect').selectOption('arp');
+        await expect(surface.locator('#densitySelect')).toBeVisible();
+    });
+
+    test('Modern jazz piano survives reload and keeps a pinned sound when changing players', async ({
+        page,
+    }) => {
+        await gotoHydrated(page, '/?genre=Jazz&prog=Dm7%20%7C%20G7%20%7C%20Cmaj7%20%7C%20Cmaj7');
+        let surface = await openInstrumentSettings(page, 'Chords');
+        await surface
+            .locator('.instrument-sound-source')
+            .getByRole('button', { name: 'Synth', exact: true })
+            .click();
+        await surface.locator('#chordPlayerSelect').selectOption('modern-piano');
+        await expect(
+            surface
+                .locator('.instrument-sound-source')
+                .getByRole('button', { name: 'Synth', exact: true }),
+        ).toHaveAttribute('aria-pressed', 'true');
+        await page.evaluate(() => history.replaceState(null, '', '/'));
+        await page.reload();
+        await page.waitForSelector('html[data-hydrated="true"]');
+        surface = await openInstrumentSettings(page, 'Chords');
+        await expect(surface.locator('#chordPlayerSelect')).toHaveValue('modern-piano');
+        await surface.locator('#chordPlayerSelect').selectOption('jazz');
+        await expect(surface.locator('#chordPlayerSelect')).toHaveValue('jazz');
+        await expect(
+            surface
+                .locator('.instrument-sound-source')
+                .getByRole('button', { name: 'Synth', exact: true }),
+        ).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    test('style-only URLs reconcile installed Auto sounds before audition and preserve pins', async ({
+        page,
+    }) => {
+        // Use real catalog manifests in CacheStorage, the installed-pack detection contract.
+        await page.evaluate(async () => {
+            const cache = await caches.open('ensemble-packs-chords1150');
+            for (const id of ['grand', 'nylon-guitar']) {
+                await cache.add(`/packs/${id}/manifest.json`);
+            }
+        });
+        await gotoHydrated(page, '/?genre=Acoustic');
+        const savedVoice = async (voice: string, autoSound: boolean) => {
+            await page.waitForFunction(
+                ({ voice, autoSound }) => {
+                    const saved = JSON.parse(localStorage.getItem('ensemble_currentState') || '{}');
+                    return saved.chords?.voice === voice && saved.chords?.autoSound === autoSound;
+                },
+                { voice, autoSound },
+            );
+        };
+        await savedVoice('pack:grand', true);
+        await gotoHydrated(page, '/?style=acoustic-strum&autoplay=1');
+        expect(await page.evaluate(() => window.ensemble.getState().chords.voice)).toBe(
+            'pack:nylon-guitar',
+        );
+        await expect(page.getByTestId('audition-play')).toBeVisible();
+        await savedVoice('pack:nylon-guitar', true);
+        await gotoHydrated(page, '/?style=arp');
+        expect(await page.evaluate(() => window.ensemble.getState().chords.voice)).toBe(
+            'pack:grand',
+        );
+        await page.evaluate(() =>
+            window.ensemble.dispatch(window.ensemble.ACTIONS.SET_INSTRUMENT_VOICE, {
+                module: 'chords',
+                voice: 'synth',
+                auto: false,
+            }),
+        );
+        await savedVoice('synth', false);
+        await gotoHydrated(page, '/?style=modern-piano');
+        expect(
+            await page.evaluate(() => ({
+                style: window.ensemble.getState().chords.style,
+                voice: window.ensemble.getState().chords.voice,
+                autoSound: window.ensemble.getState().chords.autoSound,
+            })),
+        ).toEqual({ style: 'modern-piano', voice: 'synth', autoSound: false });
+    });
+
     test('mixer accordion exposes all 5 instrument strips', async ({ page }) => {
         const trigger = page.locator('.workspace-studio-mixer-accordion-trigger');
         await expect(trigger).toBeVisible();

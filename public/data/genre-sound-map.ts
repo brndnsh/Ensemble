@@ -141,8 +141,17 @@ export function autoVoiceForGenre(
     genre: string | undefined,
     module: InstrumentModule,
     isPackInstalled: (packId: string) => boolean,
+    chordStyle?: string,
 ): InstrumentVoice {
-    const mapped = genre ? GENRE_SOUND_MAP[genre]?.[module] : undefined;
+    if (module === 'chords' && chordStyle === 'modern-piano') {
+        return isPackInstalled('grand') ? 'pack:grand' : 'synth';
+    }
+    const mapped =
+        module === 'chords' && chordStyle === 'acoustic-strum'
+            ? 'pack:nylon-guitar'
+            : genre
+              ? GENRE_SOUND_MAP[genre]?.[module]
+              : undefined;
     if (!mapped) {
         return 'synth';
     }

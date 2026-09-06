@@ -84,6 +84,7 @@ const chordC = {
     intervals: [0, 4, 7],
     freqs: [261.63, 329.63, 392.0],
     sectionId: 'A',
+    beats: 4,
 } as unknown as Parameters<typeof getAccompanimentNotes>[1];
 
 describe('Ska-Punk Piano Skank Critique (#549)', () => {
@@ -143,6 +144,7 @@ describe('Ska-Punk Piano Skank Critique (#549)', () => {
                     stepHits[s]++;
                     totalHits++;
                     for (const n of notes) {
+                        expect(Number.isFinite(n.durationSteps)).toBe(true);
                         if (n.durationSteps > maxDuration) {
                             maxDuration = n.durationSteps;
                         }

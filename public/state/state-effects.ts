@@ -92,7 +92,12 @@ export function resolveAutoVoices(
         if (!inst?.autoSound) {
             continue;
         }
-        const next = autoVoiceForGenre(genre, module, isPackInstalled);
+        const next = autoVoiceForGenre(
+            genre,
+            module,
+            isPackInstalled,
+            module === 'chords' ? stateMap.chords.style : undefined,
+        );
         if (next !== inst.voice) {
             // The SET_INSTRUMENT_VOICE effect lazily loads the pack + re-sends reverb.
             dispatch(ACTIONS.SET_INSTRUMENT_VOICE, { module, voice: next, auto: true });
@@ -256,6 +261,11 @@ export function handleEffects(
     // No HYDRATE case: this subscriber isn't attached until after boot hydration
     // already dispatched it, so boot-time effects (theme, etc.) run directly from main.ts.
     switch (action.type) {
+        case ACTIONS.SET_STYLE:
+            if (action.payload.module === 'chords') {
+                resolveAutoVoices(stateMap, stateMap.groove.lastSmartGenre, dispatch);
+            }
+            break;
         case ACTIONS.SET_INSTRUMENT_VOICE: {
             const payload = action.payload;
             // Epic 6 — selecting a `pack:<id>` voice lazily loads that pack's

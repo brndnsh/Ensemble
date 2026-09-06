@@ -1,0 +1,27 @@
+[
+    {
+        "id": "chords3-acoustic",
+        "label": "Chords 3 \u2014 Acoustic nylon strum",
+        "genreFeel": "Acoustic",
+        "drumPreset": "Acoustic",
+        "bpm": 108,
+        "intensity": 0.5,
+        "complexity": 0.4,
+        "key": "C",
+        "timeSignature": "4/4",
+        "chordStyle": "acoustic-strum",
+        "sections": [
+            {
+                "id": "verse",
+                "label": "Verse",
+                "value": "C | G | Am | F"
+            }
+        ],
+        "voices": [
+            {
+                "module": "chords",
+                "voice": "pack:nylon-guitar"
+            }
+        ]
+    }
+]

@@ -116,7 +116,7 @@ Click any of these to instantly load a curated preset. These are perfect for pra
 
 ### ⛺ Acoustic & Folk
 - [🚜 **Country Two-Step**](index.html?prog=I+%7C+I+%7C+IV+%7C+V&genre=Country&bpm=115&gallery=country-two-step) — Classic root-five bass movement and honky-tonk piano flair.
-- [🏕️ **Campfire Folk**](index.html?prog=I+%7C+V+%7C+vi+%7C+IV+%7C+I+%7C+V+%7C+IV+%7C+IV&genre=Acoustic&bpm=92&gallery=campfire-folk) — Intimate, strummed accompaniment for singer-songwriters.
+- [🏕️ **Campfire Folk**](index.html?prog=I+%7C+V+%7C+vi+%7C+IV+%7C+I+%7C+V+%7C+IV+%7C+IV&genre=Acoustic&bpm=92&gallery=campfire-folk) — Intimate accompaniment for singer-songwriters. In Chords settings, compare **Piano arpeggio** with **Acoustic guitar strum**. Auto sound uses Nylon Guitar for strums when that pack is installed in Settings → Packs; otherwise it uses Synth.
 - [💃 **Flamenco Fusion**](index.html?prog=i+%7C+VII+%7C+VI+%7C+V7&genre=Bossa&bpm=110&gallery=flamenco-fusion) — Spanish-influenced harmonic descent over a syncopated groove.
 
 ---
@@ -128,6 +128,12 @@ The following information is generated directly from the Ensemble engine to ensu
 {{GENRE_TABLE}}
 
 ### Instrument Styles
+
+In **Jazz** or **Acoustic**, open Chords settings and choose **Modern jazz piano**
+for connected chord voicings and light right-hand answers over held lower notes.
+Leave Sound on **Auto** to use Acoustic Grand Piano when installed. Density
+changes the voicing's fullness without adding more rhythmic attacks. Try
+`Dm7 | G7 | Cmaj7 | Cmaj7` with the soloist off and play your own melody above it.
 **Bass:**
 {{BASS_STYLES}}
 

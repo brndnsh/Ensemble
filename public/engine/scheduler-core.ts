@@ -1265,7 +1265,8 @@ export function scheduleChords(
             shouldReleasePriorVoicing(
                 mutPlayback.lastChordKey,
                 chordKey,
-                Boolean(playback.sustainActive),
+                Boolean(playback.sustainActive) &&
+                    !notes.some((n: { chordPerformance?: unknown }) => n.chordPerformance),
                 mutPlayback.activeChordVoices.length,
             )
         ) {
@@ -1367,7 +1368,8 @@ export function scheduleChords(
                 const voicedFreq = freq * detuneRatio(hChord.detuneCents);
                 const voiceHandle = playNote(state, voicedFreq, playTime, duration, {
                     vol: safeVelocity * hChord.velocityMult,
-                    index: strumRank[ni],
+                    index: n.chordPerformance ? 0 : strumRank[ni],
+                    ignoreSustain: Boolean(n.chordPerformance),
                     instrument: instrument || 'Piano',
                     numVoices: numVoices,
                 });
@@ -1376,7 +1378,7 @@ export function scheduleChords(
                 // Bounded like `heldNotes`: a long same-chord vamp re-strikes into
                 // the list, but each voice self-frees, so drop the oldest (ended)
                 // handle past the cap.
-                if (voiceHandle && !playback.sustainActive) {
+                if (voiceHandle && (!playback.sustainActive || n.chordPerformance)) {
                     const acv = (playback as Mutable<typeof playback>).activeChordVoices;
                     acv.push(voiceHandle); // @direct-mutation
                     if (acv.length > 64) {

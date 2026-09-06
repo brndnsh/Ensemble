@@ -8,6 +8,9 @@ import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
+vi.mock('../../../public/controllers/arranger-controller.js', () => ({
+    refreshArrangerUI: vi.fn(),
+}));
 const { mockUseEnsembleState, mockDispatch } = vi.hoisted(() => ({
     mockUseEnsembleState: vi.fn(),
     mockDispatch: vi.fn(),
@@ -63,6 +66,33 @@ describe('InstrumentSettings Component', () => {
     afterEach(() => {
         document.body.removeChild(container);
         vi.restoreAllMocks();
+    });
+
+    it('offers the Acoustic piano/guitar comparison and rebuilds only after selecting the new style', async () => {
+        const { refreshArrangerUI } = await import(
+            '../../../public/controllers/arranger-controller.js'
+        );
+        const fullState = {
+            chords: { style: 'arp', density: 'standard', voice: 'synth', autoSound: true },
+            groove: { lastSmartGenre: 'Acoustic' },
+        };
+        mockUseEnsembleState.mockImplementation((cb) => cb(fullState));
+        mockDispatch.mockClear();
+        act(() => render(<InstrumentSpecificSettings module="chords" />, container));
+        const select = container.querySelector('#chordPlayerSelect');
+        expect(select.value).toBe('arp');
+        act(() => {
+            select.value = 'acoustic-strum';
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        expect(mockDispatch).toHaveBeenCalledWith('SET_STYLE', {
+            module: 'chords',
+            style: 'acoustic-strum',
+        });
+        expect(refreshArrangerUI).toHaveBeenCalledOnce();
+        expect(mockDispatch.mock.invocationCallOrder[0]).toBeLessThan(
+            refreshArrangerUI.mock.invocationCallOrder[0],
+        );
     });
 
     it('should render Volume and Reverb sliders for generic module', () => {

@@ -621,7 +621,7 @@ export class ExportProcessor {
                     actualDurationSteps *= 0.3;
                 }
 
-                if (actualDurationSteps < 1) {
+                if (res.chordPerformance || actualDurationSteps < 1) {
                     endTimeS = noteTimeS + actualDurationSteps * this.sixteenthSec;
                 } else {
                     const targetStepIdx = globalStep + Math.round(actualDurationSteps);
@@ -630,7 +630,7 @@ export class ExportProcessor {
                         noteTimeS + actualDurationSteps * this.sixteenthSec;
                 }
 
-                if (endTimeS - noteTimeS < 0.05) {
+                if (!res.chordPerformance && endTimeS - noteTimeS < 0.05) {
                     endTimeS = noteTimeS + 0.05;
                 }
 

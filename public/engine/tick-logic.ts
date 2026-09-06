@@ -12,8 +12,10 @@ import {
     updateCoordinationContext,
 } from './coordination-engine.js';
 import { runDrumTick } from './drums-tick.js';
+import type { ChordPerformance } from './guitar-player.js';
 import { getHarmonyNotes } from './harmonies.js';
 import { isPowerChordChordsVoice } from './instrument-registry.js';
+import type { PianoPerformance } from './piano-player.js';
 import { getQaHangAt, getSoloistNotePhraseFirst } from './soloist-phrase-first.js';
 import type { DrumHitInfo, TickCursors } from './tick-types.js';
 import { getChordAtStep } from './worker-utils.js';
@@ -31,6 +33,8 @@ export interface NoteResult {
     velocity?: number;
     durationSteps?: number;
     timingOffset?: number;
+    /** Authored player articulation: renderers must not re-strum or revoice it. */
+    chordPerformance?: ChordPerformance | PianoPerformance;
     /** One-way bend-*in*: start this many semitones off the written pitch, ramp to it. */
     bendStartInterval?: number;
     /** Bend-and-release + future slide/scoop (#744). Distinct from `bendStartInterval`. */
@@ -345,7 +349,9 @@ export function generateNotesForStep(
             // relaxed register slot ('chords-guitar-low') so it stays down in the
             // bass register — that overlap is the metal idiom. Rock/other guitar
             // power chords keep the standard chords slot (~E3), which reads right.
-            const powerChords = isPowerChordChordsVoice(state.chords.voice);
+            const powerChords =
+                !['acoustic-strum', 'modern-piano'].includes(state.chords.style) &&
+                isPowerChordChordsVoice(state.chords.voice);
             const metalLowChug = powerChords && state.groove.genreFeel === 'Metal';
             if (powerChords) {
                 applyPowerChordVoicing(

@@ -752,6 +752,8 @@ function hydrateSavedState(): void {
 
 export interface UrlHydrationResult {
     genreName: string | null;
+    /** An accepted URL chord style also needs post-detection Auto voice resolution. */
+    hasChordStyle: boolean;
     genreGrooveOverrides: Pick<GrooveState, 'swing' | 'swingSub' | 'humanize'> | null;
 }
 
@@ -760,6 +762,7 @@ export function loadFromUrl(): UrlHydrationResult {
     const params = new URLSearchParams(window.location.search);
     let hasParams = false;
     let genreName: string | null = null;
+    let hasChordStyle = false;
     let genreGrooveOverrides: UrlHydrationResult['genreGrooveOverrides'] = null;
 
     const sParam = params.get('s');
@@ -841,6 +844,7 @@ export function loadFromUrl(): UrlHydrationResult {
         // Apply after the genre pipeline so an explicit permalink style still wins.
         if (isKnownChordStyle(styleParam)) {
             dispatch(ACTIONS.SET_STYLE, { module: 'chords', style: styleParam });
+            hasChordStyle = true;
         }
     }
 
@@ -934,6 +938,7 @@ export function loadFromUrl(): UrlHydrationResult {
                 } satisfies Partial<BassState>);
             }
             if (band.c) {
+                hasChordStyle ||= isKnownChordStyle(band.c.s);
                 Object.assign(chords, {
                     enabled: !!band.c.e,
                     // isKnownChordStyle, not the CHORD_STYLES picker list: the genre table
@@ -1012,7 +1017,7 @@ export function loadFromUrl(): UrlHydrationResult {
         dispatch(ACTIONS.SET_MODAL_OPEN, { modal: 'audition', open: true });
     }
 
-    return { genreName, genreGrooveOverrides };
+    return { genreName, hasChordStyle, genreGrooveOverrides };
 }
 
 function clearChordPresetHighlight() {}
