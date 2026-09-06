@@ -114,9 +114,9 @@ whole-part rest. Explicit arrangement mutes remain authoritative.
 
 The first audition compares Modern jazz piano with existing Jazz comping over
 `Dm7 | G7 | Cmaj7 | Cmaj7`, exposed and with backing. Supportive piano and Open
-modal are the next profile directions. The latter takes the proposed Tyner
-reference toward open fourth-based harmony after this shared pianist has been
-heard; this pilot does not implement all three profiles or microphone listening.
+modal were proposed as next profile directions. Open modal now has a bounded
+implementation below; Supportive piano remains a future direction. Neither
+profile implies microphone listening.
 
 Reproducible comparison scenes are
 [existing Jazz comping](../../scripts/scenes/chords-3-jazz.json) and
@@ -127,6 +127,45 @@ be compared using `mix:report --scenes-from=...`.
 The production-chart audit also corrected `7b5` parsing: a dominant flat-five
 retains its major third, while `m7b5` remains half-diminished. The legacy rootless
 voicing path now preserves that explicit flat fifth as well.
+
+## Open modal piano
+
+[Issue #1152](https://github.com/brndnsh-labs/Ensemble/issues/1152) adds optional
+`open-modal` in the Jazz and Acoustic player picker. It shares the same literal
+chord admission, playable hands, source selection and authored release contract
+as Modern piano. Profile identity participates in the content-based voicing-plan
+cache, so changing players cannot reuse the previous profile's plan.
+
+Chord identity is a hard constraint; openness is only a ranking preference.
+Required thirds/suspensions, sevenths and written alterations/extensions survive
+every density. The existing small optional color vocabulary supplies an unaltered
+ninth at Standard, and an eleventh over minor chords or a thirteenth over
+major/dominant chords at Rich where
+appropriate. The profile does not introduce substitutions, side-slipping or an
+automatic sharp eleventh. Root and written slash-bass support return when Bass is
+off. Density can exceed its nominal note count when the written chord needs it.
+
+Among valid candidates, Open modal prefers a spread near an octave and a half,
+space between low voices and up to two adjacent fourths. Mixed interval shapes
+remain available for every chord, with the shared hand/top-line movement costs
+still enforcing restraint. The register and per-hand reach do not expand.
+
+Every bar and actual chord arrival receives a full statement. Bar two of each
+four-bar phrase permits one lighter upper-hand answer on the last group boundary,
+or the last beat when the bar has only one group (such as 3/4). Bar four settles.
+The left hand supports the answer. Density adds keys rather
+than attacks, and explicit arrangement mutes remain authoritative. The normal
+Modern piano pattern remains unchanged.
+
+The shared piano critique runs both profiles through all-key harmonic identity,
+hand reach, meter, release, practice-loop, seek and detached-state contracts.
+Open-specific checks cover the allowed color vocabulary, wider/fourth-bearing
+voicings with a restrained top line, a less busy vamp and profile-cache switching.
+Audible chord recognition and the balance against a human player still require
+a TEST listening pass before merge.
+
+[Open modal comparison scene](../../scripts/scenes/chords-3-open-modal.json)
+uses the same chart, Grand Piano source, tempo and intensity as the Modern scene.
 
 ## Staged migration
 

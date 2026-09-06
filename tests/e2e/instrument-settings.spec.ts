@@ -80,36 +80,47 @@ test.describe('Instrument settings — desktop @ui', () => {
         await expect(surface.locator('#chordPlayerSelect')).toHaveValue('acoustic-strum');
         await surface.locator('#chordPlayerSelect').selectOption('arp');
         await expect(surface.locator('#densitySelect')).toBeVisible();
+        await surface.locator('#chordPlayerSelect').selectOption('open-modal');
+        await expect(surface.locator('#chordPlayerSelect')).toHaveValue('open-modal');
     });
 
-    test('Modern jazz piano survives reload and keeps a pinned sound when changing players', async ({
-        page,
-    }) => {
-        await gotoHydrated(page, '/?genre=Jazz&prog=Dm7%20%7C%20G7%20%7C%20Cmaj7%20%7C%20Cmaj7');
-        let surface = await openInstrumentSettings(page, 'Chords');
-        await surface
-            .locator('.instrument-sound-source')
-            .getByRole('button', { name: 'Synth', exact: true })
-            .click();
-        await surface.locator('#chordPlayerSelect').selectOption('modern-piano');
-        await expect(
-            surface
+    for (const profile of ['modern-piano', 'open-modal']) {
+        test(`${profile} survives reload and keeps a pinned sound when changing players`, async ({
+            page,
+        }) => {
+            await gotoHydrated(
+                page,
+                '/?genre=Jazz&prog=Dm7%20%7C%20G7%20%7C%20Cmaj7%20%7C%20Cmaj7',
+            );
+            let surface = await openInstrumentSettings(page, 'Chords');
+            await surface
                 .locator('.instrument-sound-source')
-                .getByRole('button', { name: 'Synth', exact: true }),
-        ).toHaveAttribute('aria-pressed', 'true');
-        await page.evaluate(() => history.replaceState(null, '', '/'));
-        await page.reload();
-        await page.waitForSelector('html[data-hydrated="true"]');
-        surface = await openInstrumentSettings(page, 'Chords');
-        await expect(surface.locator('#chordPlayerSelect')).toHaveValue('modern-piano');
-        await surface.locator('#chordPlayerSelect').selectOption('jazz');
-        await expect(surface.locator('#chordPlayerSelect')).toHaveValue('jazz');
-        await expect(
-            surface
-                .locator('.instrument-sound-source')
-                .getByRole('button', { name: 'Synth', exact: true }),
-        ).toHaveAttribute('aria-pressed', 'true');
-    });
+                .getByRole('button', { name: 'Synth', exact: true })
+                .click();
+            await surface.locator('#chordPlayerSelect').selectOption(profile);
+            await expect(
+                surface
+                    .locator('.instrument-sound-source')
+                    .getByRole('button', { name: 'Synth', exact: true }),
+            ).toHaveAttribute('aria-pressed', 'true');
+            await page.waitForFunction((profile) => {
+                const saved = JSON.parse(localStorage.getItem('ensemble_currentState') || '{}');
+                return saved.chords?.style === profile && saved.chords?.autoSound === false;
+            }, profile);
+            await page.evaluate(() => history.replaceState(null, '', '/'));
+            await page.reload();
+            await page.waitForSelector('html[data-hydrated="true"]');
+            surface = await openInstrumentSettings(page, 'Chords');
+            await expect(surface.locator('#chordPlayerSelect')).toHaveValue(profile);
+            await surface.locator('#chordPlayerSelect').selectOption('jazz');
+            await expect(surface.locator('#chordPlayerSelect')).toHaveValue('jazz');
+            await expect(
+                surface
+                    .locator('.instrument-sound-source')
+                    .getByRole('button', { name: 'Synth', exact: true }),
+            ).toHaveAttribute('aria-pressed', 'true');
+        });
+    }
 
     test('style-only URLs reconcile installed Auto sounds before audition and preserve pins', async ({
         page,
@@ -138,6 +149,12 @@ test.describe('Instrument settings — desktop @ui', () => {
         );
         await expect(page.getByTestId('audition-play')).toBeVisible();
         await savedVoice('pack:nylon-guitar', true);
+        await gotoHydrated(page, '/?style=open-modal&autoplay=1');
+        expect(await page.evaluate(() => window.ensemble.getState().chords.voice)).toBe(
+            'pack:grand',
+        );
+        await savedVoice('pack:grand', true);
+        await expect(page.getByTestId('audition-play')).toBeVisible();
         await gotoHydrated(page, '/?style=arp');
         expect(await page.evaluate(() => window.ensemble.getState().chords.voice)).toBe(
             'pack:grand',
@@ -158,6 +175,17 @@ test.describe('Instrument settings — desktop @ui', () => {
                 autoSound: window.ensemble.getState().chords.autoSound,
             })),
         ).toEqual({ style: 'modern-piano', voice: 'synth', autoSound: false });
+        const band = Buffer.from(JSON.stringify({ mv: 2, c: { s: 'open-modal' } })).toString(
+            'base64',
+        );
+        await gotoHydrated(page, `/?bnd=${encodeURIComponent(band)}`);
+        expect(
+            await page.evaluate(() => ({
+                style: window.ensemble.getState().chords.style,
+                voice: window.ensemble.getState().chords.voice,
+                autoSound: window.ensemble.getState().chords.autoSound,
+            })),
+        ).toEqual({ style: 'open-modal', voice: 'synth', autoSound: false });
     });
 
     test('mixer accordion exposes all 5 instrument strips', async ({ page }) => {

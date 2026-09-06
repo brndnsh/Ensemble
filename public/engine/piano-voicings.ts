@@ -1,6 +1,8 @@
 import type { Chord } from '../types.js';
 import { chordFacts } from './chord-facts.js';
 
+export type PianoProfile = 'modern-piano' | 'open-modal';
+
 export interface PianoKey {
     midi: number;
     hand: 'left' | 'right';
@@ -103,6 +105,7 @@ export function voicePianoChord(
     density: string,
     previous: readonly PianoKey[] = [],
     center = 65,
+    profile: PianoProfile = 'modern-piano',
 ): PianoKey[] {
     let best: PianoKey[] = [];
     let cost = Infinity;
@@ -110,6 +113,25 @@ export function voicePianoChord(
     for (const notes of candidates(chord, bassPresent, density)) {
         let nextCost = Math.abs(notes.reduce((sum, n) => sum + n.midi, 0) / notes.length - center);
         nextCost += Math.abs(notes.filter((n) => n.hand === 'left').length - 2) * 2;
+        if (profile === 'open-modal') {
+            // Open the texture within the same playable register. Fourths are
+            // a preference over already-valid chart tones, never a new scale
+            // or a reason to discard a third, seventh or written alteration.
+            nextCost += Math.max(0, 19 - (notes.at(-1)!.midi - notes[0].midi)) * 2;
+            let fourths = 0;
+            for (let i = 1; i < notes.length; i++) {
+                const gap = notes[i].midi - notes[i - 1].midi;
+                if (gap === 5) {
+                    fourths++;
+                }
+                // Give the low voices breathing room; close upper intervals
+                // remain available when they express the written harmony.
+                if (notes[i - 1].midi < 65 && gap < 5) {
+                    nextCost += (5 - gap) * 2;
+                }
+            }
+            nextCost -= Math.min(2, fourths) * 4;
+        }
         for (const hand of ['left', 'right'] as const) {
             const current = notes.filter((n) => n.hand === hand);
             const prior = previous.filter((n) => n.hand === hand);

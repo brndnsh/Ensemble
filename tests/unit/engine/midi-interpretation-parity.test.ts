@@ -294,7 +294,7 @@ describe('#1325 — the EXPORTER actually calls the shared curves (not just the 
         };
     }
 
-    it.each(['guitar', 'piano'])(
+    it.each(['guitar', 'modern-piano', 'open-modal'] as const)(
         'preserves authored %s articulation and fractional releases through audio, live MIDI and export (#1150)',
         (player) => {
             const notes = [0, 1, 2].map((rank) => ({
@@ -309,9 +309,9 @@ describe('#1325 — the EXPORTER actually calls the shared curves (not just the 
                 muted: false,
                 ccEvents: rank === 0 ? [{ controller: 64, value: 0, timingOffset: 0 }] : undefined,
                 chordPerformance:
-                    player === 'piano'
+                    player !== 'guitar'
                         ? {
-                              player: 'modern-piano' as const,
+                              player,
                               hand: rank === 0 ? ('left' as const) : ('right' as const),
                               gesture: 'statement' as const,
                           }

@@ -93,8 +93,8 @@ This map provides a quick reference for AI agents to understand the responsibili
 | `public/engine/chords-styles.ts` | Genre-specific chord voicing logic. | `getRootlessVoicing` |
 | `public/engine/chord-facts.ts` | Chart harmonic facts independent of the chosen instrumental voicing. | `chordFacts` |
 | `public/engine/guitar-player.ts` | Acoustic guitar shapes and meter-aware strums with authored performance timing. | `chooseGuitarShape`, `getGuitarNotes` |
-| `public/engine/piano-player.ts` | Modern piano phrase gestures and independent hand releases. | `getPianoNotes` |
-| `public/engine/piano-voicings.ts` | Playable keyboard voicings with defining-tone coverage and connected hands. | `voicePianoChord` |
+| `public/engine/piano-player.ts` | Modern and Open modal piano phrase gestures and independent hand releases. | `getPianoNotes` |
+| `public/engine/piano-voicings.ts` | Playable keyboard voicings with protected chord identity, connected hands and optional open spacing. | `voicePianoChord` |
 | `public/engine/comping-cells.ts` | Pure deterministic comping-cell banks (per-genre 16th-step hit patterns) extracted from accompaniment.ts. | `FUNK_COMPING_CELLS`, `JAZZ_COMPING_CELLS`, `BOSSA_PARTIDO_ALTO_CELLS` |
 | `public/engine/comping-emit.ts` | Standard comp lane hit decision + per-hit emission (coordination overlays, #715 statement/answer economy, #766 ring, #707 clamp) extracted from getAccompanimentNotes; compingState + coordination threaded explicitly. | `emitCompNotes`, `AccompanimentCoordination`, `CCEvent` |
 | `public/engine/comping-state.ts` | The mutated-shared-singleton comp-memory struct (groove/voice-leading/statement memory), canonical initializer, and complete fresh-run reset ritual. | `compingState`, `resetCompingState`, `CompingState` |
