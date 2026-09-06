@@ -5,6 +5,7 @@ import { getFrequency } from '../utils.js';
 import { INTRO_MUTES, OUTRO_MUTES } from './arrangement-layering.js';
 import { getBestInversion } from './chords-engine.js';
 import { getBandPocket } from './coordination-engine.js';
+import { getMovingPadVoicing } from './harmony-moving-voice.js';
 import { type HarmonyPatternKey, resolveHarmonyProfile } from './harmony-styles.js';
 import { scrambleHash } from './hash-utils.js';
 import {
@@ -55,6 +56,7 @@ interface StyleConfig {
     velocity: number;
     octaveOffset: number;
     activeStyle?: string;
+    movingPadVoice?: boolean;
 }
 
 interface HarmonyContext {
@@ -1128,6 +1130,54 @@ function finalizeHarmonyNotes(
         return [];
     }
 
+    if (
+        styleConfig.movingPadVoice &&
+        behavior.type === 'pad' &&
+        !isSoloistBusy &&
+        currentMidis.length === 2 &&
+        !(feel === 'Rock' && playback.bandIntensity > 0.7)
+    ) {
+        const plan = getMovingPadVoicing(
+            activeState,
+            chord,
+            step,
+            (octave || chords.octave || 60) + (styleConfig.octaveOffset || 0),
+        );
+        if (plan) {
+            // The intervention may replace ONE voice in the ordinary dyad. The
+            // other voice and every existing onset/duration/velocity stay owned by
+            // the pad path. Exact common pitches retain the normal legato flag.
+            const retained = plan.midis.filter((midi) => currentMidis.includes(midi));
+            const replaced = currentMidis.find((midi) => !plan.midis.includes(midi));
+            const added = plan.midis.find((midi) => !currentMidis.includes(midi));
+            const accompanimentPcs = new Set<number>(
+                (coordination.accompanimentMidis || []).map(
+                    (midi: number) => ((midi % 12) + 12) % 12,
+                ),
+            );
+            const overlapCount = (midis: number[]) =>
+                midis.filter((midi) => accompanimentPcs.has(((midi % 12) + 12) % 12)).length;
+            const sourceWasHeard =
+                !plan.arrival || plan.source.every((midi) => harmony.lastMidis.includes(midi));
+            if (
+                retained.length >= 1 &&
+                // Crowding already owns polyphony, duration and velocity above.
+                // Within that budget, the new support voice must not add another
+                // unison with the comper. A fifth is the largest replacement of
+                // an ordinary voice; the planned boundary motion stays <=2.
+                (!accompanimentCrowding ||
+                    overlapCount(plan.midis) <= overlapCount(currentMidis)) &&
+                (replaced === undefined ||
+                    added === undefined ||
+                    Math.abs(replaced - added) <= 7) &&
+                plan.midis.every((midi) => midi >= safetyFloor && midi <= 84) &&
+                sourceWasHeard
+            ) {
+                currentMidis = plan.midis;
+            }
+        }
+    }
+
     const polyphonyComp = Math.max(0.7, 1.0 - currentMidis.length * 0.05);
     const notes: HarmonyNote[] = [];
     const finalMidisForMemory: number[] = [];
@@ -1414,6 +1464,7 @@ export function getHarmonyNotes(
     if (style === 'smart') {
         // Smart path: the resolved pads-vs-stabs decision is the profile's.
         config.rhythmicStyle = profile.rhythmicStyle;
+        config.movingPadVoice = profile.movingPadVoice;
     } else {
         // Explicit-style path: keep the legacy resolution. 'auto' falls to pads
         // for the sustained-genre feels; the comping feels always force stabs
