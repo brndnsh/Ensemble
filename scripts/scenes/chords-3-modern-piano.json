@@ -1,0 +1,27 @@
+[
+    {
+        "id": "chords3-jazz-piano",
+        "label": "Chords 3 \u2014 Modern jazz piano",
+        "genreFeel": "Jazz",
+        "drumPreset": "Jazz",
+        "bpm": 108,
+        "intensity": 0.45,
+        "complexity": 0.4,
+        "key": "C",
+        "timeSignature": "4/4",
+        "chordStyle": "modern-piano",
+        "sections": [
+            {
+                "id": "verse",
+                "label": "Verse",
+                "value": "Dm7 | G7 | Cmaj7 | Cmaj7"
+            }
+        ],
+        "voices": [
+            {
+                "module": "chords",
+                "voice": "pack:grand"
+            }
+        ]
+    }
+]

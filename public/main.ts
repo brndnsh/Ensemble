@@ -26,6 +26,7 @@ import {
     deriveSoloistModeOnBoot,
     handleEffects,
     reconcileUrlGenreOnBoot,
+    resolveAutoVoices,
 } from './state/state-effects.js';
 import { hydrateState, loadFromUrl } from './state/state-hydration.js';
 import { dispatch, getState, subscribe } from './state.js';
@@ -41,6 +42,7 @@ async function init() {
         // Ensure state is populated BEFORE the UI mounts so components initialize with correct data.
         hydrateState();
         const urlHydration = loadFromUrl();
+        const needsVoiceReconciliation = !!urlHydration.genreName || urlHydration.hasChordStyle;
 
         // #675 — warm the registry's installed-pack set from the SW cache so
         // genre auto-follow knows which mapped packs are available before the
@@ -66,11 +68,11 @@ async function init() {
             }
         });
 
-        // Preserve the ordinary bootstrap path exactly: only a genre URL needs
-        // to wait for installed-pack detection before choosing its Auto voices.
+        // Genre and chord-style URLs wait for installed-pack detection before
+        // choosing Auto voices; ordinary saved-session launches remain immediate.
         // That keeps unrelated launches interactive on the same schedule while
         // the audition path below remains gated until reconciliation is complete.
-        if (!urlHydration.genreName) {
+        if (!needsVoiceReconciliation) {
             const hydrated = getState();
             warmPacksForVoices([
                 hydrated.chords.voice,
@@ -103,7 +105,7 @@ async function init() {
 
         validateProgression(getState(), dispatch);
 
-        if (!urlHydration.genreName) {
+        if (!needsVoiceReconciliation) {
             // --- ASSEMBLE UI ---
             mountComponents(() => getVisualTime(getState()));
         }
@@ -208,7 +210,7 @@ async function init() {
             }
         });
 
-        if (!urlHydration.genreName) {
+        if (!needsVoiceReconciliation) {
             analyzeFormUI(getState().arranger);
         }
 
@@ -232,6 +234,11 @@ async function init() {
                 urlHydration.genreGrooveOverrides,
                 dispatch,
             );
+        } else if (urlHydration.hasChordStyle) {
+            // SET_STYLE ran before subscriptions existed. Reconcile only the
+            // source here; replaying a genre would overwrite the URL's part.
+            await installedPacksReady;
+            resolveAutoVoices(getState(), getState().groove.lastSmartGenre, dispatch);
         }
 
         // Send one authoritative post-reconciliation snapshot. All later writes
@@ -243,7 +250,7 @@ async function init() {
         // otherwise stay monophonic until the next genre change.
         deriveSoloistModeOnBoot(getState(), dispatch);
 
-        if (urlHydration.genreName) {
+        if (needsVoiceReconciliation) {
             // Pre-decode the FINAL post-genre Auto voices, not the persisted
             // decoys the URL was meant to replace. The cache detection above
             // makes those mappings authoritative before warming begins.

@@ -26,7 +26,7 @@ describe('Chords Details Deep Dive', () => {
             { input: 'C13', quality: '13' },
             { input: 'C7b9', quality: '7b9' },
             { input: 'C7#9', quality: '7#9' },
-            { input: 'C7b5', quality: 'halfdim' },
+            { input: 'C7b5', quality: '7b5' },
             { input: 'C7#5', quality: 'aug' },
         ];
         dominants.forEach(({ input, quality }) => {

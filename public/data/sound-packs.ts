@@ -180,11 +180,11 @@ export const SOUND_PACKS: readonly SoundPack[] = [
         id: 'nylon-guitar',
         name: 'Nylon Guitar',
         description:
-            'A sampled Spanish classical guitar — a warm fingerstyle nylon lead for bossa, acoustic, country.',
+            'A sampled Spanish classical guitar — warm nylon lead and acoustic rhythm strums.',
         attribution:
             'FreePats Spanish Classical Guitar (nylon-string) by roberto@zenvoid.org — CC0 1.0 (public domain)',
         approxSizeMB: 0.6,
-        instruments: ['soloist'],
+        instruments: ['soloist', 'chords'],
         // Calibrated 2026-06-23 (#659) via `mix-report --calibrate-pack=soloist:nylon-guitar`:
         // pack sat 12.0 dB under the synth lead across rock/blues/jazz/funk
         // (RMS-match = 4.0×). The nylon is markedly darker than the synth lead

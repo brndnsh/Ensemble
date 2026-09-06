@@ -19,7 +19,9 @@ import {
     selectSharedCatchVoicing,
 } from './comping-emit.js';
 import { compingState } from './comping-state.js';
+import { getGuitarNotes } from './guitar-player.js';
 import { scrambleHash, stringHash31 } from './hash-utils.js';
+import { getPianoNotes } from './piano-player.js';
 import { isInstrumentActiveAtStep, isSoloistBusyAtStep } from './section-overrides.js';
 import {
     averageMidi,
@@ -1112,6 +1114,35 @@ export function getAccompanimentNotes(
     const { playback, arranger, chords, bass, groove } = state;
     if (!chord) {
         return [];
+    }
+
+    // The Acoustic player owns its shape, pulse and articulation together.
+    // Keep legacy keyboard styles on their established comping path.
+    if (chords.style === 'acoustic-strum') {
+        return getGuitarNotes(
+            state,
+            chord,
+            step,
+            stepInChord,
+            {
+                ...stepInfo,
+                tsConfig:
+                    stepInfo.tsConfig ||
+                    getEffectiveTimeSignature(arranger.timeSignature, arranger.grouping),
+            },
+            coordination.bassEffectiveEnabled ?? isInstrumentActiveAtStep(state, 'bass', step),
+        );
+    }
+    if (chords.style === 'modern-piano') {
+        return getPianoNotes(
+            state,
+            chord,
+            step,
+            stepInChord,
+            stepInfo,
+            coordination,
+            coordination.bassEffectiveEnabled ?? isInstrumentActiveAtStep(state, 'bass', step),
+        );
     }
 
     const notes: any[] = [];

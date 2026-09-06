@@ -56,9 +56,8 @@ vi.mock('../../../public/engine/midi-scheduler.js', () => ({
 const { scheduleBass, scheduleChords, scheduleSoloist } = await import(
     '../../../public/engine/scheduler-core.js'
 );
-const { dispatchMidiBass, dispatchMidiChordNote, dispatchMidiSoloist } = await import(
-    '../../../public/engine/midi-scheduler.js'
-);
+const { dispatchMidiBass, dispatchMidiChordNote, dispatchMidiChordSustain, dispatchMidiSoloist } =
+    await import('../../../public/engine/midi-scheduler.js');
 const { playNote, playSoloNote } = await import('../../../public/engine/engine.js');
 const { applyConductor } = await import('../../../public/engine/conductor.js');
 const { ExportProcessor } = await import('../../../public/engine/midi-worker-logic.js');
@@ -294,6 +293,79 @@ describe('#1325 — the EXPORTER actually calls the shared curves (not just the 
             },
         };
     }
+
+    it.each(['guitar', 'piano'])(
+        'preserves authored %s articulation and fractional releases through audio, live MIDI and export (#1150)',
+        (player) => {
+            const notes = [0, 1, 2].map((rank) => ({
+                module: 'chords',
+                step: 0,
+                midi: 64 - rank,
+                freq: 440 * 2 ** ((64 - rank - 69) / 12),
+                velocity: 0.5,
+                durationSteps: player === 'guitar' ? 2 - rank * 0.072 : rank === 0 ? 7.88 : 3.08,
+                timingOffset: player === 'guitar' ? rank * 0.009 : 0,
+                dry: false,
+                muted: false,
+                ccEvents: rank === 0 ? [{ controller: 64, value: 0, timingOffset: 0 }] : undefined,
+                chordPerformance:
+                    player === 'piano'
+                        ? {
+                              player: 'modern-piano' as const,
+                              hand: rank === 0 ? ('left' as const) : ('right' as const),
+                              gesture: 'statement' as const,
+                          }
+                        : {
+                              player: 'acoustic-guitar' as const,
+                              string: 5 - rank,
+                              fret: 0,
+                              stroke: 'up' as const,
+                          },
+            }));
+            const state = {
+                ...exportState(0.5),
+                chords: {
+                    ...exportState(0.5).chords,
+                    voice: 'pack:nylon-guitar',
+                    buffer: new Map([[0, notes]]),
+                },
+                vizState: { enabled: false },
+            } as unknown as EnsembleState;
+            scheduleChords(state, { chord: { absName: 'C' } } as ChordAtStep, 0, 0);
+            const live = vi.mocked(playNote).mock.calls;
+            const midi = vi.mocked(dispatchMidiChordNote).mock.calls;
+            expect(live).toHaveLength(3);
+            expect(dispatchMidiChordSustain).toHaveBeenCalledWith(state, 0, 0);
+            live.forEach((call, index) => {
+                expect(call[4]).toEqual(expect.objectContaining({ index: 0, ignoreSustain: true }));
+                expect(call[2]).toBeCloseTo(notes[index].timingOffset);
+                expect(call[3]).toBeCloseTo(notes[index].durationSteps * 0.125);
+                expect(midi[index][3]).toBe(call[2]);
+                expect(midi[index][4]).toBe(call[3]);
+            });
+            const processor = new ExportProcessor(state, { includedTracks: ['chords'] } as never);
+            try {
+                const track = new MidiTrack();
+                processor._writeNotesToTrack(track, 0, notes, 0, 'chords', {} as never, 0);
+                const on = track.events.filter((e) => (e.data[0] & 0xf0) === 0x90);
+                const off = track.events.filter((e) => (e.data[0] & 0xf0) === 0x80);
+                expect(on).toHaveLength(3);
+                expect(off).toHaveLength(3);
+                const pedal = track.events.filter(
+                    (e) => (e.data[0] & 0xf0) === 0xb0 && e.data[1] === 64,
+                );
+                expect(pedal.map((e) => ({ time: e.time, value: e.data[2] }))).toEqual([
+                    { time: 0, value: 0 },
+                ]);
+                on.forEach((event, i) => expect(event.time).toBe(processor.toPulses(live[i][2])));
+                off.forEach((event, i) =>
+                    expect(event.time).toBe(processor.toPulses(live[i][2] + live[i][3])),
+                );
+            } finally {
+                processor.cleanup();
+            }
+        },
+    );
 
     /** The MIDI velocity byte the exporter writes for a single note on `moduleName`. */
     function exportedVelocityByte(

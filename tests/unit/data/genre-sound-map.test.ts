@@ -9,6 +9,23 @@ const allInstalled = () => true;
 const noneInstalled = () => false;
 
 describe('genre → sound map (#675)', () => {
+    it('follows the modern pianist with grand piano or the audible synth fallback', () => {
+        expect(autoVoiceForGenre('Jazz', 'chords', allInstalled, 'modern-piano')).toBe(
+            'pack:grand',
+        );
+        expect(autoVoiceForGenre('Acoustic', 'chords', noneInstalled, 'modern-piano')).toBe(
+            'synth',
+        );
+    });
+    it('follows the Acoustic player without remapping existing defaults (#1150)', () => {
+        expect(autoVoiceForGenre('Acoustic', 'chords', allInstalled, 'acoustic-strum')).toBe(
+            'pack:nylon-guitar',
+        );
+        expect(autoVoiceForGenre('Acoustic', 'chords', noneInstalled, 'acoustic-strum')).toBe(
+            'synth',
+        );
+        expect(autoVoiceForGenre('Acoustic', 'chords', allInstalled, 'arp')).toBe('pack:grand');
+    });
     describe('canon integrity (guards against silently-dead entries)', () => {
         it('every map key is a canonical genre name', () => {
             for (const key of Object.keys(GENRE_SOUND_MAP)) {
