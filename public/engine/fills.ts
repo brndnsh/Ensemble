@@ -1,6 +1,8 @@
 // Fill Generation Logic
 // Uses block-based generation and templates for natural sounding fills
 
+import type { TimeSignatureConfig } from '../config.js';
+
 interface FillTemplate {
     steps: number[];
     instruments: string[];
@@ -603,8 +605,9 @@ export function generateProceduralFill(
     intensity: number,
     stepsPerMeasure: number,
     prng: () => number = Math.random,
+    meter?: TimeSignatureConfig,
 ): Record<number, { name: string; vel: number }[]> {
-    return generateDeterministicFill(genre, intensity, stepsPerMeasure, prng);
+    return generateDeterministicFill(genre, intensity, stepsPerMeasure, prng, meter);
 }
 
 /**
@@ -665,13 +668,64 @@ export function generatePhrasePickup(
     return fill;
 }
 
+// #1137 pilot vocabulary, in EIGHTHS within one dotted-quarter group:
+// sparse snare pickup, three-eighth snare group, descending single-stroke toms.
+// Each group starts strongest; its lighter continuation leads toward the NEXT
+// pulse instead of creating an accelerating 4/4 roll. No arrival cymbal is baked
+// into a gesture: the existing pendingCrash contract owns the next downbeat.
+const COMPOUND_FILL_GESTURES: FillTemplate[] = [
+    { steps: [0, 2], instruments: ['Snare', 'Snare'], velocities: [1, 0.75] },
+    { steps: [0, 1, 2], instruments: ['Snare', 'Snare', 'Snare'], velocities: [1, 0.7, 0.8] },
+    {
+        steps: [0, 1, 2],
+        instruments: ['High Tom', 'Mid Tom', 'Low Tom'],
+        velocities: [1, 0.7, 0.8],
+    },
+];
+
 export function generateDeterministicFill(
     genre: string,
     intensity: number,
     stepsPerMeasure: number,
     prng: () => number,
+    meter?: TimeSignatureConfig,
 ): Record<number, { name: string; vel: number }[]> {
     const fill: Record<number, { name: string; vel: number }[]> = {};
+    // Explicit meter is essential: 3/4 and 6/8 both occupy 12 engine steps.
+    // Authored non-triplet groupings retain their existing vocabulary.
+    if (
+        (genre === 'Rock' || genre === 'Blues') &&
+        meter?.isCompound &&
+        (meter.beats === 6 || meter.beats === 12) &&
+        meter.stepsPerBeat === 2 &&
+        stepsPerMeasure === meter.beats * meter.stepsPerBeat &&
+        meter.grouping.length === meter.beats / 3 &&
+        meter.grouping.every((group) => group === 3)
+    ) {
+        // Exactly one draw, as on the legacy path: consuming more (or none for
+        // the sparse gesture) would change every later section's fill lottery.
+        const choice = prng();
+        const gesture = COMPOUND_FILL_GESTURES[intensity <= 0.4 ? 0 : choice < 0.5 ? 1 : 2];
+        const pulseLength = 3 * meter.stepsPerBeat;
+        // Leave the first half-bar as ordinary groove. Low energy occupies just
+        // the last pulse; medium/high 12/8 can answer across the last two pulses.
+        const pulseCount = intensity <= 0.4 ? 1 : meter.beats / 6;
+        const start = stepsPerMeasure - pulseCount * pulseLength;
+        // Blues sits below Rock's attack weight; energy raises weight without
+        // turning the three-part subdivision into a denser roll.
+        const accent = (genre === 'Blues' ? 0.65 : 0.75) + intensity * 0.2;
+        for (let pulse = start; pulse < stepsPerMeasure; pulse += pulseLength) {
+            gesture.steps.forEach((eighth, index) => {
+                fill[pulse + eighth * meter.stepsPerBeat] = [
+                    {
+                        name: gesture.instruments[index],
+                        vel: accent * gesture.velocities[index],
+                    },
+                ];
+            });
+        }
+        return fill;
+    }
     const templates = FILL_TEMPLATES[genre] || FILL_TEMPLATES.Rock;
 
     let level: 'low' | 'medium' | 'high' = 'low';
