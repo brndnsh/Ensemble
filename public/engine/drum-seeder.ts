@@ -538,6 +538,7 @@ export function generateDrumFills(
             currentOrch.energyLevel,
             stepsPerMeasure,
             prng,
+            sectionTs,
         );
 
         // 4. Determine "Crash Contract"

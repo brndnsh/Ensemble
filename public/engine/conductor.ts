@@ -1,4 +1,4 @@
-import { getEffectiveTimeSignature } from '../meter.js';
+import { getEffectiveMeterAtStep, getEffectiveTimeSignature } from '../meter.js';
 import { analyzeForm, getJamMacroArc, getSectionEnergy } from '../song/form-analysis.js';
 import type { ActionPayloadUpdateSB, ChordDensity, Dispatch, EnsembleState } from '../types.js';
 import { ACTIONS } from '../types.js';
@@ -630,6 +630,8 @@ export function checkSectionTransition(
                         playback.bandIntensity,
                         stepsPerMeasure,
                         fillPrng,
+                        getEffectiveMeterAtStep(arranger, foldPracticeStep(currentStep, playback))
+                            .ts,
                     );
                     // why: #799 — mirror the seeded path's "Crash Contract"
                     // (`pendingCrash` in generateDrumFills) instead of an unconditional crash on
