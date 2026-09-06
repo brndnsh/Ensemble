@@ -248,7 +248,8 @@ interface ChordsControlsProps {
 function ChordsControls({ state }: ChordsControlsProps) {
     const genre = useEnsembleState((s) => s.groove.lastSmartGenre);
     const acoustic = genre === 'Acoustic' || state.style === 'acoustic-strum';
-    const hasPlayerChoice = acoustic || genre === 'Jazz' || state.style === 'modern-piano';
+    const hasPlayerChoice =
+        acoustic || genre === 'Jazz' || ['modern-piano', 'open-modal'].includes(state.style);
     const playerOptions = [
         ...(acoustic
             ? [
@@ -257,6 +258,7 @@ function ChordsControls({ state }: ChordsControlsProps) {
               ]
             : [{ value: 'jazz', label: 'Jazz comping' }]),
         { value: 'modern-piano', label: 'Modern jazz piano' },
+        { value: 'open-modal', label: 'Open modal piano' },
     ];
     return (
         <Fragment>

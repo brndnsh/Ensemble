@@ -143,7 +143,7 @@ export function autoVoiceForGenre(
     isPackInstalled: (packId: string) => boolean,
     chordStyle?: string,
 ): InstrumentVoice {
-    if (module === 'chords' && chordStyle === 'modern-piano') {
+    if (module === 'chords' && (chordStyle === 'modern-piano' || chordStyle === 'open-modal')) {
         return isPackInstalled('grand') ? 'pack:grand' : 'synth';
     }
     const mapped =

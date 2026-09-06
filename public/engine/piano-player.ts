@@ -3,11 +3,11 @@ import type { Chord, EnsembleState, Mutable, StepInfo } from '../types.js';
 import { binarySearchMapIndex } from '../utils.js';
 import type { AccompanimentCoordination } from './comping-emit.js';
 import { scrambleHash, stringHash31 } from './hash-utils.js';
-import { type PianoKey, voicePianoChord } from './piano-voicings.js';
+import { type PianoKey, type PianoProfile, voicePianoChord } from './piano-voicings.js';
 import { foldPracticeStep } from './section-overrides.js';
 
 export interface PianoPerformance {
-    player: 'modern-piano';
+    player: PianoProfile;
     hand: 'left' | 'right';
     gesture: 'statement' | 'answer' | 'settle';
 }
@@ -22,6 +22,7 @@ function voicingAt(
     chartStep: number,
     phraseStart: number,
     bassPresent: boolean,
+    profile: PianoProfile,
 ) {
     const map = state.arranger.stepMap;
     const index = binarySearchMapIndex(map, chartStep);
@@ -34,7 +35,7 @@ function voicingAt(
     }
     const density = state.chords.density;
     const center = Math.max(61, Math.min(70, state.chords.octave || 65));
-    const key = `${bassPresent}/${density}/${center}/${preceding
+    const key = `${profile}/${bassPresent}/${density}/${center}/${preceding
         .map((c) => `${c.rootMidi},${c.bassMidi},${c.quality},${c.is7th}`)
         .join(';')}`;
     const cached = voicingPlans.get(key);
@@ -43,7 +44,7 @@ function voicingAt(
     }
     let keys: PianoKey[] = [];
     for (const c of preceding) {
-        keys = voicePianoChord(c, bassPresent, density, keys, center);
+        keys = voicePianoChord(c, bassPresent, density, keys, center, profile);
     }
     if (voicingPlans.size >= 64) {
         voicingPlans.clear();
@@ -53,7 +54,7 @@ function voicingAt(
 }
 
 /** A four-bar statement/answer/return/settle, on this meter's actual pulse grid. */
-function gestures(info: StepInfo, barInPhrase: number, variant: number) {
+function gestures(info: StepInfo, barInPhrase: number, variant: number, profile: PianoProfile) {
     const ts = info.tsConfig;
     const beat = ts.stepsPerBeat;
     const bar = ts.beats * beat;
@@ -61,6 +62,19 @@ function gestures(info: StepInfo, barInPhrase: number, variant: number) {
     const result: { at: number; gesture: PianoPerformance['gesture'] }[] = [
         { at: 0, gesture: settling ? 'settle' : 'statement' },
     ];
+    if (profile === 'open-modal') {
+        // Broad statements keep every bar legible. A single response in bar
+        // two gives the four-bar phrase an answer without crowding practice.
+        // Honor grouped quarter-note meters too (5/4, 7/4, or authored groups).
+        // A single-group bar such as 3/4 still gets a late-pulse answer, rather
+        // than collapsing the response onto its opening statement.
+        const lastGroup = ts.grouping.length > 1 ? ts.grouping.at(-1)! : 1;
+        const answer = bar - lastGroup * beat;
+        if (barInPhrase === 1 && answer > 0) {
+            result.push({ at: answer, gesture: 'answer' });
+        }
+        return result;
+    }
     if (!settling) {
         const early = (barInPhrase === 1 ? 1 - variant : variant) === 0;
         const answer =
@@ -84,6 +98,8 @@ export function getPianoNotes(
     coordination: AccompanimentCoordination,
     bassPresent: boolean,
 ) {
+    const profile: PianoProfile =
+        state.chords.style === 'open-modal' ? 'open-modal' : 'modern-piano';
     const ts =
         info.tsConfig ||
         getEffectiveTimeSignature(state.arranger.timeSignature, state.arranger.grouping);
@@ -106,6 +122,7 @@ export function getPianoNotes(
         { ...info, tsConfig: ts },
         coordination.isFinalMeasure ? 3 : barInPhrase,
         variant,
+        profile,
     );
     (state.chords as Mutable<typeof state.chords>).rhythmicMask = plan.reduce(
         (mask, g) => mask | (1 << g.at),
@@ -118,7 +135,7 @@ export function getPianoNotes(
     if (!gesture || coordination.subtractionMutedLanes?.includes('chords')) {
         return [];
     }
-    const voicing = voicingAt(state, chord, chartStep, phraseStart, bassPresent);
+    const voicing = voicingAt(state, chord, chartStep, phraseStart, bassPresent, profile);
     const answering = gesture.gesture === 'answer';
     let selected = answering ? voicing.filter((n) => n.hand === 'right') : voicing;
     // The generated lead can soften a response without removing its pulse.
@@ -134,7 +151,7 @@ export function getPianoNotes(
         : 0.5;
     return selected.map((n, index) => {
         const gate = answering
-            ? Math.min(remaining, ts.stepsPerBeat * 0.8)
+            ? Math.min(remaining, ts.stepsPerBeat * (profile === 'open-modal' ? 1.5 : 0.8))
             : n.hand === 'right' && answer
               ? Math.min(remaining, answer.at - info.mStep)
               : remaining;
@@ -155,7 +172,7 @@ export function getPianoNotes(
             // This player's hand gates own the release on every playback sink.
             ccEvents: index === 0 ? [{ controller: 64, value: 0, timingOffset: 0 }] : undefined,
             chordPerformance: {
-                player: 'modern-piano',
+                player: profile,
                 hand: n.hand,
                 gesture: gesture.gesture,
             } satisfies PianoPerformance,

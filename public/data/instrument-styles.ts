@@ -14,6 +14,7 @@ export const CHORD_STYLES: StyleEntry[] = [
     { id: 'power-metal', name: 'Power Metal', category: 'Rock/Metal' },
     { id: 'jazz', name: 'Jazz Comp', category: 'Jazz' },
     { id: 'modern-piano', name: 'Modern jazz piano', category: 'Jazz' },
+    { id: 'open-modal', name: 'Open modal piano', category: 'Jazz' },
     { id: 'funk', name: 'Funk Scratch', category: 'Soul/Funk' },
     { id: 'ska-upstroke', name: 'Ska Upstroke', category: 'Pop/Rock' },
     { id: 'acoustic-strum', name: 'Acoustic Guitar Strum', category: 'Country/Folk' },

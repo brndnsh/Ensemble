@@ -134,6 +134,15 @@ for connected chord voicings and light right-hand answers over held lower notes.
 Leave Sound on **Auto** to use Acoustic Grand Piano when installed. Density
 changes the voicing's fullness without adding more rhythmic attacks. Try
 `Dm7 | G7 | Cmaj7 | Cmaj7` with the soloist off and play your own melody above it.
+
+Choose **Open modal piano** for wider voicings and broad, unhurried statements
+with an occasional right-hand answer. Fourths add space where they fit the chart;
+the defining chord notes stay clear. Start at Standard density, or use Thin for
+less color. Try `Dm11 | G13 | Cmaj9 | Cmaj9`, then compare
+`Cmaj7 | C7 | Cm7 | Cm7` to hear how each chord keeps its identity. With Bass off,
+the piano supplies the root and any written slash bass. Sound follows the same
+Auto/pinned choice as Modern jazz piano.
+
 **Bass:**
 {{BASS_STYLES}}
 
