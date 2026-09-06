@@ -1,6 +1,7 @@
 import type { Chord, EnsembleState, Mutable, StepInfo } from '../types.js';
 import { getFrequency, getMidi } from '../utils.js';
 import { createBassPump } from './bass-pump.js';
+import { getJazzWalkingPitch, type WalkingPitch } from './bass-walking-route.js';
 import { getBandPocket } from './coordination-engine.js';
 import { scrambleHash, stringHash33 } from './hash-utils.js';
 import { isSoloistBusyAtStep } from './section-overrides.js';
@@ -718,6 +719,7 @@ export function getBassNote(
         return note + symmetryDirection(note + 12 <= 51, note - 12 >= 28);
     };
 
+    let walkingPitch: WalkingPitch | null = null;
     /**
      * @param muted - Palm-mute amount: 0 (open) to 1 (fully muted).
      */
@@ -877,15 +879,14 @@ export function getBassNote(
                   : ts.stepsPerBeat * 0.95;
         const safeDuration = Math.min(durationSteps, maxSafeDuration);
 
-        // why: Imperfect Symmetry (S2) — applied here so EVERY return path through
-        // the bass engine inherits the repeat-pass octave displacement on its target
-        // beat. The wrap is a no-op (returns the original note) when sectionOccurrence
-        // is 1 or when the gate conditions don't match. Pitch class is preserved.
+        // #1136: a planned Jazz route owns pitch INCLUDING octave. Independent
+        // repeat-pass displacement would break its approach into the next One.
+        // Other paths retain Imperfect Symmetry's repeat-pass octave gesture.
         const baseMidi = getMidi(freq);
         let outFreq = freq;
         let outMidi = baseMidi;
         if (baseMidi !== null) {
-            const shiftedMidi = withImperfectSymmetry(baseMidi);
+            const shiftedMidi = walkingPitch?.midi ?? withImperfectSymmetry(baseMidi);
             if (shiftedMidi !== baseMidi) {
                 outMidi = shiftedMidi;
                 outFreq = getFrequency(shiftedMidi);
@@ -895,12 +896,16 @@ export function getBassNote(
         return {
             freq: outFreq,
             midi: outMidi,
+            // Worker-internal: tick-logic consumes this before emitting the
+            // note. Range safety still applies; nearest-octave revoicing does
+            // not get to undo an already-composed journey into the next One.
+            ...(walkingPitch ? { pitchPlanned: true } : {}),
             velocity: finalVel,
             durationSteps: safeDuration,
             timingOffset,
             muted,
-            bendStartInterval,
-            approachTargetRoot,
+            bendStartInterval: walkingPitch ? 0 : bendStartInterval,
+            approachTargetRoot: walkingPitch ? walkingPitch.approachTarget : approachTargetRoot,
             // #948 — the PRE-envelope authored token this note was emitted with
             // (`velocityParam`), carried out so the kick-lock floor below can compare
             // gesture-to-gesture instead of comparing a rendered velocity against a
@@ -1493,6 +1498,21 @@ export function getBassNote(
             res.timingOffset += 0.005;
             return res;
         }
+    }
+
+    // Pitch-only replacement after higher-priority cadence/Q&A/ensemble exits.
+    // The existing rhythm gate, duration and dynamics still own the emission.
+    // Bass-owned answers keep their own pitches throughout the response window.
+    if (context?.stepCoordination?.soloistQaResponseOwner !== 'bass') {
+        walkingPitch = getJazzWalkingPitch(
+            state,
+            chord,
+            style,
+            step,
+            stepInChord,
+            centerMidi,
+            stepInfo,
+        );
     }
 
     const isStraightStyle = ['rock', 'quarter', 'disco', 'neo'].includes(style);
