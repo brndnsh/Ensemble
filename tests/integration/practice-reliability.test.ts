@@ -31,6 +31,14 @@ const SCENES = [
         lengths: [16, 16, 16, 16],
     },
     {
+        genre: 'Acoustic',
+        bpm: 100,
+        meter: '3/4',
+        values: ['C | Am', 'F | G'],
+        chords: ['C', 'Am', 'F', 'G'],
+        lengths: [12, 12, 12, 12],
+    },
+    {
         genre: 'Blues',
         bpm: 120,
         meter: '6/8',

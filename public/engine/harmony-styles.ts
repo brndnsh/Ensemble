@@ -61,6 +61,8 @@ export interface HarmonyGenreProfile {
     rhythmicStyle: HarmonyRhythmicStyle;
     patternKey: HarmonyPatternKey;
     voicing?: HarmonyVoicing;
+    /** One restrained chord-tone connection per four-bar window, Smart pads only. */
+    movingPadVoice?: boolean;
 }
 
 /**
@@ -88,6 +90,7 @@ export const HARMONY_GENRE_PROFILES: Record<string, HarmonyGenreProfile> = {
         rhythmicStyle: 'pads',
         patternKey: 'default',
         voicing: { harmonizedThirds: true, powerDoubling: true },
+        movingPadVoice: true,
     },
     Jazz: { smartStyle: 'organ', rhythmicStyle: 'stabs', patternKey: 'jazz' },
     Funk: { smartStyle: 'horns', rhythmicStyle: 'stabs', patternKey: 'funk16' },
@@ -107,6 +110,7 @@ export const HARMONY_GENRE_PROFILES: Record<string, HarmonyGenreProfile> = {
         smartStyle: 'strings',
         rhythmicStyle: 'pads',
         patternKey: 'default',
+        movingPadVoice: true,
         // Harmony holds the sustained string PAD; the fingerpick arpeggio lives in
         // the chords lane (the 'arp' chord style, #787), its idiomatic plucked home.
         // The bowed strings sample wants to hold, not pluck.

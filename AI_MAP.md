@@ -71,6 +71,7 @@ This map provides a quick reference for AI agents to understand the responsibili
 | `public/engine/note-spelling.ts` | Canonical pitch-class → letter-name spelling policy (sharp/flat by key), shared by the chart render path and the chord editor. | `spellPitchClass` |
 | `public/engine/harmonies.ts` | Background pad/stab generation. | `getHarmonyNotes` |
 | `public/engine/harmony-styles.ts` | Per-genre harmony idiom profiles (style/rhythm/voicing). | `HARMONY_GENRE_PROFILES`, `resolveHarmonyProfile` |
+| `public/engine/harmony-moving-voice.ts` | Chart-derived, bounded moving-voice connections for Smart Rock/Acoustic pads. | `getMovingPadVoicing` |
 | `public/engine/soloist-config.ts` | Soloist style and register-profile data. | `STYLE_CONFIG`, `resolveSoloistStyle`, `getSoloistRegisterProfile` |
 | `public/engine/soloist-devices.ts` | Melodic embellishment and run algorithms. | `consonantDoubleStopInterval`, `guitarDoubleStopVoice` |
 | `public/engine/drum-seeder.ts` | Song-wide drum orchestration seeder. | `generateDrumOrchestration` |
