@@ -279,7 +279,7 @@ export function generateNotesForStep(
                         : { index: 0, sectionIndex: 0 },
                 );
                 const { sectionStart, sectionEnd } = chordData;
-                const bassResult = getBassNote(
+                const generatedBass = getBassNote(
                     state,
                     chord,
                     nextChordData?.chord,
@@ -293,17 +293,23 @@ export function generateNotesForStep(
                     { sectionStart, sectionEnd, stepCoordination: coordination },
                     stepInfo || null,
                 );
-                if (bassResult && (bassResult.freq || bassResult.midi)) {
+                if (generatedBass && (generatedBass.freq || generatedBass.midi)) {
+                    // #1136: this is generation metadata, not a worker-message
+                    // field. Consume it here so every audio/MIDI/render sink
+                    // receives the same authored pitch without a new protocol.
+                    const { pitchPlanned, ...bassResult } = generatedBass;
                     if (!bassResult.midi) {
                         bassResult.midi = getMidi(bassResult.freq);
                     }
-                    // Enforce Contract: Register Slotting (with smooth octave shift)
+                    // Always enforce range, but planned routes already chose
+                    // their octave. Revoicing toward the previous note can turn
+                    // a chromatic arrival into an octave-displaced MIDI leap.
                     const lastBassMidi = bass.lastFreq ? getMidi(bass.lastFreq) : null;
                     bassResult.midi = enforceRegisterSlotting(
                         'bass',
                         bassResult.midi,
                         coordination,
-                        lastBassMidi,
+                        pitchPlanned ? null : lastBassMidi,
                     );
 
                     if (!bassResult.freq) {

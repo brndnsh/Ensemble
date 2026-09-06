@@ -64,6 +64,7 @@ This map provides a quick reference for AI agents to understand the responsibili
 | `public/engine/soloist-session.ts` | Soloist per-playback state reset (relocated from the retired `soloist.ts`). | `resetSoloistState` |
 | `public/engine/soloist-seeder.ts` | Dynamic Head (Seed Melody) generation logic. | `generateSessionSeed` |
 | `public/engine/bass-engine.ts` | Bass line generation & genre resolution. | `isBassActive`, `getBassNote` |
+| `public/engine/bass-walking-route.ts` | Restrained Jazz walking routes with chart-derived root/slash arrivals and bounded contour. | `getJazzWalkingPitch` |
 | `public/engine/bass-pump.ts` | The fixed-anchor octave pump (disco): anchor, repeat-pass target beat, variation draw. | `createBassPump`, `BassPump` |
 | `public/engine/accompaniment.ts` | Chord comping and rhythmic backing. | `getAccompanimentNotes`, `compingState` |
 | `public/engine/chords-engine.ts` | Chord parsing and harmonic analysis. | `getChordDetails` |
