@@ -71,7 +71,7 @@ log() { [ "$QUIET" = false ] && echo "$@"; }
 # for what's actually deployed). Returns nonzero if the site or revision is unavailable.
 live_rev() {
     local cache_nonce="$1"
-    curl -fsS "${ORIGIN_URL}/?cb=${cache_nonce}" 2>/dev/null |
+    curl --connect-timeout 10 --max-time 30 -fsS "${ORIGIN_URL}/?cb=${cache_nonce}" 2>/dev/null |
         grep -oE 'index\.[0-9a-f]{7,}(-[0-9a-f]+)?\.js' | head -1 |
         sed -E 's/^index\.//; s/\.js$//'
 }
@@ -142,10 +142,33 @@ fi
 if [ -z "${AFTER_REV:-}" ]; then
     echo "❌ Deployment verification failed: ${ORIGIN_URL} returned no live revision."
     exit 1
-elif [ "$AFTER_REV" = "$BUILT_REV" ]; then
-    rm -rf dist
-    log "✅ Verified live on ${LABEL}: ${AFTER_REV}"
-else
+elif [ "$AFTER_REV" != "$BUILT_REV" ]; then
     echo "❌ Deployment verification failed: live rev (${AFTER_REV}) != built rev (${BUILT_REV})."
     exit 1
 fi
+
+# Check the ordinary URL that browsers register, without a cache-busting query:
+# fresh HTML alone can hide a stale CDN worker whose precache references deleted
+# bundles. Compare all bytes, not just the index revision inside its manifest.
+# The Ensemble edge policy serves this mutable script with Cache-Control: no-store;
+# hashed app assets and the separate sound-pack cache retain their normal policy.
+SW_VERIFY_FILE=$(mktemp)
+SW_HEADERS_FILE=$(mktemp)
+trap 'rm -f "$SW_VERIFY_FILE" "$SW_HEADERS_FILE"' EXIT
+if ! curl --connect-timeout 10 --max-time 30 -fsS \
+    --dump-header "$SW_HEADERS_FILE" --output "$SW_VERIFY_FILE" "${ORIGIN_URL}/sw.js"; then
+    echo "❌ Deployment verification failed: couldn't fetch the ordinary service worker URL."
+    exit 1
+fi
+if ! cmp -s dist/sw.js "$SW_VERIFY_FILE"; then
+    echo "❌ Deployment verification failed: live service worker differs from the built worker."
+    exit 1
+fi
+if ! awk 'tolower($0) ~ /^cache-control:/ { print tolower($0) }' "$SW_HEADERS_FILE" |
+    tr -d '\r' | grep -Eq '(^|[[:space:],])no-store([[:space:],]|$)'; then
+    echo "❌ Deployment verification failed: service worker must have Cache-Control: no-store."
+    exit 1
+fi
+
+rm -rf dist
+log "✅ Verified live on ${LABEL}: ${AFTER_REV} (HTML and service worker)"
