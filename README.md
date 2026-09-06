@@ -54,6 +54,8 @@ This emits an optimized bundle into `dist/`, including the service worker (via `
 
 **Deploy:** `npm run deploy:test` and `npm run deploy:prod` are thin aliases for `scripts/deploy.sh <test|prod>` — a wrapper around `vite build` + `rsync` (see [`scripts/deploy.sh`](scripts/deploy.sh)). Point them at your own host, or copy `dist/` wherever you like.
 
+Serve `/sw.js` with `Cache-Control: no-store`, and revalidate `/`, `/index.html`, and `/manifest.json` with `Cache-Control: no-cache, max-age=0, must-revalidate`. Keep hashed assets and sound packs cacheable. The deploy script verifies both the HTML revision and the exact worker returned by the ordinary `/sw.js` URL, including its cache policy; a stale CDN worker can prevent installed sound packs from surviving reload even when the HTML is current. When introducing this policy, purge any previously cached `/sw.js` entry at the CDN.
+
 ---
 
 ## I want to contribute
